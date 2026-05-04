@@ -7,6 +7,7 @@ export type UserProfile = {
   email: string
   nome_completo: string
   tipo_usuario: 'basico' | 'responsavel' | 'admin'
+  foto_url?: string | null
 }
 
 type AuthContextType = {
@@ -15,6 +16,7 @@ type AuthContextType = {
   profile: UserProfile | null
   loading: boolean
   signOut: () => Promise<void>
+  refreshProfile: () => Promise<void>
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
@@ -74,12 +76,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, [])
 
+  const refreshProfile = async () => {
+    if (!user?.id) return
+    try {
+      const { data } = await supabase.from('perfil_usuario').select('*').eq('id', user.id).single()
+      if (data) {
+        setProfile(data as UserProfile)
+      }
+    } catch (error) {
+      console.error('Erro ao atualizar perfil', error)
+    }
+  }
+
   const signOut = async () => {
     await supabase.auth.signOut()
   }
 
   return (
-    <AuthContext.Provider value={{ user, session, profile, loading, signOut }}>
+    <AuthContext.Provider value={{ user, session, profile, loading, signOut, refreshProfile }}>
       {children}
     </AuthContext.Provider>
   )

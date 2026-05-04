@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
@@ -25,7 +25,7 @@ import {
   CardTitle,
   CardFooter,
 } from '@/components/ui/card'
-import { Loader2 } from 'lucide-react'
+import { Loader2, User, Trash2, Upload } from 'lucide-react'
 
 const formSchema = z.object({
   nome_completo: z.string().min(1, 'Nome completo é obrigatório'),
@@ -36,12 +36,16 @@ const formSchema = z.object({
 type FormValues = z.infer<typeof formSchema>
 
 export default function Perfil() {
-  const { user } = useAuth()
+  const { user, refreshProfile } = useAuth()
   const navigate = useNavigate()
   const { toast } = useToast()
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [email, setEmail] = useState('')
+
+  const fileInputRef = useRef<HTMLInputElement>(null)
+  const [uploading, setUploading] = useState(false)
+  const [fotoUrl, setFotoUrl] = useState<string | null>(null)
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
@@ -59,7 +63,7 @@ export default function Perfil() {
       try {
         const { data, error } = await supabase
           .from('perfil_usuario')
-          .select('nome_completo, whatsapp, endereco, email')
+          .select('nome_completo, whatsapp, endereco, email, foto_url')
           .eq('id', user.id)
           .single()
 
@@ -67,6 +71,7 @@ export default function Perfil() {
 
         if (data) {
           setEmail(data.email)
+          setFotoUrl(data.foto_url || null)
           form.reset({
             nome_completo: data.nome_completo || '',
             whatsapp: data.whatsapp || '',
@@ -87,6 +92,109 @@ export default function Perfil() {
 
     loadProfile()
   }, [user?.id, form, toast])
+
+  const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0]
+    if (!file) return
+
+    if (!['image/jpeg', 'image/png', 'image/gif'].includes(file.type)) {
+      toast({
+        title: 'Erro',
+        description: 'Arquivo inválido. Máximo 5 MB. Tipos: JPG, PNG, GIF',
+        variant: 'destructive',
+      })
+      if (fileInputRef.current) fileInputRef.current.value = ''
+      return
+    }
+
+    if (file.size > 5 * 1024 * 1024) {
+      toast({
+        title: 'Erro',
+        description: 'Arquivo inválido. Máximo 5 MB. Tipos: JPG, PNG, GIF',
+        variant: 'destructive',
+      })
+      if (fileInputRef.current) fileInputRef.current.value = ''
+      return
+    }
+
+    setUploading(true)
+    try {
+      const ext = file.name.split('.').pop()
+      const filename = `${user?.id}/foto-${Date.now()}.${ext}`
+
+      const { error: uploadError } = await supabase.storage
+        .from('perfil_fotos')
+        .upload(filename, file, { upsert: true })
+
+      if (uploadError) throw uploadError
+
+      const {
+        data: { publicUrl },
+      } = supabase.storage.from('perfil_fotos').getPublicUrl(filename)
+
+      const { error: updateError } = await supabase
+        .from('perfil_usuario')
+        .update({ foto_url: publicUrl })
+        .eq('id', user!.id)
+
+      if (updateError) throw updateError
+
+      setFotoUrl(publicUrl)
+      if (refreshProfile) await refreshProfile()
+
+      toast({
+        title: 'Sucesso',
+        description: 'Foto atualizada com sucesso',
+      })
+    } catch (error) {
+      console.error('Erro no upload:', error)
+      toast({
+        title: 'Erro',
+        description: 'Erro ao enviar foto. Tente novamente',
+        variant: 'destructive',
+      })
+    } finally {
+      setUploading(false)
+      if (fileInputRef.current) fileInputRef.current.value = ''
+    }
+  }
+
+  const handleRemoveFoto = async () => {
+    setUploading(true)
+    try {
+      if (fotoUrl) {
+        const urlParts = fotoUrl.split('/perfil_fotos/')
+        if (urlParts.length > 1) {
+          const path = urlParts[1]
+          await supabase.storage.from('perfil_fotos').remove([path])
+        }
+      }
+
+      const { error } = await supabase
+        .from('perfil_usuario')
+        .update({ foto_url: null })
+        .eq('id', user!.id)
+
+      if (error) throw error
+
+      setFotoUrl(null)
+      if (refreshProfile) await refreshProfile()
+
+      toast({
+        title: 'Sucesso',
+        description: 'Foto removida com sucesso',
+      })
+    } catch (error) {
+      console.error('Erro ao remover foto:', error)
+      toast({
+        title: 'Erro',
+        description: 'Erro ao remover foto. Tente novamente',
+        variant: 'destructive',
+      })
+    } finally {
+      setUploading(false)
+    }
+  }
 
   const onSubmit = async (values: FormValues) => {
     if (!user?.id) return
@@ -143,11 +251,75 @@ export default function Perfil() {
   }
 
   return (
-    <div className="max-w-2xl mx-auto">
+    <div className="max-w-2xl mx-auto pb-10">
       <div className="mb-6">
         <h1 className="text-3xl font-bold tracking-tight">Meu Perfil</h1>
         <p className="text-muted-foreground">Gerencie suas informações pessoais e de contato.</p>
       </div>
+
+      <Card className="mb-6">
+        <CardHeader>
+          <CardTitle>Foto de Perfil</CardTitle>
+          <CardDescription>Adicione ou altere sua foto de perfil.</CardDescription>
+        </CardHeader>
+        <CardContent className="flex flex-col items-center sm:flex-row sm:items-start gap-6">
+          <div className="relative">
+            <div className="w-[150px] h-[150px] sm:w-[200px] sm:h-[200px] rounded-full overflow-hidden bg-slate-100 border-4 border-white shadow-sm flex items-center justify-center">
+              {uploading ? (
+                <div className="flex flex-col items-center gap-2 text-muted-foreground">
+                  <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                  <span className="text-xs">Enviando...</span>
+                </div>
+              ) : fotoUrl ? (
+                <img src={fotoUrl} alt="Foto de perfil" className="w-full h-full object-cover" />
+              ) : (
+                <div className="flex flex-col items-center gap-2 text-slate-400">
+                  <User className="h-12 w-12" />
+                  <span className="text-sm font-medium">Nenhuma foto</span>
+                </div>
+              )}
+            </div>
+          </div>
+
+          <div className="flex flex-col gap-3 justify-center pt-2 sm:pt-6 w-full sm:w-auto">
+            <input
+              type="file"
+              ref={fileInputRef}
+              className="hidden"
+              accept="image/jpeg, image/png, image/gif"
+              onChange={handleFileChange}
+            />
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => fileInputRef.current?.click()}
+              disabled={uploading}
+              className="w-full sm:w-auto"
+            >
+              <Upload className="h-4 w-4 mr-2" />
+              Alterar foto
+            </Button>
+
+            {fotoUrl && (
+              <Button
+                type="button"
+                variant="ghost"
+                onClick={handleRemoveFoto}
+                disabled={uploading}
+                className="text-red-500 hover:text-red-600 hover:bg-red-50 w-full sm:w-auto"
+              >
+                <Trash2 className="h-4 w-4 mr-2" />
+                Remover foto
+              </Button>
+            )}
+            <p className="text-xs text-muted-foreground mt-2 text-center sm:text-left">
+              Tipos permitidos: JPG, PNG, GIF.
+              <br />
+              Tamanho máximo: 5 MB.
+            </p>
+          </div>
+        </CardContent>
+      </Card>
 
       <Card>
         <CardHeader>

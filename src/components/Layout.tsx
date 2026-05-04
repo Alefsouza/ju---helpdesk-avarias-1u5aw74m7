@@ -142,11 +142,24 @@ function AppSidebar() {
       </SidebarContent>
       <SidebarFooter className="border-t p-4">
         <div className="flex flex-col gap-4">
-          <div
-            className="text-sm text-muted-foreground truncate px-2 font-medium"
-            title={user?.email || ''}
-          >
-            {user?.email}
+          <div className="flex items-center gap-2 px-2">
+            {profile?.foto_url ? (
+              <img
+                src={profile.foto_url}
+                alt={profile.nome_completo || 'Avatar'}
+                className="w-8 h-8 rounded-full object-cover border border-slate-200 shrink-0 bg-white"
+              />
+            ) : (
+              <span className="w-8 h-8 rounded-full bg-primary/10 text-primary flex items-center justify-center font-bold uppercase shrink-0">
+                {user?.email?.[0]}
+              </span>
+            )}
+            <div
+              className="text-sm text-muted-foreground truncate font-medium flex-1"
+              title={user?.email || ''}
+            >
+              {user?.email}
+            </div>
           </div>
           <Button
             variant="ghost"
@@ -249,9 +262,17 @@ export default function Layout() {
           <SidebarTrigger className="-ml-2" />
           <div className="flex-1" />
           <div className="text-sm font-medium text-slate-700 hidden sm:flex items-center gap-2">
-            <span className="w-8 h-8 rounded-full bg-primary/10 text-primary flex items-center justify-center font-bold uppercase">
-              {user?.email?.[0]}
-            </span>
+            {profile?.foto_url ? (
+              <img
+                src={profile.foto_url}
+                alt={profile.nome_completo || 'Avatar'}
+                className="w-8 h-8 rounded-full object-cover border border-slate-200"
+              />
+            ) : (
+              <span className="w-8 h-8 rounded-full bg-primary/10 text-primary flex items-center justify-center font-bold uppercase">
+                {user?.email?.[0]}
+              </span>
+            )}
             {user?.email}
           </div>
         </header>

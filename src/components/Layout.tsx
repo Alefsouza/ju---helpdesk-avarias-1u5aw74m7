@@ -15,7 +15,15 @@ import {
   SidebarTrigger,
 } from '@/components/ui/sidebar'
 import { Button } from '@/components/ui/button'
-import { Ticket, User, LogOut, LayoutDashboard, LifeBuoy, ShieldAlert } from 'lucide-react'
+import {
+  Ticket,
+  User,
+  LogOut,
+  LayoutDashboard,
+  LifeBuoy,
+  ShieldAlert,
+  PlayCircle,
+} from 'lucide-react'
 import { Skeleton } from '@/components/ui/skeleton'
 import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase/client'
@@ -75,17 +83,30 @@ function AppSidebar() {
               </SidebarMenuItem>
 
               {isResp && (
-                <SidebarMenuItem>
-                  <SidebarMenuButton
-                    asChild
-                    isActive={location.pathname === '/dashboard/chamados-abertos'}
-                  >
-                    <Link to="/dashboard/chamados-abertos">
-                      <LifeBuoy />
-                      <span>Fila de Atendimento</span>
-                    </Link>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
+                <>
+                  <SidebarMenuItem>
+                    <SidebarMenuButton
+                      asChild
+                      isActive={location.pathname === '/dashboard/chamados-abertos'}
+                    >
+                      <Link to="/dashboard/chamados-abertos">
+                        <LifeBuoy />
+                        <span>Fila de Atendimento</span>
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                  <SidebarMenuItem>
+                    <SidebarMenuButton
+                      asChild
+                      isActive={location.pathname === '/dashboard/meus-atendimentos'}
+                    >
+                      <Link to="/dashboard/meus-atendimentos">
+                        <PlayCircle />
+                        <span>Meus Atendimentos</span>
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                </>
               )}
 
               {isAdmin && (

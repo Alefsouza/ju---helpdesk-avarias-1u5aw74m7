@@ -6,13 +6,6 @@ import { useToast } from '@/hooks/use-toast'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
-import {
   Table,
   TableBody,
   TableCell,
@@ -21,11 +14,11 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import { Skeleton } from '@/components/ui/skeleton'
-import { Search, Inbox, AlertCircle, ArrowRight } from 'lucide-react'
+import { Search, Inbox, AlertCircle, ArrowRight, CheckCircle2 } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent } from '@/components/ui/card'
 
-export default function ChamadosAbertos() {
+export default function MeusAtendimentos() {
   const { user } = useAuth()
   const { toast } = useToast()
   const navigate = useNavigate()
@@ -33,13 +26,9 @@ export default function ChamadosAbertos() {
   const [chamados, setChamados] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(false)
-
   const [searchTerm, setSearchTerm] = useState('')
   const [debouncedSearch, setDebouncedSearch] = useState('')
-  const [filterPriority, setFilterPriority] = useState<string>('todas')
-  const [filterDate, setFilterDate] = useState<string>('')
-
-  const [actionLoading, setActionLoading] = useState<string | null>(null)
+  const [completingId, setCompletingId] = useState<string | null>(null)
 
   useEffect(() => {
     const timer = setTimeout(() => setDebouncedSearch(searchTerm), 300)
@@ -47,13 +36,15 @@ export default function ChamadosAbertos() {
   }, [searchTerm])
 
   const fetchChamados = async () => {
+    if (!user) return
     setLoading(true)
     setError(false)
     try {
       const { data, error: err } = await supabase
         .from('chamados')
         .select('*')
-        .eq('status', 'aberto')
+        .eq('status', 'em_atendimento')
+        .eq('responsavel_id', user.id)
 
       if (err) throw err
 
@@ -91,35 +82,34 @@ export default function ChamadosAbertos() {
 
   useEffect(() => {
     fetchChamados()
-  }, [])
+  }, [user])
 
-  const handlePegarChamado = async (chamadoId: string, e?: React.MouseEvent) => {
+  const handleFinalizar = async (chamadoId: string, e?: React.MouseEvent) => {
     if (e) e.stopPropagation()
-    if (!user) return
+    if (!window.confirm('Tem certeza que deseja finalizar este chamado?')) return
 
-    setActionLoading(chamadoId)
+    setCompletingId(chamadoId)
     try {
       const { error: updateError } = await supabase
         .from('chamados')
-        .update({ status: 'em_atendimento', responsavel_id: user.id })
+        .update({ status: 'finalizado', atualizado_em: new Date().toISOString() })
         .eq('id', chamadoId)
 
       if (updateError) throw updateError
 
       const { error: histError } = await supabase
         .from('historico_chamado')
-        .insert({ chamado_id: chamadoId, usuario_id: user.id, acao: 'atribuido' })
+        .insert({ chamado_id: chamadoId, usuario_id: user?.id, acao: 'finalizado' })
 
       if (histError) throw histError
 
-      toast({ title: 'Chamado atribuído com sucesso!' })
-
+      toast({ title: 'Chamado finalizado com sucesso!' })
       setChamados((prev) => prev.filter((c) => c.id !== chamadoId))
-      navigate(`/dashboard/meus-atendimentos`)
     } catch (e) {
       console.error(e)
-      toast({ title: 'Erro ao atribuir chamado', variant: 'destructive' })
-      setActionLoading(null)
+      toast({ title: 'Erro ao finalizar chamado', variant: 'destructive' })
+    } finally {
+      setCompletingId(null)
     }
   }
 
@@ -151,24 +141,18 @@ export default function ChamadosAbertos() {
   const filteredChamados = chamados
     .filter((c) => {
       const term = debouncedSearch.toLowerCase()
-      const matchesSearch =
-        c.titulo.toLowerCase().includes(term) || c.id.toLowerCase().includes(term)
-      const matchesPriority = filterPriority === 'todas' || c.prioridade === filterPriority
-      const matchesDate = !filterDate || c.criado_em.startsWith(filterDate)
-      return matchesSearch && matchesPriority && matchesDate
+      return c.titulo.toLowerCase().includes(term) || c.id.toLowerCase().includes(term)
     })
-    .sort((a, b) => {
-      const p: Record<string, number> = { alta: 3, media: 2, baixa: 1 }
-      if (p[a.prioridade] !== p[b.prioridade]) return p[b.prioridade] - p[a.prioridade]
-      return new Date(a.criado_em).getTime() - new Date(b.criado_em).getTime()
-    })
+    .sort((a, b) => new Date(b.atualizado_em).getTime() - new Date(a.atualizado_em).getTime())
 
   return (
     <div className="space-y-6 max-w-6xl mx-auto p-2 sm:p-4 animate-fade-in-up">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight text-slate-900">Fila de Atendimento</h1>
-          <p className="text-slate-500">Acompanhe e atribua os chamados aguardando atendimento.</p>
+          <h1 className="text-3xl font-bold tracking-tight text-slate-900">Meus Atendimentos</h1>
+          <p className="text-slate-500">
+            Gerencie os chamados que você assumiu e estão em atendimento.
+          </p>
         </div>
       </div>
 
@@ -177,68 +161,37 @@ export default function ChamadosAbertos() {
           <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-slate-500" />
           <Input
             placeholder="Buscar por ID ou título..."
-            className="pl-9 bg-white shadow-sm"
+            className="pl-9 bg-white shadow-sm max-w-md"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
           />
-        </div>
-        <div className="flex gap-2 w-full sm:w-auto">
-          <Input
-            type="date"
-            className="bg-white shadow-sm w-full sm:w-[150px]"
-            value={filterDate}
-            onChange={(e) => setFilterDate(e.target.value)}
-          />
-          <Select value={filterPriority} onValueChange={setFilterPriority}>
-            <SelectTrigger className="w-full sm:w-[150px] bg-white shadow-sm">
-              <SelectValue placeholder="Prioridade" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="todas">Todas</SelectItem>
-              <SelectItem value="alta">Alta</SelectItem>
-              <SelectItem value="media">Média</SelectItem>
-              <SelectItem value="baixa">Baixa</SelectItem>
-            </SelectContent>
-          </Select>
         </div>
       </div>
 
       {loading ? (
         <div className="bg-white rounded-lg border shadow-sm p-4 space-y-4">
-          {[1, 2, 3, 4, 5].map((i) => (
-            <Skeleton key={i} className="h-14 w-full" />
+          {[1, 2, 3].map((i) => (
+            <Skeleton key={i} className="h-16 w-full" />
           ))}
         </div>
       ) : error ? (
         <div className="text-center py-16 bg-white rounded-lg border shadow-sm">
           <AlertCircle className="h-12 w-12 mx-auto text-red-500 mb-4" />
           <h3 className="text-lg font-medium text-slate-900">Erro ao carregar chamados</h3>
-          <p className="text-slate-500 mb-6">Ocorreu um problema ao buscar os dados da fila.</p>
+          <p className="text-slate-500 mb-6">Ocorreu um problema ao buscar seus atendimentos.</p>
           <Button onClick={fetchChamados}>Tentar novamente</Button>
         </div>
       ) : filteredChamados.length === 0 ? (
         <div className="text-center py-16 bg-white rounded-lg border shadow-sm">
           <Inbox className="h-12 w-12 mx-auto text-slate-300 mb-4" />
-          <h3 className="text-lg font-medium text-slate-900">Nenhum chamado aberto</h3>
+          <h3 className="text-lg font-medium text-slate-900">Nenhum atendimento em curso</h3>
           <p className="text-slate-500 mb-6 max-w-sm mx-auto">
-            Não há chamados aguardando atendimento ou nenhum corresponde aos filtros.
+            Você não possui chamados em atendimento no momento. Volte para a Fila de Atendimento
+            para pegar novos chamados.
           </p>
-          {searchTerm || filterDate || filterPriority !== 'todas' ? (
-            <Button
-              variant="outline"
-              onClick={() => {
-                setSearchTerm('')
-                setFilterDate('')
-                setFilterPriority('todas')
-              }}
-            >
-              Limpar filtros
-            </Button>
-          ) : (
-            <Button variant="outline" onClick={() => navigate(-1)}>
-              Voltar
-            </Button>
-          )}
+          <Button onClick={() => navigate('/dashboard/chamados-abertos')}>
+            Ir para Fila de Atendimento
+          </Button>
         </div>
       ) : (
         <>
@@ -251,17 +204,14 @@ export default function ChamadosAbertos() {
                   <TableHead>Título / Assunto</TableHead>
                   <TableHead>Solicitante</TableHead>
                   <TableHead>Prioridade</TableHead>
-                  <TableHead>Data</TableHead>
-                  <TableHead className="text-right">Ação</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead>Última Atualização</TableHead>
+                  <TableHead className="text-right">Ações</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {filteredChamados.map((c) => (
-                  <TableRow
-                    key={c.id}
-                    className="cursor-pointer hover:bg-slate-50/80 transition-colors group"
-                    onClick={() => navigateToDetails(c.id)}
-                  >
+                  <TableRow key={c.id} className="hover:bg-slate-50/80 transition-colors">
                     <TableCell className="font-mono text-xs text-slate-500">{c.id}</TableCell>
                     <TableCell>
                       <div className="font-medium text-slate-900 line-clamp-1">{c.titulo}</div>
@@ -273,19 +223,34 @@ export default function ChamadosAbertos() {
                     <TableCell>
                       <PriorityBadge priority={c.prioridade} />
                     </TableCell>
-                    <TableCell className="text-sm text-slate-500 whitespace-nowrap">
-                      {formatDate(c.criado_em)}
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <Button
-                        size="sm"
-                        className="opacity-0 group-hover:opacity-100 focus:opacity-100 transition-opacity"
-                        onClick={(e) => handlePegarChamado(c.id, e)}
-                        disabled={actionLoading === c.id}
+                    <TableCell>
+                      <Badge
+                        variant="outline"
+                        className="bg-yellow-100 text-yellow-800 border-yellow-200"
                       >
-                        {actionLoading === c.id ? 'Atribuindo...' : 'Pegar chamado'}
-                        {!actionLoading && <ArrowRight className="ml-2 h-4 w-4" />}
-                      </Button>
+                        EM ATENDIMENTO
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="text-sm text-slate-500 whitespace-nowrap">
+                      {formatDate(c.atualizado_em)}
+                    </TableCell>
+                    <TableCell className="text-right whitespace-nowrap">
+                      <div className="flex justify-end gap-2">
+                        <Button variant="outline" size="sm" onClick={() => navigateToDetails(c.id)}>
+                          Continuar
+                          <ArrowRight className="ml-2 h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="default"
+                          size="sm"
+                          className="bg-green-600 hover:bg-green-700 text-white"
+                          onClick={(e) => handleFinalizar(c.id, e)}
+                          disabled={completingId === c.id}
+                        >
+                          <CheckCircle2 className="mr-2 h-4 w-4" />
+                          {completingId === c.id ? 'Finalizando...' : 'Finalizar'}
+                        </Button>
+                      </div>
                     </TableCell>
                   </TableRow>
                 ))}
@@ -296,11 +261,7 @@ export default function ChamadosAbertos() {
           {/* Mobile Cards */}
           <div className="md:hidden space-y-4">
             {filteredChamados.map((c) => (
-              <Card
-                key={c.id}
-                className="cursor-pointer hover:border-slate-300 transition-colors"
-                onClick={() => navigateToDetails(c.id)}
-              >
+              <Card key={c.id} className="border-slate-200">
                 <CardContent className="p-4 space-y-4">
                   <div className="flex justify-between items-start gap-2">
                     <div className="flex-1 min-w-0">
@@ -308,22 +269,42 @@ export default function ChamadosAbertos() {
                       <h3 className="font-semibold text-slate-900 line-clamp-1">{c.titulo}</h3>
                       <p className="text-sm text-slate-500 line-clamp-1">{c.assunto}</p>
                     </div>
-                    <PriorityBadge priority={c.prioridade} />
                   </div>
+
+                  <div className="flex gap-2">
+                    <PriorityBadge priority={c.prioridade} />
+                    <Badge
+                      variant="outline"
+                      className="bg-yellow-100 text-yellow-800 border-yellow-200"
+                    >
+                      EM ATENDIMENTO
+                    </Badge>
+                  </div>
+
                   <div className="flex justify-between items-center text-sm text-slate-500 bg-slate-50 p-2 rounded-md">
                     <span className="font-medium text-slate-700 truncate mr-2">
                       {c.nome_usuario}
                     </span>
-                    <span className="whitespace-nowrap">{formatDate(c.criado_em)}</span>
+                    <span className="whitespace-nowrap">{formatDate(c.atualizado_em)}</span>
                   </div>
-                  <Button
-                    className="w-full"
-                    onClick={(e) => handlePegarChamado(c.id, e)}
-                    disabled={actionLoading === c.id}
-                  >
-                    {actionLoading === c.id ? 'Atribuindo...' : 'Pegar chamado'}
-                    {!actionLoading && <ArrowRight className="ml-2 h-4 w-4" />}
-                  </Button>
+
+                  <div className="flex gap-2 pt-2 border-t">
+                    <Button
+                      variant="outline"
+                      className="flex-1"
+                      onClick={() => navigateToDetails(c.id)}
+                    >
+                      Continuar
+                    </Button>
+                    <Button
+                      className="flex-1 bg-green-600 hover:bg-green-700"
+                      onClick={(e) => handleFinalizar(c.id, e)}
+                      disabled={completingId === c.id}
+                    >
+                      <CheckCircle2 className="mr-2 h-4 w-4" />
+                      {completingId === c.id ? '...' : 'Finalizar'}
+                    </Button>
+                  </div>
                 </CardContent>
               </Card>
             ))}

@@ -51,8 +51,8 @@ function AppSidebar() {
                 </SidebarMenuButton>
               </SidebarMenuItem>
               <SidebarMenuItem>
-                <SidebarMenuButton asChild>
-                  <Link to="/dashboard">
+                <SidebarMenuButton asChild isActive={location.pathname === '/dashboard/perfil'}>
+                  <Link to="/dashboard/perfil">
                     <User />
                     <span>Perfil</span>
                   </Link>

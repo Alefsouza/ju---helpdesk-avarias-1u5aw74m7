@@ -231,7 +231,7 @@ export default function Layout() {
       <main className="min-h-screen flex flex-col items-center justify-center bg-slate-50 p-4 sm:p-8">
         <div className="mb-8 flex items-center gap-2 text-primary font-bold text-2xl animate-fade-in-down">
           <LifeBuoy className="h-8 w-8" />
-          Via Sudeste Helpdesk
+          Via Sudeste
         </div>
         <div className="w-full max-w-[400px]">
           <Outlet />

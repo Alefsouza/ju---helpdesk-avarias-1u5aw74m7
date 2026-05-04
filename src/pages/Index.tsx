@@ -73,7 +73,6 @@ export default function Index() {
   return (
     <Card className="border-slate-200 shadow-sm">
       <CardHeader className="space-y-1">
-        <CardTitle className="text-2xl font-bold text-center">Entrar no Helpdesk</CardTitle>
         <CardDescription className="text-center">
           Insira seu e-mail e senha para acessar sua conta
         </CardDescription>
@@ -141,10 +140,6 @@ export default function Index() {
           <Link to="/cadastro" className="text-primary hover:underline font-medium">
             Cadastre-se
           </Link>
-        </div>
-        <div className="text-xs text-center text-slate-400 mt-4 px-4 bg-slate-50 p-2 rounded-md border border-slate-100">
-          Demo: Use <strong>admin@helpdesk.com</strong> e senha <strong>12345678</strong> ou
-          cadastre um novo.
         </div>
       </CardFooter>
     </Card>

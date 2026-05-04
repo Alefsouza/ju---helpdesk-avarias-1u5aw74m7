@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import * as z from 'zod'
-import { supabase } from '@/lib/supabase'
+import { supabase } from '@/lib/supabase/client'
 import { useToast } from '@/hooks/use-toast'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -21,6 +21,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert'
 
 const formSchema = z
   .object({
+    nome_completo: z.string().min(3, 'Nome é obrigatório'),
     email: z.string().email('E-mail inválido'),
     password: z.string().min(8, 'A senha deve ter pelo menos 8 caracteres'),
     confirmPassword: z.string(),
@@ -38,7 +39,7 @@ export default function Register() {
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
-    defaultValues: { email: '', password: '', confirmPassword: '' },
+    defaultValues: { nome_completo: '', email: '', password: '', confirmPassword: '' },
   })
 
   const onSubmit = async (values: z.infer<typeof formSchema>) => {
@@ -48,6 +49,11 @@ export default function Register() {
     const { error: signUpError } = await supabase.auth.signUp({
       email: values.email,
       password: values.password,
+      options: {
+        data: {
+          full_name: values.nome_completo,
+        },
+      },
     })
 
     setIsLoading(false)
@@ -106,6 +112,27 @@ export default function Register() {
               <AlertDescription className="ml-2">{error}</AlertDescription>
             </Alert>
           )}
+          <div className="space-y-2">
+            <Label htmlFor="nome_completo">
+              Nome Completo <span className="text-red-500">*</span>
+            </Label>
+            <Input
+              id="nome_completo"
+              placeholder="Seu nome"
+              {...form.register('nome_completo')}
+              className={
+                form.formState.errors.nome_completo
+                  ? 'border-red-500 focus-visible:ring-red-500'
+                  : ''
+              }
+              disabled={isLoading}
+            />
+            {form.formState.errors.nome_completo && (
+              <p className="text-sm text-red-500 animate-fade-in">
+                {form.formState.errors.nome_completo.message}
+              </p>
+            )}
+          </div>
           <div className="space-y-2">
             <Label htmlFor="email">
               E-mail <span className="text-red-500">*</span>

@@ -5,6 +5,9 @@ import { TooltipProvider } from '@/components/ui/tooltip'
 import Index from './pages/Index'
 import Register from './pages/Register'
 import Dashboard from './pages/Dashboard'
+import MeusChamados from './pages/dashboard/MeusChamados'
+import ChamadosAbertos from './pages/dashboard/ChamadosAbertos'
+import AdminDashboard from './pages/dashboard/Admin'
 import NotFound from './pages/NotFound'
 import Layout from './components/Layout'
 import { AuthProvider } from './hooks/use-auth'
@@ -20,6 +23,9 @@ const App = () => (
             <Route path="/" element={<Index />} />
             <Route path="/cadastro" element={<Register />} />
             <Route path="/dashboard" element={<Dashboard />} />
+            <Route path="/dashboard/meus-chamados" element={<MeusChamados />} />
+            <Route path="/dashboard/chamados-abertos" element={<ChamadosAbertos />} />
+            <Route path="/dashboard/admin" element={<AdminDashboard />} />
           </Route>
           <Route path="*" element={<NotFound />} />
         </Routes>

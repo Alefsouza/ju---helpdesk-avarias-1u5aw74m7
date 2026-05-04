@@ -52,10 +52,10 @@ function AppSidebar() {
 
   return (
     <Sidebar>
-      <SidebarHeader className="h-16 flex items-center justify-center border-b px-4 bg-sidebar">
-        <div className="flex items-center gap-2 font-bold text-lg text-primary">
-          <LifeBuoy className="h-6 w-6" />
-          <span>Helpdesk</span>
+      <SidebarHeader className="h-16 flex items-center justify-center border-b border-sidebar-border px-4 bg-sidebar">
+        <div className="flex items-center gap-2 font-bold text-lg text-sidebar-foreground">
+          <LifeBuoy className="h-6 w-6 text-sidebar-primary" />
+          <span>Via Sudeste</span>
         </div>
       </SidebarHeader>
       <SidebarContent>
@@ -142,7 +142,7 @@ function AppSidebar() {
           </div>
           <Button
             variant="ghost"
-            className="w-full justify-start text-red-600 hover:text-red-700 hover:bg-red-50 transition-colors"
+            className="w-full justify-start text-red-400 hover:text-red-300 hover:bg-white/10 transition-colors"
             onClick={signOut}
           >
             <LogOut className="mr-2 h-4 w-4" />
@@ -223,7 +223,7 @@ export default function Layout() {
       <main className="min-h-screen flex flex-col items-center justify-center bg-slate-50 p-4 sm:p-8">
         <div className="mb-8 flex items-center gap-2 text-primary font-bold text-2xl animate-fade-in-down">
           <LifeBuoy className="h-8 w-8" />
-          Helpdesk
+          Via Sudeste Helpdesk
         </div>
         <div className="w-full max-w-[400px]">
           <Outlet />

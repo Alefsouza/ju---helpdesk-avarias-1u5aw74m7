@@ -11,8 +11,8 @@ export function DashboardCards({ chamados }: { chamados: any[] }) {
   const renderTrend = (up: boolean, val: string) => (
     <div
       className={cn(
-        'flex items-center text-xs mt-1 font-medium',
-        up ? 'text-emerald-600' : 'text-red-600',
+        'flex items-center text-[12px] mt-1 font-medium',
+        up ? 'text-[#225f3d]' : 'text-slate-400',
       )}
     >
       {up ? <TrendingUp className="h-3 w-3 mr-1" /> : <TrendingDown className="h-3 w-3 mr-1" />}
@@ -34,15 +34,20 @@ export function DashboardCards({ chamados }: { chamados: any[] }) {
   ]
 
   return (
-    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4 mb-6">
       {cards.map((card, i) => (
-        <Card key={i} className="border-slate-200 bg-white">
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-slate-600">{card.title}</CardTitle>
-            <card.icon className="h-4 w-4 text-emerald-700" />
+        <Card
+          key={i}
+          className="border-[#f0f0f0] bg-white transition-all duration-200 hover:shadow-subtle"
+        >
+          <CardHeader className="flex flex-row items-center justify-between pb-2 px-6 pt-6">
+            <CardTitle className="text-[14px] font-medium text-[#212121]">{card.title}</CardTitle>
+            <card.icon className="h-4 w-4 text-[#225f3d]" />
           </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-emerald-800">{card.value}</div>
+          <CardContent className="px-6 pb-6">
+            <div className="text-[32px] font-bold text-[#225f3d] leading-none mb-1">
+              {card.value}
+            </div>
             {renderTrend(card.up, card.trend)}
           </CardContent>
         </Card>

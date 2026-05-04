@@ -91,20 +91,20 @@ export function DashboardTable({
   }
 
   return (
-    <Card className="flex-1 shadow-sm">
+    <Card className="flex-1 shadow-sm border-[#f0f0f0] transition-all duration-200 hover:shadow-subtle">
       <CardContent className="p-4 sm:p-6 space-y-6">
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
           <div className="relative">
             <Search className="absolute left-3 top-3 h-4 w-4 text-slate-400" />
             <Input
-              className="pl-9 bg-slate-50"
+              className="pl-9 bg-[#f0f0f0] border-[#f0f0f0] text-[#212121] placeholder:text-slate-500"
               placeholder="Buscar ID ou Título..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
             />
           </div>
           <Select value={period} onValueChange={setPeriod}>
-            <SelectTrigger className="bg-slate-50">
+            <SelectTrigger className="bg-[#f0f0f0] border-[#f0f0f0] text-[#212121]">
               <SelectValue placeholder="Período" />
             </SelectTrigger>
             <SelectContent>
@@ -115,7 +115,7 @@ export function DashboardTable({
             </SelectContent>
           </Select>
           <Select value={status} onValueChange={setStatus}>
-            <SelectTrigger className="bg-slate-50">
+            <SelectTrigger className="bg-[#f0f0f0] border-[#f0f0f0] text-[#212121]">
               <SelectValue placeholder="Status" />
             </SelectTrigger>
             <SelectContent>
@@ -126,7 +126,7 @@ export function DashboardTable({
             </SelectContent>
           </Select>
           <Select value={prioridade} onValueChange={setPrioridade}>
-            <SelectTrigger className="bg-slate-50">
+            <SelectTrigger className="bg-[#f0f0f0] border-[#f0f0f0] text-[#212121]">
               <SelectValue placeholder="Prioridade" />
             </SelectTrigger>
             <SelectContent>
@@ -137,7 +137,7 @@ export function DashboardTable({
             </SelectContent>
           </Select>
           <Select value={resp} onValueChange={setResp}>
-            <SelectTrigger className="bg-slate-50">
+            <SelectTrigger className="bg-[#f0f0f0] border-[#f0f0f0] text-[#212121]">
               <SelectValue placeholder="Responsável" />
             </SelectTrigger>
             <SelectContent>
@@ -153,7 +153,7 @@ export function DashboardTable({
         </div>
 
         {filtered.length === 0 ? (
-          <div className="flex flex-col items-center justify-center p-12 text-center border rounded-lg border-dashed">
+          <div className="flex flex-col items-center justify-center p-12 text-center border-[#f0f0f0] rounded-lg border-dashed">
             <FilterX className="h-10 w-10 text-slate-400 mb-3" />
             <h3 className="text-lg font-medium">Nenhum chamado encontrado</h3>
             <p className="text-slate-500 mb-4 text-sm">
@@ -165,22 +165,39 @@ export function DashboardTable({
           </div>
         ) : (
           <>
-            <div className="hidden md:block rounded-md border overflow-x-auto">
+            <div className="hidden md:block rounded-md border border-[#f0f0f0] overflow-x-auto">
               <Table>
                 <TableHeader>
-                  <TableRow className="bg-slate-50">
-                    <TableHead className="w-[100px]">ID</TableHead>
-                    <TableHead>Título</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Prioridade</TableHead>
-                    <TableHead>Responsável</TableHead>
-                    <TableHead>Criado em</TableHead>
-                    <TableHead className="text-right">Ação</TableHead>
+                  <TableRow className="bg-[#c8e6c9] hover:bg-[#c8e6c9]/90 border-[#f0f0f0]">
+                    <TableHead className="w-[100px] text-[#225f3d] font-semibold text-[14px]">
+                      ID
+                    </TableHead>
+                    <TableHead className="text-[#225f3d] font-semibold text-[14px]">
+                      Título
+                    </TableHead>
+                    <TableHead className="text-[#225f3d] font-semibold text-[14px]">
+                      Status
+                    </TableHead>
+                    <TableHead className="text-[#225f3d] font-semibold text-[14px]">
+                      Prioridade
+                    </TableHead>
+                    <TableHead className="text-[#225f3d] font-semibold text-[14px]">
+                      Responsável
+                    </TableHead>
+                    <TableHead className="text-[#225f3d] font-semibold text-[14px]">
+                      Criado em
+                    </TableHead>
+                    <TableHead className="text-right text-[#225f3d] font-semibold text-[14px]">
+                      Ação
+                    </TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {filtered.map((c) => (
-                    <TableRow key={c.id}>
+                    <TableRow
+                      key={c.id}
+                      className="border-[#f0f0f0] odd:bg-white even:bg-[#fbfbfb] hover:bg-[#f0f0f0]/50 transition-colors"
+                    >
                       <TableCell className="font-mono text-xs text-slate-500">
                         {c.id.split('-')[0].toUpperCase()}
                       </TableCell>
@@ -204,7 +221,12 @@ export function DashboardTable({
                         {format(new Date(c.criado_em), 'dd/MM/yyyy HH:mm')}
                       </TableCell>
                       <TableCell className="text-right">
-                        <Button asChild variant="ghost" size="sm">
+                        <Button
+                          asChild
+                          variant="ghost"
+                          size="sm"
+                          className="text-[#225f3d] hover:text-[#225f3d] hover:bg-[#c8e6c9]/50"
+                        >
                           <Link to={`/dashboard/chamados/${c.id}`}>
                             <ExternalLink className="h-4 w-4 mr-2" /> Ver detalhes
                           </Link>
@@ -218,7 +240,10 @@ export function DashboardTable({
 
             <div className="md:hidden space-y-4">
               {filtered.map((c) => (
-                <Card key={c.id} className="border border-slate-200 shadow-sm">
+                <Card
+                  key={c.id}
+                  className="border-[#f0f0f0] shadow-sm hover:shadow-subtle transition-all"
+                >
                   <CardContent className="p-4 space-y-3">
                     <div className="flex justify-between items-start">
                       <div className="space-y-1">

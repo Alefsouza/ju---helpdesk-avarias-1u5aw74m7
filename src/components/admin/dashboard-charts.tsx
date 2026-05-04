@@ -3,15 +3,15 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart'
 
 const statusColors = {
-  aberto: '#166534',
-  em_atendimento: '#22c55e',
-  finalizado: '#9ca3af',
+  aberto: '#225f3d', // verde escuro
+  em_atendimento: '#c8e6c9', // verde claro
+  finalizado: '#f0f0f0', // cinza claro
 }
 
 const priorityColors = {
-  baixa: '#9ca3af',
-  media: '#f97316',
-  alta: '#ef4444',
+  baixa: '#f0f0f0', // cinza claro
+  media: '#c8e6c9', // verde claro
+  alta: '#225f3d', // verde escuro
 }
 
 export function DashboardCharts({ chamados }: { chamados: any[] }) {
@@ -64,10 +64,10 @@ export function DashboardCharts({ chamados }: { chamados: any[] }) {
   }
 
   return (
-    <div className="grid gap-4 md:grid-cols-2">
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base font-medium text-slate-700">
+    <div className="grid gap-4 md:grid-cols-2 mb-6">
+      <Card className="border-[#f0f0f0] transition-all duration-200 hover:shadow-subtle">
+        <CardHeader className="p-6 pb-2">
+          <CardTitle className="text-[24px] font-semibold text-[#225f3d]">
             Distribuição por Status
           </CardTitle>
         </CardHeader>
@@ -83,7 +83,8 @@ export function DashboardCharts({ chamados }: { chamados: any[] }) {
                   cy="50%"
                   innerRadius={60}
                   outerRadius={80}
-                  paddingAngle={5}
+                  paddingAngle={2}
+                  stroke="none"
                 >
                   {statusData.map((entry, index) => (
                     <Cell key={index} fill={entry.fill} />
@@ -95,9 +96,9 @@ export function DashboardCharts({ chamados }: { chamados: any[] }) {
           </ChartContainer>
         </CardContent>
       </Card>
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base font-medium text-slate-700">
+      <Card className="border-[#f0f0f0] transition-all duration-200 hover:shadow-subtle">
+        <CardHeader className="p-6 pb-2">
+          <CardTitle className="text-[24px] font-semibold text-[#225f3d]">
             Chamados por Prioridade
           </CardTitle>
         </CardHeader>
@@ -105,8 +106,14 @@ export function DashboardCharts({ chamados }: { chamados: any[] }) {
           <ChartContainer config={prioConfig} className="h-[300px] w-full">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={prioData} margin={{ top: 20, right: 20, bottom: 20, left: 0 }}>
-                <XAxis dataKey="name" fontSize={12} tickLine={false} axisLine={false} />
-                <YAxis fontSize={12} tickLine={false} axisLine={false} />
+                <XAxis
+                  dataKey="name"
+                  fontSize={12}
+                  tickLine={false}
+                  axisLine={false}
+                  tick={{ fill: '#212121' }}
+                />
+                <YAxis fontSize={12} tickLine={false} axisLine={false} tick={{ fill: '#212121' }} />
                 <ChartTooltip content={<ChartTooltipContent />} />
                 <Bar dataKey="value" radius={[4, 4, 0, 0]} maxBarSize={50}>
                   {prioData.map((entry, index) => (

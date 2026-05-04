@@ -203,13 +203,27 @@ export default function ChamadoDetalhes() {
       setSubmitting(false)
       return
     }
+
+    const isSupportUser =
+      currentUserProfile?.tipo_usuario === 'responsavel' ||
+      currentUserProfile?.tipo_usuario === 'admin'
+
+    if (!isSupportUser && chamado?.status === 'em_atendimento') {
+      await supabase
+        .from('chamados')
+        .update({ status: 'aberto', atualizado_em: new Date().toISOString() })
+        .eq('id', id)
+    }
+
     await supabase.from('historico_chamado').insert({
       chamado_id: id,
       acao: 'respondido',
       usuario_id: user?.id,
     })
+
     setMensagem('')
     setSubmitting(false)
+    toast.success('Resposta enviada')
   }
 
   const handleFinalizar = async () => {

@@ -419,8 +419,10 @@ export const Constants = {
 //   Policy "chamados_update" (UPDATE, PERMISSIVE) roles={authenticated}
 //     USING: ((usuario_id = auth.uid()) OR (is_responsavel() AND ((responsavel_id = auth.uid()) OR (status = 'aberto'::text))) OR is_admin())
 // Table: historico_chamado
-//   Policy "historico_select" (SELECT, PERMISSIVE) roles={authenticated}
-//     USING: (is_admin() OR (chamado_id IN ( SELECT chamados.id    FROM chamados   WHERE (chamados.usuario_id = auth.uid()))))
+//   Policy "Permitir INSERT para responsáveis e admin" (INSERT, PERMISSIVE) roles={authenticated}
+//     WITH CHECK: (auth.uid() IS NOT NULL)
+//   Policy "Permitir SELECT para admin e responsáveis" (SELECT, PERMISSIVE) roles={authenticated}
+//     USING: ((( SELECT perfil_usuario.tipo_usuario    FROM perfil_usuario   WHERE (perfil_usuario.id = auth.uid())) = 'admin'::text) OR (( SELECT perfil_usuario.tipo_usuario    FROM perfil_usuario   WHERE (perfil_usuario.id = auth.uid())) = 'responsavel'::text) OR (chamado_id IN ( SELECT chamados.id    FROM chamados   WHERE (chamados.usuario_id = auth.uid()))))
 // Table: perfil_usuario
 //   Policy "perfil_select" (SELECT, PERMISSIVE) roles={authenticated}
 //     USING: ((id = auth.uid()) OR is_admin())

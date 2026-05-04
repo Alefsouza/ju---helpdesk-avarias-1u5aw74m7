@@ -43,7 +43,6 @@ function AppSidebar() {
     <Sidebar>
       <SidebarHeader className="h-16 flex items-center justify-center border-b border-sidebar-border px-4 bg-sidebar">
         <div className="flex items-center gap-2 font-bold text-lg text-sidebar-foreground">
-          <LifeBuoy className="h-6 w-6 text-sidebar-primary" />
           <span>Via Sudeste</span>
         </div>
       </SidebarHeader>

@@ -17,6 +17,9 @@ import {
 import { Button } from '@/components/ui/button'
 import { Ticket, User, LogOut, LayoutDashboard, LifeBuoy } from 'lucide-react'
 import { Skeleton } from '@/components/ui/skeleton'
+import { useEffect } from 'react'
+import { supabase } from '@/lib/supabase/client'
+import { toast } from 'sonner'
 
 function AppSidebar() {
   const { user, signOut } = useAuth()
@@ -84,10 +87,47 @@ function AppSidebar() {
   )
 }
 
+function useRealtimeNotifications(userId: string | undefined) {
+  useEffect(() => {
+    if (!userId) return
+
+    const channel = supabase
+      .channel('global_notifications')
+      .on(
+        'postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'respostas_chamado' },
+        async (payload) => {
+          if (payload.new.usuario_id !== userId) {
+            const { data } = await supabase
+              .from('chamados')
+              .select('usuario_id, id')
+              .eq('id', payload.new.chamado_id)
+              .single()
+
+            if (data && data.usuario_id === userId) {
+              const shortId = data.id.split('-')[0].toUpperCase()
+              toast.info(`Seu chamado #${shortId} foi respondido!`, {
+                position: 'bottom-right',
+                duration: 5000,
+              })
+            }
+          }
+        },
+      )
+      .subscribe()
+
+    return () => {
+      supabase.removeChannel(channel)
+    }
+  }, [userId])
+}
+
 export default function Layout() {
   const { user, loading } = useAuth()
   const location = useLocation()
   const isAuthRoute = location.pathname === '/' || location.pathname === '/cadastro'
+
+  useRealtimeNotifications(user?.id)
 
   if (loading) {
     return (

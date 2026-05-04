@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react'
 import { Navigate } from 'react-router-dom'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { Activity, UserCog } from 'lucide-react'
+import { Activity, UserCog, Users } from 'lucide-react'
 import { VisaoGeral } from '@/components/admin/visao-geral'
 import { GestaoEquipe } from '@/components/admin/gestao-equipe'
+import { GerenciarUsuarios } from '@/components/admin/gerenciar-usuarios'
 import { useAuth } from '@/hooks/use-auth'
 import { supabase } from '@/lib/supabase/client'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -51,6 +52,9 @@ export default function AdminDashboard() {
           <TabsTrigger value="equipe" className="flex gap-2">
             <UserCog className="h-4 w-4" /> Equipe
           </TabsTrigger>
+          <TabsTrigger value="usuarios" className="flex gap-2">
+            <Users className="h-4 w-4" /> Todos Usuários
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="geral" className="space-y-6">
@@ -59,6 +63,10 @@ export default function AdminDashboard() {
 
         <TabsContent value="equipe" className="space-y-6">
           <GestaoEquipe />
+        </TabsContent>
+
+        <TabsContent value="usuarios" className="space-y-6">
+          <GerenciarUsuarios />
         </TabsContent>
       </Tabs>
     </div>

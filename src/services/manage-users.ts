@@ -15,3 +15,9 @@ export const deleteAdminUser = async (userId: string) => {
     body: { action: 'delete', userId },
   })
 }
+
+export const changePasswordUser = async (userId: string, newPassword: string, email: string) => {
+  return await supabase.functions.invoke('manage-users', {
+    body: { action: 'change_password', userId, newPassword, email },
+  })
+}

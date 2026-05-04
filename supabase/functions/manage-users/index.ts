@@ -77,6 +77,28 @@ Deno.serve(async (req: Request) => {
       })
     }
 
+    if (action === 'change_password') {
+      const { userId, newPassword } = body
+
+      const { error: updateError } = await supabaseAdmin.auth.admin.updateUserById(userId, {
+        password: newPassword,
+      })
+
+      if (updateError) throw updateError
+
+      const { error: auditError } = await supabaseAdmin.from('auditoria_admin').insert({
+        admin_id: user.id,
+        usuario_id: userId,
+        acao: 'alteracao_senha',
+      })
+
+      if (auditError) console.error('Erro ao registrar auditoria:', auditError)
+
+      return new Response(JSON.stringify({ success: true }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      })
+    }
+
     throw new Error('Invalid action')
   } catch (error: any) {
     return new Response(JSON.stringify({ error: error.message }), {

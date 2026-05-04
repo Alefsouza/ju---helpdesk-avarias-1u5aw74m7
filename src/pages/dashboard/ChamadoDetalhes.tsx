@@ -423,11 +423,17 @@ export default function ChamadoDetalhes() {
   }
 
   const loadResponsaveis = async () => {
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from('perfil_usuario')
-      .select('*')
-      .in('tipo_usuario', ['responsavel', 'admin'])
+      .select('id, nome_completo, email')
+      .eq('tipo_usuario', 'responsavel')
       .neq('id', chamado?.responsavel_id || '00000000-0000-0000-0000-000000000000')
+      .order('nome_completo', { ascending: true })
+
+    if (error) {
+      toast.error('Erro ao carregar responsáveis. Tente novamente')
+      return
+    }
 
     if (data) {
       setAvailableResponsaveis(data)
@@ -441,6 +447,11 @@ export default function ChamadoDetalhes() {
 
   const handleTransferir = async () => {
     if (!selectedResponsavel) return
+
+    if (selectedResponsavel === chamado?.responsavel_id) {
+      toast.error('Selecione um responsável diferente')
+      return
+    }
 
     const novoResponsavel = availableResponsaveis.find((r) => r.id === selectedResponsavel)
     if (
@@ -1062,18 +1073,23 @@ export default function ChamadoDetalhes() {
                 onValueChange={setSelectedResponsavel}
                 disabled={transferLoading}
               >
-                <SelectTrigger>
+                <SelectTrigger className="h-auto py-2 min-h-[40px]">
                   <SelectValue placeholder="Selecione um responsável" />
                 </SelectTrigger>
                 <SelectContent>
                   {availableResponsaveis.length === 0 ? (
-                    <div className="p-2 text-sm text-slate-500">
+                    <div className="p-3 text-sm text-slate-500 text-center">
                       Nenhum outro responsável disponível
                     </div>
                   ) : (
                     availableResponsaveis.map((resp) => (
                       <SelectItem key={resp.id} value={resp.id}>
-                        {resp.nome_completo}
+                        <div className="flex flex-col text-left py-0.5">
+                          <span className="font-medium leading-none">{resp.nome_completo}</span>
+                          <span className="text-[11px] text-slate-500 mt-1.5 leading-none">
+                            {resp.email}
+                          </span>
+                        </div>
                       </SelectItem>
                     ))
                   )}

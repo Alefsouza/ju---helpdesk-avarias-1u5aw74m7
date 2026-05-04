@@ -150,8 +150,9 @@ export default function ChamadoDetalhes() {
       .from('perfil_usuario')
       .select('*')
       .eq('id', chamadoData.usuario_id)
-      .single()
-    if (solicitanteData) setSolicitante(solicitanteData)
+      .maybeSingle()
+
+    setSolicitante(solicitanteData || null)
 
     if (user) {
       const { data: currUser } = await supabase
@@ -423,12 +424,17 @@ export default function ChamadoDetalhes() {
   }
 
   const loadResponsaveis = async () => {
-    const { data, error } = await supabase
+    let query = supabase
       .from('perfil_usuario')
       .select('id, nome_completo, email')
       .eq('tipo_usuario', 'responsavel')
-      .neq('id', chamado?.responsavel_id || '00000000-0000-0000-0000-000000000000')
       .order('nome_completo', { ascending: true })
+
+    if (chamado?.responsavel_id) {
+      query = query.neq('id', chamado.responsavel_id)
+    }
+
+    const { data, error } = await query
 
     if (error) {
       toast.error('Erro ao carregar responsáveis. Tente novamente')
@@ -768,12 +774,12 @@ export default function ChamadoDetalhes() {
                 })}
               </span>
             </div>
-            {solicitante && (
-              <div className="flex items-center gap-1 mt-1">
-                <User className="h-4 w-4" />
-                <span className="font-medium text-slate-700">{solicitante.nome_completo}</span>
-              </div>
-            )}
+            <div className="flex items-center gap-1 mt-1">
+              <User className="h-4 w-4" />
+              <span className="font-medium text-slate-700">
+                {solicitante ? solicitante.nome_completo : 'Usuário não encontrado'}
+              </span>
+            </div>
             {solicitante?.email && (
               <div className="text-xs text-slate-400 pl-5">{solicitante.email}</div>
             )}

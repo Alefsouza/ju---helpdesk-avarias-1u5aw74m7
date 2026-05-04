@@ -10,12 +10,14 @@ export function useChamadosDashboard() {
   const fetchData = async () => {
     try {
       setLoading(true)
-      const [chamadosRes, respRes] = await Promise.all([
+      const [chamadosRes, respRes, respostasRes, historicoRes] = await Promise.all([
         supabase.from('chamados').select('*').order('criado_em', { ascending: false }),
         supabase
           .from('perfil_usuario')
           .select('id, nome_completo')
           .in('tipo_usuario', ['responsavel', 'admin']),
+        supabase.from('respostas_chamado').select('id, chamado_id, criado_em'),
+        supabase.from('historico_chamado').select('id, chamado_id, acao, criado_em'),
       ])
 
       if (chamadosRes.error) throw chamadosRes.error
@@ -24,6 +26,8 @@ export function useChamadosDashboard() {
       const mapped = (chamadosRes.data || []).map((c) => ({
         ...c,
         responsavel: (respRes.data || []).find((r) => r.id === c.responsavel_id) || null,
+        respostas: (respostasRes.data || []).filter((r) => r.chamado_id === c.id),
+        historico: (historicoRes.data || []).filter((h) => h.chamado_id === c.id),
       }))
 
       setChamados(mapped)
@@ -43,6 +47,12 @@ export function useChamadosDashboard() {
     const channel = supabase
       .channel('dashboard_changes')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'chamados' }, () =>
+        fetchData(),
+      )
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'respostas_chamado' }, () =>
+        fetchData(),
+      )
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'historico_chamado' }, () =>
         fetchData(),
       )
       .subscribe()

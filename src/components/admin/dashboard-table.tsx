@@ -19,8 +19,11 @@ import {
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent } from '@/components/ui/card'
-import { Search, FilterX, ExternalLink } from 'lucide-react'
-import { format, isAfter, subDays } from 'date-fns'
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
+import { Calendar } from '@/components/ui/calendar'
+import { Search, FilterX, ExternalLink, CalendarIcon } from 'lucide-react'
+import { format, isAfter, isBefore, subDays, startOfDay, endOfDay } from 'date-fns'
+import { cn } from '@/lib/utils'
 
 export function DashboardTable({
   chamados,
@@ -32,6 +35,7 @@ export function DashboardTable({
   const [search, setSearch] = useState('')
   const [debouncedSearch, setDebouncedSearch] = useState('')
   const [period, setPeriod] = useState('all')
+  const [dateRange, setDateRange] = useState<{ from?: Date; to?: Date } | undefined>()
   const [status, setStatus] = useState('all')
   const [prioridade, setPrioridade] = useState('all')
   const [resp, setResp] = useState('all')
@@ -55,13 +59,18 @@ export function DashboardTable({
         if (resp === 'unassigned' && c.responsavel) return false
         if (resp !== 'unassigned' && c.responsavel?.id !== resp) return false
       }
-      if (period !== 'all') {
+      if (period !== 'all' && period !== 'custom') {
         const days = parseInt(period)
         if (days && isAfter(subDays(new Date(), days), new Date(c.criado_em))) return false
       }
+      if (period === 'custom' && dateRange?.from) {
+        const d = new Date(c.criado_em)
+        if (isBefore(d, startOfDay(dateRange.from))) return false
+        if (dateRange.to && isAfter(d, endOfDay(dateRange.to))) return false
+      }
       return true
     })
-  }, [chamados, debouncedSearch, status, prioridade, resp, period])
+  }, [chamados, debouncedSearch, status, prioridade, resp, period, dateRange])
 
   const statusColor: Record<string, string> = {
     aberto: 'bg-blue-100 text-blue-800 hover:bg-blue-100',
@@ -88,6 +97,7 @@ export function DashboardTable({
     setPrioridade('all')
     setResp('all')
     setPeriod('all')
+    setDateRange(undefined)
   }
 
   return (
@@ -103,17 +113,56 @@ export function DashboardTable({
               onChange={(e) => setSearch(e.target.value)}
             />
           </div>
-          <Select value={period} onValueChange={setPeriod}>
-            <SelectTrigger className="bg-[#f0f0f0] border-[#f0f0f0] text-[#212121]">
-              <SelectValue placeholder="Período" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Todo o período</SelectItem>
-              <SelectItem value="7">Últimos 7 dias</SelectItem>
-              <SelectItem value="30">Últimos 30 dias</SelectItem>
-              <SelectItem value="90">Últimos 90 dias</SelectItem>
-            </SelectContent>
-          </Select>
+          <div className="flex gap-2 w-full">
+            <Select value={period} onValueChange={setPeriod}>
+              <SelectTrigger className="bg-[#f0f0f0] border-[#f0f0f0] text-[#212121] flex-1">
+                <SelectValue placeholder="Período" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todo o período</SelectItem>
+                <SelectItem value="7">Últimos 7 dias</SelectItem>
+                <SelectItem value="30">Últimos 30 dias</SelectItem>
+                <SelectItem value="90">Últimos 90 dias</SelectItem>
+                <SelectItem value="custom">Personalizado</SelectItem>
+              </SelectContent>
+            </Select>
+            {period === 'custom' && (
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className={cn(
+                      'justify-start text-left font-normal bg-[#f0f0f0] border-[#f0f0f0] text-[#212121] flex-1 px-3',
+                      !dateRange && 'text-slate-500',
+                    )}
+                  >
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {dateRange?.from ? (
+                      dateRange.to ? (
+                        <span className="text-xs truncate">
+                          {format(dateRange.from, 'dd/MM/yy')} - {format(dateRange.to, 'dd/MM/yy')}
+                        </span>
+                      ) : (
+                        <span className="text-xs">{format(dateRange.from, 'dd/MM/yy')}</span>
+                      )
+                    ) : (
+                      <span className="text-xs">Selecione...</span>
+                    )}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <Calendar
+                    initialFocus
+                    mode="range"
+                    defaultMonth={dateRange?.from}
+                    selected={dateRange}
+                    onSelect={setDateRange}
+                    numberOfMonths={1}
+                  />
+                </PopoverContent>
+              </Popover>
+            )}
+          </div>
           <Select value={status} onValueChange={setStatus}>
             <SelectTrigger className="bg-[#f0f0f0] border-[#f0f0f0] text-[#212121]">
               <SelectValue placeholder="Status" />

@@ -13,15 +13,16 @@ export default function AdminDashboard() {
   const [isAdmin, setIsAdmin] = useState<boolean | null>(null)
 
   useEffect(() => {
-    if (!user)
-      return supabase
-        .from('perfil_usuario')
-        .select('tipo_usuario')
-        .eq('id', user.id)
-        .single()
-        .then(({ data }) => {
-          setIsAdmin(data?.tipo_usuario === 'admin')
-        })
+    if (!user) return
+
+    supabase
+      .from('perfil_usuario')
+      .select('tipo_usuario')
+      .eq('id', user.id)
+      .single()
+      .then(({ data }) => {
+        setIsAdmin(data?.tipo_usuario === 'admin')
+      })
   }, [user])
 
   if (isAdmin === null) {

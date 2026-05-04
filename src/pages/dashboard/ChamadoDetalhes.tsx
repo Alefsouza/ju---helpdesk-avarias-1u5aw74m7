@@ -424,10 +424,13 @@ export default function ChamadoDetalhes() {
   }
 
   const loadResponsaveis = async () => {
+    if (!user?.id) return
+
     const { data, error } = await supabase
       .from('perfil_usuario')
       .select('id, nome_completo, email')
       .eq('tipo_usuario', 'responsavel')
+      .neq('id', user.id)
       .order('nome_completo', { ascending: true })
 
     if (error) {
@@ -435,13 +438,7 @@ export default function ChamadoDetalhes() {
       return
     }
 
-    if (data) {
-      if (chamado?.responsavel_id) {
-        setAvailableResponsaveis(data.filter((r) => r.id !== chamado.responsavel_id))
-      } else {
-        setAvailableResponsaveis(data)
-      }
-    }
+    setAvailableResponsaveis(data || [])
   }
 
   const handleOpenTransferModal = () => {

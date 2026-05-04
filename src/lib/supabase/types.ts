@@ -47,6 +47,30 @@ export type Database = {
           },
         ]
       }
+      auditoria_admin: {
+        Row: {
+          acao: string
+          admin_id: string
+          criado_em: string
+          id: string
+          usuario_id: string
+        }
+        Insert: {
+          acao: string
+          admin_id: string
+          criado_em?: string
+          id?: string
+          usuario_id: string
+        }
+        Update: {
+          acao?: string
+          admin_id?: string
+          criado_em?: string
+          id?: string
+          usuario_id?: string
+        }
+        Relationships: []
+      }
       chamados: {
         Row: {
           assunto: string
@@ -348,6 +372,12 @@ export const Constants = {
 //   tipo_arquivo: text (not null)
 //   tamanho_mb: numeric (not null)
 //   criado_em: timestamp with time zone (not null, default: now())
+// Table: auditoria_admin
+//   id: uuid (not null, default: gen_random_uuid())
+//   admin_id: uuid (not null)
+//   usuario_id: uuid (not null)
+//   acao: text (not null)
+//   criado_em: timestamp with time zone (not null, default: now())
 // Table: chamados
 //   id: uuid (not null, default: gen_random_uuid())
 //   usuario_id: uuid (not null)
@@ -389,6 +419,10 @@ export const Constants = {
 //   FOREIGN KEY anexos_chamado_chamado_id_fkey: FOREIGN KEY (chamado_id) REFERENCES chamados(id) ON DELETE CASCADE
 //   PRIMARY KEY anexos_chamado_pkey: PRIMARY KEY (id)
 //   CHECK anexos_chamado_tipo_arquivo_check: CHECK ((tipo_arquivo = ANY (ARRAY['audio'::text, 'video'::text, 'imagem'::text, 'pdf'::text])))
+// Table: auditoria_admin
+//   FOREIGN KEY auditoria_admin_admin_id_fkey: FOREIGN KEY (admin_id) REFERENCES auth.users(id) ON DELETE CASCADE
+//   PRIMARY KEY auditoria_admin_pkey: PRIMARY KEY (id)
+//   FOREIGN KEY auditoria_admin_usuario_id_fkey: FOREIGN KEY (usuario_id) REFERENCES auth.users(id) ON DELETE CASCADE
 // Table: chamados
 //   PRIMARY KEY chamados_pkey: PRIMARY KEY (id)
 //   CHECK chamados_prioridade_check: CHECK ((prioridade = ANY (ARRAY['baixa'::text, 'media'::text, 'alta'::text])))
@@ -415,6 +449,11 @@ export const Constants = {
 //     WITH CHECK: (chamado_id IN ( SELECT chamados.id    FROM chamados))
 //   Policy "anexos_select" (SELECT, PERMISSIVE) roles={authenticated}
 //     USING: (chamado_id IN ( SELECT chamados.id    FROM chamados))
+// Table: auditoria_admin
+//   Policy "admin_auditoria_insert" (INSERT, PERMISSIVE) roles={authenticated}
+//     WITH CHECK: is_admin()
+//   Policy "admin_auditoria_select" (SELECT, PERMISSIVE) roles={authenticated}
+//     USING: is_admin()
 // Table: chamados
 //   Policy "chamados_insert" (INSERT, PERMISSIVE) roles={authenticated}
 //     WITH CHECK: (usuario_id = auth.uid())

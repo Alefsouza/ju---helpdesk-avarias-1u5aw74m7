@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { Key, Users } from 'lucide-react'
+import { Key, Users, Search, X, Loader2 } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import {
   Table,
@@ -11,7 +11,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
-import { Skeleton } from '@/components/ui/skeleton'
+import { Input } from '@/components/ui/input'
 import { supabase } from '@/lib/supabase/client'
 import { AlterarSenhaModal } from './alterar-senha-modal'
 import { format } from 'date-fns'
@@ -23,13 +23,27 @@ export function GerenciarUsuarios() {
   const [modalOpen, setModalOpen] = useState(false)
   const [selectedUser, setSelectedUser] = useState<any>(null)
 
-  const loadUsers = async () => {
+  const [searchTerm, setSearchTerm] = useState('')
+  const [debouncedSearch, setDebouncedSearch] = useState('')
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearch(searchTerm)
+    }, 300)
+    return () => clearTimeout(timer)
+  }, [searchTerm])
+
+  const loadUsers = async (search: string = '') => {
     setLoading(true)
     setError(false)
-    const { data, error: err } = await supabase
-      .from('perfil_usuario')
-      .select('*')
-      .order('criado_em', { ascending: false })
+
+    let query = supabase.from('perfil_usuario').select('*').order('criado_em', { ascending: false })
+
+    if (search.trim()) {
+      query = query.or(`nome_completo.ilike.%${search.trim()}%,email.ilike.%${search.trim()}%`)
+    }
+
+    const { data, error: err } = await query
 
     if (err) {
       setError(true)
@@ -40,8 +54,8 @@ export function GerenciarUsuarios() {
   }
 
   useEffect(() => {
-    loadUsers()
-  }, [])
+    loadUsers(debouncedSearch)
+  }, [debouncedSearch])
 
   const openPasswordModal = (u: any) => {
     setSelectedUser(u)
@@ -56,24 +70,49 @@ export function GerenciarUsuarios() {
           Visualize todos os usuários do sistema e gerencie senhas e acessos.
         </CardDescription>
       </CardHeader>
-      <CardContent>
+      <CardContent className="space-y-4">
+        <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center">
+          <div className="relative flex-1 max-w-md w-full">
+            <Search className="absolute left-3 top-3 h-4 w-4 text-slate-500" />
+            <Input
+              placeholder="Buscar por nome ou e-mail"
+              className="pl-9"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
+          </div>
+          {searchTerm && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setSearchTerm('')}
+              className="h-10 text-slate-500 hover:text-slate-900"
+            >
+              <X className="h-4 w-4 mr-2" /> Limpar busca
+            </Button>
+          )}
+        </div>
+
         {loading ? (
-          <div className="space-y-3">
-            {[1, 2, 3].map((i) => (
-              <Skeleton key={i} className="h-16 w-full" />
-            ))}
+          <div className="flex flex-col items-center justify-center py-12 text-slate-500">
+            <Loader2 className="h-8 w-8 animate-spin mb-4 text-slate-400" />
+            <p>Buscando usuários...</p>
           </div>
         ) : error ? (
           <div className="text-center py-8">
-            <p className="text-red-500 mb-4">Erro ao carregar usuários</p>
-            <Button onClick={loadUsers} variant="outline">
+            <p className="text-red-500 mb-4">Erro ao buscar usuários</p>
+            <Button onClick={() => loadUsers(debouncedSearch)} variant="outline">
               Tentar novamente
             </Button>
           </div>
         ) : users.length === 0 ? (
           <div className="text-center py-12 flex flex-col items-center text-slate-500">
             <Users className="h-12 w-12 mb-4 text-slate-300" />
-            <p>Nenhum usuário encontrado</p>
+            <p>
+              {debouncedSearch
+                ? 'Nenhum usuário encontrado com esse critério'
+                : 'Nenhum usuário encontrado'}
+            </p>
           </div>
         ) : (
           <div className="rounded-md border overflow-x-auto">

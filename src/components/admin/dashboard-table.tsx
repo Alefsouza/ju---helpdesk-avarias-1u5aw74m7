@@ -227,13 +227,13 @@ export function DashboardTable({
                     <TableHead className="text-[#225f3d] font-semibold text-[14px]">
                       Status
                     </TableHead>
-                    <TableHead className="text-[#225f3d] font-semibold text-[14px]">
+                    <TableHead className="hidden lg:table-cell text-[#225f3d] font-semibold text-[14px]">
                       Prioridade
                     </TableHead>
                     <TableHead className="text-[#225f3d] font-semibold text-[14px]">
                       Responsável
                     </TableHead>
-                    <TableHead className="text-[#225f3d] font-semibold text-[14px]">
+                    <TableHead className="hidden lg:table-cell text-[#225f3d] font-semibold text-[14px]">
                       Criado em
                     </TableHead>
                     <TableHead className="text-right text-[#225f3d] font-semibold text-[14px]">
@@ -250,7 +250,7 @@ export function DashboardTable({
                       <TableCell className="font-mono text-xs text-slate-500">
                         {c.id.split('-')[0].toUpperCase()}
                       </TableCell>
-                      <TableCell className="font-medium truncate max-w-[250px]">
+                      <TableCell className="font-medium text-[#212121] truncate max-w-[250px]">
                         {c.titulo}
                       </TableCell>
                       <TableCell>
@@ -258,15 +258,15 @@ export function DashboardTable({
                           {statusLabel[c.status]}
                         </Badge>
                       </TableCell>
-                      <TableCell>
+                      <TableCell className="hidden lg:table-cell">
                         <Badge className={prioColor[c.prioridade]} variant="secondary">
                           {prioLabel[c.prioridade]}
                         </Badge>
                       </TableCell>
-                      <TableCell className="text-sm text-slate-600">
+                      <TableCell className="text-sm text-[#212121]">
                         {c.responsavel?.nome_completo || '-'}
                       </TableCell>
-                      <TableCell className="text-sm text-slate-600">
+                      <TableCell className="hidden lg:table-cell text-sm text-[#212121]">
                         {format(new Date(c.criado_em), 'dd/MM/yyyy HH:mm')}
                       </TableCell>
                       <TableCell className="text-right">

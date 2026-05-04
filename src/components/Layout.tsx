@@ -65,13 +65,8 @@ function AppSidebar() {
               <SidebarMenuItem>
                 <SidebarMenuButton
                   asChild
-                  isActive={location.pathname === '/dashboard'}
-                ></SidebarMenuButton>
-              </SidebarMenuItem>
-              <SidebarMenuItem>
-                <SidebarMenuButton
-                  asChild
                   isActive={location.pathname === '/dashboard/meus-chamados'}
+                  className="data-[active=true]:bg-transparent data-[active=true]:text-[#c8e6c9] hover:bg-[#c8e6c9]/10 hover:text-[#c8e6c9] text-white transition-colors"
                 >
                   <Link to="/dashboard/meus-chamados">
                     <Ticket />
@@ -86,6 +81,7 @@ function AppSidebar() {
                     <SidebarMenuButton
                       asChild
                       isActive={location.pathname === '/dashboard/chamados-abertos'}
+                      className="data-[active=true]:bg-transparent data-[active=true]:text-[#c8e6c9] hover:bg-[#c8e6c9]/10 hover:text-[#c8e6c9] text-white transition-colors"
                     >
                       <Link to="/dashboard/chamados-abertos">
                         <LifeBuoy />
@@ -97,6 +93,7 @@ function AppSidebar() {
                     <SidebarMenuButton
                       asChild
                       isActive={location.pathname === '/dashboard/meus-atendimentos'}
+                      className="data-[active=true]:bg-transparent data-[active=true]:text-[#c8e6c9] hover:bg-[#c8e6c9]/10 hover:text-[#c8e6c9] text-white transition-colors"
                     >
                       <Link to="/dashboard/meus-atendimentos">
                         <PlayCircle />
@@ -109,7 +106,11 @@ function AppSidebar() {
 
               {isAdmin && (
                 <SidebarMenuItem>
-                  <SidebarMenuButton asChild isActive={location.pathname === '/dashboard/admin'}>
+                  <SidebarMenuButton
+                    asChild
+                    isActive={location.pathname === '/dashboard/admin'}
+                    className="data-[active=true]:bg-transparent data-[active=true]:text-[#c8e6c9] hover:bg-[#c8e6c9]/10 hover:text-[#c8e6c9] text-white transition-colors"
+                  >
                     <Link to="/dashboard/admin">
                       <ShieldAlert />
                       <span>Painel Admin</span>
@@ -119,7 +120,11 @@ function AppSidebar() {
               )}
 
               <SidebarMenuItem>
-                <SidebarMenuButton asChild isActive={location.pathname === '/dashboard/perfil'}>
+                <SidebarMenuButton
+                  asChild
+                  isActive={location.pathname === '/dashboard/perfil'}
+                  className="data-[active=true]:bg-transparent data-[active=true]:text-[#c8e6c9] hover:bg-[#c8e6c9]/10 hover:text-[#c8e6c9] text-white transition-colors"
+                >
                   <Link to="/dashboard/perfil">
                     <User />
                     <span>Perfil</span>

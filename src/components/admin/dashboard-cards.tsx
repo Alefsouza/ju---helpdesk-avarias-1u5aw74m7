@@ -40,7 +40,7 @@ export function DashboardCards({ chamados }: { chamados: any[] }) {
     <div
       className={cn(
         'flex items-center text-[12px] mt-1 font-medium',
-        up === true ? 'text-[#225f3d]' : up === false ? 'text-red-500' : 'text-slate-400',
+        up === true ? 'text-[#225f3d]' : 'text-slate-400',
       )}
     >
       {up === true ? (

@@ -1,4 +1,14 @@
-import { Pie, PieChart, Cell, Bar, BarChart, XAxis, YAxis, ResponsiveContainer } from 'recharts'
+import {
+  Pie,
+  PieChart,
+  Cell,
+  Bar,
+  BarChart,
+  XAxis,
+  YAxis,
+  ResponsiveContainer,
+  Legend,
+} from 'recharts'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart'
 
@@ -91,6 +101,13 @@ export function DashboardCharts({ chamados }: { chamados: any[] }) {
                   ))}
                 </Pie>
                 <ChartTooltip content={<ChartTooltipContent />} />
+                <Legend
+                  formatter={(value) => (
+                    <span style={{ color: '#212121', fontSize: '12px', fontWeight: 500 }}>
+                      {value}
+                    </span>
+                  )}
+                />
               </PieChart>
             </ResponsiveContainer>
           </ChartContainer>
@@ -120,6 +137,13 @@ export function DashboardCharts({ chamados }: { chamados: any[] }) {
                     <Cell key={index} fill={entry.fill} />
                   ))}
                 </Bar>
+                <Legend
+                  formatter={() => (
+                    <span style={{ color: '#212121', fontSize: '12px', fontWeight: 500 }}>
+                      Quantidade
+                    </span>
+                  )}
+                />
               </BarChart>
             </ResponsiveContainer>
           </ChartContainer>

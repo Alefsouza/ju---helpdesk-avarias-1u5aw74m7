@@ -10,6 +10,7 @@ import NovoChamado from './pages/dashboard/NovoChamado'
 import ChamadosAbertos from './pages/dashboard/ChamadosAbertos'
 import AdminDashboard from './pages/dashboard/Admin'
 import Perfil from './pages/dashboard/Perfil'
+import ChamadoDetalhes from './pages/dashboard/ChamadoDetalhes'
 import NotFound from './pages/NotFound'
 import Layout from './components/Layout'
 import { AuthProvider } from './hooks/use-auth'
@@ -28,6 +29,7 @@ const App = () => (
             <Route path="/dashboard/meus-chamados" element={<MeusChamados />} />
             <Route path="/dashboard/novo-chamado" element={<NovoChamado />} />
             <Route path="/dashboard/chamados-abertos" element={<ChamadosAbertos />} />
+            <Route path="/dashboard/chamados/:id" element={<ChamadoDetalhes />} />
             <Route path="/dashboard/admin" element={<AdminDashboard />} />
             <Route path="/dashboard/perfil" element={<Perfil />} />
           </Route>

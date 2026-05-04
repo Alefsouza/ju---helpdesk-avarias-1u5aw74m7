@@ -254,17 +254,80 @@ export default function ChamadoDetalhes() {
       .channel(`chamado_${id}`)
       .on(
         'postgres_changes',
-        { event: '*', schema: 'public', table: 'respostas_chamado', filter: `chamado_id=eq.${id}` },
-        () => fetchChamadoData(),
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'respostas_chamado',
+          filter: `chamado_id=eq.${id}`,
+        },
+        async (payload) => {
+          const newResposta = payload.new as any
+          const { data: profile } = await supabase
+            .from('perfil_usuario')
+            .select('*')
+            .eq('id', newResposta.usuario_id)
+            .single()
+
+          setTimeline((prev) => {
+            if (prev.some((item) => item.id === newResposta.id)) return prev
+
+            const newItem: TimelineItem = {
+              id: newResposta.id,
+              type: 'response',
+              mensagem: newResposta.mensagem,
+              criado_em: newResposta.criado_em,
+              usuario: profile || null,
+              anexos: [],
+            }
+
+            return [...prev, newItem].sort(
+              (a, b) => new Date(a.criado_em).getTime() - new Date(b.criado_em).getTime(),
+            )
+          })
+        },
       )
       .on(
         'postgres_changes',
-        { event: '*', schema: 'public', table: 'historico_chamado', filter: `chamado_id=eq.${id}` },
-        () => fetchChamadoData(),
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'historico_chamado',
+          filter: `chamado_id=eq.${id}`,
+        },
+        async (payload) => {
+          const newHistory = payload.new as any
+          const { data: profile } = await supabase
+            .from('perfil_usuario')
+            .select('*')
+            .eq('id', newHistory.usuario_id)
+            .single()
+
+          setTimeline((prev) => {
+            if (prev.some((item) => item.id === newHistory.id)) return prev
+
+            const newItem: TimelineItem = {
+              id: newHistory.id,
+              type: 'history',
+              acao: newHistory.acao,
+              detalhes: newHistory.detalhes,
+              criado_em: newHistory.criado_em,
+              usuario: profile || null,
+            }
+
+            return [...prev, newItem].sort(
+              (a, b) => new Date(a.criado_em).getTime() - new Date(b.criado_em).getTime(),
+            )
+          })
+        },
       )
       .on(
         'postgres_changes',
-        { event: '*', schema: 'public', table: 'anexos_chamado', filter: `chamado_id=eq.${id}` },
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'anexos_chamado',
+          filter: `chamado_id=eq.${id}`,
+        },
         () => fetchChamadoData(),
       )
       .on(

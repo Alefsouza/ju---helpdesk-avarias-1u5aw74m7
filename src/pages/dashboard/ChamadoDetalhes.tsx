@@ -12,6 +12,8 @@ import {
   User,
   Clock,
   FileText,
+  Image as ImageIcon,
+  Video,
   Music,
   AlertCircle,
   Paperclip,
@@ -36,6 +38,7 @@ type TimelineItem = {
   mensagem?: string
   criado_em: string
   usuario: Perfil | null
+  anexos?: Anexo[]
 }
 
 type FileItem = {
@@ -140,7 +143,6 @@ export default function ChamadoDetalhes() {
       .from('anexos_chamado')
       .select('*')
       .eq('chamado_id', id)
-    if (anexosData) setAnexos(anexosData)
 
     const { data: respostasData } = await supabase
       .from('respostas_chamado')
@@ -165,6 +167,36 @@ export default function ChamadoDetalhes() {
       profilesMap[p.id] = p
     })
 
+    const cTime = chamadoData ? new Date(chamadoData.criado_em).getTime() : 0
+    const anexosByResposta: Record<string, Anexo[]> = {}
+    const chamadosAnexos: Anexo[] = []
+
+    if (anexosData) {
+      anexosData.forEach((anexo) => {
+        const aTime = new Date(anexo.criado_em).getTime()
+        let closestRespId: string | null = null
+        let minDiff = Infinity
+
+        respostasData?.forEach((resp) => {
+          const rTime = new Date(resp.criado_em).getTime()
+          const diff = Math.abs(aTime - rTime)
+          if (diff < minDiff && diff <= 15000) {
+            minDiff = diff
+            closestRespId = resp.id
+          }
+        })
+
+        const diffChamado = Math.abs(aTime - cTime)
+        if (closestRespId && minDiff < diffChamado) {
+          if (!anexosByResposta[closestRespId]) anexosByResposta[closestRespId] = []
+          anexosByResposta[closestRespId].push(anexo)
+        } else {
+          chamadosAnexos.push(anexo)
+        }
+      })
+      setAnexos(chamadosAnexos)
+    }
+
     const timelineItems: TimelineItem[] = []
     respostasData?.forEach((r) => {
       timelineItems.push({
@@ -173,6 +205,7 @@ export default function ChamadoDetalhes() {
         mensagem: r.mensagem,
         criado_em: r.criado_em,
         usuario: profilesMap[r.usuario_id] || null,
+        anexos: anexosByResposta[r.id] || [],
       })
     })
     historicoData?.forEach((h) => {
@@ -376,10 +409,12 @@ export default function ChamadoDetalhes() {
 
     setSubmitting(true)
 
+    const now = new Date().toISOString()
     const { error: respostaError } = await supabase.from('respostas_chamado').insert({
       chamado_id: id as string,
       usuario_id: user?.id as string,
       mensagem: mensagem.trim(),
+      criado_em: now,
     })
 
     if (respostaError) {
@@ -395,6 +430,7 @@ export default function ChamadoDetalhes() {
         nome_arquivo: f.file.name,
         tipo_arquivo: getTipoArquivo(f.file.type),
         tamanho_mb: Number((f.file.size / (1024 * 1024)).toFixed(2)),
+        criado_em: now,
       }))
 
       const { error: anexosError } = await supabase.from('anexos_chamado').insert(uploadedAnexos)
@@ -695,6 +731,50 @@ export default function ChamadoDetalhes() {
                     <div className="whitespace-pre-wrap text-sm leading-relaxed">
                       {item.mensagem}
                     </div>
+
+                    {item.anexos && item.anexos.length > 0 && (
+                      <div
+                        className={cn(
+                          'mt-3 space-y-2 pt-3 border-t',
+                          isCurrentUser ? 'border-primary-foreground/20' : 'border-slate-200',
+                        )}
+                      >
+                        {item.anexos.map((anexo) => {
+                          const isImage =
+                            anexo.tipo_arquivo.includes('imagem') ||
+                            anexo.tipo_arquivo.includes('image')
+                          const isVideo = anexo.tipo_arquivo.includes('video')
+                          const isAudio = anexo.tipo_arquivo.includes('audio')
+
+                          let Icon = FileText
+                          if (isImage) Icon = ImageIcon
+                          if (isVideo) Icon = Video
+                          if (isAudio) Icon = Music
+
+                          return (
+                            <a
+                              key={anexo.id}
+                              href={anexo.url_arquivo}
+                              target="_blank"
+                              rel="noreferrer"
+                              className={cn(
+                                'flex items-center gap-3 p-2.5 rounded-lg border text-sm transition-colors text-left group',
+                                isCurrentUser
+                                  ? 'bg-primary-foreground/10 hover:bg-primary-foreground/20 border-primary-foreground/20'
+                                  : 'bg-white hover:bg-slate-50 border-slate-200',
+                              )}
+                            >
+                              <Icon className="h-5 w-5 shrink-0 opacity-70" />
+                              <div className="flex-1 min-w-0">
+                                <p className="truncate font-medium">{anexo.nome_arquivo}</p>
+                                <p className="text-xs opacity-70">{anexo.tamanho_mb} MB</p>
+                              </div>
+                            </a>
+                          )
+                        })}
+                      </div>
+                    )}
+
                     <div
                       className={cn(
                         'text-[10px] mt-2 text-right opacity-70',

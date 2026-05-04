@@ -259,7 +259,6 @@ export default function ChamadoDetalhes() {
     currentUserProfile?.tipo_usuario === 'responsavel' ||
     currentUserProfile?.tipo_usuario === 'admin'
   const canFinalize = isSupport || chamado.usuario_id === user?.id
-  const shortId = chamado.id.split('-')[0].toUpperCase()
 
   const getAcaoText = (acao: string, userNome: string) => {
     switch (acao) {
@@ -372,7 +371,7 @@ export default function ChamadoDetalhes() {
           <div className="space-y-2">
             <div className="flex flex-wrap items-center gap-2 mb-2">
               <span className="text-sm font-mono text-slate-500 bg-slate-100 px-2 py-1 rounded">
-                #{shortId}
+                {chamado.id}
               </span>
               <Badge
                 variant="outline"

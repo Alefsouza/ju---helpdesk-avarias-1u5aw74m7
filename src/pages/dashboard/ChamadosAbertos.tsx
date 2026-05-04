@@ -262,9 +262,7 @@ export default function ChamadosAbertos() {
                     className="cursor-pointer hover:bg-slate-50/80 transition-colors group"
                     onClick={() => navigateToDetails(c.id)}
                   >
-                    <TableCell className="font-mono text-xs text-slate-500">
-                      {c.id.split('-')[0]}
-                    </TableCell>
+                    <TableCell className="font-mono text-xs text-slate-500">{c.id}</TableCell>
                     <TableCell>
                       <div className="font-medium text-slate-900 line-clamp-1">{c.titulo}</div>
                       <div className="text-sm text-slate-500 line-clamp-1">{c.assunto}</div>
@@ -306,9 +304,7 @@ export default function ChamadosAbertos() {
                 <CardContent className="p-4 space-y-4">
                   <div className="flex justify-between items-start gap-2">
                     <div className="flex-1 min-w-0">
-                      <div className="text-xs text-slate-500 font-mono mb-1">
-                        ID: {c.id.split('-')[0]}
-                      </div>
+                      <div className="text-xs text-slate-500 font-mono mb-1">ID: {c.id}</div>
                       <h3 className="font-semibold text-slate-900 line-clamp-1">{c.titulo}</h3>
                       <p className="text-sm text-slate-500 line-clamp-1">{c.assunto}</p>
                     </div>

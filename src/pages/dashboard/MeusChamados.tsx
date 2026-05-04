@@ -282,7 +282,7 @@ export default function MeusChamados() {
                 {chamados.map((c) => (
                   <TableRow key={c.id} className="hover:bg-muted/50">
                     <TableCell className="font-mono text-xs text-muted-foreground">
-                      #{c.id.substring(0, 6)}
+                      {c.id}
                     </TableCell>
                     <TableCell className="font-medium">
                       <Link
@@ -337,9 +337,7 @@ export default function MeusChamados() {
               <Card key={c.id} className="overflow-hidden">
                 <CardContent className="p-4 flex flex-col gap-3">
                   <div className="flex justify-between items-start mb-1">
-                    <span className="font-mono text-xs text-muted-foreground">
-                      #{c.id.substring(0, 8)}
-                    </span>
+                    <span className="font-mono text-xs text-muted-foreground">{c.id}</span>
                     <span className="text-xs text-muted-foreground">{formatDate(c.criado_em)}</span>
                   </div>
 

@@ -155,7 +155,7 @@ function AppSidebar() {
               </span>
             )}
             <div
-              className="text-sm text-muted-foreground truncate font-medium flex-1"
+              className="text-sm text-muted-foreground truncate font-medium flex-1 shadow-[0px_0px_6px_0px_#ffffff]"
               title={user?.email || ''}
             >
               {user?.email}

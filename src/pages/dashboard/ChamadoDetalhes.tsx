@@ -148,7 +148,7 @@ export default function ChamadoDetalhes() {
 
     const { data: solicitanteData } = await supabase
       .from('perfil_usuario')
-      .select('*')
+      .select('id, nome_completo, email')
       .eq('id', chamadoData.usuario_id)
       .maybeSingle()
 
@@ -424,17 +424,11 @@ export default function ChamadoDetalhes() {
   }
 
   const loadResponsaveis = async () => {
-    let query = supabase
+    const { data, error } = await supabase
       .from('perfil_usuario')
       .select('id, nome_completo, email')
       .eq('tipo_usuario', 'responsavel')
       .order('nome_completo', { ascending: true })
-
-    if (chamado?.responsavel_id) {
-      query = query.neq('id', chamado.responsavel_id)
-    }
-
-    const { data, error } = await query
 
     if (error) {
       toast.error('Erro ao carregar responsáveis. Tente novamente')
@@ -442,7 +436,11 @@ export default function ChamadoDetalhes() {
     }
 
     if (data) {
-      setAvailableResponsaveis(data)
+      if (chamado?.responsavel_id) {
+        setAvailableResponsaveis(data.filter((r) => r.id !== chamado.responsavel_id))
+      } else {
+        setAvailableResponsaveis(data)
+      }
     }
   }
 

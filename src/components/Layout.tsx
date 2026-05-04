@@ -29,6 +29,8 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase/client'
 import { toast } from 'sonner'
+import logoBranco from '@/assets/logo_branco_transparente_nitido-80a6a.png'
+import logoColorido from '@/assets/whatsapp-image-2023-08-10-at-16.17.31-0b937.jpeg'
 
 function AppSidebar() {
   const { user, profile, signOut } = useAuth()
@@ -40,13 +42,17 @@ function AppSidebar() {
   const isAdmin = tipo === 'admin'
 
   return (
-    <Sidebar>
-      <SidebarHeader className="h-16 flex items-center justify-center border-b border-sidebar-border px-4 bg-sidebar">
-        <div className="flex items-center gap-2 font-bold text-lg text-sidebar-foreground">
-          <span>Via Sudeste</span>
-        </div>
+    <Sidebar className="border-r-0">
+      <SidebarHeader className="pt-4 pl-4 pb-4 flex items-start justify-start border-b border-white/10 bg-[#225f3d]">
+        <Link to="/dashboard" className="flex items-center hover:opacity-90 transition-opacity">
+          <img
+            src={logoBranco}
+            alt="Via Sudeste"
+            className="w-[150px] h-auto max-w-full object-contain"
+          />
+        </Link>
       </SidebarHeader>
-      <SidebarContent>
+      <SidebarContent className="bg-[#225f3d]">
         <SidebarGroup>
           <SidebarGroupContent>
             <SidebarMenu>
@@ -139,7 +145,7 @@ function AppSidebar() {
           </SidebarGroupContent>
         </SidebarGroup>
       </SidebarContent>
-      <SidebarFooter className="border-t p-4">
+      <SidebarFooter className="border-t border-white/10 p-4 bg-[#225f3d]">
         <div className="flex flex-col gap-4">
           <div className="flex items-center gap-2 px-2">
             {profile?.foto_url ? (
@@ -240,9 +246,13 @@ export default function Layout() {
   // Auth Layout
   if (isAuthRoute) {
     return (
-      <main className="min-h-screen flex flex-col items-center justify-center bg-slate-50 p-4 sm:p-8">
-        <div className="mb-8 flex items-center gap-2 text-primary font-bold text-2xl animate-fade-in-down">
-          Via Sudeste
+      <main className="min-h-screen flex flex-col items-center justify-start pt-[40px] bg-[#225f3d] px-4 pb-8 sm:px-8">
+        <div className="mb-12 flex items-center justify-center animate-fade-in-down w-full max-w-[400px]">
+          <img
+            src={logoColorido}
+            alt="Via Sudeste"
+            className="w-[200px] h-auto md:w-[200px] object-contain rounded-2xl shadow-2xl"
+          />
         </div>
         <div className="w-full max-w-[400px]">
           <Outlet />
@@ -255,9 +265,16 @@ export default function Layout() {
   return (
     <SidebarProvider>
       <AppSidebar />
-      <SidebarInset className="flex flex-col flex-1 min-h-screen bg-slate-50/50">
+      <SidebarInset className="flex flex-col flex-1 min-h-screen bg-white">
         <header className="flex h-16 shrink-0 items-center border-b px-4 gap-4 bg-white sticky top-0 z-10 shadow-sm">
-          <SidebarTrigger className="-ml-2" />
+          <SidebarTrigger className="-ml-2 text-slate-700" />
+          <div className="flex md:hidden items-center ml-2">
+            <img
+              src={logoColorido}
+              alt="Via Sudeste"
+              className="h-8 w-auto object-contain rounded"
+            />
+          </div>
           <div className="flex-1" />
           <div className="text-sm font-medium text-slate-700 hidden sm:flex items-center gap-2">
             {profile?.foto_url ? (

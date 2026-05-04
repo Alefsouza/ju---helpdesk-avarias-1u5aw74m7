@@ -43,8 +43,11 @@ function AppSidebar() {
 
   return (
     <Sidebar className="border-r-0">
-      <SidebarHeader className="pt-4 pl-4 pb-4 flex items-start justify-start border-b border-white/10 bg-[#225f3d]">
-        <Link to="/dashboard" className="flex items-center hover:opacity-90 transition-opacity">
+      <SidebarHeader className="py-4 flex items-center justify-center border-b border-white/10 bg-[#225f3d]">
+        <Link
+          to="/dashboard"
+          className="flex items-center justify-center w-full hover:opacity-90 transition-opacity"
+        >
           <img
             src={logoBranco}
             alt="Via Sudeste"

@@ -1,7 +1,9 @@
 import { useEffect, useState } from 'react'
+import { Link } from 'react-router-dom'
 import { supabase } from '@/lib/supabase/client'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Ticket } from 'lucide-react'
+import { Button } from '@/components/ui/button'
 
 export default function MeusChamados() {
   const [chamados, setChamados] = useState<any[]>([])
@@ -18,7 +20,12 @@ export default function MeusChamados() {
 
   return (
     <div className="space-y-6 max-w-5xl mx-auto p-4 animate-fade-in-up">
-      <h1 className="text-3xl font-bold tracking-tight">Meus Chamados</h1>
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+        <h1 className="text-3xl font-bold tracking-tight">Meus Chamados</h1>
+        <Button asChild>
+          <Link to="/dashboard/novo-chamado">Novo Chamado</Link>
+        </Button>
+      </div>
       <Card>
         <CardHeader>
           <CardTitle>Histórico</CardTitle>

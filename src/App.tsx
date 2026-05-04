@@ -6,6 +6,7 @@ import Index from './pages/Index'
 import Register from './pages/Register'
 import Dashboard from './pages/Dashboard'
 import MeusChamados from './pages/dashboard/MeusChamados'
+import NovoChamado from './pages/dashboard/NovoChamado'
 import ChamadosAbertos from './pages/dashboard/ChamadosAbertos'
 import AdminDashboard from './pages/dashboard/Admin'
 import Perfil from './pages/dashboard/Perfil'
@@ -25,6 +26,7 @@ const App = () => (
             <Route path="/cadastro" element={<Register />} />
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/dashboard/meus-chamados" element={<MeusChamados />} />
+            <Route path="/dashboard/novo-chamado" element={<NovoChamado />} />
             <Route path="/dashboard/chamados-abertos" element={<ChamadosAbertos />} />
             <Route path="/dashboard/admin" element={<AdminDashboard />} />
             <Route path="/dashboard/perfil" element={<Perfil />} />

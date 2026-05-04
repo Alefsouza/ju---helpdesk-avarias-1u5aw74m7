@@ -464,30 +464,20 @@ export default function ChamadoDetalhes() {
 
     setTransferLoading(true)
 
-    const { error: updateError } = await supabase
-      .from('chamados')
-      .update({
-        responsavel_id: selectedResponsavel,
-        atualizado_em: new Date().toISOString(),
-      })
-      .eq('id', id as string)
+    const { data, error: funcError } = await supabase.functions.invoke('transferir-chamado', {
+      body: {
+        chamado_id: id as string,
+        novo_responsavel_id: selectedResponsavel,
+        observacao: transferObservacao,
+      },
+    })
 
-    if (updateError) {
-      toast.error('Erro ao transferir chamado. Tente novamente')
+    if (funcError || data?.error) {
+      console.error(funcError || data?.error)
+      toast.error('Erro ao transferir chamado. Verifique suas permissões.')
       setTransferLoading(false)
       return
     }
-
-    const detalhes = transferObservacao.trim()
-      ? `Transferido para ${novoResponsavel?.nome_completo}. Motivo: ${transferObservacao}`
-      : `Transferido para ${novoResponsavel?.nome_completo}.`
-
-    await supabase.from('historico_chamado').insert({
-      chamado_id: id as string,
-      acao: 'transferido',
-      usuario_id: user?.id as string,
-      detalhes: detalhes,
-    })
 
     toast.success(`Chamado transferido com sucesso para ${novoResponsavel?.nome_completo}`)
     setTransferLoading(false)

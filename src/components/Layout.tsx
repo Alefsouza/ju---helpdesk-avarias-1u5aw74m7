@@ -63,12 +63,10 @@ function AppSidebar() {
           <SidebarGroupContent>
             <SidebarMenu>
               <SidebarMenuItem>
-                <SidebarMenuButton asChild isActive={location.pathname === '/dashboard'}>
-                  <Link to="/dashboard">
-                    <LayoutDashboard />
-                    <span>Dashboard</span>
-                  </Link>
-                </SidebarMenuButton>
+                <SidebarMenuButton
+                  asChild
+                  isActive={location.pathname === '/dashboard'}
+                ></SidebarMenuButton>
               </SidebarMenuItem>
               <SidebarMenuItem>
                 <SidebarMenuButton

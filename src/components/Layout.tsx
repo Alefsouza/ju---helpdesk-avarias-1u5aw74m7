@@ -15,15 +15,32 @@ import {
   SidebarTrigger,
 } from '@/components/ui/sidebar'
 import { Button } from '@/components/ui/button'
-import { Ticket, User, LogOut, LayoutDashboard, LifeBuoy } from 'lucide-react'
+import { Ticket, User, LogOut, LayoutDashboard, LifeBuoy, ShieldAlert } from 'lucide-react'
 import { Skeleton } from '@/components/ui/skeleton'
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase/client'
 import { toast } from 'sonner'
 
 function AppSidebar() {
   const { user, signOut } = useAuth()
   const location = useLocation()
+  const [profile, setProfile] = useState<any>(null)
+
+  useEffect(() => {
+    if (user) {
+      supabase
+        .from('perfil_usuario')
+        .select('tipo_usuario')
+        .eq('id', user.id)
+        .single()
+        .then(({ data }) => {
+          if (data) setProfile(data)
+        })
+    }
+  }, [user])
+
+  const isResp = profile?.tipo_usuario === 'responsavel' || profile?.tipo_usuario === 'admin'
+  const isAdmin = profile?.tipo_usuario === 'admin'
 
   return (
     <Sidebar>
@@ -46,13 +63,42 @@ function AppSidebar() {
                 </SidebarMenuButton>
               </SidebarMenuItem>
               <SidebarMenuItem>
-                <SidebarMenuButton asChild>
-                  <Link to="/dashboard">
+                <SidebarMenuButton
+                  asChild
+                  isActive={location.pathname === '/dashboard/meus-chamados'}
+                >
+                  <Link to="/dashboard/meus-chamados">
                     <Ticket />
                     <span>Meus Chamados</span>
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
+
+              {isResp && (
+                <SidebarMenuItem>
+                  <SidebarMenuButton
+                    asChild
+                    isActive={location.pathname === '/dashboard/chamados-abertos'}
+                  >
+                    <Link to="/dashboard/chamados-abertos">
+                      <LifeBuoy />
+                      <span>Fila de Atendimento</span>
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              )}
+
+              {isAdmin && (
+                <SidebarMenuItem>
+                  <SidebarMenuButton asChild isActive={location.pathname === '/dashboard/admin'}>
+                    <Link to="/dashboard/admin">
+                      <ShieldAlert />
+                      <span>Painel Admin</span>
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              )}
+
               <SidebarMenuItem>
                 <SidebarMenuButton asChild isActive={location.pathname === '/dashboard/perfil'}>
                   <Link to="/dashboard/perfil">

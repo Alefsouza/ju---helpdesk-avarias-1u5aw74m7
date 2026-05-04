@@ -1,0 +1,87 @@
+import 'jsr:@supabase/functions-js/edge-runtime.d.ts'
+import { createClient } from 'jsr:@supabase/supabase-js@2'
+import { corsHeaders } from '../_shared/cors.ts'
+
+Deno.serve(async (req: Request) => {
+  if (req.method === 'OPTIONS') {
+    return new Response('ok', { headers: corsHeaders })
+  }
+
+  try {
+    const authHeader = req.headers.get('Authorization')
+    if (!authHeader) throw new Error('Missing Authorization header')
+
+    const supabaseClient = createClient(
+      Deno.env.get('SUPABASE_URL') ?? '',
+      Deno.env.get('SUPABASE_ANON_KEY') ?? '',
+      { global: { headers: { Authorization: authHeader } } },
+    )
+
+    const supabaseAdmin = createClient(
+      Deno.env.get('SUPABASE_URL') ?? '',
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
+    )
+
+    // Check if caller is admin
+    const {
+      data: { user },
+    } = await supabaseClient.auth.getUser()
+    if (!user) throw new Error('Unauthorized')
+
+    const { data: profile } = await supabaseAdmin
+      .from('perfil_usuario')
+      .select('tipo_usuario')
+      .eq('id', user.id)
+      .single()
+
+    if (profile?.tipo_usuario !== 'admin') {
+      throw new Error('Forbidden: Only admins can perform this action')
+    }
+
+    const body = await req.json()
+    const { action } = body
+
+    if (action === 'create') {
+      const { email, nome_completo, tipo_usuario } = body
+
+      const { data: newUser, error: createError } = await supabaseAdmin.auth.admin.createUser({
+        email,
+        password: 'HelpdeskUser@123', // Default initial password
+        email_confirm: true,
+        user_metadata: { full_name: nome_completo },
+      })
+
+      if (createError) throw createError
+
+      // Update profile created by the database trigger
+      const { error: updateError } = await supabaseAdmin
+        .from('perfil_usuario')
+        .update({ tipo_usuario, nome_completo })
+        .eq('id', newUser.user.id)
+
+      if (updateError) throw updateError
+
+      return new Response(JSON.stringify({ user: newUser.user }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      })
+    }
+
+    if (action === 'delete') {
+      const { userId } = body
+
+      const { error: deleteError } = await supabaseAdmin.auth.admin.deleteUser(userId)
+      if (deleteError) throw deleteError
+
+      return new Response(JSON.stringify({ success: true }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      })
+    }
+
+    throw new Error('Invalid action')
+  } catch (error: any) {
+    return new Response(JSON.stringify({ error: error.message }), {
+      status: 400,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    })
+  }
+})

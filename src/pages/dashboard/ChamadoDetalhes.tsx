@@ -6,6 +6,21 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { Badge } from '@/components/ui/badge'
 import { Progress } from '@/components/ui/progress'
 import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from '@/components/ui/dialog'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
+import { Label } from '@/components/ui/label'
+import {
   ArrowLeft,
   Send,
   CheckCircle2,
@@ -19,6 +34,8 @@ import {
   Paperclip,
   X,
   RefreshCw,
+  ArrowRightLeft,
+  Loader2,
 } from 'lucide-react'
 import { supabase } from '@/lib/supabase/client'
 import { useAuth } from '@/hooks/use-auth'
@@ -103,6 +120,12 @@ export default function ChamadoDetalhes() {
 
   const [files, setFiles] = useState<FileItem[]>([])
   const [isDragActive, setIsDragActive] = useState(false)
+
+  const [transferModalOpen, setTransferModalOpen] = useState(false)
+  const [availableResponsaveis, setAvailableResponsaveis] = useState<Perfil[]>([])
+  const [selectedResponsavel, setSelectedResponsavel] = useState<string>('')
+  const [transferObservacao, setTransferObservacao] = useState('')
+  const [transferLoading, setTransferLoading] = useState(false)
 
   const fileInputRef = useRef<HTMLInputElement>(null)
   const messagesEndRef = useRef<HTMLDivElement>(null)
@@ -399,6 +422,68 @@ export default function ChamadoDetalhes() {
     return 'pdf'
   }
 
+  const loadResponsaveis = async () => {
+    const { data } = await supabase
+      .from('perfil_usuario')
+      .select('*')
+      .in('tipo_usuario', ['responsavel', 'admin'])
+      .neq('id', chamado?.responsavel_id || '00000000-0000-0000-0000-000000000000')
+
+    if (data) {
+      setAvailableResponsaveis(data)
+    }
+  }
+
+  const handleOpenTransferModal = () => {
+    loadResponsaveis()
+    setTransferModalOpen(true)
+  }
+
+  const handleTransferir = async () => {
+    if (!selectedResponsavel) return
+
+    const novoResponsavel = availableResponsaveis.find((r) => r.id === selectedResponsavel)
+    if (
+      !window.confirm(
+        `Tem certeza que deseja transferir este chamado para ${novoResponsavel?.nome_completo}?`,
+      )
+    )
+      return
+
+    setTransferLoading(true)
+
+    const { error: updateError } = await supabase
+      .from('chamados')
+      .update({
+        responsavel_id: selectedResponsavel,
+        atualizado_em: new Date().toISOString(),
+      })
+      .eq('id', id as string)
+
+    if (updateError) {
+      toast.error('Erro ao transferir chamado. Tente novamente')
+      setTransferLoading(false)
+      return
+    }
+
+    const detalhes = transferObservacao.trim()
+      ? `Transferido para ${novoResponsavel?.nome_completo}. Motivo: ${transferObservacao}`
+      : `Transferido para ${novoResponsavel?.nome_completo}.`
+
+    await supabase.from('historico_chamado').insert({
+      chamado_id: id as string,
+      acao: 'transferido',
+      usuario_id: user?.id as string,
+      detalhes: detalhes,
+    })
+
+    toast.success(`Chamado transferido com sucesso para ${novoResponsavel?.nome_completo}`)
+    setTransferLoading(false)
+    setTransferModalOpen(false)
+    setTransferObservacao('')
+    setSelectedResponsavel('')
+  }
+
   const handleResponder = async () => {
     if (!mensagem.trim()) return
     const hasIncomplete = files.some((f) => f.status !== 'success')
@@ -509,6 +594,7 @@ export default function ChamadoDetalhes() {
     currentUserProfile?.tipo_usuario === 'responsavel' ||
     currentUserProfile?.tipo_usuario === 'admin'
   const canFinalize = isSupport || chamado.usuario_id === user?.id
+  const canTransfer = isSupport && chamado.status !== 'finalizado'
 
   const getAcaoText = (acao: string, userNome: string) => {
     switch (acao) {
@@ -522,6 +608,8 @@ export default function ChamadoDetalhes() {
         return `Finalizado por ${userNome}`
       case 'deletado':
         return `Deletado por ${userNome}`
+      case 'transferido':
+        return `Transferido por ${userNome}`
       default:
         return `Ação ${acao} por ${userNome}`
     }
@@ -603,17 +691,30 @@ export default function ChamadoDetalhes() {
           <ArrowLeft className="mr-2 h-4 w-4" />
           Voltar
         </Button>
-        {chamado.status !== 'finalizado' && canFinalize && (
-          <Button
-            variant="outline"
-            className="text-green-600 border-green-200 hover:bg-green-50 w-full sm:w-auto"
-            onClick={handleFinalizar}
-            disabled={completing}
-          >
-            <CheckCircle2 className="mr-2 h-4 w-4" />
-            {completing ? 'Finalizando...' : 'Finalizar Chamado'}
-          </Button>
-        )}
+        <div className="flex flex-col sm:flex-row items-center gap-2 w-full sm:w-auto">
+          {canTransfer && (
+            <Button
+              variant="outline"
+              className="w-full sm:w-auto"
+              onClick={handleOpenTransferModal}
+              disabled={completing || transferLoading}
+            >
+              <ArrowRightLeft className="mr-2 h-4 w-4" />
+              Transferir Chamado
+            </Button>
+          )}
+          {chamado.status !== 'finalizado' && canFinalize && (
+            <Button
+              variant="outline"
+              className="text-green-600 border-green-200 hover:bg-green-50 w-full sm:w-auto"
+              onClick={handleFinalizar}
+              disabled={completing || transferLoading}
+            >
+              <CheckCircle2 className="mr-2 h-4 w-4" />
+              {completing ? 'Finalizando...' : 'Finalizar Chamado'}
+            </Button>
+          )}
+        </div>
       </div>
 
       <div className="bg-white rounded-xl border shadow-sm p-4 sm:p-6 lg:p-8 space-y-6">
@@ -701,10 +802,22 @@ export default function ChamadoDetalhes() {
               if (item.type === 'history') {
                 return (
                   <div key={`${item.id}-${index}`} className="flex justify-center my-2">
-                    <div className="bg-slate-100 text-slate-500 text-xs px-3 py-1.5 rounded-full flex items-center gap-2 font-medium border">
-                      <Clock className="h-3 w-3" />
-                      {getAcaoText(item.acao!, item.usuario?.nome_completo || 'Sistema')} -{' '}
-                      {format(new Date(item.criado_em), 'dd/MM/yyyy HH:mm')}
+                    <div className="bg-slate-100 text-slate-500 text-xs px-3 py-1.5 rounded-3xl sm:rounded-full flex flex-col sm:flex-row sm:items-center gap-2 font-medium border max-w-[90%] text-center">
+                      <div className="flex items-center justify-center gap-2">
+                        <Clock className="h-3 w-3 shrink-0" />
+                        <span>
+                          {getAcaoText(item.acao!, item.usuario?.nome_completo || 'Sistema')} -{' '}
+                          {format(new Date(item.criado_em), 'dd/MM/yyyy HH:mm')}
+                        </span>
+                      </div>
+                      {item.detalhes && (
+                        <>
+                          <span className="hidden sm:inline text-slate-300">|</span>
+                          <span className="font-normal italic max-w-full truncate">
+                            {item.detalhes}
+                          </span>
+                        </>
+                      )}
                     </div>
                   </div>
                 )
@@ -935,6 +1048,63 @@ export default function ChamadoDetalhes() {
           </div>
         </div>
       )}
+
+      <Dialog open={transferModalOpen} onOpenChange={setTransferModalOpen}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Transferir Chamado</DialogTitle>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="space-y-2">
+              <Label>Novo Responsável</Label>
+              <Select
+                value={selectedResponsavel}
+                onValueChange={setSelectedResponsavel}
+                disabled={transferLoading}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione um responsável" />
+                </SelectTrigger>
+                <SelectContent>
+                  {availableResponsaveis.length === 0 ? (
+                    <div className="p-2 text-sm text-slate-500">
+                      Nenhum outro responsável disponível
+                    </div>
+                  ) : (
+                    availableResponsaveis.map((resp) => (
+                      <SelectItem key={resp.id} value={resp.id}>
+                        {resp.nome_completo}
+                      </SelectItem>
+                    ))
+                  )}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label>Observação (Opcional)</Label>
+              <Textarea
+                placeholder="Motivo da transferência..."
+                value={transferObservacao}
+                onChange={(e) => setTransferObservacao(e.target.value)}
+                disabled={transferLoading}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setTransferModalOpen(false)}
+              disabled={transferLoading}
+            >
+              Cancelar
+            </Button>
+            <Button onClick={handleTransferir} disabled={!selectedResponsavel || transferLoading}>
+              {transferLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              {transferLoading ? 'Transferindo chamado...' : 'Transferir'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

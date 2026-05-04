@@ -13,6 +13,8 @@ import {
   FileText,
   Music,
   AlertCircle,
+  Paperclip,
+  X,
 } from 'lucide-react'
 import { supabase } from '@/lib/supabase/client'
 import { useAuth } from '@/hooks/use-auth'
@@ -69,6 +71,8 @@ export default function ChamadoDetalhes() {
   const [submitting, setSubmitting] = useState(false)
   const [completing, setCompleting] = useState(false)
   const [currentUserProfile, setCurrentUserProfile] = useState<Perfil | null>(null)
+  const [selectedFiles, setSelectedFiles] = useState<File[]>([])
+  const fileInputRef = useRef<HTMLInputElement>(null)
   const messagesEndRef = useRef<HTMLDivElement>(null)
 
   const fetchChamadoData = async () => {
@@ -174,6 +178,11 @@ export default function ChamadoDetalhes() {
       )
       .on(
         'postgres_changes',
+        { event: '*', schema: 'public', table: 'anexos_chamado', filter: `chamado_id=eq.${id}` },
+        () => fetchChamadoData(),
+      )
+      .on(
+        'postgres_changes',
         { event: 'UPDATE', schema: 'public', table: 'chamados', filter: `id=eq.${id}` },
         () => fetchChamadoData(),
       )
@@ -190,18 +199,101 @@ export default function ChamadoDetalhes() {
     }
   }, [timeline])
 
+  const addFiles = (files: File[]) => {
+    const validTypes = ['application/pdf', 'audio/mpeg', 'audio/mp3', 'video/mp4']
+    const validFiles = files.filter((f) => {
+      const isValidType = f.type.startsWith('image/') || validTypes.includes(f.type)
+      const isValidSize = f.size <= 20 * 1024 * 1024 // 20MB
+      return isValidType && isValidSize
+    })
+
+    if (validFiles.length !== files.length) {
+      toast.error('Alguns arquivos são inválidos (tamanho > 20MB ou tipo não permitido).')
+    }
+
+    setSelectedFiles((prev) => {
+      const newFiles = [...prev, ...validFiles]
+      if (newFiles.length > 10) {
+        toast.error('Máximo de 10 arquivos permitidos por resposta.')
+        return newFiles.slice(0, 10)
+      }
+      return newFiles
+    })
+  }
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files) {
+      addFiles(Array.from(e.target.files))
+    }
+  }
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+  }
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    if (e.dataTransfer.files) {
+      addFiles(Array.from(e.dataTransfer.files))
+    }
+  }
+
+  const removeFile = (index: number) => {
+    setSelectedFiles((prev) => prev.filter((_, i) => i !== index))
+  }
+
   const handleResponder = async () => {
     if (!mensagem.trim()) return
     setSubmitting(true)
+
+    const uploadedAnexos = []
+    if (selectedFiles.length > 0) {
+      for (const file of selectedFiles) {
+        const fileExt = file.name.split('.').pop()
+        const fileName = `${Math.random().toString(36).substring(2, 15)}_${Date.now()}.${fileExt}`
+        const filePath = `${id}/${fileName}`
+
+        const { error: uploadError } = await supabase.storage
+          .from('chamados')
+          .upload(filePath, file)
+
+        if (uploadError) {
+          toast.error(`Erro ao fazer upload do arquivo ${file.name}`)
+          setSubmitting(false)
+          return
+        }
+
+        const { data: publicUrlData } = supabase.storage.from('chamados').getPublicUrl(filePath)
+
+        uploadedAnexos.push({
+          chamado_id: id as string,
+          url_arquivo: publicUrlData.publicUrl,
+          nome_arquivo: file.name,
+          tipo_arquivo: file.type,
+          tamanho_mb: Number((file.size / (1024 * 1024)).toFixed(2)),
+        })
+      }
+    }
+
     const { error: respostaError } = await supabase.from('respostas_chamado').insert({
-      chamado_id: id,
-      usuario_id: user?.id,
+      chamado_id: id as string,
+      usuario_id: user?.id as string,
       mensagem: mensagem.trim(),
     })
+
     if (respostaError) {
       toast.error('Erro ao enviar resposta')
       setSubmitting(false)
       return
+    }
+
+    if (uploadedAnexos.length > 0) {
+      const { error: anexosError } = await supabase.from('anexos_chamado').insert(uploadedAnexos)
+      if (anexosError) {
+        toast.error('Erro ao salvar anexos no banco de dados')
+      }
     }
 
     const isSupportUser =
@@ -212,18 +304,19 @@ export default function ChamadoDetalhes() {
       await supabase
         .from('chamados')
         .update({ status: 'aberto', atualizado_em: new Date().toISOString() })
-        .eq('id', id)
+        .eq('id', id as string)
     }
 
     await supabase.from('historico_chamado').insert({
-      chamado_id: id,
+      chamado_id: id as string,
       acao: 'respondido',
-      usuario_id: user?.id,
+      usuario_id: user?.id as string,
     })
 
     setMensagem('')
+    setSelectedFiles([])
     setSubmitting(false)
-    toast.success('Resposta enviada')
+    toast.success(uploadedAnexos.length > 0 ? 'Resposta enviada com anexos' : 'Resposta enviada')
   }
 
   const handleFinalizar = async () => {
@@ -517,23 +610,88 @@ export default function ChamadoDetalhes() {
           <h3 className="text-sm font-bold text-slate-900 mb-3 uppercase tracking-wider">
             Responder
           </h3>
-          <div className="flex flex-col gap-3">
+          <div
+            className="flex flex-col gap-3 rounded-lg border-2 border-dashed p-4 transition-colors bg-slate-50 hover:border-slate-300"
+            onDragOver={handleDragOver}
+            onDrop={handleDrop}
+          >
             <Textarea
-              placeholder="Digite sua resposta aqui..."
+              placeholder="Digite sua resposta aqui... (Você também pode arrastar arquivos para anexar)"
               value={mensagem}
               onChange={(e) => setMensagem(e.target.value)}
-              className="min-h-[120px] resize-y"
+              className="min-h-[120px] resize-y bg-white"
               disabled={submitting}
             />
-            <div className="flex justify-end">
-              <Button
-                onClick={handleResponder}
-                disabled={submitting || !mensagem.trim()}
-                className="w-full sm:w-auto"
-              >
-                <Send className="mr-2 h-4 w-4" />
-                {submitting ? 'Enviando...' : 'Enviar Resposta'}
-              </Button>
+
+            {selectedFiles.length > 0 && (
+              <div className="flex flex-wrap gap-2 pt-2 border-t">
+                {selectedFiles.map((file, idx) => (
+                  <div
+                    key={idx}
+                    className="flex items-center gap-2 bg-white text-xs font-medium px-3 py-1.5 rounded-md border shadow-sm"
+                  >
+                    <Paperclip className="h-3 w-3 text-slate-500" />
+                    <span className="truncate max-w-[150px]" title={file.name}>
+                      {file.name}
+                    </span>
+                    <button
+                      onClick={() => removeFile(idx)}
+                      className="text-slate-400 hover:text-red-500 transition-colors"
+                      disabled={submitting}
+                    >
+                      <X className="h-3 w-3" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            <div className="flex flex-col sm:flex-row justify-between items-center gap-4 pt-2 border-t mt-1">
+              <div className="flex items-center gap-2 w-full sm:w-auto">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="text-slate-600 h-9 bg-white"
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={submitting || selectedFiles.length >= 10}
+                >
+                  <Paperclip className="mr-2 h-4 w-4" />
+                  Anexar
+                </Button>
+                <input
+                  type="file"
+                  ref={fileInputRef}
+                  onChange={handleFileChange}
+                  className="hidden"
+                  multiple
+                  accept="image/*,application/pdf,audio/mpeg,audio/mp3,video/mp4"
+                />
+                <span className="text-xs text-slate-500">Até 10 arquivos (Máx 20MB).</span>
+              </div>
+
+              <div className="flex gap-2 w-full sm:w-auto justify-end">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-9"
+                  onClick={() => {
+                    setMensagem('')
+                    setSelectedFiles([])
+                  }}
+                  disabled={submitting || (!mensagem && selectedFiles.length === 0)}
+                >
+                  Cancelar
+                </Button>
+                <Button
+                  size="sm"
+                  className="h-9"
+                  onClick={handleResponder}
+                  disabled={submitting || !mensagem.trim()}
+                >
+                  <Send className="mr-2 h-4 w-4" />
+                  {submitting ? 'Enviando...' : 'Responder'}
+                </Button>
+              </div>
             </div>
           </div>
         </div>

@@ -10,6 +10,7 @@ import NovoChamado from './pages/dashboard/NovoChamado'
 import ChamadosAbertos from './pages/dashboard/ChamadosAbertos'
 import MeusAtendimentos from './pages/dashboard/MeusAtendimentos'
 import AdminDashboard from './pages/dashboard/Admin'
+import Relatorios from './pages/dashboard/Relatorios'
 import Perfil from './pages/dashboard/Perfil'
 import ChamadoDetalhes from './pages/dashboard/ChamadoDetalhes'
 import NotFound from './pages/NotFound'
@@ -33,6 +34,7 @@ const App = () => (
             <Route path="/dashboard/meus-atendimentos" element={<MeusAtendimentos />} />
             <Route path="/dashboard/chamados/:id" element={<ChamadoDetalhes />} />
             <Route path="/dashboard/admin" element={<AdminDashboard />} />
+            <Route path="/dashboard/relatorios" element={<Relatorios />} />
             <Route path="/dashboard/perfil" element={<Perfil />} />
           </Route>
           <Route path="*" element={<NotFound />} />

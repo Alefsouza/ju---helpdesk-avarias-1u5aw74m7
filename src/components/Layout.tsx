@@ -23,6 +23,7 @@ import {
   LifeBuoy,
   ShieldAlert,
   PlayCircle,
+  FileBarChart,
 } from 'lucide-react'
 import { Skeleton } from '@/components/ui/skeleton'
 import { useEffect, useState } from 'react'
@@ -105,18 +106,32 @@ function AppSidebar() {
               )}
 
               {isAdmin && (
-                <SidebarMenuItem>
-                  <SidebarMenuButton
-                    asChild
-                    isActive={location.pathname === '/dashboard/admin'}
-                    className="data-[active=true]:bg-transparent data-[active=true]:text-[#c8e6c9] hover:bg-[#c8e6c9]/10 hover:text-[#c8e6c9] text-white transition-colors"
-                  >
-                    <Link to="/dashboard/admin">
-                      <ShieldAlert />
-                      <span>Painel Admin</span>
-                    </Link>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
+                <>
+                  <SidebarMenuItem>
+                    <SidebarMenuButton
+                      asChild
+                      isActive={location.pathname === '/dashboard/admin'}
+                      className="data-[active=true]:bg-transparent data-[active=true]:text-[#c8e6c9] hover:bg-[#c8e6c9]/10 hover:text-[#c8e6c9] text-white transition-colors"
+                    >
+                      <Link to="/dashboard/admin">
+                        <ShieldAlert />
+                        <span>Painel Admin</span>
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                  <SidebarMenuItem>
+                    <SidebarMenuButton
+                      asChild
+                      isActive={location.pathname === '/dashboard/relatorios'}
+                      className="data-[active=true]:bg-transparent data-[active=true]:text-[#c8e6c9] hover:bg-[#c8e6c9]/10 hover:text-[#c8e6c9] text-white transition-colors"
+                    >
+                      <Link to="/dashboard/relatorios">
+                        <FileBarChart />
+                        <span>Relatórios</span>
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                </>
               )}
 
               <SidebarMenuItem>

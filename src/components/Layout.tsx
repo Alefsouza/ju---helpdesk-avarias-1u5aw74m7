@@ -31,25 +31,13 @@ import { supabase } from '@/lib/supabase/client'
 import { toast } from 'sonner'
 
 function AppSidebar() {
-  const { user, signOut } = useAuth()
+  const { user, profile, signOut } = useAuth()
   const location = useLocation()
-  const [profile, setProfile] = useState<any>(null)
 
-  useEffect(() => {
-    if (user) {
-      supabase
-        .from('perfil_usuario')
-        .select('tipo_usuario')
-        .eq('id', user.id)
-        .single()
-        .then(({ data }) => {
-          if (data) setProfile(data)
-        })
-    }
-  }, [user])
-
-  const isResp = profile?.tipo_usuario === 'responsavel' || profile?.tipo_usuario === 'admin'
-  const isAdmin = profile?.tipo_usuario === 'admin'
+  const tipo = profile?.tipo_usuario
+  const isBasico = tipo === 'basico'
+  const isResponsavel = tipo === 'responsavel'
+  const isAdmin = tipo === 'admin'
 
   return (
     <Sidebar>
@@ -63,20 +51,22 @@ function AppSidebar() {
         <SidebarGroup>
           <SidebarGroupContent>
             <SidebarMenu>
-              <SidebarMenuItem>
-                <SidebarMenuButton
-                  asChild
-                  isActive={location.pathname === '/dashboard/meus-chamados'}
-                  className="data-[active=true]:bg-transparent data-[active=true]:text-[#c8e6c9] hover:bg-[#c8e6c9]/10 hover:text-[#c8e6c9] text-white transition-colors"
-                >
-                  <Link to="/dashboard/meus-chamados">
-                    <Ticket />
-                    <span>Meus Chamados</span>
-                  </Link>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
+              {isBasico && (
+                <SidebarMenuItem>
+                  <SidebarMenuButton
+                    asChild
+                    isActive={location.pathname === '/dashboard/meus-chamados'}
+                    className="data-[active=true]:bg-transparent data-[active=true]:text-[#c8e6c9] hover:bg-[#c8e6c9]/10 hover:text-[#c8e6c9] text-white transition-colors"
+                  >
+                    <Link to="/dashboard/meus-chamados">
+                      <Ticket />
+                      <span>Meus Chamados</span>
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              )}
 
-              {isResp && (
+              {isResponsavel && (
                 <>
                   <SidebarMenuItem>
                     <SidebarMenuButton

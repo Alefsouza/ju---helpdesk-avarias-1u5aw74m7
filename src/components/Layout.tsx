@@ -211,7 +211,7 @@ function useRealtimeNotifications(userId: string | undefined) {
 }
 
 export default function Layout() {
-  const { user, loading } = useAuth()
+  const { user, profile, loading } = useAuth()
   const location = useLocation()
   const isAuthRoute = location.pathname === '/' || location.pathname === '/cadastro'
 

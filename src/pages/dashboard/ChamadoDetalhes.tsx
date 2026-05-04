@@ -1,9 +1,10 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Badge } from '@/components/ui/badge'
+import { Progress } from '@/components/ui/progress'
 import {
   ArrowLeft,
   Send,
@@ -15,6 +16,7 @@ import {
   AlertCircle,
   Paperclip,
   X,
+  RefreshCw,
 } from 'lucide-react'
 import { supabase } from '@/lib/supabase/client'
 import { useAuth } from '@/hooks/use-auth'
@@ -34,6 +36,16 @@ type TimelineItem = {
   mensagem?: string
   criado_em: string
   usuario: Perfil | null
+}
+
+type FileItem = {
+  id: string
+  file: File
+  status: 'pending' | 'uploading' | 'success' | 'error'
+  progress: number
+  url?: string
+  errorCount: number
+  errorMessage?: string
 }
 
 const statusColors: Record<string, string> = {
@@ -57,6 +69,20 @@ const prioridadeLabels: Record<string, string> = {
   alta: 'Alta',
 }
 
+const MAX_FILES = 10
+const MAX_SIZE_MB = 20
+const MAX_SIZE_BYTES = MAX_SIZE_MB * 1024 * 1024
+const ALLOWED_TYPES = [
+  'audio/mpeg',
+  'audio/mp3',
+  'video/mp4',
+  'application/pdf',
+  'image/jpeg',
+  'image/png',
+  'image/gif',
+  'image/webp',
+]
+
 export default function ChamadoDetalhes() {
   const { id } = useParams()
   const navigate = useNavigate()
@@ -71,7 +97,10 @@ export default function ChamadoDetalhes() {
   const [submitting, setSubmitting] = useState(false)
   const [completing, setCompleting] = useState(false)
   const [currentUserProfile, setCurrentUserProfile] = useState<Perfil | null>(null)
-  const [selectedFiles, setSelectedFiles] = useState<File[]>([])
+
+  const [files, setFiles] = useState<FileItem[]>([])
+  const [isDragActive, setIsDragActive] = useState(false)
+
   const fileInputRef = useRef<HTMLInputElement>(null)
   const messagesEndRef = useRef<HTMLDivElement>(null)
 
@@ -199,83 +228,153 @@ export default function ChamadoDetalhes() {
     }
   }, [timeline])
 
-  const addFiles = (files: File[]) => {
-    const validTypes = ['application/pdf', 'audio/mpeg', 'audio/mp3', 'video/mp4']
-    const validFiles = files.filter((f) => {
-      const isValidType = f.type.startsWith('image/') || validTypes.includes(f.type)
-      const isValidSize = f.size <= 20 * 1024 * 1024 // 20MB
-      return isValidType && isValidSize
-    })
+  const uploadFile = async (item: FileItem) => {
+    setFiles((prev) =>
+      prev.map((f) =>
+        f.id === item.id ? { ...f, status: 'uploading', progress: 0, errorMessage: undefined } : f,
+      ),
+    )
 
-    if (validFiles.length !== files.length) {
-      toast.error('Alguns arquivos são inválidos (tamanho > 20MB ou tipo não permitido).')
+    const interval = setInterval(() => {
+      setFiles((prev) =>
+        prev.map((f) => {
+          if (f.id === item.id && f.status === 'uploading' && f.progress < 90) {
+            return { ...f, progress: f.progress + 15 }
+          }
+          return f
+        }),
+      )
+    }, 300)
+
+    try {
+      const ext = item.file.name.split('.').pop()
+      const uuid = crypto.randomUUID()
+      const filePath = `${id}/${uuid}.${ext}`
+
+      const { error } = await supabase.storage
+        .from('chamados')
+        .upload(filePath, item.file, { upsert: false })
+
+      clearInterval(interval)
+
+      if (error) {
+        throw error
+      }
+
+      const {
+        data: { publicUrl },
+      } = supabase.storage.from('chamados').getPublicUrl(filePath)
+
+      setFiles((prev) =>
+        prev.map((f) =>
+          f.id === item.id ? { ...f, status: 'success', progress: 100, url: publicUrl } : f,
+        ),
+      )
+    } catch (err: any) {
+      clearInterval(interval)
+      setFiles((prev) =>
+        prev.map((f) => {
+          if (f.id === item.id) {
+            return {
+              ...f,
+              status: 'error',
+              errorCount: f.errorCount + 1,
+              errorMessage: 'Erro ao enviar arquivo. Tente novamente',
+            }
+          }
+          return f
+        }),
+      )
+    }
+  }
+
+  const processFiles = (newFiles: File[]) => {
+    if (files.length + newFiles.length > MAX_FILES) {
+      toast.error(`Você pode enviar no máximo ${MAX_FILES} arquivos por resposta.`)
+      return
     }
 
-    setSelectedFiles((prev) => {
-      const newFiles = [...prev, ...validFiles]
-      if (newFiles.length > 10) {
-        toast.error('Máximo de 10 arquivos permitidos por resposta.')
-        return newFiles.slice(0, 10)
+    const itemsToUpload: FileItem[] = []
+
+    for (const file of newFiles) {
+      const isValidType = ALLOWED_TYPES.includes(file.type) || file.type.startsWith('image/')
+      if (!isValidType || file.size > MAX_SIZE_BYTES) {
+        toast.error('Arquivo inválido. Máximo 20 MB. Tipos: MP3, MP4, imagens, PDF')
+        continue
       }
-      return newFiles
-    })
+
+      const item: FileItem = {
+        id: crypto.randomUUID(),
+        file,
+        status: 'pending',
+        progress: 0,
+        errorCount: 0,
+      }
+      itemsToUpload.push(item)
+    }
+
+    if (itemsToUpload.length > 0) {
+      setFiles((prev) => [...prev, ...itemsToUpload])
+      itemsToUpload.forEach(uploadFile)
+    }
   }
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
-      addFiles(Array.from(e.target.files))
+      processFiles(Array.from(e.target.files))
     }
+    if (fileInputRef.current) fileInputRef.current.value = ''
   }
 
-  const handleDragOver = (e: React.DragEvent) => {
+  const handleDragOver = useCallback((e: React.DragEvent) => {
     e.preventDefault()
     e.stopPropagation()
-  }
+    setIsDragActive(true)
+  }, [])
 
-  const handleDrop = (e: React.DragEvent) => {
+  const handleDragLeave = useCallback((e: React.DragEvent) => {
     e.preventDefault()
     e.stopPropagation()
-    if (e.dataTransfer.files) {
-      addFiles(Array.from(e.dataTransfer.files))
-    }
+    setIsDragActive(false)
+  }, [])
+
+  const handleDrop = useCallback(
+    (e: React.DragEvent) => {
+      e.preventDefault()
+      e.stopPropagation()
+      setIsDragActive(false)
+      if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+        processFiles(Array.from(e.dataTransfer.files))
+      }
+    },
+    [files],
+  )
+
+  const removeFile = (fileId: string) => {
+    setFiles((prev) => prev.filter((f) => f.id !== fileId))
   }
 
-  const removeFile = (index: number) => {
-    setSelectedFiles((prev) => prev.filter((_, i) => i !== index))
+  const retryUpload = (item: FileItem) => {
+    uploadFile(item)
+  }
+
+  const getTipoArquivo = (mime: string) => {
+    if (mime.startsWith('audio/')) return 'audio'
+    if (mime.startsWith('video/')) return 'video'
+    if (mime.startsWith('image/')) return 'imagem'
+    if (mime === 'application/pdf') return 'pdf'
+    return 'pdf'
   }
 
   const handleResponder = async () => {
     if (!mensagem.trim()) return
-    setSubmitting(true)
-
-    const uploadedAnexos = []
-    if (selectedFiles.length > 0) {
-      for (const file of selectedFiles) {
-        const fileExt = file.name.split('.').pop()
-        const fileName = `${Math.random().toString(36).substring(2, 15)}_${Date.now()}.${fileExt}`
-        const filePath = `${id}/${fileName}`
-
-        const { error: uploadError } = await supabase.storage
-          .from('chamados')
-          .upload(filePath, file)
-
-        if (uploadError) {
-          toast.error(`Erro ao fazer upload do arquivo ${file.name}`)
-          setSubmitting(false)
-          return
-        }
-
-        const { data: publicUrlData } = supabase.storage.from('chamados').getPublicUrl(filePath)
-
-        uploadedAnexos.push({
-          chamado_id: id as string,
-          url_arquivo: publicUrlData.publicUrl,
-          nome_arquivo: file.name,
-          tipo_arquivo: file.type,
-          tamanho_mb: Number((file.size / (1024 * 1024)).toFixed(2)),
-        })
-      }
+    const hasIncomplete = files.some((f) => f.status !== 'success')
+    if (hasIncomplete) {
+      toast.error('Aguarde o envio de todos os anexos ou remova os que apresentaram erro.')
+      return
     }
+
+    setSubmitting(true)
 
     const { error: respostaError } = await supabase.from('respostas_chamado').insert({
       chamado_id: id as string,
@@ -289,7 +388,15 @@ export default function ChamadoDetalhes() {
       return
     }
 
-    if (uploadedAnexos.length > 0) {
+    if (files.length > 0) {
+      const uploadedAnexos = files.map((f) => ({
+        chamado_id: id as string,
+        url_arquivo: f.url!,
+        nome_arquivo: f.file.name,
+        tipo_arquivo: getTipoArquivo(f.file.type),
+        tamanho_mb: Number((f.file.size / (1024 * 1024)).toFixed(2)),
+      }))
+
       const { error: anexosError } = await supabase.from('anexos_chamado').insert(uploadedAnexos)
       if (anexosError) {
         toast.error('Erro ao salvar anexos no banco de dados')
@@ -314,9 +421,9 @@ export default function ChamadoDetalhes() {
     })
 
     setMensagem('')
-    setSelectedFiles([])
+    setFiles([])
     setSubmitting(false)
-    toast.success(uploadedAnexos.length > 0 ? 'Resposta enviada com anexos' : 'Resposta enviada')
+    toast.success(files.length > 0 ? 'Resposta enviada com anexos' : 'Resposta enviada')
   }
 
   const handleFinalizar = async () => {
@@ -385,7 +492,7 @@ export default function ChamadoDetalhes() {
   }
 
   const renderAnexo = (anexo: Anexo) => {
-    const isImage = anexo.tipo_arquivo.includes('image')
+    const isImage = anexo.tipo_arquivo.includes('imagem') || anexo.tipo_arquivo.includes('image')
     const isVideo = anexo.tipo_arquivo.includes('video')
     const isAudio = anexo.tipo_arquivo.includes('audio')
 
@@ -611,8 +718,12 @@ export default function ChamadoDetalhes() {
             Responder
           </h3>
           <div
-            className="flex flex-col gap-3 rounded-lg border-2 border-dashed p-4 transition-colors bg-slate-50 hover:border-slate-300"
+            className={cn(
+              'flex flex-col gap-3 rounded-lg border-2 border-dashed p-4 transition-colors bg-slate-50',
+              isDragActive ? 'border-primary bg-primary/5' : 'hover:border-slate-300',
+            )}
             onDragOver={handleDragOver}
+            onDragLeave={handleDragLeave}
             onDrop={handleDrop}
           >
             <Textarea
@@ -623,23 +734,67 @@ export default function ChamadoDetalhes() {
               disabled={submitting}
             />
 
-            {selectedFiles.length > 0 && (
-              <div className="flex flex-wrap gap-2 pt-2 border-t">
-                {selectedFiles.map((file, idx) => (
+            {files.length > 0 && (
+              <div className="flex flex-col gap-2 pt-2 border-t">
+                {files.map((f) => (
                   <div
-                    key={idx}
-                    className="flex items-center gap-2 bg-white text-xs font-medium px-3 py-1.5 rounded-md border shadow-sm"
+                    key={f.id}
+                    className={cn(
+                      'flex items-center gap-3 p-2.5 rounded-md border text-sm shadow-sm',
+                      f.status === 'error' ? 'border-red-200 bg-red-50/50' : 'bg-white',
+                    )}
                   >
-                    <Paperclip className="h-3 w-3 text-slate-500" />
-                    <span className="truncate max-w-[150px]" title={file.name}>
-                      {file.name}
-                    </span>
+                    <Paperclip className="h-4 w-4 text-slate-400 shrink-0" />
+                    <div className="flex-1 min-w-0">
+                      <div className="flex justify-between items-center mb-1">
+                        <span
+                          className="truncate max-w-[200px] sm:max-w-[300px] font-medium"
+                          title={f.file.name}
+                        >
+                          {f.file.name}
+                        </span>
+                        <span className="text-xs text-slate-500 shrink-0">
+                          {(f.file.size / (1024 * 1024)).toFixed(2)} MB
+                        </span>
+                      </div>
+
+                      {f.status === 'uploading' && (
+                        <div className="space-y-1.5 mt-1">
+                          <Progress value={f.progress} className="h-1.5" />
+                          <p className="text-[10px] text-slate-500 font-medium">Enviando...</p>
+                        </div>
+                      )}
+
+                      {f.status === 'success' && (
+                        <div className="flex items-center gap-1 text-green-600 text-[11px] font-medium mt-0.5">
+                          <CheckCircle2 className="h-3.5 w-3.5" />
+                          Enviado
+                        </div>
+                      )}
+
+                      {f.status === 'error' && (
+                        <div className="flex items-center gap-2 mt-0.5">
+                          <div className="flex items-center gap-1 text-red-600 text-[11px] font-medium">
+                            <AlertCircle className="h-3.5 w-3.5" />
+                            {f.errorMessage}
+                          </div>
+                          <button
+                            onClick={() => retryUpload(f)}
+                            className="text-[11px] text-slate-500 hover:text-slate-800 underline flex items-center gap-1"
+                            disabled={submitting}
+                          >
+                            <RefreshCw className="h-3 w-3" />
+                            Tentar novamente
+                          </button>
+                        </div>
+                      )}
+                    </div>
                     <button
-                      onClick={() => removeFile(idx)}
-                      className="text-slate-400 hover:text-red-500 transition-colors"
+                      onClick={() => removeFile(f.id)}
+                      className="text-slate-400 hover:text-red-500 hover:bg-slate-100 p-1.5 rounded shrink-0 transition-colors"
                       disabled={submitting}
                     >
-                      <X className="h-3 w-3" />
+                      <X className="h-4 w-4" />
                     </button>
                   </div>
                 ))}
@@ -653,10 +808,10 @@ export default function ChamadoDetalhes() {
                   size="sm"
                   className="text-slate-600 h-9 bg-white"
                   onClick={() => fileInputRef.current?.click()}
-                  disabled={submitting || selectedFiles.length >= 10}
+                  disabled={submitting || files.length >= MAX_FILES}
                 >
                   <Paperclip className="mr-2 h-4 w-4" />
-                  Anexar
+                  Anexar Arquivo
                 </Button>
                 <input
                   type="file"
@@ -664,9 +819,11 @@ export default function ChamadoDetalhes() {
                   onChange={handleFileChange}
                   className="hidden"
                   multiple
-                  accept="image/*,application/pdf,audio/mpeg,audio/mp3,video/mp4"
+                  accept=".mp3,.mp4,.pdf,image/jpeg,image/png,image/gif,image/webp"
                 />
-                <span className="text-xs text-slate-500">Até 10 arquivos (Máx 20MB).</span>
+                <span className="text-xs text-slate-500 hidden sm:inline-block">
+                  Máx 10 arquivos (20MB)
+                </span>
               </div>
 
               <div className="flex gap-2 w-full sm:w-auto justify-end">
@@ -676,9 +833,9 @@ export default function ChamadoDetalhes() {
                   className="h-9"
                   onClick={() => {
                     setMensagem('')
-                    setSelectedFiles([])
+                    setFiles([])
                   }}
-                  disabled={submitting || (!mensagem && selectedFiles.length === 0)}
+                  disabled={submitting || (!mensagem && files.length === 0)}
                 >
                   Cancelar
                 </Button>
@@ -686,7 +843,9 @@ export default function ChamadoDetalhes() {
                   size="sm"
                   className="h-9"
                   onClick={handleResponder}
-                  disabled={submitting || !mensagem.trim()}
+                  disabled={
+                    submitting || !mensagem.trim() || files.some((f) => f.status !== 'success')
+                  }
                 >
                   <Send className="mr-2 h-4 w-4" />
                   {submitting ? 'Enviando...' : 'Responder'}

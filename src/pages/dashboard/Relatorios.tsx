@@ -285,11 +285,11 @@ export default function Relatorios() {
 
     try {
       const { jsPDF } = await import('jspdf')
-      const autoTable = (await import('jspdf-autotable')).default
-
       const doc = new jsPDF()
 
+      // PÁGINA 1: Título, filtros, métricas resumidas
       doc.setFontSize(16)
+      doc.setTextColor(34, 95, 61)
       doc.text('Relatório de Chamados', 14, 20)
 
       doc.setFontSize(10)
@@ -316,53 +316,75 @@ export default function Relatorios() {
 
       doc.text(filterText, 14, 44)
 
-      const tableColumn = [
-        'ID',
-        'Título',
-        'Status',
-        'Prioridade',
-        'Responsável',
-        'Data Criação',
-        'Data Fin.',
-        'Tempo (h)',
-      ]
+      doc.setFontSize(12)
+      doc.setTextColor(0)
+      doc.text('Métricas Resumidas:', 14, 56)
 
-      const tableRows = filteredData.map((d) => {
+      doc.setFontSize(10)
+      doc.setTextColor(100)
+      doc.text(`Total de Chamados: ${metrics.total}`, 14, 64)
+      doc.text(`Tempo Médio de Atendimento: ${metrics.avgTime.toFixed(1)} hrs`, 14, 70)
+      doc.text(`Taxa de Resolução: ${metrics.resolutionRate.toFixed(1)}%`, 14, 76)
+
+      // PÁGINA 2+: Tabela de chamados (20 linhas por página)
+      let pageY = 20
+      const rowsPerPage = 20
+      const tableColumnX = [14, 30, 85, 115, 135, 155, 175, 195]
+
+      const renderHeaders = () => {
+        doc.setFontSize(9)
+        doc.setTextColor(34, 95, 61)
+        doc.setFont('helvetica', 'bold')
+        doc.text('ID', tableColumnX[0], pageY)
+        doc.text('Título', tableColumnX[1], pageY)
+        doc.text('Status', tableColumnX[2], pageY)
+        doc.text('Prior.', tableColumnX[3], pageY)
+        doc.text('Resp.', tableColumnX[4], pageY)
+        doc.text('Criação', tableColumnX[5], pageY)
+        doc.text('Fin.', tableColumnX[6], pageY)
+        doc.text('Hrs', tableColumnX[7], pageY)
+        doc.line(14, pageY + 2, 200, pageY + 2)
+        pageY += 8
+        doc.setFont('helvetica', 'normal')
+        doc.setTextColor(100)
+      }
+
+      for (let i = 0; i < filteredData.length; i++) {
+        if (i % rowsPerPage === 0) {
+          doc.addPage()
+          pageY = 20
+          renderHeaders()
+        }
+
+        const d = filteredData[i]
         const isFinished = d.status === 'finalizado'
         const time = isFinished
           ? differenceInHours(parseISO(d.atualizado_em), parseISO(d.criado_em))
           : '-'
-        return [
-          d.id.split('-')[0].toUpperCase(),
-          d.titulo.substring(0, 30) + (d.titulo.length > 30 ? '...' : ''),
-          d.status.replace('_', ' '),
-          d.prioridade,
-          d.perfil_usuario?.nome_completo || 'Não atribuído',
-          format(parseISO(d.criado_em), 'dd/MM/yy HH:mm'),
-          isFinished ? format(parseISO(d.atualizado_em), 'dd/MM/yy HH:mm') : '-',
-          time,
-        ]
-      })
 
-      autoTable(doc, {
-        head: [tableColumn],
-        body: tableRows,
-        startY: 50,
-        styles: { fontSize: 8 },
-        headStyles: { fillColor: [34, 95, 61] },
-      })
+        const id = d.id.split('-')[0].toUpperCase()
+        const titulo = d.titulo.substring(0, 25) + (d.titulo.length > 25 ? '...' : '')
+        const status = d.status.replace('_', ' ')
+        const prioridade = d.prioridade
+        const resp =
+          (d.perfil_usuario?.nome_completo || 'Não atribuído').substring(0, 10) +
+          ((d.perfil_usuario?.nome_completo?.length || 0) > 10 ? '...' : '')
+        const criacao = format(parseISO(d.criado_em), 'dd/MM/yy')
+        const fin = isFinished ? format(parseISO(d.atualizado_em), 'dd/MM/yy') : '-'
+        const hrs = String(time)
 
-      const finalY = (doc as any).lastAutoTable.finalY || 50
+        doc.setFontSize(8)
+        doc.text(id, tableColumnX[0], pageY)
+        doc.text(titulo, tableColumnX[1], pageY)
+        doc.text(status, tableColumnX[2], pageY)
+        doc.text(prioridade, tableColumnX[3], pageY)
+        doc.text(resp, tableColumnX[4], pageY)
+        doc.text(criacao, tableColumnX[5], pageY)
+        doc.text(fin, tableColumnX[6], pageY)
+        doc.text(hrs, tableColumnX[7], pageY)
 
-      doc.setFontSize(12)
-      doc.setTextColor(0)
-      doc.text('Métricas Resumidas:', 14, finalY + 15)
-
-      doc.setFontSize(10)
-      doc.setTextColor(100)
-      doc.text(`Total de Chamados: ${metrics.total}`, 14, finalY + 23)
-      doc.text(`Tempo Médio de Atendimento: ${metrics.avgTime.toFixed(1)} hrs`, 14, finalY + 29)
-      doc.text(`Taxa de Resolução: ${metrics.resolutionRate.toFixed(1)}%`, 14, finalY + 35)
+        pageY += 7
+      }
 
       const pageCount = doc.internal.getNumberOfPages()
       for (let i = 1; i <= pageCount; i++) {
@@ -370,7 +392,7 @@ export default function Relatorios() {
         doc.setFontSize(8)
         doc.setTextColor(150)
         doc.text(
-          `Página ${i} de ${pageCount} - Gerado pelo Sistema de Helpdesk Via Sudeste`,
+          `Página ${i} de ${pageCount} - Gerado pelo Sistema de Helpdesk Via Sudeste em ${format(new Date(), 'dd/MM/yyyy HH:mm')}`,
           doc.internal.pageSize.width / 2,
           doc.internal.pageSize.height - 10,
           { align: 'center' },

@@ -119,13 +119,25 @@ export default function Relatorios() {
     try {
       const { data: chamadosData, error: fetchError } = await supabase
         .from('chamados')
-        .select(
-          'id, titulo, status, prioridade, criado_em, atualizado_em, responsavel_id, perfil_usuario:responsavel_id(nome_completo)',
-        )
+        .select('id, titulo, status, prioridade, criado_em, atualizado_em, responsavel_id')
         .order('criado_em', { ascending: false })
 
       if (fetchError) throw fetchError
-      setData(chamadosData as unknown as Chamado[])
+
+      const { data: perfisData, error: perfisError } = await supabase
+        .from('perfil_usuario')
+        .select('id, nome_completo')
+
+      if (perfisError) throw perfisError
+
+      const perfisMap = new Map(perfisData.map((p) => [p.id, p]))
+
+      const combinedData = chamadosData.map((chamado) => ({
+        ...chamado,
+        perfil_usuario: chamado.responsavel_id ? perfisMap.get(chamado.responsavel_id) : null,
+      }))
+
+      setData(combinedData as unknown as Chamado[])
     } catch (err) {
       console.error(err)
       setError(true)
@@ -268,46 +280,109 @@ export default function Relatorios() {
     }))
   }
 
-  const exportCSV = () => {
+  const exportPDF = async () => {
     if (filteredData.length === 0) return toast.error('Não há dados para exportar')
 
-    const headers = [
-      'ID',
-      'Título',
-      'Status',
-      'Prioridade',
-      'Responsável',
-      'Data Criação',
-      'Data Finalização',
-      'Tempo Atendimento (h)',
-    ]
-    const rows = filteredData.map((d) => {
-      const isFinished = d.status === 'finalizado'
-      const time = isFinished
-        ? differenceInHours(parseISO(d.atualizado_em), parseISO(d.criado_em))
-        : ''
-      return [
-        d.id,
-        `"${d.titulo.replace(/"/g, '""')}"`,
-        d.status,
-        d.prioridade,
-        `"${d.perfil_usuario?.nome_completo || 'Não atribuído'}"`,
-        format(parseISO(d.criado_em), 'dd/MM/yyyy HH:mm'),
-        isFinished ? format(parseISO(d.atualizado_em), 'dd/MM/yyyy HH:mm') : '',
-        time,
-      ].join(',')
-    })
+    try {
+      const { jsPDF } = await import('jspdf')
+      const autoTable = (await import('jspdf-autotable')).default
 
-    const csvContent = [headers.join(','), ...rows].join('\n')
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
-    const link = document.createElement('a')
-    const url = URL.createObjectURL(blob)
-    link.setAttribute('href', url)
-    link.setAttribute('download', `relatorio_chamados_${format(new Date(), 'yyyyMMdd_HHmm')}.csv`)
-    link.style.visibility = 'hidden'
-    document.body.appendChild(link)
-    link.click()
-    document.body.removeChild(link)
+      const doc = new jsPDF()
+
+      doc.setFontSize(16)
+      doc.text('Relatório de Chamados', 14, 20)
+
+      doc.setFontSize(10)
+      doc.setTextColor(100)
+      doc.text(`Gerado em: ${format(new Date(), 'dd/MM/yyyy HH:mm')}`, 14, 28)
+
+      doc.setFontSize(12)
+      doc.setTextColor(0)
+      doc.text('Filtros aplicados:', 14, 38)
+      doc.setFontSize(10)
+      doc.setTextColor(100)
+
+      let filterText = `Período: ${appliedFilters.period}`
+      if (appliedFilters.period === 'custom') {
+        filterText += ` (${appliedFilters.startDate} a ${appliedFilters.endDate})`
+      }
+      filterText += ` | Status: ${appliedFilters.status} | Prioridade: ${appliedFilters.priority}`
+      if (appliedFilters.assignee !== 'todos') {
+        const assigneeName =
+          assignees.find((a) => a.id === appliedFilters.assignee)?.nome_completo ||
+          appliedFilters.assignee
+        filterText += ` | Responsável: ${assigneeName}`
+      }
+
+      doc.text(filterText, 14, 44)
+
+      const tableColumn = [
+        'ID',
+        'Título',
+        'Status',
+        'Prioridade',
+        'Responsável',
+        'Data Criação',
+        'Data Fin.',
+        'Tempo (h)',
+      ]
+
+      const tableRows = filteredData.map((d) => {
+        const isFinished = d.status === 'finalizado'
+        const time = isFinished
+          ? differenceInHours(parseISO(d.atualizado_em), parseISO(d.criado_em))
+          : '-'
+        return [
+          d.id.split('-')[0].toUpperCase(),
+          d.titulo.substring(0, 30) + (d.titulo.length > 30 ? '...' : ''),
+          d.status.replace('_', ' '),
+          d.prioridade,
+          d.perfil_usuario?.nome_completo || 'Não atribuído',
+          format(parseISO(d.criado_em), 'dd/MM/yy HH:mm'),
+          isFinished ? format(parseISO(d.atualizado_em), 'dd/MM/yy HH:mm') : '-',
+          time,
+        ]
+      })
+
+      autoTable(doc, {
+        head: [tableColumn],
+        body: tableRows,
+        startY: 50,
+        styles: { fontSize: 8 },
+        headStyles: { fillColor: [34, 95, 61] },
+      })
+
+      const finalY = (doc as any).lastAutoTable.finalY || 50
+
+      doc.setFontSize(12)
+      doc.setTextColor(0)
+      doc.text('Métricas Resumidas:', 14, finalY + 15)
+
+      doc.setFontSize(10)
+      doc.setTextColor(100)
+      doc.text(`Total de Chamados: ${metrics.total}`, 14, finalY + 23)
+      doc.text(`Tempo Médio de Atendimento: ${metrics.avgTime.toFixed(1)} hrs`, 14, finalY + 29)
+      doc.text(`Taxa de Resolução: ${metrics.resolutionRate.toFixed(1)}%`, 14, finalY + 35)
+
+      const pageCount = doc.internal.getNumberOfPages()
+      for (let i = 1; i <= pageCount; i++) {
+        doc.setPage(i)
+        doc.setFontSize(8)
+        doc.setTextColor(150)
+        doc.text(
+          `Página ${i} de ${pageCount} - Gerado pelo Sistema de Helpdesk Via Sudeste`,
+          doc.internal.pageSize.width / 2,
+          doc.internal.pageSize.height - 10,
+          { align: 'center' },
+        )
+      }
+
+      doc.save(`relatorio_chamados_${format(new Date(), 'yyyyMMdd_HHmm')}.pdf`)
+      toast.success('PDF gerado com sucesso')
+    } catch (error) {
+      console.error('Error generating PDF:', error)
+      toast.error('Erro ao gerar PDF. Tente novamente mais tarde.')
+    }
   }
 
   if (isAdmin === false) return <Navigate to="/dashboard" replace />
@@ -319,9 +394,9 @@ export default function Relatorios() {
           <h1 className="text-2xl font-semibold text-[#225f3d]">Relatórios</h1>
           <p className="text-sm text-slate-500">Análise avançada e exportação de dados</p>
         </div>
-        <Button onClick={exportCSV} className="bg-[#225f3d] hover:bg-[#1a4a2f] text-white">
+        <Button onClick={exportPDF} className="bg-[#225f3d] hover:bg-[#1a4a2f] text-white">
           <Download className="w-4 h-4 mr-2" />
-          Exportar CSV
+          Exportar PDF
         </Button>
       </div>
 

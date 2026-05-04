@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react'
-import { Link, useSearchParams } from 'react-router-dom'
+import { useState } from 'react'
+import { Link } from 'react-router-dom'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import * as z from 'zod'
@@ -16,66 +16,86 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card'
-import { AlertCircle, Loader2 } from 'lucide-react'
+import { AlertCircle, CheckCircle2, Loader2, ArrowLeft } from 'lucide-react'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 
-const formSchema = z.object({
-  email: z.string().email('E-mail inválido'),
-  password: z.string().min(1, 'A senha é obrigatória'),
-})
+const formSchema = z
+  .object({
+    email: z.string().email('E-mail inválido'),
+    password: z.string().min(8, 'A senha deve ter pelo menos 8 caracteres'),
+    confirmPassword: z.string(),
+  })
+  .refine((data) => data.password === data.confirmPassword, {
+    message: 'Senhas não conferem',
+    path: ['confirmPassword'],
+  })
 
-export default function Index() {
-  const [searchParams] = useSearchParams()
+export default function Register() {
   const { toast } = useToast()
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [isSuccess, setIsSuccess] = useState(false)
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
-    defaultValues: { email: '', password: '' },
+    defaultValues: { email: '', password: '', confirmPassword: '' },
   })
-
-  useEffect(() => {
-    if (searchParams.get('confirmed') === 'true') {
-      // Small timeout to ensure toaster is mounted
-      setTimeout(() => {
-        toast({
-          title: 'E-mail confirmado!',
-          description: 'Faça login para continuar.',
-          className: 'bg-green-600 text-white border-none',
-        })
-      }, 100)
-    }
-  }, [searchParams, toast])
 
   const onSubmit = async (values: z.infer<typeof formSchema>) => {
     setIsLoading(true)
     setError(null)
 
-    const { error: signInError } = await supabase.auth.signInWithPassword({
+    const { error: signUpError } = await supabase.auth.signUp({
       email: values.email,
       password: values.password,
     })
 
     setIsLoading(false)
 
-    if (signInError) {
-      setError(signInError.message || 'E-mail ou senha incorretos')
+    if (signUpError) {
+      setError(signUpError.message || 'Erro ao realizar cadastro')
     } else {
+      setIsSuccess(true)
       toast({
-        title: 'Login realizado com sucesso',
+        title: 'Cadastro realizado!',
+        description: 'Verifique seu e-mail para confirmar a conta.',
         className: 'bg-green-600 text-white border-none',
       })
-      // Redirect happens automatically via Layout observation of Auth State
     }
   }
 
+  if (isSuccess) {
+    return (
+      <Card className="border-slate-200 shadow-sm animate-fade-in text-center py-6">
+        <CardHeader>
+          <div className="mx-auto bg-green-100 p-3 rounded-full w-fit mb-4 animate-slide-up">
+            <CheckCircle2 className="h-8 w-8 text-green-600" />
+          </div>
+          <CardTitle className="text-2xl font-bold">Verifique seu e-mail</CardTitle>
+          <CardDescription className="text-base mt-2">
+            Enviamos um link de confirmação para o seu e-mail. Por favor, acesse-o para confirmar
+            seu cadastro.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Button
+            asChild
+            variant="outline"
+            className="mt-4 w-full transition-transform active:scale-[0.98]"
+          >
+            <Link to="/?confirmed=true">Ir para o Login (Demo Simulação)</Link>
+          </Button>
+        </CardContent>
+      </Card>
+    )
+  }
+
   return (
-    <Card className="border-slate-200 shadow-sm">
+    <Card className="border-slate-200 shadow-sm animate-fade-in">
       <CardHeader className="space-y-1">
-        <CardTitle className="text-2xl font-bold text-center">Entrar no Helpdesk</CardTitle>
+        <CardTitle className="text-2xl font-bold text-center">Criar Conta</CardTitle>
         <CardDescription className="text-center">
-          Insira seu e-mail e senha para acessar sua conta
+          Preencha os dados abaixo para se cadastrar
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -125,27 +145,50 @@ export default function Index() {
               </p>
             )}
           </div>
+          <div className="space-y-2">
+            <Label htmlFor="confirmPassword">
+              Confirmar Senha <span className="text-red-500">*</span>
+            </Label>
+            <Input
+              id="confirmPassword"
+              type="password"
+              {...form.register('confirmPassword')}
+              className={
+                form.formState.errors.confirmPassword
+                  ? 'border-red-500 focus-visible:ring-red-500'
+                  : ''
+              }
+              disabled={isLoading}
+            />
+            {form.formState.errors.confirmPassword && (
+              <p className="text-sm text-red-500 animate-fade-in">
+                {form.formState.errors.confirmPassword.message}
+              </p>
+            )}
+          </div>
           <Button
             type="submit"
             className="w-full transition-transform active:scale-[0.98]"
             disabled={isLoading}
           >
             {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-            {isLoading ? 'Entrando...' : 'Entrar'}
+            {isLoading ? 'Cadastrando...' : 'Cadastrar'}
           </Button>
         </form>
       </CardContent>
-      <CardFooter className="flex flex-col space-y-2 border-t pt-4">
+      <CardFooter className="flex flex-col space-y-4 border-t pt-4">
         <div className="text-sm text-center text-slate-500">
-          Não tem uma conta?{' '}
-          <Link to="/cadastro" className="text-primary hover:underline font-medium">
-            Cadastre-se
+          Já tem conta?{' '}
+          <Link to="/" className="text-primary hover:underline font-medium">
+            Faça login
           </Link>
         </div>
-        <div className="text-xs text-center text-slate-400 mt-4 px-4 bg-slate-50 p-2 rounded-md border border-slate-100">
-          Demo: Use <strong>admin@helpdesk.com</strong> e senha <strong>12345678</strong> ou
-          cadastre um novo.
-        </div>
+        <Link
+          to="/"
+          className="text-sm text-slate-400 hover:text-slate-600 flex items-center justify-center transition-colors"
+        >
+          <ArrowLeft className="h-4 w-4 mr-1" /> Voltar
+        </Link>
       </CardFooter>
     </Card>
   )

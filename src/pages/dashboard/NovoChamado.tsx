@@ -16,7 +16,15 @@ import {
 } from '@/components/ui/select'
 import { Progress } from '@/components/ui/progress'
 import { toast } from 'sonner'
-import { UploadCloud, X, FileIcon, AlertCircle, CheckCircle2, RefreshCw } from 'lucide-react'
+import {
+  UploadCloud,
+  X,
+  FileIcon,
+  AlertCircle,
+  CheckCircle2,
+  RefreshCw,
+  Loader2,
+} from 'lucide-react'
 
 type FileItem = {
   id: string
@@ -210,6 +218,16 @@ export default function NovoChamado() {
       return
     }
 
+    if (titulo.length < 10) {
+      toast.error('O título deve ter no mínimo 10 caracteres')
+      return
+    }
+
+    if (descricao.length < 20) {
+      toast.error('A descrição deve ter no mínimo 20 caracteres')
+      return
+    }
+
     const hasIncomplete = files.some((f) => f.status !== 'success')
     if (hasIncomplete) {
       toast.error('Valide todos os anexos antes de enviar')
@@ -226,7 +244,9 @@ export default function NovoChamado() {
           descricao,
           prioridade,
           usuario_id: user.id,
+          responsavel_id: null,
           status: 'aberto',
+          criado_em: new Date().toISOString(),
         })
         .select()
         .single()
@@ -251,11 +271,11 @@ export default function NovoChamado() {
         usuario_id: user.id,
       })
 
-      toast.success(`Chamado criado com sucesso! ID: ${chamado.id.substring(0, 8)}`)
-      navigate('/dashboard/meus-chamados')
+      toast.success('Chamado criado com sucesso')
+      navigate(`/dashboard/chamados/${chamado.id}`)
     } catch (error) {
       console.error(error)
-      toast.error('Não conseguimos criar o chamado. Verifique os anexos e tente novamente')
+      toast.error('Erro ao criar chamado. Tente novamente')
     } finally {
       setIsSubmitting(false)
     }
@@ -290,14 +310,20 @@ export default function NovoChamado() {
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="assunto">Assunto *</Label>
-                  <Input
-                    id="assunto"
-                    placeholder="Ex: Financeiro, TI, Dúvidas"
-                    value={assunto}
-                    onChange={(e) => setAssunto(e.target.value)}
-                    required
-                  />
+                  <Label htmlFor="assunto">Categoria *</Label>
+                  <Select value={assunto} onValueChange={setAssunto}>
+                    <SelectTrigger id="assunto">
+                      <SelectValue placeholder="Selecione uma categoria" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="TI / Suporte Técnico">TI / Suporte Técnico</SelectItem>
+                      <SelectItem value="Financeiro">Financeiro</SelectItem>
+                      <SelectItem value="Manutenção">Manutenção</SelectItem>
+                      <SelectItem value="Recursos Humanos">Recursos Humanos</SelectItem>
+                      <SelectItem value="Dúvidas Gerais">Dúvidas Gerais</SelectItem>
+                      <SelectItem value="Outros">Outros</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="prioridade">Prioridade *</Label>
@@ -438,7 +464,14 @@ export default function NovoChamado() {
                 </span>
               )}
               <Button type="submit" disabled={isSubmitDisabled}>
-                {isSubmitting ? 'Enviando...' : 'Enviar chamado'}
+                {isSubmitting ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Criando...
+                  </>
+                ) : (
+                  'Criar chamado'
+                )}
               </Button>
             </div>
           </CardFooter>

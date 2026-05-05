@@ -986,9 +986,7 @@ export default function ChamadoDetalhes() {
             <div className="border-2 border-green-700 bg-[rgba(200,230,201,0.1)] rounded-xl shadow-sm p-4 sm:p-6 space-y-4">
               <div className="flex items-center gap-2 mb-2">
                 <AlertCircle className="h-5 w-5 text-green-800" />
-                <h3 className="text-base font-bold text-green-800 uppercase tracking-wider">
-                  Plano de Ação Imediata
-                </h3>
+                <h3 className="text-base font-bold text-green-800 uppercase tracking-wider">PIA</h3>
               </div>
               <Textarea
                 placeholder="Descreva o Plano de Ação Imediata"

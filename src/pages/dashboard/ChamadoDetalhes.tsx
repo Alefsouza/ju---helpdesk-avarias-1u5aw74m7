@@ -36,6 +36,8 @@ import {
   RefreshCw,
   ArrowRightLeft,
   Loader2,
+  Trash2,
+  Download,
 } from 'lucide-react'
 import { supabase } from '@/lib/supabase/client'
 import { useAuth } from '@/hooks/use-auth'
@@ -47,6 +49,16 @@ import { cn } from '@/lib/utils'
 type Chamado = any
 type Perfil = any
 type Anexo = any
+type AnexoInterno = {
+  id: string
+  chamado_id: string
+  usuario_id: string
+  arquivo_url: string
+  nome_arquivo: string
+  tamanho_bytes: number
+  tipo_arquivo: string
+  criado_em: string
+}
 type TimelineItem = {
   id: string
   type: 'history' | 'response'
@@ -112,6 +124,7 @@ export default function ChamadoDetalhes() {
   const [solicitante, setSolicitante] = useState<Perfil | null>(null)
   const [anexos, setAnexos] = useState<Anexo[]>([])
   const [timeline, setTimeline] = useState<TimelineItem[]>([])
+  const [anexosInternos, setAnexosInternos] = useState<AnexoInterno[]>([])
   const [loading, setLoading] = useState(true)
   const [mensagem, setMensagem] = useState('')
   const [submitting, setSubmitting] = useState(false)
@@ -126,8 +139,10 @@ export default function ChamadoDetalhes() {
   const [selectedResponsavel, setSelectedResponsavel] = useState<string>('')
   const [transferObservacao, setTransferObservacao] = useState('')
   const [transferLoading, setTransferLoading] = useState(false)
+  const [uploadingInternal, setUploadingInternal] = useState(false)
 
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const internalFileInputRef = useRef<HTMLInputElement>(null)
   const messagesEndRef = useRef<HTMLDivElement>(null)
 
   const fetchChamadoData = async () => {
@@ -154,14 +169,25 @@ export default function ChamadoDetalhes() {
 
     setSolicitante(solicitanteData || null)
 
+    let currUser = null
     if (user) {
-      const { data: currUser } = await supabase
-        .from('perfil_usuario')
-        .select('*')
-        .eq('id', user.id)
-        .single()
+      const { data } = await supabase.from('perfil_usuario').select('*').eq('id', user.id).single()
+      currUser = data
       setCurrentUserProfile(currUser)
     }
+
+    let internalAttachments: AnexoInterno[] = []
+    if (
+      currUser &&
+      (currUser.tipo_usuario === 'responsavel' || currUser.tipo_usuario === 'admin')
+    ) {
+      const { data: anexosInt } = await supabase
+        .from('anexos_chamado_interno')
+        .select('*')
+        .eq('chamado_id', id)
+      internalAttachments = anexosInt || []
+    }
+    setAnexosInternos(internalAttachments)
 
     const { data: anexosData } = await supabase
       .from('anexos_chamado')
@@ -335,6 +361,16 @@ export default function ChamadoDetalhes() {
         { event: 'UPDATE', schema: 'public', table: 'chamados', filter: `id=eq.${id}` },
         () => fetchChamadoData(),
       )
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'anexos_chamado_interno',
+          filter: `chamado_id=eq.${id}`,
+        },
+        () => fetchChamadoData(),
+      )
       .subscribe()
 
     return () => {
@@ -476,6 +512,74 @@ export default function ChamadoDetalhes() {
 
   const retryUpload = (item: FileItem) => {
     uploadFile(item)
+  }
+
+  const handleInternalFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!e.target.files || e.target.files.length === 0) return
+    const file = e.target.files[0]
+
+    const MAX_INTERNAL_MB = 10
+    const MAX_INTERNAL_BYTES = MAX_INTERNAL_MB * 1024 * 1024
+
+    if (file.size > MAX_INTERNAL_BYTES) {
+      toast.error('Arquivo muito grande. Máximo 10 MB.')
+      return
+    }
+
+    setUploadingInternal(true)
+    try {
+      const ext = file.name.split('.').pop()
+      const uuid = crypto.randomUUID()
+      const filePath = `${id}/${uuid}.${ext}`
+
+      const { error: uploadError } = await supabase.storage
+        .from('anexos_chamados_interno')
+        .upload(filePath, file)
+
+      if (uploadError) throw uploadError
+
+      const {
+        data: { publicUrl },
+      } = supabase.storage.from('anexos_chamados_interno').getPublicUrl(filePath)
+
+      const { error: dbError } = await supabase.from('anexos_chamado_interno').insert({
+        chamado_id: id as string,
+        usuario_id: user?.id as string,
+        arquivo_url: publicUrl,
+        nome_arquivo: file.name,
+        tamanho_bytes: file.size,
+        tipo_arquivo: file.type || 'application/octet-stream',
+      })
+
+      if (dbError) throw dbError
+
+      toast.success('Anexo interno adicionado com sucesso')
+    } catch (err: any) {
+      toast.error('Erro ao fazer upload do anexo interno')
+    } finally {
+      setUploadingInternal(false)
+      if (internalFileInputRef.current) internalFileInputRef.current.value = ''
+    }
+  }
+
+  const handleDeleteInternal = async (anexoId: string, url: string) => {
+    if (!window.confirm('Tem certeza que deseja deletar este anexo interno?')) return
+
+    try {
+      const urlParts = url.split('/')
+      const fileName = urlParts[urlParts.length - 1]
+      const fileIdFolder = urlParts[urlParts.length - 2]
+      const path = `${fileIdFolder}/${fileName}`
+
+      await supabase.storage.from('anexos_chamados_interno').remove([path])
+
+      const { error } = await supabase.from('anexos_chamado_interno').delete().eq('id', anexoId)
+      if (error) throw error
+
+      toast.success('Anexo interno deletado')
+    } catch (error) {
+      toast.error('Erro ao deletar anexo interno')
+    }
   }
 
   const getTipoArquivo = (mime: string) => {
@@ -851,6 +955,93 @@ export default function ChamadoDetalhes() {
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
               {anexos.map(renderAnexo)}
             </div>
+          </div>
+        )}
+
+        {isSupport && (
+          <div className="pt-4 border-t">
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="text-sm font-bold text-slate-900 uppercase tracking-wider flex items-center gap-2">
+                Anexos Internos{' '}
+                <Badge variant="secondary" className="bg-amber-100 text-amber-800">
+                  {anexosInternos.length}
+                </Badge>
+              </h3>
+              <Button
+                size="sm"
+                variant="outline"
+                className="text-xs h-8 bg-amber-50 hover:bg-amber-100 text-amber-800 border-amber-200"
+                onClick={() => internalFileInputRef.current?.click()}
+                disabled={uploadingInternal}
+              >
+                {uploadingInternal ? (
+                  <Loader2 className="mr-2 h-3 w-3 animate-spin" />
+                ) : (
+                  <Paperclip className="mr-2 h-3 w-3" />
+                )}
+                Adicionar Anexo Interno
+              </Button>
+              <input
+                type="file"
+                ref={internalFileInputRef}
+                onChange={handleInternalFileChange}
+                className="hidden"
+                accept=".pdf,.doc,.docx,.xls,.xlsx,image/jpeg,image/png,image/gif"
+              />
+            </div>
+
+            {anexosInternos.length > 0 ? (
+              <div className="flex flex-col gap-2">
+                {anexosInternos.map((anexo) => (
+                  <div
+                    key={anexo.id}
+                    className="flex items-center justify-between p-3 rounded-lg border bg-amber-50/30"
+                  >
+                    <div className="flex items-center gap-3 min-w-0">
+                      <FileText className="h-5 w-5 text-amber-600 shrink-0" />
+                      <div className="min-w-0">
+                        <p
+                          className="text-sm font-medium text-slate-900 truncate"
+                          title={anexo.nome_arquivo}
+                        >
+                          {anexo.nome_arquivo}
+                        </p>
+                        <p className="text-xs text-slate-500">
+                          {(anexo.tamanho_bytes / 1024 / 1024).toFixed(2)} MB •{' '}
+                          {format(new Date(anexo.criado_em), 'dd/MM/yyyy HH:mm')}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2 shrink-0 ml-4">
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        className="h-8 w-8 text-slate-500 hover:text-slate-900"
+                        asChild
+                      >
+                        <a href={anexo.arquivo_url} target="_blank" rel="noreferrer" download>
+                          <Download className="h-4 w-4" />
+                        </a>
+                      </Button>
+                      {user?.id === anexo.usuario_id && (
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          className="h-8 w-8 text-slate-500 hover:text-red-600"
+                          onClick={() => handleDeleteInternal(anexo.id, anexo.arquivo_url)}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center p-6 border border-dashed rounded-lg bg-slate-50">
+                <p className="text-sm text-slate-500">Nenhum anexo interno registrado.</p>
+              </div>
+            )}
           </div>
         )}
       </div>

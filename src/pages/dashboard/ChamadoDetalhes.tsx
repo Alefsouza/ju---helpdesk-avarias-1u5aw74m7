@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useCallback } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
+import { Input } from '@/components/ui/input'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Badge } from '@/components/ui/badge'
 import { Progress } from '@/components/ui/progress'
@@ -736,6 +737,12 @@ export default function ChamadoDetalhes() {
 
   const handleSalvarPia = async () => {
     if (!isSupport) return
+
+    if (pia.trim() && !/^[A-Za-z0-9/\-.\s]+$/.test(pia.trim())) {
+      toast.error('Informe um número válido de PIA')
+      return
+    }
+
     setSavingPia(true)
     const { error } = await supabase
       .from('chamados')
@@ -986,13 +993,16 @@ export default function ChamadoDetalhes() {
             <div className="border-2 border-green-700 bg-[rgba(200,230,201,0.1)] rounded-xl shadow-sm p-4 sm:p-6 space-y-4">
               <div className="flex items-center gap-2 mb-2">
                 <AlertCircle className="h-5 w-5 text-green-800" />
-                <h3 className="text-base font-bold text-green-800 uppercase tracking-wider">PIA</h3>
+                <h3 className="text-base font-bold text-green-800 uppercase tracking-wider">
+                  Plano de Ação Imediata
+                </h3>
               </div>
-              <Textarea
-                placeholder="Descreva o Plano de Ação Imediata"
+              <Input
+                type="text"
+                placeholder="Informe o número de PIA"
                 value={pia}
                 onChange={(e) => setPia(e.target.value)}
-                className="min-h-[100px] resize-y bg-white border-green-300 focus-visible:ring-green-700"
+                className="bg-white border-green-300 focus-visible:ring-green-700"
                 disabled={savingPia}
               />
               <div className="flex justify-end">

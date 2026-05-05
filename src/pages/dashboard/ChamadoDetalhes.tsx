@@ -561,16 +561,25 @@ export default function ChamadoDetalhes() {
         data: { publicUrl },
       } = supabase.storage.from('anexos_chamados_interno').getPublicUrl(filePath)
 
-      const { error: dbError } = await supabase.from('anexos_chamado_interno').insert({
-        chamado_id: id as string,
-        usuario_id: user?.id as string,
-        arquivo_url: publicUrl,
-        nome_arquivo: file.name,
-        tamanho_bytes: file.size,
-        tipo_arquivo: file.type || 'application/octet-stream',
-      })
+      const { data: newAnexo, error: dbError } = await supabase
+        .from('anexos_chamado_interno')
+        .insert({
+          chamado_id: id as string,
+          usuario_id: user?.id as string,
+          arquivo_url: publicUrl,
+          nome_arquivo: file.name,
+          tamanho_bytes: file.size,
+          tipo_arquivo: file.type || 'application/octet-stream',
+        })
+        .select()
+        .single()
 
       if (dbError) throw dbError
+
+      setAnexosInternos((prev) => {
+        if (prev.some((a) => a.id === newAnexo.id)) return prev
+        return [...prev, newAnexo]
+      })
 
       toast.success('Anexo interno adicionado com sucesso')
     } catch (err: any) {
@@ -595,9 +604,46 @@ export default function ChamadoDetalhes() {
       const { error } = await supabase.from('anexos_chamado_interno').delete().eq('id', anexoId)
       if (error) throw error
 
+      setAnexosInternos((prev) => prev.filter((a) => a.id !== anexoId))
       toast.success('Anexo interno deletado')
     } catch (error) {
       toast.error('Erro ao deletar anexo interno')
+    }
+  }
+
+  const handleDownloadInternal = async (anexo: AnexoInterno) => {
+    try {
+      const urlParts = anexo.arquivo_url.split('/anexos_chamados_interno/')
+      const path = urlParts.length > 1 ? urlParts[1] : null
+
+      let blob: Blob
+
+      if (path) {
+        const { data, error } = await supabase.storage
+          .from('anexos_chamados_interno')
+          .download(path)
+        if (error) throw new Error('not_found')
+        blob = data
+      } else {
+        const response = await fetch(anexo.arquivo_url)
+        if (!response.ok) throw new Error('not_found')
+        blob = await response.blob()
+      }
+
+      const url = window.URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = anexo.nome_arquivo
+      document.body.appendChild(a)
+      a.click()
+      window.URL.revokeObjectURL(url)
+      document.body.removeChild(a)
+    } catch (err: any) {
+      if (err.message === 'not_found') {
+        toast.error('Arquivo não encontrado')
+      } else {
+        toast.error('Erro ao baixar arquivo. Tente novamente')
+      }
     }
   }
 
@@ -1080,11 +1126,9 @@ export default function ChamadoDetalhes() {
                         size="icon"
                         variant="ghost"
                         className="h-8 w-8 text-slate-500 hover:text-slate-900"
-                        asChild
+                        onClick={() => handleDownloadInternal(anexo)}
                       >
-                        <a href={anexo.arquivo_url} target="_blank" rel="noreferrer" download>
-                          <Download className="h-4 w-4" />
-                        </a>
+                        <Download className="h-4 w-4" />
                       </Button>
                       {user?.id === anexo.usuario_id && (
                         <Button

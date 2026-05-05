@@ -97,7 +97,11 @@ export function DashboardCharts({ chamados }: { chamados: any[] }) {
                   stroke="none"
                 >
                   {statusData.map((entry, index) => (
-                    <Cell key={index} fill={entry.fill} />
+                    <Cell
+                      className="shadow-[0px_0px_6px_0px_#000000] border-[inherit]"
+                      key={index}
+                      fill={entry.fill}
+                    />
                   ))}
                 </Pie>
                 <ChartTooltip content={<ChartTooltipContent />} />

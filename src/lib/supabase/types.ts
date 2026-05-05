@@ -114,7 +114,6 @@ export type Database = {
       }
       chamados: {
         Row: {
-          assunto: string
           atualizado_em: string
           criado_em: string
           descricao: string
@@ -127,7 +126,6 @@ export type Database = {
           usuario_id: string
         }
         Insert: {
-          assunto: string
           atualizado_em?: string
           criado_em?: string
           descricao: string
@@ -140,7 +138,6 @@ export type Database = {
           usuario_id: string
         }
         Update: {
-          assunto?: string
           atualizado_em?: string
           criado_em?: string
           descricao?: string
@@ -435,7 +432,6 @@ export const Constants = {
 //   id: uuid (not null, default: gen_random_uuid())
 //   usuario_id: uuid (not null)
 //   titulo: text (not null)
-//   assunto: text (not null)
 //   descricao: text (not null)
 //   prioridade: text (not null, default: 'media'::text)
 //   status: text (not null, default: 'aberto'::text)

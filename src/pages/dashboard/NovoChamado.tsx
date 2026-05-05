@@ -212,13 +212,13 @@ export default function NovoChamado() {
     e.preventDefault()
     if (!user) return
 
-    if (!titulo || !descricao) {
-      toast.error('Preencha todos os campos obrigatórios')
+    if (!titulo.trim()) {
+      toast.error('Título é obrigatório')
       return
     }
 
-    if (titulo.length < 10) {
-      toast.error('O título deve ter no mínimo 10 caracteres')
+    if (!descricao.trim()) {
+      toast.error('Preencha todos os campos obrigatórios')
       return
     }
 
@@ -280,7 +280,7 @@ export default function NovoChamado() {
   }
 
   const isSubmitDisabled =
-    isSubmitting || files.some((f) => f.status !== 'success') || !titulo || !descricao
+    isSubmitting || files.some((f) => f.status !== 'success') || !titulo.trim() || !descricao.trim()
 
   return (
     <div className="max-w-3xl mx-auto space-y-6 animate-fade-in-up p-4">

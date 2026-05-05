@@ -981,13 +981,36 @@ export default function ChamadoDetalhes() {
           </div>
         </div>
 
-        {anexos.length > 0 && (
+        {isSupport && (
           <div className="pt-4 border-t">
-            <h3 className="text-sm font-bold text-slate-900 mb-3 uppercase tracking-wider flex items-center gap-2">
-              Anexos <Badge variant="secondary">{anexos.length}</Badge>
-            </h3>
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
-              {anexos.map(renderAnexo)}
+            <div className="border-2 border-green-700 bg-[rgba(200,230,201,0.1)] rounded-xl shadow-sm p-4 sm:p-6 space-y-4">
+              <div className="flex items-center gap-2 mb-2">
+                <AlertCircle className="h-5 w-5 text-green-800" />
+                <h3 className="text-base font-bold text-green-800 uppercase tracking-wider">
+                  Plano de Ação Imediata
+                </h3>
+              </div>
+              <Textarea
+                placeholder="Descreva o Plano de Ação Imediata"
+                value={pia}
+                onChange={(e) => setPia(e.target.value)}
+                className="min-h-[100px] resize-y bg-white border-green-300 focus-visible:ring-green-700"
+                disabled={savingPia}
+              />
+              <div className="flex justify-end">
+                <Button
+                  onClick={handleSalvarPia}
+                  disabled={savingPia}
+                  className="bg-green-700 hover:bg-green-800 text-white"
+                >
+                  {savingPia ? (
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  ) : (
+                    <CheckCircle2 className="mr-2 h-4 w-4" />
+                  )}
+                  {savingPia ? 'Salvando...' : 'Salvar PIA'}
+                </Button>
+              </div>
             </div>
           </div>
         )}
@@ -1078,39 +1101,18 @@ export default function ChamadoDetalhes() {
             )}
           </div>
         )}
-      </div>
 
-      {isSupport && (
-        <div className="border-2 border-green-700 bg-[rgba(200,230,201,0.1)] rounded-xl shadow-sm p-4 sm:p-6 space-y-4">
-          <div className="flex items-center gap-2 mb-2">
-            <AlertCircle className="h-5 w-5 text-green-800" />
-            <h3 className="text-base font-bold text-green-800 uppercase tracking-wider">
-              PIA (Plano de Ação Imediata)
+        {anexos.length > 0 && (
+          <div className="pt-4 border-t">
+            <h3 className="text-sm font-bold text-slate-900 mb-3 uppercase tracking-wider flex items-center gap-2">
+              Anexos <Badge variant="secondary">{anexos.length}</Badge>
             </h3>
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+              {anexos.map(renderAnexo)}
+            </div>
           </div>
-          <Textarea
-            placeholder="Descreva a PIA (Plano de Ação Imediata)"
-            value={pia}
-            onChange={(e) => setPia(e.target.value)}
-            className="min-h-[100px] resize-y bg-white border-green-300 focus-visible:ring-green-700"
-            disabled={savingPia}
-          />
-          <div className="flex justify-end">
-            <Button
-              onClick={handleSalvarPia}
-              disabled={savingPia}
-              className="bg-green-700 hover:bg-green-800 text-white"
-            >
-              {savingPia ? (
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              ) : (
-                <CheckCircle2 className="mr-2 h-4 w-4" />
-              )}
-              {savingPia ? 'Salvando...' : 'Salvar PIA'}
-            </Button>
-          </div>
-        </div>
-      )}
+        )}
+      </div>
 
       <div className="space-y-4">
         <h3 className="text-lg font-bold text-slate-900 px-1">Histórico de Interações</h3>

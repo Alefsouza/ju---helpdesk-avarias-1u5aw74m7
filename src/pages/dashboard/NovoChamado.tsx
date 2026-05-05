@@ -54,7 +54,6 @@ export default function NovoChamado() {
   const navigate = useNavigate()
 
   const [titulo, setTitulo] = useState('')
-  const [assunto, setAssunto] = useState('')
   const [descricao, setDescricao] = useState('')
   const [prioridade, setPrioridade] = useState('media')
 
@@ -213,7 +212,7 @@ export default function NovoChamado() {
     e.preventDefault()
     if (!user) return
 
-    if (!titulo || !assunto || !descricao) {
+    if (!titulo || !descricao) {
       toast.error('Preencha todos os campos obrigatórios')
       return
     }
@@ -240,14 +239,13 @@ export default function NovoChamado() {
         .from('chamados')
         .insert({
           titulo,
-          assunto,
           descricao,
           prioridade,
           usuario_id: user.id,
           responsavel_id: null,
           status: 'aberto',
           criado_em: new Date().toISOString(),
-        })
+        } as any)
         .select()
         .single()
 
@@ -282,7 +280,7 @@ export default function NovoChamado() {
   }
 
   const isSubmitDisabled =
-    isSubmitting || files.some((f) => f.status !== 'success') || !titulo || !assunto || !descricao
+    isSubmitting || files.some((f) => f.status !== 'success') || !titulo || !descricao
 
   return (
     <div className="max-w-3xl mx-auto space-y-6 animate-fade-in-up p-4">
@@ -309,22 +307,6 @@ export default function NovoChamado() {
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="assunto">Categoria *</Label>
-                  <Select value={assunto} onValueChange={setAssunto}>
-                    <SelectTrigger id="assunto">
-                      <SelectValue placeholder="Selecione uma categoria" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="TI / Suporte Técnico">TI / Suporte Técnico</SelectItem>
-                      <SelectItem value="Financeiro">Financeiro</SelectItem>
-                      <SelectItem value="Manutenção">Manutenção</SelectItem>
-                      <SelectItem value="Recursos Humanos">Recursos Humanos</SelectItem>
-                      <SelectItem value="Dúvidas Gerais">Dúvidas Gerais</SelectItem>
-                      <SelectItem value="Outros">Outros</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
                 <div className="space-y-2">
                   <Label htmlFor="prioridade">Prioridade *</Label>
                   <Select value={prioridade} onValueChange={setPrioridade}>

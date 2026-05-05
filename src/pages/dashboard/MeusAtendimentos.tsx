@@ -201,7 +201,7 @@ export default function MeusAtendimentos() {
               <TableHeader>
                 <TableRow className="bg-slate-50">
                   <TableHead className="w-[100px]">ID</TableHead>
-                  <TableHead>Título / Assunto</TableHead>
+                  <TableHead>Título</TableHead>
                   <TableHead>Solicitante</TableHead>
                   <TableHead>Prioridade</TableHead>
                   <TableHead>Status</TableHead>
@@ -215,7 +215,6 @@ export default function MeusAtendimentos() {
                     <TableCell className="font-mono text-xs text-slate-500">{c.id}</TableCell>
                     <TableCell>
                       <div className="font-medium text-slate-900 line-clamp-1">{c.titulo}</div>
-                      <div className="text-sm text-slate-500 line-clamp-1">{c.assunto}</div>
                     </TableCell>
                     <TableCell className="text-sm">
                       <span className="font-medium text-slate-700">{c.nome_usuario}</span>
@@ -267,7 +266,6 @@ export default function MeusAtendimentos() {
                     <div className="flex-1 min-w-0">
                       <div className="text-xs text-slate-500 font-mono mb-1">ID: {c.id}</div>
                       <h3 className="font-semibold text-slate-900 line-clamp-1">{c.titulo}</h3>
-                      <p className="text-sm text-slate-500 line-clamp-1">{c.assunto}</p>
                     </div>
                   </div>
 

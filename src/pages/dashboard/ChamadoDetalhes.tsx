@@ -1000,9 +1000,6 @@ export default function ChamadoDetalhes() {
               </Badge>
             </div>
             <h1 className="text-2xl font-bold text-slate-900">{chamado.titulo}</h1>
-            <p className="text-sm font-medium text-primary bg-primary/10 w-fit px-3 py-1 rounded-full">
-              {chamado.assunto}
-            </p>
           </div>
           <div className="text-sm text-slate-500 flex flex-col sm:items-end gap-1 bg-slate-50 p-3 rounded-lg border">
             <div className="flex items-center gap-1">

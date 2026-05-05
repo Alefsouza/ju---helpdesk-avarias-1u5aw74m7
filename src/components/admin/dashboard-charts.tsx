@@ -15,11 +15,11 @@ import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/
 const statusColors = {
   aberto: '#225f3d', // verde escuro
   em_atendimento: '#c8e6c9', // verde claro
-  finalizado: '#404040', // cinza escuro
+  finalizado: '#808080', // cinza médio
 }
 
 const priorityColors = {
-  baixa: '#404040', // cinza escuro
+  baixa: '#808080', // cinza médio
   media: '#c8e6c9', // verde claro
   alta: '#225f3d', // verde escuro
 }

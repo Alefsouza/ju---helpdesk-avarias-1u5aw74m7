@@ -75,11 +75,11 @@ export function DashboardTable({
   const statusColor: Record<string, string> = {
     aberto: 'bg-blue-100 text-blue-800 hover:bg-blue-100',
     em_atendimento: 'bg-yellow-100 text-yellow-800 hover:bg-yellow-100',
-    finalizado: 'bg-green-100 text-green-800 hover:bg-green-100',
+    finalizado: 'bg-[#404040] text-white hover:bg-[#404040]/90 border-transparent',
   }
 
   const prioColor: Record<string, string> = {
-    baixa: 'bg-gray-100 text-gray-800 hover:bg-gray-100',
+    baixa: 'bg-[#404040] text-white hover:bg-[#404040]/90 border-transparent',
     media: 'bg-orange-100 text-orange-800 hover:bg-orange-100',
     alta: 'bg-red-100 text-red-800 hover:bg-red-100',
   }

@@ -131,6 +131,9 @@ export default function ChamadoDetalhes() {
   const [completing, setCompleting] = useState(false)
   const [currentUserProfile, setCurrentUserProfile] = useState<Perfil | null>(null)
 
+  const [pia, setPia] = useState('')
+  const [savingPia, setSavingPia] = useState(false)
+
   const [files, setFiles] = useState<FileItem[]>([])
   const [isDragActive, setIsDragActive] = useState(false)
 
@@ -160,6 +163,7 @@ export default function ChamadoDetalhes() {
       return
     }
     setChamado(chamadoData)
+    setPia(chamadoData.pia || '')
 
     const { data: solicitanteData } = await supabase
       .from('perfil_usuario')
@@ -359,7 +363,12 @@ export default function ChamadoDetalhes() {
       .on(
         'postgres_changes',
         { event: 'UPDATE', schema: 'public', table: 'chamados', filter: `id=eq.${id}` },
-        () => fetchChamadoData(),
+        (payload) => {
+          setChamado(payload.new as any)
+          if (payload.new.pia !== undefined) {
+            setPia(payload.new.pia || '')
+          }
+        },
       )
       .on(
         'postgres_changes',
@@ -369,7 +378,16 @@ export default function ChamadoDetalhes() {
           table: 'anexos_chamado_interno',
           filter: `chamado_id=eq.${id}`,
         },
-        () => fetchChamadoData(),
+        (payload) => {
+          if (payload.eventType === 'INSERT') {
+            setAnexosInternos((prev) => {
+              if (prev.some((a) => a.id === payload.new.id)) return prev
+              return [...prev, payload.new as AnexoInterno]
+            })
+          } else if (payload.eventType === 'DELETE') {
+            setAnexosInternos((prev) => prev.filter((a) => a.id !== payload.old.id))
+          }
+        },
       )
       .subscribe()
 
@@ -716,6 +734,22 @@ export default function ChamadoDetalhes() {
     toast.success(files.length > 0 ? 'Resposta enviada com anexos' : 'Resposta enviada')
   }
 
+  const handleSalvarPia = async () => {
+    if (!isSupport) return
+    setSavingPia(true)
+    const { error } = await supabase
+      .from('chamados')
+      .update({ pia })
+      .eq('id', id as string)
+
+    setSavingPia(false)
+    if (error) {
+      toast.error('Erro ao salvar PIA. Tente novamente')
+    } else {
+      toast.success('PIA salva com sucesso')
+    }
+  }
+
   const handleFinalizar = async () => {
     if (!window.confirm('Tem certeza que deseja finalizar este chamado?')) return
     setCompleting(true)
@@ -1045,6 +1079,38 @@ export default function ChamadoDetalhes() {
           </div>
         )}
       </div>
+
+      {isSupport && (
+        <div className="border-2 border-green-700 bg-[rgba(200,230,201,0.1)] rounded-xl shadow-sm p-4 sm:p-6 space-y-4">
+          <div className="flex items-center gap-2 mb-2">
+            <AlertCircle className="h-5 w-5 text-green-800" />
+            <h3 className="text-base font-bold text-green-800 uppercase tracking-wider">
+              PIA (Plano de Ação Imediata)
+            </h3>
+          </div>
+          <Textarea
+            placeholder="Descreva a PIA (Plano de Ação Imediata)"
+            value={pia}
+            onChange={(e) => setPia(e.target.value)}
+            className="min-h-[100px] resize-y bg-white border-green-300 focus-visible:ring-green-700"
+            disabled={savingPia}
+          />
+          <div className="flex justify-end">
+            <Button
+              onClick={handleSalvarPia}
+              disabled={savingPia}
+              className="bg-green-700 hover:bg-green-800 text-white"
+            >
+              {savingPia ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : (
+                <CheckCircle2 className="mr-2 h-4 w-4" />
+              )}
+              {savingPia ? 'Salvando...' : 'Salvar PIA'}
+            </Button>
+          </div>
+        </div>
+      )}
 
       <div className="space-y-4">
         <h3 className="text-lg font-bold text-slate-900 px-1">Histórico de Interações</h3>

@@ -47,6 +47,47 @@ export type Database = {
           },
         ]
       }
+      anexos_chamado_interno: {
+        Row: {
+          arquivo_url: string
+          chamado_id: string
+          criado_em: string
+          id: string
+          nome_arquivo: string
+          tamanho_bytes: number
+          tipo_arquivo: string
+          usuario_id: string
+        }
+        Insert: {
+          arquivo_url: string
+          chamado_id: string
+          criado_em?: string
+          id?: string
+          nome_arquivo: string
+          tamanho_bytes: number
+          tipo_arquivo: string
+          usuario_id: string
+        }
+        Update: {
+          arquivo_url?: string
+          chamado_id?: string
+          criado_em?: string
+          id?: string
+          nome_arquivo?: string
+          tamanho_bytes?: number
+          tipo_arquivo?: string
+          usuario_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: 'anexos_chamado_interno_chamado_id_fkey'
+            columns: ['chamado_id']
+            isOneToOne: false
+            referencedRelation: 'chamados'
+            referencedColumns: ['id']
+          },
+        ]
+      }
       auditoria_admin: {
         Row: {
           acao: string
@@ -372,6 +413,15 @@ export const Constants = {
 //   tipo_arquivo: text (not null)
 //   tamanho_mb: numeric (not null)
 //   criado_em: timestamp with time zone (not null, default: now())
+// Table: anexos_chamado_interno
+//   id: uuid (not null, default: gen_random_uuid())
+//   chamado_id: uuid (not null)
+//   usuario_id: uuid (not null)
+//   arquivo_url: text (not null)
+//   nome_arquivo: text (not null)
+//   tamanho_bytes: integer (not null)
+//   tipo_arquivo: text (not null)
+//   criado_em: timestamp with time zone (not null, default: now())
 // Table: auditoria_admin
 //   id: uuid (not null, default: gen_random_uuid())
 //   admin_id: uuid (not null)
@@ -419,6 +469,10 @@ export const Constants = {
 //   FOREIGN KEY anexos_chamado_chamado_id_fkey: FOREIGN KEY (chamado_id) REFERENCES chamados(id) ON DELETE CASCADE
 //   PRIMARY KEY anexos_chamado_pkey: PRIMARY KEY (id)
 //   CHECK anexos_chamado_tipo_arquivo_check: CHECK ((tipo_arquivo = ANY (ARRAY['audio'::text, 'video'::text, 'imagem'::text, 'pdf'::text])))
+// Table: anexos_chamado_interno
+//   FOREIGN KEY anexos_chamado_interno_chamado_id_fkey: FOREIGN KEY (chamado_id) REFERENCES chamados(id) ON DELETE CASCADE
+//   PRIMARY KEY anexos_chamado_interno_pkey: PRIMARY KEY (id)
+//   FOREIGN KEY anexos_chamado_interno_usuario_id_fkey: FOREIGN KEY (usuario_id) REFERENCES auth.users(id) ON DELETE CASCADE
 // Table: auditoria_admin
 //   FOREIGN KEY auditoria_admin_admin_id_fkey: FOREIGN KEY (admin_id) REFERENCES auth.users(id) ON DELETE CASCADE
 //   PRIMARY KEY auditoria_admin_pkey: PRIMARY KEY (id)
@@ -449,6 +503,15 @@ export const Constants = {
 //     WITH CHECK: (chamado_id IN ( SELECT chamados.id    FROM chamados))
 //   Policy "anexos_select" (SELECT, PERMISSIVE) roles={authenticated}
 //     USING: (chamado_id IN ( SELECT chamados.id    FROM chamados))
+// Table: anexos_chamado_interno
+//   Policy "anexos_internos_delete" (DELETE, PERMISSIVE) roles={authenticated}
+//     USING: ((usuario_id = auth.uid()) AND (is_responsavel() OR is_admin()))
+//   Policy "anexos_internos_insert" (INSERT, PERMISSIVE) roles={authenticated}
+//     WITH CHECK: (is_responsavel() OR is_admin())
+//   Policy "anexos_internos_select" (SELECT, PERMISSIVE) roles={authenticated}
+//     USING: (is_responsavel() OR is_admin())
+//   Policy "anexos_internos_update" (UPDATE, PERMISSIVE) roles={authenticated}
+//     USING: ((usuario_id = auth.uid()) AND (is_responsavel() OR is_admin()))
 // Table: auditoria_admin
 //   Policy "admin_auditoria_insert" (INSERT, PERMISSIVE) roles={authenticated}
 //     WITH CHECK: is_admin()

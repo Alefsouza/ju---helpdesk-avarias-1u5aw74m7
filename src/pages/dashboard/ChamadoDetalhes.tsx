@@ -1115,7 +1115,7 @@ export default function ChamadoDetalhes() {
               <div className="flex items-center gap-2 mb-2">
                 <LinkIcon className="h-5 w-5 text-slate-500" />
                 <h3 className="text-base font-bold text-slate-700 uppercase tracking-wider">
-                  Link do Formulário IDO
+                  Link do Formulário - DADOS DO BOLETIM DE OCORRÊNCIA
                 </h3>
               </div>
               <div className="flex items-center gap-2 bg-white border rounded-md p-3 overflow-hidden">

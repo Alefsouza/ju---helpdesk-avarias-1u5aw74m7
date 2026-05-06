@@ -151,6 +151,83 @@ export type Database = {
         }
         Relationships: []
       }
+      formularios_ido: {
+        Row: {
+          assinatura_base64: string | null
+          atualizado_em: string
+          chamado_id: string
+          colaborador_nome: string | null
+          colaborador_registro: string | null
+          criado_em: string
+          id: string
+          protocolo_ido: string | null
+          testemunha_1_endereco: string | null
+          testemunha_1_nome: string | null
+          testemunha_1_sg: string | null
+          testemunha_1_telefone: string | null
+          testemunha_2_endereco: string | null
+          testemunha_2_nome: string | null
+          testemunha_2_sg: string | null
+          testemunha_2_telefone: string | null
+          testemunha_3_endereco: string | null
+          testemunha_3_nome: string | null
+          testemunha_3_sg: string | null
+          testemunha_3_telefone: string | null
+        }
+        Insert: {
+          assinatura_base64?: string | null
+          atualizado_em?: string
+          chamado_id: string
+          colaborador_nome?: string | null
+          colaborador_registro?: string | null
+          criado_em?: string
+          id?: string
+          protocolo_ido?: string | null
+          testemunha_1_endereco?: string | null
+          testemunha_1_nome?: string | null
+          testemunha_1_sg?: string | null
+          testemunha_1_telefone?: string | null
+          testemunha_2_endereco?: string | null
+          testemunha_2_nome?: string | null
+          testemunha_2_sg?: string | null
+          testemunha_2_telefone?: string | null
+          testemunha_3_endereco?: string | null
+          testemunha_3_nome?: string | null
+          testemunha_3_sg?: string | null
+          testemunha_3_telefone?: string | null
+        }
+        Update: {
+          assinatura_base64?: string | null
+          atualizado_em?: string
+          chamado_id?: string
+          colaborador_nome?: string | null
+          colaborador_registro?: string | null
+          criado_em?: string
+          id?: string
+          protocolo_ido?: string | null
+          testemunha_1_endereco?: string | null
+          testemunha_1_nome?: string | null
+          testemunha_1_sg?: string | null
+          testemunha_1_telefone?: string | null
+          testemunha_2_endereco?: string | null
+          testemunha_2_nome?: string | null
+          testemunha_2_sg?: string | null
+          testemunha_2_telefone?: string | null
+          testemunha_3_endereco?: string | null
+          testemunha_3_nome?: string | null
+          testemunha_3_sg?: string | null
+          testemunha_3_telefone?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: 'formularios_ido_chamado_id_fkey'
+            columns: ['chamado_id']
+            isOneToOne: false
+            referencedRelation: 'chamados'
+            referencedColumns: ['id']
+          },
+        ]
+      }
       historico_chamado: {
         Row: {
           acao: string
@@ -439,6 +516,27 @@ export const Constants = {
 //   criado_em: timestamp with time zone (not null, default: now())
 //   atualizado_em: timestamp with time zone (not null, default: now())
 //   pia: text (nullable)
+// Table: formularios_ido
+//   id: uuid (not null, default: gen_random_uuid())
+//   chamado_id: uuid (not null)
+//   protocolo_ido: text (nullable)
+//   colaborador_nome: text (nullable)
+//   colaborador_registro: text (nullable)
+//   testemunha_1_nome: text (nullable)
+//   testemunha_1_endereco: text (nullable)
+//   testemunha_1_sg: text (nullable)
+//   testemunha_1_telefone: text (nullable)
+//   testemunha_2_nome: text (nullable)
+//   testemunha_2_endereco: text (nullable)
+//   testemunha_2_sg: text (nullable)
+//   testemunha_2_telefone: text (nullable)
+//   testemunha_3_nome: text (nullable)
+//   testemunha_3_endereco: text (nullable)
+//   testemunha_3_sg: text (nullable)
+//   testemunha_3_telefone: text (nullable)
+//   assinatura_base64: text (nullable)
+//   criado_em: timestamp with time zone (not null, default: now())
+//   atualizado_em: timestamp with time zone (not null, default: now())
 // Table: historico_chamado
 //   id: uuid (not null, default: gen_random_uuid())
 //   chamado_id: uuid (not null)
@@ -483,6 +581,9 @@ export const Constants = {
 //   FOREIGN KEY chamados_responsavel_id_fkey: FOREIGN KEY (responsavel_id) REFERENCES auth.users(id) ON DELETE SET NULL
 //   CHECK chamados_status_check: CHECK ((status = ANY (ARRAY['aberto'::text, 'em_atendimento'::text, 'finalizado'::text])))
 //   FOREIGN KEY chamados_usuario_id_fkey: FOREIGN KEY (usuario_id) REFERENCES auth.users(id) ON DELETE CASCADE
+// Table: formularios_ido
+//   FOREIGN KEY formularios_ido_chamado_id_fkey: FOREIGN KEY (chamado_id) REFERENCES chamados(id) ON DELETE CASCADE
+//   PRIMARY KEY formularios_ido_pkey: PRIMARY KEY (id)
 // Table: historico_chamado
 //   CHECK historico_chamado_acao_check: CHECK ((acao = ANY (ARRAY['criado'::text, 'atribuido'::text, 'respondido'::text, 'finalizado'::text, 'deletado'::text, 'transferido'::text])))
 //   FOREIGN KEY historico_chamado_chamado_id_fkey: FOREIGN KEY (chamado_id) REFERENCES chamados(id) ON DELETE CASCADE
@@ -524,6 +625,14 @@ export const Constants = {
 //     USING: ((usuario_id = auth.uid()) OR is_responsavel() OR is_admin())
 //   Policy "chamados_update" (UPDATE, PERMISSIVE) roles={authenticated}
 //     USING: ((usuario_id = auth.uid()) OR (is_responsavel() AND ((responsavel_id = auth.uid()) OR (status = 'aberto'::text))) OR is_admin())
+// Table: formularios_ido
+//   Policy "formularios_ido_insert" (INSERT, PERMISSIVE) roles={public}
+//     WITH CHECK: true
+//   Policy "formularios_ido_select" (SELECT, PERMISSIVE) roles={authenticated}
+//     USING: ((chamado_id IN ( SELECT chamados.id    FROM chamados   WHERE ((chamados.usuario_id = auth.uid()) OR (chamados.responsavel_id = auth.uid())))) OR is_admin())
+//   Policy "formularios_ido_update" (UPDATE, PERMISSIVE) roles={authenticated}
+//     USING: (chamado_id IN ( SELECT chamados.id    FROM chamados   WHERE (chamados.responsavel_id = auth.uid())))
+//     WITH CHECK: (chamado_id IN ( SELECT chamados.id    FROM chamados   WHERE (chamados.responsavel_id = auth.uid())))
 // Table: historico_chamado
 //   Policy "Permitir INSERT para responsáveis e admin" (INSERT, PERMISSIVE) roles={authenticated}
 //     WITH CHECK: (auth.uid() IS NOT NULL)
@@ -618,3 +727,7 @@ export const Constants = {
 //   END;
 //   $function$
 //
+
+// --- INDEXES ---
+// Table: formularios_ido
+//   CREATE INDEX formularios_ido_chamado_id_idx ON public.formularios_ido USING btree (chamado_id)

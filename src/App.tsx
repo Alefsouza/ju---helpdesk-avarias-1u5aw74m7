@@ -13,6 +13,8 @@ import AdminDashboard from './pages/dashboard/Admin'
 import Relatorios from './pages/dashboard/Relatorios'
 import Perfil from './pages/dashboard/Perfil'
 import ChamadoDetalhes from './pages/dashboard/ChamadoDetalhes'
+import FormularioIdo from './pages/ido/FormularioIdo'
+import SucessoIdo from './pages/ido/Sucesso'
 import NotFound from './pages/NotFound'
 import Layout from './components/Layout'
 import { AuthProvider } from './hooks/use-auth'
@@ -37,6 +39,8 @@ const App = () => (
             <Route path="/dashboard/relatorios" element={<Relatorios />} />
             <Route path="/dashboard/perfil" element={<Perfil />} />
           </Route>
+          <Route path="/ido/sucesso" element={<SucessoIdo />} />
+          <Route path="/ido/:id" element={<FormularioIdo />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </TooltipProvider>

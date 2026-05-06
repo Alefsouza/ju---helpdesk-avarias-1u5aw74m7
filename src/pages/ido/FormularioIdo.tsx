@@ -1,0 +1,253 @@
+import { useState } from 'react'
+import { useParams, useNavigate } from 'react-router-dom'
+import { useForm, Controller } from 'react-hook-form'
+import { zodResolver } from '@hookform/resolvers/zod'
+import * as z from 'zod'
+import { supabase } from '@/lib/supabase/client'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Separator } from '@/components/ui/separator'
+import { useToast } from '@/hooks/use-toast'
+import { SignaturePad } from '@/components/SignaturePad'
+
+const testemunhaSchema = z
+  .object({
+    nome: z.string().optional(),
+    endereco: z.string().optional(),
+    sg: z.string().optional(),
+    telefone: z.string().optional(),
+  })
+  .refine(
+    (data) => {
+      const values = [data.nome, data.endereco, data.sg, data.telefone].filter(
+        (v) => v !== undefined && v.trim() !== '',
+      )
+      return values.length === 0 || values.length === 4
+    },
+    {
+      message: 'Preencha todos os campos da testemunha',
+      path: ['nome'],
+    },
+  )
+
+const formSchema = z.object({
+  protocolo_ido: z.string().min(1, 'Protocolo é obrigatório'),
+  colaborador_nome: z.string().min(1, 'Nome é obrigatório'),
+  colaborador_registro: z.string().min(1, 'Registro é obrigatório'),
+  assinatura_base64: z.string().min(1, 'Assinatura é obrigatória'),
+  testemunha_1: testemunhaSchema,
+  testemunha_2: testemunhaSchema,
+  testemunha_3: testemunhaSchema,
+})
+
+type FormValues = z.infer<typeof formSchema>
+
+export default function FormularioIdo() {
+  const { id } = useParams<{ id: string }>()
+  const navigate = useNavigate()
+  const { toast } = useToast()
+  const [isSubmitting, setIsSubmitting] = useState(false)
+
+  const form = useForm<FormValues>({
+    resolver: zodResolver(formSchema),
+    defaultValues: {
+      protocolo_ido: '',
+      colaborador_nome: '',
+      colaborador_registro: '',
+      assinatura_base64: '',
+      testemunha_1: { nome: '', endereco: '', sg: '', telefone: '' },
+      testemunha_2: { nome: '', endereco: '', sg: '', telefone: '' },
+      testemunha_3: { nome: '', endereco: '', sg: '', telefone: '' },
+    },
+  })
+
+  const onSubmit = async (data: FormValues) => {
+    if (!id) return
+
+    setIsSubmitting(true)
+
+    try {
+      const { error } = await supabase.from('formularios_ido').insert({
+        chamado_id: id,
+        protocolo_ido: data.protocolo_ido,
+        colaborador_nome: data.colaborador_nome,
+        colaborador_registro: data.colaborador_registro,
+        assinatura_base64: data.assinatura_base64,
+        testemunha_1_nome: data.testemunha_1.nome || null,
+        testemunha_1_endereco: data.testemunha_1.endereco || null,
+        testemunha_1_sg: data.testemunha_1.sg || null,
+        testemunha_1_telefone: data.testemunha_1.telefone || null,
+        testemunha_2_nome: data.testemunha_2.nome || null,
+        testemunha_2_endereco: data.testemunha_2.endereco || null,
+        testemunha_2_sg: data.testemunha_2.sg || null,
+        testemunha_2_telefone: data.testemunha_2.telefone || null,
+        testemunha_3_nome: data.testemunha_3.nome || null,
+        testemunha_3_endereco: data.testemunha_3.endereco || null,
+        testemunha_3_sg: data.testemunha_3.sg || null,
+        testemunha_3_telefone: data.testemunha_3.telefone || null,
+      })
+
+      if (error) throw error
+
+      toast({
+        title: 'Sucesso',
+        description: 'Formulário enviado com sucesso!',
+      })
+      navigate('/ido/sucesso')
+    } catch (error: any) {
+      console.error(error)
+      toast({
+        title: 'Erro ao enviar',
+        description: 'Erro ao enviar formulário. Tente novamente.',
+        variant: 'destructive',
+      })
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
+
+  return (
+    <div className="container max-w-3xl py-8 md:py-12 mx-auto px-4">
+      <Card>
+        <CardHeader>
+          <CardTitle>Formulário de Identificação (IDO)</CardTitle>
+          <CardDescription>
+            Preencha os dados abaixo para registrar as informações vinculadas ao chamado.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
+            <div className="space-y-4">
+              <h3 className="text-lg font-medium">Dados do Colaborador</h3>
+
+              <div className="grid gap-4 md:grid-cols-2">
+                <div className="space-y-2">
+                  <Label htmlFor="protocolo_ido">
+                    Protocolo de IDO <span className="text-destructive">*</span>
+                  </Label>
+                  <Input
+                    id="protocolo_ido"
+                    placeholder="Informe o número de protocolo"
+                    {...form.register('protocolo_ido')}
+                  />
+                  {form.formState.errors.protocolo_ido && (
+                    <span className="text-sm text-destructive">
+                      {form.formState.errors.protocolo_ido.message}
+                    </span>
+                  )}
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="colaborador_nome">
+                    Nome do colaborador <span className="text-destructive">*</span>
+                  </Label>
+                  <Input
+                    id="colaborador_nome"
+                    placeholder="Informe seu nome completo"
+                    {...form.register('colaborador_nome')}
+                  />
+                  {form.formState.errors.colaborador_nome && (
+                    <span className="text-sm text-destructive">
+                      {form.formState.errors.colaborador_nome.message}
+                    </span>
+                  )}
+                </div>
+
+                <div className="space-y-2 md:col-span-2">
+                  <Label htmlFor="colaborador_registro">
+                    Registro do colaborador <span className="text-destructive">*</span>
+                  </Label>
+                  <Input
+                    id="colaborador_registro"
+                    placeholder="Informe seu número de registro"
+                    {...form.register('colaborador_registro')}
+                  />
+                  {form.formState.errors.colaborador_registro && (
+                    <span className="text-sm text-destructive">
+                      {form.formState.errors.colaborador_registro.message}
+                    </span>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            <Separator />
+
+            <div className="space-y-4">
+              <h3 className="text-lg font-medium">Testemunhas (Opcional)</h3>
+              <p className="text-sm text-muted-foreground">
+                Você pode adicionar até 3 testemunhas. Se preencher uma testemunha, todos os seus
+                campos tornam-se obrigatórios.
+              </p>
+
+              {[1, 2, 3].map((num) => {
+                const prefix = `testemunha_${num}` as const
+                const errorObj = form.formState.errors[prefix] as any
+                const rootError = errorObj?.nome?.message
+
+                return (
+                  <div key={num} className="p-4 border rounded-lg space-y-4">
+                    <h4 className="font-medium">Testemunha {num}</h4>
+                    <div className="grid gap-4 md:grid-cols-2">
+                      <div className="space-y-2">
+                        <Label>Nome</Label>
+                        <Input
+                          placeholder="Nome da testemunha"
+                          {...form.register(`${prefix}.nome`)}
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Endereço</Label>
+                        <Input
+                          placeholder="Endereço da testemunha"
+                          {...form.register(`${prefix}.endereco`)}
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>SG</Label>
+                        <Input placeholder="SG da testemunha" {...form.register(`${prefix}.sg`)} />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Telefone</Label>
+                        <Input
+                          placeholder="Telefone da testemunha"
+                          {...form.register(`${prefix}.telefone`)}
+                        />
+                      </div>
+                    </div>
+                    {rootError && <p className="text-sm text-destructive">{rootError}</p>}
+                  </div>
+                )
+              })}
+            </div>
+
+            <Separator />
+
+            <div className="space-y-4">
+              <h3 className="text-lg font-medium">
+                Assinatura Digital <span className="text-destructive">*</span>
+              </h3>
+              <p className="text-sm text-muted-foreground">
+                Assine no quadro abaixo usando o mouse ou o dedo.
+              </p>
+
+              <Controller
+                control={form.control}
+                name="assinatura_base64"
+                render={({ field, fieldState }) => (
+                  <SignaturePad onChange={field.onChange} error={fieldState.error?.message} />
+                )}
+              />
+            </div>
+
+            <Button type="submit" className="w-full" disabled={isSubmitting}>
+              {isSubmitting ? 'Enviando...' : 'Enviar formulário'}
+            </Button>
+          </form>
+        </CardContent>
+      </Card>
+    </div>
+  )
+}

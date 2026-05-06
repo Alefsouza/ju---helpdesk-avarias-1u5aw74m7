@@ -81,7 +81,7 @@ export default function FormularioEspelhoDanos() {
 
       let logoBase64: string | null = null
       try {
-        const res = await fetch('/logo.png')
+        const res = await fetch('/image-019dff11-886e-74db-932e-be9cefd195ef.png')
         if (res.ok) {
           const blob = await res.blob()
           logoBase64 = await new Promise<string>((resolve) => {
@@ -101,6 +101,7 @@ export default function FormularioEspelhoDanos() {
         const pageHeight = doc.internal.pageSize.getHeight()
         const margin = 20
         const contentWidth = pageWidth - 2 * margin
+        const columnWidth = (contentWidth - 10) / 2
         let currentY = margin
         let pageNumber = 1
 
@@ -119,16 +120,9 @@ export default function FormularioEspelhoDanos() {
           doc.setFont('helvetica', 'bold')
           doc.setFontSize(18)
           doc.setTextColor(43, 43, 43)
-          doc.text('Espelho de Danos', pageWidth / 2, margin + 6, { align: 'center' })
+          doc.text('Espelho de Danos', pageWidth / 2, margin + 8, { align: 'center' })
 
-          doc.setFont('helvetica', 'normal')
-          doc.setFontSize(11)
-          doc.setTextColor(100, 100, 100)
-          doc.text('Preencha os dados da vistoria abaixo', pageWidth / 2, margin + 11, {
-            align: 'center',
-          })
-
-          currentY = margin + 17
+          currentY = margin + 18
         }
 
         const addFooter = () => {
@@ -147,51 +141,68 @@ export default function FormularioEspelhoDanos() {
         addHeader()
         addFooter()
 
-        const addField = (label: string, value: string, isTextarea = false) => {
-          doc.setFont('helvetica', 'bold')
-          doc.setFontSize(10)
-          const labelText = `${label}: `
-          const labelWidth = doc.getTextWidth(labelText)
-
-          doc.setFont('helvetica', 'normal')
-          const valueText = value || '-'
-
-          let boxHeight = 5
-          let textLines: string[] = [valueText]
-
-          if (isTextarea) {
-            textLines = doc.splitTextToSize(valueText, contentWidth - 3)
-            const textHeight = textLines.length * 4.2
-            boxHeight = Math.max(10, 1.5 + textHeight + 1.5)
-          }
-
-          if (currentY + boxHeight > pageHeight - margin - 15) {
+        const checkPageBreak = (neededHeight: number) => {
+          if (currentY + neededHeight > pageHeight - margin - 10) {
             doc.addPage()
             pageNumber++
             addHeader()
             addFooter()
           }
+        }
 
-          doc.setDrawColor(224, 224, 224)
-          doc.setFillColor(255, 255, 255)
-          doc.rect(margin, currentY, contentWidth, boxHeight, 'FD')
+        const lineSpacing = 4.2
+        const blockSpacing = 3
+
+        const renderRow = (
+          leftTitle: string,
+          leftValue: string,
+          rightTitle: string,
+          rightValue: string,
+        ) => {
+          doc.setFontSize(10)
+          const leftLines = doc.splitTextToSize(leftValue || '-', columnWidth)
+          const rightLines = doc.splitTextToSize(rightValue || '-', columnWidth)
+          const maxLines = Math.max(leftLines.length, rightLines.length)
+          const neededHeight = 4.5 + maxLines * lineSpacing + blockSpacing
+
+          checkPageBreak(neededHeight)
+
+          const leftX = margin
+          const rightX = margin + columnWidth + 10
 
           doc.setFont('helvetica', 'bold')
           doc.setTextColor(43, 43, 43)
+          doc.text(leftTitle, leftX, currentY)
+          doc.setFont('helvetica', 'normal')
+          doc.setTextColor(0, 0, 0)
+          doc.text(leftLines, leftX, currentY + 4.5, { lineHeightFactor: 1.2 })
 
-          if (isTextarea) {
-            doc.text(labelText, margin + 1.5, currentY + 5)
-            doc.setFont('helvetica', 'normal')
-            doc.setTextColor(0, 0, 0)
-            doc.text(textLines, margin + 1.5, currentY + 9.2, { lineHeightFactor: 1.2 })
-          } else {
-            doc.text(labelText, margin + 1.5, currentY + 3.5)
-            doc.setFont('helvetica', 'normal')
-            doc.setTextColor(0, 0, 0)
-            doc.text(valueText, margin + 1.5 + labelWidth, currentY + 3.5)
-          }
+          doc.setFont('helvetica', 'bold')
+          doc.setTextColor(43, 43, 43)
+          doc.text(rightTitle, rightX, currentY)
+          doc.setFont('helvetica', 'normal')
+          doc.setTextColor(0, 0, 0)
+          doc.text(rightLines, rightX, currentY + 4.5, { lineHeightFactor: 1.2 })
 
-          currentY += boxHeight + 3
+          currentY += 4.5 + maxLines * lineSpacing + blockSpacing
+        }
+
+        const renderFullWidth = (title: string, value: string) => {
+          doc.setFontSize(10)
+          const lines = doc.splitTextToSize(value || '-', contentWidth)
+          const neededHeight = 4.5 + lines.length * lineSpacing + blockSpacing
+
+          checkPageBreak(neededHeight)
+
+          doc.setFont('helvetica', 'bold')
+          doc.setTextColor(43, 43, 43)
+          doc.text(title, margin, currentY)
+
+          doc.setFont('helvetica', 'normal')
+          doc.setTextColor(0, 0, 0)
+          doc.text(lines, margin, currentY + 4.5, { lineHeightFactor: 1.2 })
+
+          currentY += 4.5 + lines.length * lineSpacing + blockSpacing
         }
 
         let dataFormatada = 'Data é obrigatória'
@@ -204,17 +215,22 @@ export default function FormularioEspelhoDanos() {
           }
         }
 
-        addField('Número de OS', values.numero_os)
-        addField('Garagem', values.garagem)
-        addField('Data', dataFormatada)
-        addField('Horário', values.horario)
-        addField('Ocorrência', values.ocorrencia)
-        addField('Linha', values.linha)
-        addField('Descrição dos Danos', values.descricao_danos, true)
-        addField('Registro do Vistoriador', values.registro_vistoriador)
-        addField('Nome do Vistoriador', values.nome_vistoriador)
-        addField('Registro do Motorista', values.registro_motorista)
-        addField('Nome do Motorista', values.nome_motorista)
+        renderRow('Número de OS', values.numero_os, 'Garagem', values.garagem)
+        renderRow('Data', dataFormatada, 'Horário', values.horario)
+        renderRow('Ocorrência', values.ocorrencia, 'Linha', values.linha)
+        renderFullWidth('Descrição dos Danos', values.descricao_danos)
+        renderRow(
+          'Registro do Vistoriador',
+          values.registro_vistoriador,
+          'Nome do Vistoriador',
+          values.nome_vistoriador,
+        )
+        renderRow(
+          'Registro do Motorista',
+          values.registro_motorista,
+          'Nome do Motorista',
+          values.nome_motorista,
+        )
 
         for (let i = 1; i <= pageNumber; i++) {
           doc.setPage(i)

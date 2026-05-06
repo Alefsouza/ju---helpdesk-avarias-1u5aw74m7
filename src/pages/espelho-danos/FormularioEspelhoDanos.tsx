@@ -84,14 +84,21 @@ export default function FormularioEspelhoDanos() {
         const res = await fetch('/image-019dff11-886e-74db-932e-be9cefd195ef.png')
         if (res.ok) {
           const blob = await res.blob()
-          logoBase64 = await new Promise<string>((resolve) => {
+          logoBase64 = await new Promise<string>((resolve, reject) => {
             const reader = new FileReader()
-            reader.onloadend = () => resolve(reader.result as string)
+            reader.onloadend = () => {
+              let result = reader.result as string
+              if (!result.startsWith('data:image/')) {
+                result = result.replace(/^data:[^;]+;base64,/, 'data:image/png;base64,')
+              }
+              resolve(result)
+            }
+            reader.onerror = reject
             reader.readAsDataURL(blob)
           })
         }
       } catch (err) {
-        // Fallback handled safely below
+        console.error('Erro ao carregar logo:', err)
       }
 
       let pdfBlob: Blob
@@ -136,13 +143,8 @@ export default function FormularioEspelhoDanos() {
         const renderField = (title: string, value: string) => {
           doc.setFontSize(10)
           const lines = doc.splitTextToSize(value || '-', contentWidth)
-          const textBlockHeight = (lines.length - 1) * 4.2
 
-          const answerStartY = currentY + 5.5
-          const totalHeight = answerStartY - currentY + textBlockHeight
-          const spaceAfter = 6
-
-          if (currentY + totalHeight + spaceAfter > pageHeight - 25 - 10) {
+          if (currentY + 10 > pageHeight - 30) {
             doc.addPage()
             pageNumber++
             addHeader()
@@ -153,11 +155,24 @@ export default function FormularioEspelhoDanos() {
           doc.setTextColor(43, 43, 43)
           doc.text(title, margin, currentY)
 
+          let currentLineY = currentY + 6
+
           doc.setFont('helvetica', 'normal')
           doc.setTextColor(0, 0, 0)
-          doc.text(lines, margin, answerStartY, { lineHeightFactor: 1.2 })
 
-          currentY = answerStartY + textBlockHeight + spaceAfter
+          for (let i = 0; i < lines.length; i++) {
+            if (currentLineY > pageHeight - 30) {
+              doc.addPage()
+              pageNumber++
+              addHeader()
+              addFooter()
+              currentLineY = currentY
+            }
+            doc.text(lines[i], margin, currentLineY)
+            currentLineY += 4.2
+          }
+
+          currentY = currentLineY - 4.2 + 11
         }
 
         let dataFormatada = 'Data é obrigatória'

@@ -79,6 +79,21 @@ export default function FormularioEspelhoDanos() {
 
       if (espelhoError) throw new Error('Erro ao salvar os dados do formulário')
 
+      let logoBase64: string | null = null
+      try {
+        const res = await fetch('/logo.png')
+        if (res.ok) {
+          const blob = await res.blob()
+          logoBase64 = await new Promise<string>((resolve) => {
+            const reader = new FileReader()
+            reader.onloadend = () => resolve(reader.result as string)
+            reader.readAsDataURL(blob)
+          })
+        }
+      } catch (err) {
+        // Fallback handled safely below
+      }
+
       let pdfBlob: Blob
       try {
         const doc = new jsPDF({ format: 'a4', unit: 'mm' })
@@ -90,39 +105,43 @@ export default function FormularioEspelhoDanos() {
         let pageNumber = 1
 
         const addHeader = () => {
-          doc.setFillColor(245, 245, 245)
-          doc.rect(margin, margin, 40, 20, 'F')
-          doc.setFont('helvetica', 'bold')
-          doc.setFontSize(9)
-          doc.setTextColor(150, 150, 150)
-          doc.text('VIA SUDESTE', margin + 20, margin + 11, { align: 'center' })
+          if (logoBase64) {
+            doc.addImage(logoBase64, 'PNG', margin, margin, 25, 12)
+          } else {
+            doc.setFillColor(245, 245, 245)
+            doc.rect(margin, margin, 25, 12, 'F')
+            doc.setFont('helvetica', 'bold')
+            doc.setFontSize(7)
+            doc.setTextColor(150, 150, 150)
+            doc.text('VIA SUDESTE', margin + 12.5, margin + 7, { align: 'center' })
+          }
 
           doc.setFont('helvetica', 'bold')
           doc.setFontSize(18)
           doc.setTextColor(43, 43, 43)
-          doc.text('Espelho de Danos', pageWidth / 2, margin + 10, { align: 'center' })
+          doc.text('Espelho de Danos', pageWidth / 2, margin + 6, { align: 'center' })
 
           doc.setFont('helvetica', 'normal')
           doc.setFontSize(11)
           doc.setTextColor(100, 100, 100)
-          doc.text('Preencha os dados da vistoria abaixo', pageWidth / 2, margin + 18, {
+          doc.text('Preencha os dados da vistoria abaixo', pageWidth / 2, margin + 11, {
             align: 'center',
           })
 
-          currentY = margin + 35
+          currentY = margin + 17
         }
 
         const addFooter = () => {
           const footerY = pageHeight - margin
           doc.setDrawColor(224, 224, 224)
           doc.setLineWidth(0.5)
-          doc.line(margin, footerY - 5, pageWidth - margin, footerY - 5)
+          doc.line(margin, footerY, pageWidth - margin, footerY)
 
           doc.setFont('helvetica', 'normal')
           doc.setFontSize(9)
           doc.setTextColor(150, 150, 150)
           const dateStr = `Gerado em: ${format(new Date(), 'dd/MM/yyyy HH:mm:ss')}`
-          doc.text(dateStr, margin, footerY)
+          doc.text(dateStr, margin, footerY + 5)
         }
 
         addHeader()
@@ -137,12 +156,13 @@ export default function FormularioEspelhoDanos() {
           doc.setFont('helvetica', 'normal')
           const valueText = value || '-'
 
-          let boxHeight = 12
+          let boxHeight = 5
           let textLines: string[] = [valueText]
 
           if (isTextarea) {
-            textLines = doc.splitTextToSize(valueText, contentWidth - 6)
-            boxHeight = Math.max(30, 10 + textLines.length * 5)
+            textLines = doc.splitTextToSize(valueText, contentWidth - 3)
+            const textHeight = textLines.length * 4.2
+            boxHeight = Math.max(10, 1.5 + textHeight + 1.5)
           }
 
           if (currentY + boxHeight > pageHeight - margin - 15) {
@@ -160,18 +180,18 @@ export default function FormularioEspelhoDanos() {
           doc.setTextColor(43, 43, 43)
 
           if (isTextarea) {
-            doc.text(labelText, margin + 3, currentY + 7)
+            doc.text(labelText, margin + 1.5, currentY + 5)
             doc.setFont('helvetica', 'normal')
             doc.setTextColor(0, 0, 0)
-            doc.text(textLines, margin + 3, currentY + 13)
+            doc.text(textLines, margin + 1.5, currentY + 9.2, { lineHeightFactor: 1.2 })
           } else {
-            doc.text(labelText, margin + 3, currentY + 8)
+            doc.text(labelText, margin + 1.5, currentY + 3.5)
             doc.setFont('helvetica', 'normal')
             doc.setTextColor(0, 0, 0)
-            doc.text(valueText, margin + 3 + labelWidth, currentY + 8)
+            doc.text(valueText, margin + 1.5 + labelWidth, currentY + 3.5)
           }
 
-          currentY += boxHeight + 8
+          currentY += boxHeight + 3
         }
 
         addField('Número de OS', values.numero_os)
@@ -191,7 +211,7 @@ export default function FormularioEspelhoDanos() {
           doc.setFont('helvetica', 'normal')
           doc.setFontSize(9)
           doc.setTextColor(150, 150, 150)
-          doc.text(`Página ${i} de ${pageNumber}`, pageWidth - margin, pageHeight - margin, {
+          doc.text(`Página ${i} de ${pageNumber}`, pageWidth - margin, pageHeight - margin + 5, {
             align: 'right',
           })
         }

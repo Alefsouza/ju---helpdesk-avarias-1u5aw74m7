@@ -756,7 +756,7 @@ export const Constants = {
 //       p_chamado_id,
 //       v_alvo_id,
 //       'respondido',
-//       'Boletim Eletrônico IDO preenchido e anexado com sucesso.'
+//       'Boletim de Ocorrência preenchido e anexado com sucesso.'
 //     );
 //   END;
 //   $function$

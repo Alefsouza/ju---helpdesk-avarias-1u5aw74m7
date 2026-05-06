@@ -64,31 +64,31 @@ export default function FormularioIdo() {
     },
   })
 
-  const generatePDF = async (data: FormValues) => {
+  const generatePDFDoc = (data: FormValues) => {
     const doc = new jsPDF()
     doc.setFontSize(16)
-    doc.text('DADOS DO BOLETIM DE OCORRÊNCIA', 105, 20, { align: 'center' })
+    doc.text('DADOS DO BOLETIM DE OCORRÊNCIA', 10, 20)
 
     doc.setFontSize(12)
-    doc.text(`Protocolo de IDO: ${data.protocolo_ido}`, 20, 40)
-    doc.text(`Colaborador: ${data.colaborador_nome}`, 20, 50)
-    doc.text(`Registro: ${data.colaborador_registro}`, 20, 60)
+    doc.text(`Protocolo: ${data.protocolo_ido}`, 10, 30)
+    doc.text(`Colaborador: ${data.colaborador_nome}`, 10, 40)
+    doc.text(`Registro: ${data.colaborador_registro}`, 10, 50)
 
-    let y = 70
+    let y = 60
 
     const writeTestemunha = (num: number, t: any) => {
       if (t && t.nome) {
         doc.setFont('', 'bold')
-        doc.text(`Testemunha ${num}`, 20, y)
+        doc.text(`Testemunha ${num}`, 10, y)
         doc.setFont('', 'normal')
         y += 10
-        doc.text(`Nome: ${t.nome}`, 20, y)
+        doc.text(`Nome: ${t.nome}`, 10, y)
         y += 10
-        doc.text(`Endereço: ${t.endereco}`, 20, y)
+        doc.text(`Endereço: ${t.endereco}`, 10, y)
         y += 10
-        doc.text(`RG: ${t.rg}`, 20, y)
+        doc.text(`RG: ${t.rg}`, 10, y)
         y += 10
-        doc.text(`Telefone: ${t.telefone}`, 20, y)
+        doc.text(`Telefone: ${t.telefone}`, 10, y)
         y += 15
       }
     }
@@ -97,27 +97,30 @@ export default function FormularioIdo() {
     writeTestemunha(2, data.testemunha_2)
     writeTestemunha(3, data.testemunha_3)
 
-    if (y > 200) {
+    if (y > 220) {
       doc.addPage()
       y = 20
     }
 
     doc.setFont('', 'bold')
-    doc.text('Assinatura Digital:', 20, y)
+    doc.text('Assinatura Digital:', 10, y)
     doc.setFont('', 'normal')
     y += 10
 
-    try {
-      doc.addImage(data.assinatura_base64, 'PNG', 20, y, 80, 40)
-    } catch (e) {
-      console.error('Failed to add image', e)
+    if (data.assinatura_base64) {
+      try {
+        doc.addImage(data.assinatura_base64, 'PNG', 10, y, 50, 30)
+      } catch (e) {
+        console.error('Failed to add image', e)
+      }
     }
-    y += 50
+
+    y += 40
 
     const dateStr = new Date().toLocaleString('pt-BR')
-    doc.text(`Data e hora de criação: ${dateStr}`, 20, y)
+    doc.text(`Data e hora de criação: ${dateStr}`, 10, y)
 
-    return doc.output('blob')
+    return doc
   }
 
   const onSubmit = async (data: FormValues) => {
@@ -150,14 +153,19 @@ export default function FormularioIdo() {
 
       let pdfBlob: Blob
       try {
-        pdfBlob = await generatePDF(data)
+        const doc = generatePDFDoc(data)
+        pdfBlob = doc.output('blob')
+
+        // Testar geração e visualizar no navegador antes de realizar o upload
+        const blobUrl = URL.createObjectURL(pdfBlob)
+        window.open(blobUrl, '_blank')
       } catch (err) {
         console.error(err)
         throw new Error('Erro ao gerar documento. Tente novamente')
       }
 
       const uuid = crypto.randomUUID()
-      const fileName = `DADOS_DO_BOLETIM_DE_OCORRENCIA_${uuid}.pdf`
+      const fileName = `DADOS_DO_BOLETIM_ELETRONICO_${uuid}.pdf`
       const filePath = `chamado-${id}/${fileName}`
 
       const { data: uploadData, error: uploadError } = await supabase.storage

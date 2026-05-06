@@ -782,10 +782,14 @@ export default function ChamadoDetalhes() {
   }
 
   const handleSalvarPia = async () => {
-    if (!canFillPIA) return
+    const isSupportUser =
+      currentUserProfile?.tipo_usuario === 'responsavel' ||
+      currentUserProfile?.tipo_usuario === 'admin'
+
+    if (!isSupportUser) return
 
     if (pia.trim() && !/^[A-Za-z0-9/\-.\s]+$/.test(pia.trim())) {
-      toast.error('Informe um número válido de PIA')
+      toast.error('Informe um número válido de R.A.')
       return
     }
 
@@ -797,9 +801,9 @@ export default function ChamadoDetalhes() {
 
     setSavingPia(false)
     if (error) {
-      toast.error('Erro ao salvar PIA. Tente novamente')
+      toast.error('Erro ao salvar R.A. Tente novamente')
     } else {
-      toast.success('PIA salva com sucesso')
+      toast.success('R.A. salvo com sucesso')
     }
   }
 
@@ -855,7 +859,7 @@ export default function ChamadoDetalhes() {
   const canReply = isSolicitante || isResponsible
   const canFinalize = isSolicitante || isResponsible
   const canTransfer = isResponsible && chamado.status !== 'finalizado'
-  const canFillPIA = isResponsible
+  const canEditRA = isSupport
 
   const getAcaoText = (acao: string, userNome: string) => {
     switch (acao) {
@@ -1036,23 +1040,24 @@ export default function ChamadoDetalhes() {
           </div>
         </div>
 
-        {canFillPIA && (
-          <div className="pt-4 border-t">
-            <div className="border-2 border-green-700 bg-[rgba(200,230,201,0.1)] rounded-xl shadow-sm p-4 sm:p-6 space-y-4">
-              <div className="flex items-center gap-2 mb-2">
-                <AlertCircle className="h-5 w-5 text-green-800" />
-                <h3 className="text-base font-bold text-green-800 uppercase tracking-wider">
-                  R.A.
-                </h3>
-              </div>
-              <Input
-                type="text"
-                placeholder="Informe o número de PIA"
-                value={pia}
-                onChange={(e) => setPia(e.target.value)}
-                className="bg-white border-green-300 focus-visible:ring-green-700"
-                disabled={savingPia}
-              />
+        <div className="pt-4 border-t">
+          <div className="border-2 border-green-700 bg-[rgba(200,230,201,0.1)] rounded-xl shadow-sm p-4 sm:p-6 space-y-4">
+            <div className="flex items-center gap-2 mb-2">
+              <AlertCircle className="h-5 w-5 text-green-800" />
+              <h3 className="text-base font-bold text-green-800 uppercase tracking-wider">R.A.</h3>
+            </div>
+            <Input
+              type="text"
+              placeholder="Informe o número de R.A."
+              value={pia}
+              onChange={(e) => setPia(e.target.value)}
+              className={cn(
+                'bg-white border-green-300 focus-visible:ring-green-700',
+                !canEditRA && 'opacity-70 disabled:cursor-default',
+              )}
+              disabled={savingPia || !canEditRA}
+            />
+            {canEditRA && (
               <div className="flex justify-end">
                 <Button
                   onClick={handleSalvarPia}
@@ -1064,12 +1069,12 @@ export default function ChamadoDetalhes() {
                   ) : (
                     <CheckCircle2 className="mr-2 h-4 w-4" />
                   )}
-                  {savingPia ? 'Salvando...' : 'Salvar PIA'}
+                  {savingPia ? 'Salvando...' : 'Salvar R.A.'}
                 </Button>
               </div>
-            </div>
+            )}
           </div>
-        )}
+        </div>
 
         {isSupport && (
           <div className="pt-4 border-t">

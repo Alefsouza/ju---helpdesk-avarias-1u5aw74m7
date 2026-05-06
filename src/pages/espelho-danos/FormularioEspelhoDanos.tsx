@@ -5,6 +5,8 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import * as z from 'zod'
 import { supabase } from '@/lib/supabase/client'
 import { useToast } from '@/hooks/use-toast'
+import { jsPDF } from 'jspdf'
+import { format } from 'date-fns'
 import {
   Form,
   FormControl,
@@ -69,17 +71,81 @@ export default function FormularioEspelhoDanos() {
     if (!id) return
     setLoading(true)
     try {
-      const { error } = await supabase
+      const espelhoId = crypto.randomUUID()
+
+      const { error: espelhoError } = await supabase
         .from('formularios_espelho_danos')
-        .insert({ chamado_id: id, ...values })
-      if (error) throw error
+        .insert({ id: espelhoId, chamado_id: id, ...values })
+
+      if (espelhoError) throw new Error('Erro ao salvar os dados do formulário')
+
+      let pdfBlob: Blob
+      try {
+        const doc = new jsPDF()
+        doc.setFontSize(16)
+        doc.text('Espelho de Danos', 20, 20)
+
+        doc.setFontSize(12)
+        doc.text(`Número de OS: ${values.numero_os}`, 20, 40)
+        doc.text(`Garagem: ${values.garagem}`, 20, 50)
+        doc.text(`Data e Horário: ${values.data} às ${values.horario}`, 20, 60)
+        doc.text(`Ocorrência: ${values.ocorrencia}`, 20, 70)
+        doc.text(`Linha: ${values.linha}`, 20, 80)
+
+        doc.text('Descrição dos danos:', 20, 100)
+        const splitDescricao = doc.splitTextToSize(values.descricao_danos, 170)
+        doc.text(splitDescricao, 20, 110)
+
+        const yAfterDesc = 110 + splitDescricao.length * 7 + 10
+        doc.text(
+          `Vistoriador: ${values.nome_vistoriador} (Registro: ${values.registro_vistoriador})`,
+          20,
+          yAfterDesc,
+        )
+        doc.text(
+          `Motorista: ${values.nome_motorista} (Registro: ${values.registro_motorista})`,
+          20,
+          yAfterDesc + 10,
+        )
+        doc.text(`Criado em: ${format(new Date(), 'dd/MM/yyyy HH:mm:ss')}`, 20, yAfterDesc + 30)
+
+        pdfBlob = doc.output('blob')
+      } catch (err) {
+        throw new Error('Erro ao gerar documento. Tente novamente')
+      }
+
+      const fileName = `ESPELHO_DE_DANOS_${espelhoId}.pdf`
+      const filePath = `chamado-${id}/${fileName}`
+
+      const { error: uploadError } = await supabase.storage
+        .from('anexos_chamados_interno')
+        .upload(filePath, pdfBlob, {
+          contentType: 'application/pdf',
+          upsert: true,
+        })
+
+      if (uploadError) throw new Error('Erro ao salvar documento. Tente novamente')
+
+      const { data: publicUrlData } = supabase.storage
+        .from('anexos_chamados_interno')
+        .getPublicUrl(filePath)
+
+      const { error: rpcError } = await (supabase.rpc as any)('registrar_espelho_danos', {
+        p_chamado_id: id,
+        p_nome_arquivo: fileName,
+        p_arquivo_url: publicUrlData.publicUrl,
+        p_tamanho_bytes: pdfBlob.size,
+      })
+
+      if (rpcError) throw new Error('Erro ao registrar documento. Tente novamente')
+
       toast({ title: 'Sucesso', description: 'Formulário enviado com sucesso' })
       navigate('/espelho-danos/sucesso')
     } catch (error: any) {
       toast({
         variant: 'destructive',
         title: 'Erro',
-        description: 'Erro ao enviar formulário. Tente novamente',
+        description: error.message || 'Erro ao enviar formulário. Tente novamente',
       })
     } finally {
       setLoading(false)

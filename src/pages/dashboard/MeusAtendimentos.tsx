@@ -161,11 +161,11 @@ export default function MeusAtendimentos() {
 
   const filteredChamados = chamados
     .filter((c) => {
+      if (!debouncedSearch) return true
       const term = debouncedSearch.toLowerCase()
       return (
-        c.titulo.toLowerCase().includes(term) ||
-        c.id.toLowerCase().includes(term) ||
-        c.nome_responsavel?.toLowerCase().includes(term) ||
+        c.titulo?.toLowerCase().includes(term) ||
+        c.pia?.toLowerCase().includes(term) ||
         c.nome_usuario?.toLowerCase().includes(term)
       )
     })
@@ -186,7 +186,7 @@ export default function MeusAtendimentos() {
         <div className="relative flex-1">
           <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-slate-500" />
           <Input
-            placeholder="Buscar por ID ou título..."
+            placeholder="Pesquisar por Solicitante, PIA ou Título..."
             className="pl-9 bg-white shadow-sm max-w-md"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}

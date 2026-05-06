@@ -39,6 +39,9 @@ import {
   Loader2,
   Trash2,
   Download,
+  Link as LinkIcon,
+  Copy,
+  Share2,
 } from 'lucide-react'
 import { supabase } from '@/lib/supabase/client'
 import { useAuth } from '@/hooks/use-auth'
@@ -807,6 +810,35 @@ export default function ChamadoDetalhes() {
     }
   }
 
+  const handleCopiarLinkIdo = async () => {
+    try {
+      const url = `${window.location.origin}/ido/${id}`
+      await navigator.clipboard.writeText(url)
+      toast.success('Link copiado para a área de transferência')
+    } catch (error) {
+      toast.error('Erro ao gerar link. Tente novamente')
+    }
+  }
+
+  const handleCompartilharIdo = async () => {
+    try {
+      const url = `${window.location.origin}/ido/${id}`
+      if (navigator.share) {
+        await navigator.share({
+          title: `Formulário IDO - Chamado ${chamado?.titulo}`,
+          text: 'Por favor, preencha o formulário IDO para o seu chamado.',
+          url: url,
+        })
+      } else {
+        handleCopiarLinkIdo()
+      }
+    } catch (error) {
+      if ((error as any).name !== 'AbortError') {
+        toast.error('Erro ao gerar link. Tente novamente')
+      }
+    }
+  }
+
   const handleFinalizar = async () => {
     if (!window.confirm('Tem certeza que deseja finalizar este chamado?')) return
     setCompleting(true)
@@ -1073,6 +1105,38 @@ export default function ChamadoDetalhes() {
                   </Button>
                 </div>
               )}
+            </div>
+          </div>
+        )}
+
+        {isSupport && (
+          <div className="pt-4 border-t">
+            <div className="bg-slate-50 rounded-xl border shadow-sm p-4 sm:p-6 space-y-4">
+              <div className="flex items-center gap-2 mb-2">
+                <LinkIcon className="h-5 w-5 text-slate-500" />
+                <h3 className="text-base font-bold text-slate-700 uppercase tracking-wider">
+                  Link do Formulário IDO
+                </h3>
+              </div>
+              <div className="flex items-center gap-2 bg-white border rounded-md p-3 overflow-hidden">
+                <span className="text-sm text-slate-600 truncate flex-1 select-all">
+                  {`${window.location.origin}/ido/${id}`}
+                </span>
+              </div>
+              <div className="flex flex-col sm:flex-row gap-2 justify-end">
+                <Button
+                  variant="outline"
+                  onClick={handleCopiarLinkIdo}
+                  className="w-full sm:w-auto bg-white hover:bg-slate-100"
+                >
+                  <Copy className="mr-2 h-4 w-4" />
+                  Copiar link
+                </Button>
+                <Button onClick={handleCompartilharIdo} className="w-full sm:w-auto">
+                  <Share2 className="mr-2 h-4 w-4" />
+                  Compartilhar
+                </Button>
+              </div>
             </div>
           </div>
         )}

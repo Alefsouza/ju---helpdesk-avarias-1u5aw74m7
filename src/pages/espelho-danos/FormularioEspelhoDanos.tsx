@@ -99,100 +99,55 @@ export default function FormularioEspelhoDanos() {
         const doc = new jsPDF({ format: 'a4', unit: 'mm' })
         const pageWidth = doc.internal.pageSize.getWidth()
         const pageHeight = doc.internal.pageSize.getHeight()
-        const margin = 20
+        const margin = 25
         const contentWidth = pageWidth - 2 * margin
-        const columnWidth = (contentWidth - 10) / 2
         let currentY = margin
         let pageNumber = 1
 
         const addHeader = () => {
           if (logoBase64) {
-            doc.addImage(logoBase64, 'PNG', margin, margin, 25, 12)
-          } else {
-            doc.setFillColor(245, 245, 245)
-            doc.rect(margin, margin, 25, 12, 'F')
-            doc.setFont('helvetica', 'bold')
-            doc.setFontSize(7)
-            doc.setTextColor(150, 150, 150)
-            doc.text('VIA SUDESTE', margin + 12.5, margin + 7, { align: 'center' })
+            doc.addImage(logoBase64, 'PNG', 20, 20, 25, 12)
           }
 
           doc.setFont('helvetica', 'bold')
           doc.setFontSize(18)
           doc.setTextColor(43, 43, 43)
-          doc.text('Espelho de Danos', pageWidth / 2, margin + 8, { align: 'center' })
+          doc.text('Espelho de Danos', pageWidth / 2, 28, { align: 'center' })
 
-          currentY = margin + 18
+          currentY = 45
         }
 
         const addFooter = () => {
-          const footerY = pageHeight - margin
+          const footerY = pageHeight - 25
           doc.setDrawColor(224, 224, 224)
           doc.setLineWidth(0.5)
-          doc.line(margin, footerY, pageWidth - margin, footerY)
+          doc.line(25, footerY, pageWidth - 25, footerY)
 
           doc.setFont('helvetica', 'normal')
           doc.setFontSize(9)
           doc.setTextColor(150, 150, 150)
           const dateStr = `Gerado em: ${format(new Date(), 'dd/MM/yyyy HH:mm:ss')}`
-          doc.text(dateStr, margin, footerY + 5)
+          doc.text(dateStr, 25, footerY + 5)
         }
 
         addHeader()
         addFooter()
 
-        const checkPageBreak = (neededHeight: number) => {
-          if (currentY + neededHeight > pageHeight - margin - 10) {
+        const renderField = (title: string, value: string) => {
+          doc.setFontSize(10)
+          const lines = doc.splitTextToSize(value || '-', contentWidth)
+          const textBlockHeight = (lines.length - 1) * 4.2
+
+          const answerStartY = currentY + 5.5
+          const totalHeight = answerStartY - currentY + textBlockHeight
+          const spaceAfter = 6
+
+          if (currentY + totalHeight + spaceAfter > pageHeight - 25 - 10) {
             doc.addPage()
             pageNumber++
             addHeader()
             addFooter()
           }
-        }
-
-        const lineSpacing = 4.2
-        const blockSpacing = 3
-
-        const renderRow = (
-          leftTitle: string,
-          leftValue: string,
-          rightTitle: string,
-          rightValue: string,
-        ) => {
-          doc.setFontSize(10)
-          const leftLines = doc.splitTextToSize(leftValue || '-', columnWidth)
-          const rightLines = doc.splitTextToSize(rightValue || '-', columnWidth)
-          const maxLines = Math.max(leftLines.length, rightLines.length)
-          const neededHeight = 4.5 + maxLines * lineSpacing + blockSpacing
-
-          checkPageBreak(neededHeight)
-
-          const leftX = margin
-          const rightX = margin + columnWidth + 10
-
-          doc.setFont('helvetica', 'bold')
-          doc.setTextColor(43, 43, 43)
-          doc.text(leftTitle, leftX, currentY)
-          doc.setFont('helvetica', 'normal')
-          doc.setTextColor(0, 0, 0)
-          doc.text(leftLines, leftX, currentY + 4.5, { lineHeightFactor: 1.2 })
-
-          doc.setFont('helvetica', 'bold')
-          doc.setTextColor(43, 43, 43)
-          doc.text(rightTitle, rightX, currentY)
-          doc.setFont('helvetica', 'normal')
-          doc.setTextColor(0, 0, 0)
-          doc.text(rightLines, rightX, currentY + 4.5, { lineHeightFactor: 1.2 })
-
-          currentY += 4.5 + maxLines * lineSpacing + blockSpacing
-        }
-
-        const renderFullWidth = (title: string, value: string) => {
-          doc.setFontSize(10)
-          const lines = doc.splitTextToSize(value || '-', contentWidth)
-          const neededHeight = 4.5 + lines.length * lineSpacing + blockSpacing
-
-          checkPageBreak(neededHeight)
 
           doc.setFont('helvetica', 'bold')
           doc.setTextColor(43, 43, 43)
@@ -200,9 +155,9 @@ export default function FormularioEspelhoDanos() {
 
           doc.setFont('helvetica', 'normal')
           doc.setTextColor(0, 0, 0)
-          doc.text(lines, margin, currentY + 4.5, { lineHeightFactor: 1.2 })
+          doc.text(lines, margin, answerStartY, { lineHeightFactor: 1.2 })
 
-          currentY += 4.5 + lines.length * lineSpacing + blockSpacing
+          currentY = answerStartY + textBlockHeight + spaceAfter
         }
 
         let dataFormatada = 'Data é obrigatória'
@@ -215,29 +170,24 @@ export default function FormularioEspelhoDanos() {
           }
         }
 
-        renderRow('Número de OS', values.numero_os, 'Garagem', values.garagem)
-        renderRow('Data', dataFormatada, 'Horário', values.horario)
-        renderRow('Ocorrência', values.ocorrencia, 'Linha', values.linha)
-        renderFullWidth('Descrição dos Danos', values.descricao_danos)
-        renderRow(
-          'Registro do Vistoriador',
-          values.registro_vistoriador,
-          'Nome do Vistoriador',
-          values.nome_vistoriador,
-        )
-        renderRow(
-          'Registro do Motorista',
-          values.registro_motorista,
-          'Nome do Motorista',
-          values.nome_motorista,
-        )
+        renderField('Número de OS', values.numero_os)
+        renderField('Garagem', values.garagem)
+        renderField('Data', dataFormatada)
+        renderField('Horário', values.horario)
+        renderField('Ocorrência', values.ocorrencia)
+        renderField('Linha', values.linha)
+        renderField('Descrição dos Danos', values.descricao_danos)
+        renderField('Registro do Vistoriador', values.registro_vistoriador)
+        renderField('Nome do Vistoriador', values.nome_vistoriador)
+        renderField('Registro do Motorista', values.registro_motorista)
+        renderField('Nome do Motorista', values.nome_motorista)
 
         for (let i = 1; i <= pageNumber; i++) {
           doc.setPage(i)
           doc.setFont('helvetica', 'normal')
           doc.setFontSize(9)
           doc.setTextColor(150, 150, 150)
-          doc.text(`Página ${i} de ${pageNumber}`, pageWidth - margin, pageHeight - margin + 5, {
+          doc.text(`Página ${i} de ${pageNumber}`, pageWidth - 25, pageHeight - 25 + 5, {
             align: 'right',
           })
         }

@@ -269,6 +269,7 @@ export default function ChamadoDetalhes() {
     historicoData?.forEach((h) => {
       if (
         h.detalhes === 'Boletim de Ocorrência preenchido e anexado com sucesso.' ||
+        h.detalhes === 'Espelho de Danos preenchido e anexado com sucesso.' ||
         h.detalhes?.toLowerCase().includes('anexo interno')
       ) {
         return
@@ -340,6 +341,7 @@ export default function ChamadoDetalhes() {
 
           if (
             newHistory.detalhes === 'Boletim de Ocorrência preenchido e anexado com sucesso.' ||
+            newHistory.detalhes === 'Espelho de Danos preenchido e anexado com sucesso.' ||
             newHistory.detalhes?.toLowerCase().includes('anexo interno')
           ) {
             return

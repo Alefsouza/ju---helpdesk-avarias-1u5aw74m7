@@ -155,24 +155,18 @@ export default function FormularioIdo() {
       try {
         const doc = generatePDFDoc(data)
         pdfBlob = doc.output('blob')
-
-        // Testar geração e visualizar no navegador antes de realizar o upload
-        const blobUrl = URL.createObjectURL(pdfBlob)
-        window.open(blobUrl, '_blank')
       } catch (err) {
         console.error(err)
         throw new Error('Erro ao gerar documento. Tente novamente')
       }
 
-      const uuid = crypto.randomUUID()
-      const fileName = `DADOS_DO_BOLETIM_ELETRONICO_${uuid}.pdf`
+      const fileName = `DADOS_DO_BOLETIM_ELETRONICO_${Date.now()}.pdf`
       const filePath = `chamado-${id}/${fileName}`
 
-      const { data: uploadData, error: uploadError } = await supabase.storage
+      const { error: uploadError } = await supabase.storage
         .from('anexos_chamados_interno')
         .upload(filePath, pdfBlob, {
           contentType: 'application/pdf',
-          cacheControl: '3600',
           upsert: false,
         })
 
@@ -181,10 +175,14 @@ export default function FormularioIdo() {
         throw new Error('Erro ao salvar documento. Tente novamente')
       }
 
+      const { data: urlData } = supabase.storage
+        .from('anexos_chamados_interno')
+        .getPublicUrl(filePath)
+
       const { error: rpcError } = await supabase.rpc('registrar_boletim_ido' as any, {
         p_chamado_id: id,
         p_nome_arquivo: fileName,
-        p_arquivo_url: uploadData.path,
+        p_arquivo_url: urlData.publicUrl,
         p_tamanho_bytes: pdfBlob.size,
       })
 
@@ -195,7 +193,7 @@ export default function FormularioIdo() {
 
       toast({
         title: 'Sucesso',
-        description: 'Formulário enviado com sucesso!',
+        description: 'Documento salvo com sucesso!',
       })
       navigate('/ido/sucesso')
     } catch (error: any) {

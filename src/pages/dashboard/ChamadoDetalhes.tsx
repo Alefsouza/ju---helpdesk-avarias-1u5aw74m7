@@ -1221,7 +1221,7 @@ export default function ChamadoDetalhes() {
                 <div className="flex items-center gap-2 overflow-hidden flex-1">
                   <LinkIcon className="h-4 w-4 text-slate-400 shrink-0" />
                   <span className="text-[12px] font-medium text-slate-700 shrink-0 hidden sm:inline-block">
-                    Formulário IDO:
+                    Boletim de Ocorrência:
                   </span>
                   <span className="text-[12px] text-slate-500 truncate select-all">{`${window.location.origin}/ido/${id}`}</span>
                 </div>

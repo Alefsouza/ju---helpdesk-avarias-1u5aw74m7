@@ -384,10 +384,62 @@ export default function ChamadoDetalhes() {
         },
         (payload) => {
           if (payload.eventType === 'INSERT') {
+            const newAnexo = payload.new as AnexoInterno
             setAnexosInternos((prev) => {
-              if (prev.some((a) => a.id === payload.new.id)) return prev
-              return [...prev, payload.new as AnexoInterno]
+              if (prev.some((a) => a.id === newAnexo.id)) return prev
+              return [...prev, newAnexo]
             })
+
+            toast.custom(
+              (t) => (
+                <div className="bg-white border border-slate-200 border-l-4 border-l-primary rounded-lg shadow-lg p-4 flex gap-3 items-start w-full sm:w-[350px] max-w-[90vw]">
+                  <FileText className="h-5 w-5 text-primary mt-0.5 shrink-0" />
+                  <div className="flex-1 min-w-0">
+                    <h4 className="text-sm font-semibold text-slate-900">
+                      Novo documento recebido
+                    </h4>
+                    <p className="text-sm text-slate-500 mt-1 leading-snug">
+                      Um novo documento foi anexado ao chamado {id?.substring(0, 8)}.
+                    </p>
+                    <div className="flex gap-2 mt-3">
+                      <Button
+                        size="sm"
+                        className="h-8 text-xs"
+                        onClick={() => {
+                          const el = document.getElementById('anexos-internos')
+                          if (el) {
+                            el.scrollIntoView({ behavior: 'smooth', block: 'start' })
+                            el.classList.add(
+                              'ring-2',
+                              'ring-primary',
+                              'ring-offset-2',
+                              'transition-all',
+                              'duration-500',
+                              'rounded-xl',
+                            )
+                            setTimeout(() => {
+                              el.classList.remove('ring-2', 'ring-primary', 'ring-offset-2')
+                            }, 2000)
+                          }
+                          toast.dismiss(t as number | string)
+                        }}
+                      >
+                        Ver
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="h-8 text-xs"
+                        onClick={() => toast.dismiss(t as number | string)}
+                      >
+                        Fechar
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              ),
+              { duration: 5000, position: 'bottom-right' },
+            )
           } else if (payload.eventType === 'DELETE') {
             setAnexosInternos((prev) => prev.filter((a) => a.id !== payload.old.id))
           }
@@ -1142,7 +1194,7 @@ export default function ChamadoDetalhes() {
         )}
 
         {isSupport && (
-          <div className="pt-4 border-t">
+          <div className="pt-4 border-t" id="anexos-internos">
             <div className="flex items-center justify-between mb-3">
               <h3 className="text-sm font-bold text-slate-900 uppercase tracking-wider flex items-center gap-2">
                 Anexos Internos{' '}

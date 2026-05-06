@@ -15,6 +15,8 @@ import Perfil from './pages/dashboard/Perfil'
 import ChamadoDetalhes from './pages/dashboard/ChamadoDetalhes'
 import FormularioIdo from './pages/ido/FormularioIdo'
 import SucessoIdo from './pages/ido/Sucesso'
+import FormularioEspelhoDanos from './pages/espelho-danos/FormularioEspelhoDanos'
+import SucessoEspelhoDanos from './pages/espelho-danos/Sucesso'
 import NotFound from './pages/NotFound'
 import Layout from './components/Layout'
 import { AuthProvider } from './hooks/use-auth'
@@ -41,6 +43,8 @@ const App = () => (
           </Route>
           <Route path="/ido/sucesso" element={<SucessoIdo />} />
           <Route path="/ido/:id" element={<FormularioIdo />} />
+          <Route path="/espelho-danos/sucesso" element={<SucessoEspelhoDanos />} />
+          <Route path="/espelho-danos/:id" element={<FormularioEspelhoDanos />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </TooltipProvider>

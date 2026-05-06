@@ -151,6 +151,68 @@ export type Database = {
         }
         Relationships: []
       }
+      formularios_espelho_danos: {
+        Row: {
+          atualizado_em: string
+          chamado_id: string
+          criado_em: string
+          data: string | null
+          descricao_danos: string | null
+          garagem: string | null
+          horario: string | null
+          id: string
+          linha: string | null
+          nome_motorista: string | null
+          nome_vistoriador: string | null
+          numero_os: string | null
+          ocorrencia: string | null
+          registro_motorista: string | null
+          registro_vistoriador: string | null
+        }
+        Insert: {
+          atualizado_em?: string
+          chamado_id: string
+          criado_em?: string
+          data?: string | null
+          descricao_danos?: string | null
+          garagem?: string | null
+          horario?: string | null
+          id?: string
+          linha?: string | null
+          nome_motorista?: string | null
+          nome_vistoriador?: string | null
+          numero_os?: string | null
+          ocorrencia?: string | null
+          registro_motorista?: string | null
+          registro_vistoriador?: string | null
+        }
+        Update: {
+          atualizado_em?: string
+          chamado_id?: string
+          criado_em?: string
+          data?: string | null
+          descricao_danos?: string | null
+          garagem?: string | null
+          horario?: string | null
+          id?: string
+          linha?: string | null
+          nome_motorista?: string | null
+          nome_vistoriador?: string | null
+          numero_os?: string | null
+          ocorrencia?: string | null
+          registro_motorista?: string | null
+          registro_vistoriador?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: 'formularios_espelho_danos_chamado_id_fkey'
+            columns: ['chamado_id']
+            isOneToOne: false
+            referencedRelation: 'chamados'
+            referencedColumns: ['id']
+          },
+        ]
+      }
       formularios_ido: {
         Row: {
           assinatura_base64: string | null
@@ -525,6 +587,22 @@ export const Constants = {
 //   criado_em: timestamp with time zone (not null, default: now())
 //   atualizado_em: timestamp with time zone (not null, default: now())
 //   pia: text (nullable)
+// Table: formularios_espelho_danos
+//   id: uuid (not null, default: gen_random_uuid())
+//   chamado_id: uuid (not null)
+//   numero_os: text (nullable)
+//   garagem: text (nullable)
+//   data: date (nullable)
+//   horario: time without time zone (nullable)
+//   ocorrencia: text (nullable)
+//   linha: text (nullable)
+//   descricao_danos: text (nullable)
+//   registro_vistoriador: text (nullable)
+//   nome_vistoriador: text (nullable)
+//   registro_motorista: text (nullable)
+//   nome_motorista: text (nullable)
+//   criado_em: timestamp with time zone (not null, default: now())
+//   atualizado_em: timestamp with time zone (not null, default: now())
 // Table: formularios_ido
 //   id: uuid (not null, default: gen_random_uuid())
 //   chamado_id: uuid (not null)
@@ -590,6 +668,9 @@ export const Constants = {
 //   FOREIGN KEY chamados_responsavel_id_fkey: FOREIGN KEY (responsavel_id) REFERENCES auth.users(id) ON DELETE SET NULL
 //   CHECK chamados_status_check: CHECK ((status = ANY (ARRAY['aberto'::text, 'em_atendimento'::text, 'finalizado'::text])))
 //   FOREIGN KEY chamados_usuario_id_fkey: FOREIGN KEY (usuario_id) REFERENCES auth.users(id) ON DELETE CASCADE
+// Table: formularios_espelho_danos
+//   FOREIGN KEY formularios_espelho_danos_chamado_id_fkey: FOREIGN KEY (chamado_id) REFERENCES chamados(id) ON DELETE CASCADE
+//   PRIMARY KEY formularios_espelho_danos_pkey: PRIMARY KEY (id)
 // Table: formularios_ido
 //   FOREIGN KEY formularios_ido_chamado_id_fkey: FOREIGN KEY (chamado_id) REFERENCES chamados(id) ON DELETE CASCADE
 //   PRIMARY KEY formularios_ido_pkey: PRIMARY KEY (id)
@@ -634,6 +715,14 @@ export const Constants = {
 //     USING: ((usuario_id = auth.uid()) OR is_responsavel() OR is_admin())
 //   Policy "chamados_update" (UPDATE, PERMISSIVE) roles={authenticated}
 //     USING: ((usuario_id = auth.uid()) OR (is_responsavel() AND ((responsavel_id = auth.uid()) OR (status = 'aberto'::text))) OR is_admin())
+// Table: formularios_espelho_danos
+//   Policy "formularios_espelho_danos_insert" (INSERT, PERMISSIVE) roles={public}
+//     WITH CHECK: true
+//   Policy "formularios_espelho_danos_select" (SELECT, PERMISSIVE) roles={authenticated}
+//     USING: ((chamado_id IN ( SELECT chamados.id    FROM chamados   WHERE ((chamados.usuario_id = auth.uid()) OR (chamados.responsavel_id = auth.uid())))) OR is_admin())
+//   Policy "formularios_espelho_danos_update" (UPDATE, PERMISSIVE) roles={authenticated}
+//     USING: (chamado_id IN ( SELECT chamados.id    FROM chamados   WHERE (chamados.responsavel_id = auth.uid())))
+//     WITH CHECK: (chamado_id IN ( SELECT chamados.id    FROM chamados   WHERE (chamados.responsavel_id = auth.uid())))
 // Table: formularios_ido
 //   Policy "formularios_ido_insert" (INSERT, PERMISSIVE) roles={public}
 //     WITH CHECK: true
@@ -794,5 +883,7 @@ export const Constants = {
 //
 
 // --- INDEXES ---
+// Table: formularios_espelho_danos
+//   CREATE INDEX formularios_espelho_danos_chamado_id_idx ON public.formularios_espelho_danos USING btree (chamado_id)
 // Table: formularios_ido
 //   CREATE INDEX formularios_ido_chamado_id_idx ON public.formularios_ido USING btree (chamado_id)

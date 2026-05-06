@@ -169,7 +169,15 @@ export default function MeusAtendimentos() {
         c.nome_usuario?.toLowerCase().includes(term)
       )
     })
-    .sort((a, b) => new Date(b.criado_em).getTime() - new Date(a.criado_em).getTime())
+    .sort((a, b) => {
+      const aIsMine = a.responsavel_id === user?.id
+      const bIsMine = b.responsavel_id === user?.id
+
+      if (aIsMine && !bIsMine) return -1
+      if (!aIsMine && bIsMine) return 1
+
+      return new Date(b.criado_em).getTime() - new Date(a.criado_em).getTime()
+    })
 
   return (
     <div className="space-y-6 max-w-6xl mx-auto p-2 sm:p-4 animate-fade-in-up">

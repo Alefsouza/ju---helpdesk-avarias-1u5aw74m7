@@ -16,12 +16,12 @@ const testemunhaSchema = z
   .object({
     nome: z.string().optional(),
     endereco: z.string().optional(),
-    sg: z.string().optional(),
+    rg: z.string().optional(),
     telefone: z.string().optional(),
   })
   .refine(
     (data) => {
-      const values = [data.nome, data.endereco, data.sg, data.telefone].filter(
+      const values = [data.nome, data.endereco, data.rg, data.telefone].filter(
         (v) => v !== undefined && v.trim() !== '',
       )
       return values.length === 0 || values.length === 4
@@ -57,9 +57,9 @@ export default function FormularioIdo() {
       colaborador_nome: '',
       colaborador_registro: '',
       assinatura_base64: '',
-      testemunha_1: { nome: '', endereco: '', sg: '', telefone: '' },
-      testemunha_2: { nome: '', endereco: '', sg: '', telefone: '' },
-      testemunha_3: { nome: '', endereco: '', sg: '', telefone: '' },
+      testemunha_1: { nome: '', endereco: '', rg: '', telefone: '' },
+      testemunha_2: { nome: '', endereco: '', rg: '', telefone: '' },
+      testemunha_3: { nome: '', endereco: '', rg: '', telefone: '' },
     },
   })
 
@@ -77,15 +77,15 @@ export default function FormularioIdo() {
         assinatura_base64: data.assinatura_base64,
         testemunha_1_nome: data.testemunha_1.nome || null,
         testemunha_1_endereco: data.testemunha_1.endereco || null,
-        testemunha_1_sg: data.testemunha_1.sg || null,
+        testemunha_1_sg: data.testemunha_1.rg || null,
         testemunha_1_telefone: data.testemunha_1.telefone || null,
         testemunha_2_nome: data.testemunha_2.nome || null,
         testemunha_2_endereco: data.testemunha_2.endereco || null,
-        testemunha_2_sg: data.testemunha_2.sg || null,
+        testemunha_2_sg: data.testemunha_2.rg || null,
         testemunha_2_telefone: data.testemunha_2.telefone || null,
         testemunha_3_nome: data.testemunha_3.nome || null,
         testemunha_3_endereco: data.testemunha_3.endereco || null,
-        testemunha_3_sg: data.testemunha_3.sg || null,
+        testemunha_3_sg: data.testemunha_3.rg || null,
         testemunha_3_telefone: data.testemunha_3.telefone || null,
       })
 
@@ -206,8 +206,8 @@ export default function FormularioIdo() {
                         />
                       </div>
                       <div className="space-y-2">
-                        <Label>SG</Label>
-                        <Input placeholder="SG da testemunha" {...form.register(`${prefix}.sg`)} />
+                        <Label>RG</Label>
+                        <Input placeholder="RG da testemunha" {...form.register(`${prefix}.rg`)} />
                       </div>
                       <div className="space-y-2">
                         <Label>Telefone</Label>

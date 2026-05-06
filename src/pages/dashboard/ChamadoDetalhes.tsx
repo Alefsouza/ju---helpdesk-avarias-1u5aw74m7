@@ -267,6 +267,13 @@ export default function ChamadoDetalhes() {
       })
     })
     historicoData?.forEach((h) => {
+      if (
+        h.detalhes === 'Boletim de Ocorrência preenchido e anexado com sucesso.' ||
+        h.detalhes?.toLowerCase().includes('anexo interno')
+      ) {
+        return
+      }
+
       timelineItems.push({
         id: h.id,
         type: 'history',
@@ -330,6 +337,14 @@ export default function ChamadoDetalhes() {
         },
         async (payload) => {
           const newHistory = payload.new as any
+
+          if (
+            newHistory.detalhes === 'Boletim de Ocorrência preenchido e anexado com sucesso.' ||
+            newHistory.detalhes?.toLowerCase().includes('anexo interno')
+          ) {
+            return
+          }
+
           const { data: profile } = await supabase
             .from('perfil_usuario')
             .select('*')

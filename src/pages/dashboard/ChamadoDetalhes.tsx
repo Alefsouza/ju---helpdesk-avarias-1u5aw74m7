@@ -1037,7 +1037,7 @@ export default function ChamadoDetalhes() {
           </div>
         </div>
 
-        {(isSupport || (pia && pia.trim() !== '')) && (
+        {(isSupport || (chamado.pia && chamado.pia.trim() !== '')) && (
           <div className="pt-4 border-t">
             <div className="border-2 border-green-700 bg-[rgba(200,230,201,0.1)] rounded-xl shadow-sm p-4 sm:p-6 space-y-4">
               <div className="flex items-center gap-2 mb-2">

@@ -111,7 +111,7 @@ function AppSidebar() {
                     >
                       <Link to="/dashboard/meus-atendimentos">
                         <PlayCircle />
-                        <span>Meus Atendimentos</span>
+                        <span>Atendimentos</span>
                       </Link>
                     </SidebarMenuButton>
                   </SidebarMenuItem>

@@ -176,7 +176,7 @@ export default function ChamadosAbertos() {
         <div className="relative flex-1">
           <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-slate-500" />
           <Input
-            placeholder="Buscar por ID ou título..."
+            placeholder="Buscar por título..."
             className="pl-9 bg-white shadow-sm"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
@@ -247,7 +247,6 @@ export default function ChamadosAbertos() {
             <Table>
               <TableHeader>
                 <TableRow className="bg-slate-50">
-                  <TableHead className="w-[100px]">ID</TableHead>
                   <TableHead>Título</TableHead>
                   <TableHead>Solicitante</TableHead>
                   <TableHead>Prioridade</TableHead>
@@ -262,7 +261,6 @@ export default function ChamadosAbertos() {
                     className="cursor-pointer hover:bg-slate-50/80 transition-colors group"
                     onClick={() => navigateToDetails(c.id)}
                   >
-                    <TableCell className="font-mono text-xs text-slate-500">{c.id}</TableCell>
                     <TableCell>
                       <div className="font-medium text-slate-900 line-clamp-1">{c.titulo}</div>
                     </TableCell>
@@ -303,7 +301,6 @@ export default function ChamadosAbertos() {
                 <CardContent className="p-4 space-y-4">
                   <div className="flex justify-between items-start gap-2">
                     <div className="flex-1 min-w-0">
-                      <div className="text-xs text-slate-500 font-mono mb-1">ID: {c.id}</div>
                       <h3 className="font-semibold text-slate-900 line-clamp-1">{c.titulo}</h3>
                     </div>
                     <PriorityBadge priority={c.prioridade} />

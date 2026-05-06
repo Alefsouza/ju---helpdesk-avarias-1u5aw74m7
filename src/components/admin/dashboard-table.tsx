@@ -108,7 +108,7 @@ export function DashboardTable({
             <Search className="absolute left-3 top-3 h-4 w-4 text-slate-400" />
             <Input
               className="pl-9 bg-[#f0f0f0] border-[#f0f0f0] text-[#212121] placeholder:text-slate-500"
-              placeholder="Buscar ID ou Título..."
+              placeholder="Buscar por Título..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
             />
@@ -218,9 +218,6 @@ export function DashboardTable({
               <Table>
                 <TableHeader>
                   <TableRow className="bg-[#c8e6c9] hover:bg-[#c8e6c9]/90 border-[#f0f0f0]">
-                    <TableHead className="w-[100px] text-[#225f3d] font-semibold text-[14px]">
-                      ID
-                    </TableHead>
                     <TableHead className="text-[#225f3d] font-semibold text-[14px]">
                       Título
                     </TableHead>
@@ -247,9 +244,6 @@ export function DashboardTable({
                       key={c.id}
                       className="border-[#f0f0f0] odd:bg-white even:bg-[#fbfbfb] hover:bg-[#f0f0f0]/50 transition-colors"
                     >
-                      <TableCell className="font-mono text-xs text-slate-500">
-                        {c.id.split('-')[0].toUpperCase()}
-                      </TableCell>
                       <TableCell className="font-medium text-[#212121] truncate max-w-[250px]">
                         {c.titulo}
                       </TableCell>
@@ -296,9 +290,6 @@ export function DashboardTable({
                   <CardContent className="p-4 space-y-3">
                     <div className="flex justify-between items-start">
                       <div className="space-y-1">
-                        <span className="font-mono text-xs text-slate-500">
-                          #{c.id.split('-')[0].toUpperCase()}
-                        </span>
                         <h4 className="font-medium leading-tight">{c.titulo}</h4>
                       </div>
                     </div>

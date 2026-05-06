@@ -250,7 +250,6 @@ export default function MeusAtendimentos() {
             <Table>
               <TableHeader>
                 <TableRow className="bg-slate-50">
-                  <TableHead className="w-[100px]">ID</TableHead>
                   <TableHead>Título</TableHead>
                   <TableHead>Solicitante</TableHead>
                   <TableHead>Prioridade</TableHead>
@@ -263,7 +262,6 @@ export default function MeusAtendimentos() {
               <TableBody>
                 {filteredChamados.map((c) => (
                   <TableRow key={c.id} className="hover:bg-slate-50/80 transition-colors">
-                    <TableCell className="font-mono text-xs text-slate-500">{c.id}</TableCell>
                     <TableCell>
                       <div className="font-medium text-slate-900 line-clamp-1">{c.titulo}</div>
                     </TableCell>
@@ -324,7 +322,6 @@ export default function MeusAtendimentos() {
                 <CardContent className="p-4 space-y-4">
                   <div className="flex justify-between items-start gap-2">
                     <div className="flex-1 min-w-0">
-                      <div className="text-xs text-slate-500 font-mono mb-1">ID: {c.id}</div>
                       <h3 className="font-semibold text-slate-900 line-clamp-1">{c.titulo}</h3>
                     </div>
                   </div>

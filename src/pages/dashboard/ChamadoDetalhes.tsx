@@ -986,9 +986,6 @@ export default function ChamadoDetalhes() {
         <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
           <div className="space-y-2">
             <div className="flex flex-wrap items-center gap-2 mb-2">
-              <span className="text-sm font-mono text-slate-500 bg-slate-100 px-2 py-1 rounded">
-                {chamado.id}
-              </span>
               <Badge
                 variant="outline"
                 className={cn(

@@ -202,7 +202,7 @@ export default function MeusChamados() {
         <div className="md:col-span-6 relative">
           <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
           <Input
-            placeholder="Buscar por título ou ID..."
+            placeholder="Buscar por título..."
             className="pl-9 bg-background"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
@@ -270,7 +270,6 @@ export default function MeusChamados() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead className="w-[100px]">ID</TableHead>
                   <TableHead>Título</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead>Prioridade</TableHead>
@@ -281,9 +280,6 @@ export default function MeusChamados() {
               <TableBody>
                 {chamados.map((c) => (
                   <TableRow key={c.id} className="hover:bg-muted/50">
-                    <TableCell className="font-mono text-xs text-muted-foreground">
-                      {c.id}
-                    </TableCell>
                     <TableCell className="font-medium">
                       <Link
                         to={`/dashboard/chamados/${c.id}`}
@@ -336,8 +332,7 @@ export default function MeusChamados() {
             {chamados.map((c) => (
               <Card key={c.id} className="overflow-hidden">
                 <CardContent className="p-4 flex flex-col gap-3">
-                  <div className="flex justify-between items-start mb-1">
-                    <span className="font-mono text-xs text-muted-foreground">{c.id}</span>
+                  <div className="flex justify-end items-start mb-1">
                     <span className="text-xs text-muted-foreground">{formatDate(c.criado_em)}</span>
                   </div>
 

@@ -67,7 +67,7 @@ export default function FormularioIdo() {
   const generatePDF = async (data: FormValues) => {
     const doc = new jsPDF()
     doc.setFontSize(16)
-    doc.text('DADOS DO BOLETIM ELETRÔNICO', 105, 20, { align: 'center' })
+    doc.text('DADOS DO BOLETIM DE OCORRÊNCIA', 105, 20, { align: 'center' })
 
     doc.setFontSize(12)
     doc.text(`Protocolo de IDO: ${data.protocolo_ido}`, 20, 40)
@@ -157,7 +157,7 @@ export default function FormularioIdo() {
       }
 
       const uuid = crypto.randomUUID()
-      const fileName = `DADOS_DO_BOLETIM_ELETRONICO_${uuid}.pdf`
+      const fileName = `DADOS_DO_BOLETIM_DE_OCORRENCIA_${uuid}.pdf`
       const filePath = `chamado-${id}/${fileName}`
 
       const { data: uploadData, error: uploadError } = await supabase.storage

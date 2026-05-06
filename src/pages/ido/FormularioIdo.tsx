@@ -64,61 +64,128 @@ export default function FormularioIdo() {
     },
   })
 
-  const generatePDFDoc = (data: FormValues) => {
+  const generatePDFDoc = async (data: FormValues) => {
     const doc = new jsPDF()
-    doc.setFontSize(16)
-    doc.text('DADOS DO BOLETIM DE OCORRÊNCIA', 10, 20)
 
-    doc.setFontSize(12)
-    doc.text(`Protocolo: ${data.protocolo_ido}`, 10, 30)
-    doc.text(`Colaborador: ${data.colaborador_nome}`, 10, 40)
-    doc.text(`Registro: ${data.colaborador_registro}`, 10, 50)
+    let logoBase64 = null
+    try {
+      const img = new Image()
+      img.crossOrigin = 'Anonymous'
+      img.src = '/image-019dff11-886e-74db-932e-be9cefd195ef.png'
+      await new Promise((resolve, reject) => {
+        img.onload = resolve
+        img.onerror = reject
+      })
+      const canvas = document.createElement('canvas')
+      canvas.width = img.width
+      canvas.height = img.height
+      const ctx = canvas.getContext('2d')
+      ctx?.drawImage(img, 0, 0)
+      logoBase64 = canvas.toDataURL('image/png')
+    } catch (e) {
+      console.error('Failed to load logo', e)
+    }
 
-    let y = 60
+    const pageWidth = doc.internal.pageSize.getWidth()
+    const pageHeight = doc.internal.pageSize.getHeight()
+    const margin = 25
+    const contentWidth = pageWidth - margin * 2
+    let y = margin
 
-    const writeTestemunha = (num: number, t: any) => {
-      if (t && t.nome) {
-        doc.setFont('', 'bold')
-        doc.text(`Testemunha ${num}`, 10, y)
-        doc.setFont('', 'normal')
-        y += 10
-        doc.text(`Nome: ${t.nome}`, 10, y)
-        y += 10
-        doc.text(`Endereço: ${t.endereco}`, 10, y)
-        y += 10
-        doc.text(`RG: ${t.rg}`, 10, y)
-        y += 10
-        doc.text(`Telefone: ${t.telefone}`, 10, y)
-        y += 15
+    const drawHeader = () => {
+      if (logoBase64) {
+        doc.addImage(logoBase64, 'PNG', 20, 20, 25, 12)
+      }
+      doc.setFont('helvetica', 'bold')
+      doc.setFontSize(12)
+      doc.setTextColor(43, 43, 43)
+      doc.text('DADOS DO BOLETIM DE OCORRÊNCIA', 50, 28)
+      y = 45
+    }
+
+    const checkPageBreak = (neededSpace: number) => {
+      if (y + neededSpace > pageHeight - 35) {
+        doc.addPage()
+        drawHeader()
       }
     }
 
-    writeTestemunha(1, data.testemunha_1)
-    writeTestemunha(2, data.testemunha_2)
-    writeTestemunha(3, data.testemunha_3)
+    const drawField = (title: string, value: string | undefined | null) => {
+      if (!value) return
 
-    if (y > 220) {
-      doc.addPage()
-      y = 20
+      const titleHeight = 4
+      const spaceBetween = 2
+      const lineSpacing = 4
+
+      doc.setFont('helvetica', 'bold')
+      doc.setFontSize(10)
+      doc.setTextColor(43, 43, 43)
+
+      const splitValue = doc.splitTextToSize(String(value), contentWidth)
+      const valueHeight = splitValue.length * lineSpacing
+
+      checkPageBreak(titleHeight + spaceBetween + valueHeight + 8)
+
+      doc.text(title, margin, y)
+      y += spaceBetween + 4
+
+      doc.setFont('helvetica', 'normal')
+      doc.setTextColor(0, 0, 0)
+      doc.text(splitValue, margin, y)
+      y += (splitValue.length - 1) * lineSpacing + 8
     }
 
-    doc.setFont('', 'bold')
-    doc.text('Assinatura Digital:', 10, y)
-    doc.setFont('', 'normal')
-    y += 10
+    drawHeader()
+
+    drawField('Protocolo do BO/TOKEN:', data.protocolo_ido)
+    drawField('Nome do colaborador:', data.colaborador_nome)
+    drawField('Registro do colaborador:', data.colaborador_registro)
+
+    const drawTestemunha = (num: number, t: any) => {
+      if (t && t.nome) {
+        drawField(`Testemunha ${num} - Nome:`, t.nome)
+        drawField(`Testemunha ${num} - Endereço:`, t.endereco)
+        drawField(`Testemunha ${num} - SG:`, t.rg)
+        drawField(`Testemunha ${num} - Telefone:`, t.telefone)
+      }
+    }
+
+    drawTestemunha(1, data.testemunha_1)
+    drawTestemunha(2, data.testemunha_2)
+    drawTestemunha(3, data.testemunha_3)
 
     if (data.assinatura_base64) {
+      checkPageBreak(30 + 8)
+      doc.setFont('helvetica', 'bold')
+      doc.setFontSize(10)
+      doc.setTextColor(43, 43, 43)
+      doc.text('Assinatura Digital:', margin, y)
+      y += 6
       try {
-        doc.addImage(data.assinatura_base64, 'PNG', 10, y, 50, 30)
+        doc.addImage(data.assinatura_base64, 'PNG', margin, y, 50, 30)
+        y += 30 + 8
       } catch (e) {
-        console.error('Failed to add image', e)
+        console.error('Failed to add signature image', e)
       }
     }
 
-    y += 40
+    const totalPages = doc.getNumberOfPages()
+    for (let i = 1; i <= totalPages; i++) {
+      doc.setPage(i)
+      const dateStr = new Date().toLocaleString('pt-BR')
+      doc.setDrawColor(224, 224, 224)
+      doc.setLineWidth(0.5)
+      doc.line(margin, pageHeight - 25, pageWidth - margin, pageHeight - 25)
 
-    const dateStr = new Date().toLocaleString('pt-BR')
-    doc.text(`Data e hora de criação: ${dateStr}`, 10, y)
+      doc.setFont('helvetica', 'normal')
+      doc.setFontSize(9)
+      doc.setTextColor(150, 150, 150)
+      doc.text(`Data e hora de criação: ${dateStr}`, margin, pageHeight - 25 + 5)
+
+      const pageStr = `Página ${i} de ${totalPages}`
+      const textWidth = doc.getTextWidth(pageStr)
+      doc.text(pageStr, pageWidth - margin - textWidth, pageHeight - 25 + 5)
+    }
 
     return doc
   }
@@ -153,7 +220,7 @@ export default function FormularioIdo() {
 
       let pdfBlob: Blob
       try {
-        const doc = generatePDFDoc(data)
+        const doc = await generatePDFDoc(data)
         pdfBlob = doc.output('blob')
       } catch (err) {
         console.error(err)

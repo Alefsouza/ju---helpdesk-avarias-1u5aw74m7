@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { supabase } from '@/lib/supabase/client'
 import { useAuth } from '@/hooks/use-auth'
 import { useToast } from '@/hooks/use-toast'
@@ -17,11 +17,21 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { Search, Inbox, AlertCircle, ArrowRight, CheckCircle2 } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent } from '@/components/ui/card'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 
 export default function MeusAtendimentos() {
   const { user } = useAuth()
   const { toast } = useToast()
   const navigate = useNavigate()
+  const [searchParams, setSearchParams] = useSearchParams()
+
+  const filterStatus = searchParams.get('status') || 'em_atendimento'
 
   const [chamados, setChamados] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
@@ -40,11 +50,17 @@ export default function MeusAtendimentos() {
     setLoading(true)
     setError(false)
     try {
-      const { data, error: err } = await supabase
-        .from('chamados')
-        .select('*')
-        .eq('status', 'em_atendimento')
-        .order('criado_em', { ascending: false })
+      let query = supabase.from('chamados').select('*')
+
+      if (filterStatus === 'em_atendimento') {
+        query = query.eq('status', 'em_atendimento')
+      } else if (filterStatus === 'finalizado') {
+        query = query.eq('status', 'finalizado')
+      } else if (filterStatus === 'ambos') {
+        query = query.in('status', ['em_atendimento', 'finalizado'])
+      }
+
+      const { data, error: err } = await query.order('criado_em', { ascending: false })
 
       if (err) throw err
 
@@ -87,7 +103,7 @@ export default function MeusAtendimentos() {
 
   useEffect(() => {
     fetchChamados()
-  }, [user])
+  }, [user, filterStatus])
 
   const handleFinalizar = async (chamadoId: string, e?: React.MouseEvent) => {
     if (e) e.stopPropagation()
@@ -153,11 +169,7 @@ export default function MeusAtendimentos() {
         c.nome_usuario?.toLowerCase().includes(term)
       )
     })
-    .sort((a, b) => {
-      const respCompare = a.nome_responsavel.localeCompare(b.nome_responsavel)
-      if (respCompare !== 0) return respCompare
-      return new Date(b.criado_em).getTime() - new Date(a.criado_em).getTime()
-    })
+    .sort((a, b) => new Date(b.criado_em).getTime() - new Date(a.criado_em).getTime())
 
   return (
     <div className="space-y-6 max-w-6xl mx-auto p-2 sm:p-4 animate-fade-in-up">
@@ -180,6 +192,23 @@ export default function MeusAtendimentos() {
             onChange={(e) => setSearchTerm(e.target.value)}
           />
         </div>
+        <div className="w-full sm:w-48">
+          <Select
+            value={filterStatus}
+            onValueChange={(val) => {
+              setSearchParams({ status: val })
+            }}
+          >
+            <SelectTrigger className="bg-white">
+              <SelectValue placeholder="Status" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="em_atendimento">Em atendimento</SelectItem>
+              <SelectItem value="finalizado">Finalizado</SelectItem>
+              <SelectItem value="ambos">Ambos</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
       </div>
 
       {loading ? (
@@ -198,10 +227,9 @@ export default function MeusAtendimentos() {
       ) : filteredChamados.length === 0 ? (
         <div className="text-center py-16 bg-white rounded-lg border shadow-sm">
           <Inbox className="h-12 w-12 mx-auto text-slate-300 mb-4" />
-          <h3 className="text-lg font-medium text-slate-900">Nenhum atendimento em curso</h3>
+          <h3 className="text-lg font-medium text-slate-900">Nenhum atendimento encontrado</h3>
           <p className="text-slate-500 mb-6 max-w-sm mx-auto">
-            Não há chamados em atendimento no momento. Volte para a Fila de Atendimento para pegar
-            novos chamados.
+            Não há chamados correspondentes aos filtros selecionados no momento.
           </p>
           <Button onClick={() => navigate('/dashboard/chamados-abertos')}>
             Ir para Fila de Atendimento
@@ -243,9 +271,13 @@ export default function MeusAtendimentos() {
                     <TableCell>
                       <Badge
                         variant="outline"
-                        className="bg-yellow-100 text-yellow-800 border-yellow-200"
+                        className={
+                          c.status === 'finalizado'
+                            ? 'bg-slate-100 text-slate-800 border-slate-200'
+                            : 'bg-yellow-100 text-yellow-800 border-yellow-200'
+                        }
                       >
-                        EM ATENDIMENTO
+                        {c.status === 'finalizado' ? 'FINALIZADO' : 'EM ATENDIMENTO'}
                       </Badge>
                     </TableCell>
                     <TableCell className="text-sm text-slate-500 whitespace-nowrap">
@@ -257,7 +289,7 @@ export default function MeusAtendimentos() {
                           Continuar
                           <ArrowRight className="ml-2 h-4 w-4" />
                         </Button>
-                        {c.responsavel_id === user?.id && (
+                        {c.responsavel_id === user?.id && c.status !== 'finalizado' && (
                           <Button
                             variant="default"
                             size="sm"
@@ -293,9 +325,13 @@ export default function MeusAtendimentos() {
                     <PriorityBadge priority={c.prioridade} />
                     <Badge
                       variant="outline"
-                      className="bg-yellow-100 text-yellow-800 border-yellow-200"
+                      className={
+                        c.status === 'finalizado'
+                          ? 'bg-slate-100 text-slate-800 border-slate-200'
+                          : 'bg-yellow-100 text-yellow-800 border-yellow-200'
+                      }
                     >
-                      EM ATENDIMENTO
+                      {c.status === 'finalizado' ? 'FINALIZADO' : 'EM ATENDIMENTO'}
                     </Badge>
                   </div>
 
@@ -319,7 +355,7 @@ export default function MeusAtendimentos() {
                     >
                       Continuar
                     </Button>
-                    {c.responsavel_id === user?.id && (
+                    {c.responsavel_id === user?.id && c.status !== 'finalizado' && (
                       <Button
                         className="flex-1 bg-green-600 hover:bg-green-700"
                         onClick={(e) => handleFinalizar(c.id, e)}

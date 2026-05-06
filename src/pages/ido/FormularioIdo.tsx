@@ -11,6 +11,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Separator } from '@/components/ui/separator'
 import { useToast } from '@/hooks/use-toast'
 import { SignaturePad } from '@/components/SignaturePad'
+import { jsPDF } from 'jspdf'
 
 const testemunhaSchema = z
   .object({
@@ -63,6 +64,62 @@ export default function FormularioIdo() {
     },
   })
 
+  const generatePDF = async (data: FormValues) => {
+    const doc = new jsPDF()
+    doc.setFontSize(16)
+    doc.text('DADOS DO BOLETIM ELETRÔNICO', 105, 20, { align: 'center' })
+
+    doc.setFontSize(12)
+    doc.text(`Protocolo de IDO: ${data.protocolo_ido}`, 20, 40)
+    doc.text(`Colaborador: ${data.colaborador_nome}`, 20, 50)
+    doc.text(`Registro: ${data.colaborador_registro}`, 20, 60)
+
+    let y = 70
+
+    const writeTestemunha = (num: number, t: any) => {
+      if (t && t.nome) {
+        doc.setFont('', 'bold')
+        doc.text(`Testemunha ${num}`, 20, y)
+        doc.setFont('', 'normal')
+        y += 10
+        doc.text(`Nome: ${t.nome}`, 20, y)
+        y += 10
+        doc.text(`Endereço: ${t.endereco}`, 20, y)
+        y += 10
+        doc.text(`RG: ${t.rg}`, 20, y)
+        y += 10
+        doc.text(`Telefone: ${t.telefone}`, 20, y)
+        y += 15
+      }
+    }
+
+    writeTestemunha(1, data.testemunha_1)
+    writeTestemunha(2, data.testemunha_2)
+    writeTestemunha(3, data.testemunha_3)
+
+    if (y > 200) {
+      doc.addPage()
+      y = 20
+    }
+
+    doc.setFont('', 'bold')
+    doc.text('Assinatura Digital:', 20, y)
+    doc.setFont('', 'normal')
+    y += 10
+
+    try {
+      doc.addImage(data.assinatura_base64, 'PNG', 20, y, 80, 40)
+    } catch (e) {
+      console.error('Failed to add image', e)
+    }
+    y += 50
+
+    const dateStr = new Date().toLocaleString('pt-BR')
+    doc.text(`Data e hora de criação: ${dateStr}`, 20, y)
+
+    return doc.output('blob')
+  }
+
   const onSubmit = async (data: FormValues) => {
     if (!id) return
 
@@ -89,7 +146,44 @@ export default function FormularioIdo() {
         testemunha_3_telefone: data.testemunha_3.telefone || null,
       })
 
-      if (error) throw error
+      if (error) throw new Error('Erro ao salvar formulário.')
+
+      let pdfBlob: Blob
+      try {
+        pdfBlob = await generatePDF(data)
+      } catch (err) {
+        console.error(err)
+        throw new Error('Erro ao gerar documento. Tente novamente')
+      }
+
+      const uuid = crypto.randomUUID()
+      const fileName = `DADOS_DO_BOLETIM_ELETRONICO_${uuid}.pdf`
+      const filePath = `chamado-${id}/${fileName}`
+
+      const { data: uploadData, error: uploadError } = await supabase.storage
+        .from('anexos_chamados_interno')
+        .upload(filePath, pdfBlob, {
+          contentType: 'application/pdf',
+          cacheControl: '3600',
+          upsert: false,
+        })
+
+      if (uploadError) {
+        console.error(uploadError)
+        throw new Error('Erro ao salvar documento. Tente novamente')
+      }
+
+      const { error: rpcError } = await supabase.rpc('registrar_boletim_ido' as any, {
+        p_chamado_id: id,
+        p_nome_arquivo: fileName,
+        p_arquivo_url: uploadData.path,
+        p_tamanho_bytes: pdfBlob.size,
+      })
+
+      if (rpcError) {
+        console.error(rpcError)
+        throw new Error('Erro ao registrar documento. Tente novamente')
+      }
 
       toast({
         title: 'Sucesso',
@@ -100,7 +194,7 @@ export default function FormularioIdo() {
       console.error(error)
       toast({
         title: 'Erro ao enviar',
-        description: 'Erro ao enviar formulário. Tente novamente.',
+        description: error.message || 'Erro ao enviar formulário. Tente novamente.',
         variant: 'destructive',
       })
     } finally {

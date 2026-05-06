@@ -44,6 +44,7 @@ export default function MeusAtendimentos() {
         .from('chamados')
         .select('*')
         .eq('status', 'em_atendimento')
+        .order('criado_em', { ascending: false })
 
       if (err) throw err
 
@@ -152,7 +153,11 @@ export default function MeusAtendimentos() {
         c.nome_usuario?.toLowerCase().includes(term)
       )
     })
-    .sort((a, b) => a.nome_responsavel.localeCompare(b.nome_responsavel))
+    .sort((a, b) => {
+      const respCompare = a.nome_responsavel.localeCompare(b.nome_responsavel)
+      if (respCompare !== 0) return respCompare
+      return new Date(b.criado_em).getTime() - new Date(a.criado_em).getTime()
+    })
 
   return (
     <div className="space-y-6 max-w-6xl mx-auto p-2 sm:p-4 animate-fade-in-up">
@@ -195,8 +200,8 @@ export default function MeusAtendimentos() {
           <Inbox className="h-12 w-12 mx-auto text-slate-300 mb-4" />
           <h3 className="text-lg font-medium text-slate-900">Nenhum atendimento em curso</h3>
           <p className="text-slate-500 mb-6 max-w-sm mx-auto">
-            Você não possui chamados em atendimento no momento. Volte para a Fila de Atendimento
-            para pegar novos chamados.
+            Não há chamados em atendimento no momento. Volte para a Fila de Atendimento para pegar
+            novos chamados.
           </p>
           <Button onClick={() => navigate('/dashboard/chamados-abertos')}>
             Ir para Fila de Atendimento

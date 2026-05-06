@@ -782,7 +782,7 @@ export default function ChamadoDetalhes() {
   }
 
   const handleSalvarPia = async () => {
-    if (!isSupport) return
+    if (!canFillPIA) return
 
     if (pia.trim() && !/^[A-Za-z0-9/\-.\s]+$/.test(pia.trim())) {
       toast.error('Informe um número válido de PIA')
@@ -849,8 +849,13 @@ export default function ChamadoDetalhes() {
   const isSupport =
     currentUserProfile?.tipo_usuario === 'responsavel' ||
     currentUserProfile?.tipo_usuario === 'admin'
-  const canFinalize = isSupport || chamado.usuario_id === user?.id
-  const canTransfer = isSupport && chamado.status !== 'finalizado'
+  const isResponsible = chamado.responsavel_id === user?.id
+  const isSolicitante = chamado.usuario_id === user?.id
+
+  const canReply = isSolicitante || isResponsible
+  const canFinalize = isSolicitante || isResponsible
+  const canTransfer = isResponsible && chamado.status !== 'finalizado'
+  const canFillPIA = isResponsible
 
   const getAcaoText = (acao: string, userNome: string) => {
     switch (acao) {
@@ -1031,7 +1036,7 @@ export default function ChamadoDetalhes() {
           </div>
         </div>
 
-        {isSupport && (
+        {canFillPIA && (
           <div className="pt-4 border-t">
             <div className="border-2 border-green-700 bg-[rgba(200,230,201,0.1)] rounded-xl shadow-sm p-4 sm:p-6 space-y-4">
               <div className="flex items-center gap-2 mb-2">
@@ -1276,7 +1281,7 @@ export default function ChamadoDetalhes() {
         </div>
       </div>
 
-      {chamado.status !== 'finalizado' && (
+      {chamado.status !== 'finalizado' && canReply && (
         <div className="bg-white rounded-xl border shadow-sm p-4 sm:p-6 animate-fade-in-up">
           <h3 className="text-sm font-bold text-slate-900 mb-3 uppercase tracking-wider">
             Responder

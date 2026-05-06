@@ -44,12 +44,13 @@ export default function MeusAtendimentos() {
         .from('chamados')
         .select('*')
         .eq('status', 'em_atendimento')
-        .eq('responsavel_id', user.id)
 
       if (err) throw err
 
       if (data && data.length > 0) {
-        const userIds = [...new Set(data.map((c) => c.usuario_id))]
+        const userIds = [
+          ...new Set(data.flatMap((c) => [c.usuario_id, c.responsavel_id]).filter(Boolean)),
+        ]
         const { data: perfis } = await supabase
           .from('perfil_usuario')
           .select('id, nome_completo')
@@ -66,6 +67,9 @@ export default function MeusAtendimentos() {
         const chamadosComNome = data.map((c) => ({
           ...c,
           nome_usuario: perfilMap?.[c.usuario_id] || 'Usuário Desconhecido',
+          nome_responsavel: c.responsavel_id
+            ? perfilMap?.[c.responsavel_id] || 'Sem responsável'
+            : 'Sem responsável',
         }))
 
         setChamados(chamadosComNome)
@@ -141,9 +145,14 @@ export default function MeusAtendimentos() {
   const filteredChamados = chamados
     .filter((c) => {
       const term = debouncedSearch.toLowerCase()
-      return c.titulo.toLowerCase().includes(term) || c.id.toLowerCase().includes(term)
+      return (
+        c.titulo.toLowerCase().includes(term) ||
+        c.id.toLowerCase().includes(term) ||
+        c.nome_responsavel?.toLowerCase().includes(term) ||
+        c.nome_usuario?.toLowerCase().includes(term)
+      )
     })
-    .sort((a, b) => new Date(b.atualizado_em).getTime() - new Date(a.atualizado_em).getTime())
+    .sort((a, b) => a.nome_responsavel.localeCompare(b.nome_responsavel))
 
   return (
     <div className="space-y-6 max-w-6xl mx-auto p-2 sm:p-4 animate-fade-in-up">
@@ -151,7 +160,7 @@ export default function MeusAtendimentos() {
         <div>
           <h1 className="text-3xl font-bold tracking-tight text-slate-900">Meus Atendimentos</h1>
           <p className="text-slate-500">
-            Gerencie os chamados que você assumiu e estão em atendimento.
+            Acompanhe todos os chamados que estão atualmente em atendimento.
           </p>
         </div>
       </div>
@@ -204,6 +213,7 @@ export default function MeusAtendimentos() {
                   <TableHead>Título</TableHead>
                   <TableHead>Solicitante</TableHead>
                   <TableHead>Prioridade</TableHead>
+                  <TableHead>Colaborador</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead>Última Atualização</TableHead>
                   <TableHead className="text-right">Ações</TableHead>
@@ -222,6 +232,9 @@ export default function MeusAtendimentos() {
                     <TableCell>
                       <PriorityBadge priority={c.prioridade} />
                     </TableCell>
+                    <TableCell className="text-sm">
+                      <span className="font-medium text-slate-700">{c.nome_responsavel}</span>
+                    </TableCell>
                     <TableCell>
                       <Badge
                         variant="outline"
@@ -239,16 +252,18 @@ export default function MeusAtendimentos() {
                           Continuar
                           <ArrowRight className="ml-2 h-4 w-4" />
                         </Button>
-                        <Button
-                          variant="default"
-                          size="sm"
-                          className="bg-green-600 hover:bg-green-700 text-white"
-                          onClick={(e) => handleFinalizar(c.id, e)}
-                          disabled={completingId === c.id}
-                        >
-                          <CheckCircle2 className="mr-2 h-4 w-4" />
-                          {completingId === c.id ? 'Finalizando...' : 'Finalizar'}
-                        </Button>
+                        {c.responsavel_id === user?.id && (
+                          <Button
+                            variant="default"
+                            size="sm"
+                            className="bg-green-600 hover:bg-green-700 text-white"
+                            onClick={(e) => handleFinalizar(c.id, e)}
+                            disabled={completingId === c.id}
+                          >
+                            <CheckCircle2 className="mr-2 h-4 w-4" />
+                            {completingId === c.id ? 'Finalizando...' : 'Finalizar'}
+                          </Button>
+                        )}
                       </div>
                     </TableCell>
                   </TableRow>
@@ -279,11 +294,16 @@ export default function MeusAtendimentos() {
                     </Badge>
                   </div>
 
-                  <div className="flex justify-between items-center text-sm text-slate-500 bg-slate-50 p-2 rounded-md">
-                    <span className="font-medium text-slate-700 truncate mr-2">
-                      {c.nome_usuario}
-                    </span>
-                    <span className="whitespace-nowrap">{formatDate(c.atualizado_em)}</span>
+                  <div className="flex flex-col gap-1 text-sm text-slate-500 bg-slate-50 p-2 rounded-md">
+                    <div className="flex justify-between items-center">
+                      <span className="font-medium text-slate-700 truncate mr-2">
+                        Solicitante: {c.nome_usuario}
+                      </span>
+                      <span className="whitespace-nowrap">{formatDate(c.atualizado_em)}</span>
+                    </div>
+                    <div className="font-medium text-slate-700 truncate">
+                      Colaborador: {c.nome_responsavel}
+                    </div>
                   </div>
 
                   <div className="flex gap-2 pt-2 border-t">
@@ -294,14 +314,16 @@ export default function MeusAtendimentos() {
                     >
                       Continuar
                     </Button>
-                    <Button
-                      className="flex-1 bg-green-600 hover:bg-green-700"
-                      onClick={(e) => handleFinalizar(c.id, e)}
-                      disabled={completingId === c.id}
-                    >
-                      <CheckCircle2 className="mr-2 h-4 w-4" />
-                      {completingId === c.id ? '...' : 'Finalizar'}
-                    </Button>
+                    {c.responsavel_id === user?.id && (
+                      <Button
+                        className="flex-1 bg-green-600 hover:bg-green-700"
+                        onClick={(e) => handleFinalizar(c.id, e)}
+                        disabled={completingId === c.id}
+                      >
+                        <CheckCircle2 className="mr-2 h-4 w-4" />
+                        {completingId === c.id ? '...' : 'Finalizar'}
+                      </Button>
+                    )}
                   </div>
                 </CardContent>
               </Card>

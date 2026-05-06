@@ -81,33 +81,120 @@ export default function FormularioEspelhoDanos() {
 
       let pdfBlob: Blob
       try {
-        const doc = new jsPDF()
-        doc.setFontSize(16)
-        doc.text('Espelho de Danos', 20, 20)
+        const doc = new jsPDF({ format: 'a4', unit: 'mm' })
+        const pageWidth = doc.internal.pageSize.getWidth()
+        const pageHeight = doc.internal.pageSize.getHeight()
+        const margin = 20
+        const contentWidth = pageWidth - 2 * margin
+        let currentY = margin
+        let pageNumber = 1
 
-        doc.setFontSize(12)
-        doc.text(`Número de OS: ${values.numero_os}`, 20, 40)
-        doc.text(`Garagem: ${values.garagem}`, 20, 50)
-        doc.text(`Data e Horário: ${values.data} às ${values.horario}`, 20, 60)
-        doc.text(`Ocorrência: ${values.ocorrencia}`, 20, 70)
-        doc.text(`Linha: ${values.linha}`, 20, 80)
+        const addHeader = () => {
+          doc.setFillColor(245, 245, 245)
+          doc.rect(margin, margin, 40, 20, 'F')
+          doc.setFont('helvetica', 'bold')
+          doc.setFontSize(9)
+          doc.setTextColor(150, 150, 150)
+          doc.text('VIA SUDESTE', margin + 20, margin + 11, { align: 'center' })
 
-        doc.text('Descrição dos danos:', 20, 100)
-        const splitDescricao = doc.splitTextToSize(values.descricao_danos, 170)
-        doc.text(splitDescricao, 20, 110)
+          doc.setFont('helvetica', 'bold')
+          doc.setFontSize(18)
+          doc.setTextColor(43, 43, 43)
+          doc.text('Espelho de Danos', pageWidth / 2, margin + 10, { align: 'center' })
 
-        const yAfterDesc = 110 + splitDescricao.length * 7 + 10
-        doc.text(
-          `Vistoriador: ${values.nome_vistoriador} (Registro: ${values.registro_vistoriador})`,
-          20,
-          yAfterDesc,
-        )
-        doc.text(
-          `Motorista: ${values.nome_motorista} (Registro: ${values.registro_motorista})`,
-          20,
-          yAfterDesc + 10,
-        )
-        doc.text(`Criado em: ${format(new Date(), 'dd/MM/yyyy HH:mm:ss')}`, 20, yAfterDesc + 30)
+          doc.setFont('helvetica', 'normal')
+          doc.setFontSize(11)
+          doc.setTextColor(100, 100, 100)
+          doc.text('Preencha os dados da vistoria abaixo', pageWidth / 2, margin + 18, {
+            align: 'center',
+          })
+
+          currentY = margin + 35
+        }
+
+        const addFooter = () => {
+          const footerY = pageHeight - margin
+          doc.setDrawColor(224, 224, 224)
+          doc.setLineWidth(0.5)
+          doc.line(margin, footerY - 5, pageWidth - margin, footerY - 5)
+
+          doc.setFont('helvetica', 'normal')
+          doc.setFontSize(9)
+          doc.setTextColor(150, 150, 150)
+          const dateStr = `Gerado em: ${format(new Date(), 'dd/MM/yyyy HH:mm:ss')}`
+          doc.text(dateStr, margin, footerY)
+        }
+
+        addHeader()
+        addFooter()
+
+        const addField = (label: string, value: string, isTextarea = false) => {
+          doc.setFont('helvetica', 'bold')
+          doc.setFontSize(10)
+          const labelText = `${label}: `
+          const labelWidth = doc.getTextWidth(labelText)
+
+          doc.setFont('helvetica', 'normal')
+          const valueText = value || '-'
+
+          let boxHeight = 12
+          let textLines: string[] = [valueText]
+
+          if (isTextarea) {
+            textLines = doc.splitTextToSize(valueText, contentWidth - 6)
+            boxHeight = Math.max(30, 10 + textLines.length * 5)
+          }
+
+          if (currentY + boxHeight > pageHeight - margin - 15) {
+            doc.addPage()
+            pageNumber++
+            addHeader()
+            addFooter()
+          }
+
+          doc.setDrawColor(224, 224, 224)
+          doc.setFillColor(255, 255, 255)
+          doc.rect(margin, currentY, contentWidth, boxHeight, 'FD')
+
+          doc.setFont('helvetica', 'bold')
+          doc.setTextColor(43, 43, 43)
+
+          if (isTextarea) {
+            doc.text(labelText, margin + 3, currentY + 7)
+            doc.setFont('helvetica', 'normal')
+            doc.setTextColor(0, 0, 0)
+            doc.text(textLines, margin + 3, currentY + 13)
+          } else {
+            doc.text(labelText, margin + 3, currentY + 8)
+            doc.setFont('helvetica', 'normal')
+            doc.setTextColor(0, 0, 0)
+            doc.text(valueText, margin + 3 + labelWidth, currentY + 8)
+          }
+
+          currentY += boxHeight + 8
+        }
+
+        addField('Número de OS', values.numero_os)
+        addField('Garagem', values.garagem)
+        addField('Data', values.data)
+        addField('Horário', values.horario)
+        addField('Ocorrência', values.ocorrencia)
+        addField('Linha', values.linha)
+        addField('Descrição dos Danos', values.descricao_danos, true)
+        addField('Registro do Vistoriador', values.registro_vistoriador)
+        addField('Nome do Vistoriador', values.nome_vistoriador)
+        addField('Registro do Motorista', values.registro_motorista)
+        addField('Nome do Motorista', values.nome_motorista)
+
+        for (let i = 1; i <= pageNumber; i++) {
+          doc.setPage(i)
+          doc.setFont('helvetica', 'normal')
+          doc.setFontSize(9)
+          doc.setTextColor(150, 150, 150)
+          doc.text(`Página ${i} de ${pageNumber}`, pageWidth - margin, pageHeight - margin, {
+            align: 'right',
+          })
+        }
 
         pdfBlob = doc.output('blob')
       } catch (err) {

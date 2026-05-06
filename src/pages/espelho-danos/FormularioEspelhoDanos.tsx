@@ -194,9 +194,19 @@ export default function FormularioEspelhoDanos() {
           currentY += boxHeight + 3
         }
 
+        let dataFormatada = 'Data é obrigatória'
+        if (values.data) {
+          const parts = values.data.split('-')
+          if (parts.length === 3) {
+            dataFormatada = `${parts[2]}/${parts[1]}/${parts[0]}`
+          } else {
+            dataFormatada = 'Data inválida'
+          }
+        }
+
         addField('Número de OS', values.numero_os)
         addField('Garagem', values.garagem)
-        addField('Data', values.data)
+        addField('Data', dataFormatada)
         addField('Horário', values.horario)
         addField('Ocorrência', values.ocorrencia)
         addField('Linha', values.linha)

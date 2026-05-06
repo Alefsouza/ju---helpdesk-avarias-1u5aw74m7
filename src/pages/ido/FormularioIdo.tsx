@@ -112,7 +112,7 @@ export default function FormularioIdo() {
     <div className="container max-w-3xl py-8 md:py-12 mx-auto px-4">
       <Card>
         <CardHeader>
-          <CardTitle>Formulário de Identificação (IDO)</CardTitle>
+          <CardTitle>DADOS DO BOLETIM DE OCORRENCIA&nbsp;</CardTitle>
           <CardDescription>
             Preencha os dados abaixo para registrar as informações vinculadas ao chamado.
           </CardDescription>
@@ -125,7 +125,7 @@ export default function FormularioIdo() {
               <div className="grid gap-4 md:grid-cols-2">
                 <div className="space-y-2">
                   <Label htmlFor="protocolo_ido">
-                    Protocolo de IDO <span className="text-destructive">*</span>
+                    Protocolo ou TOKEN do BO&nbsp;<span className="text-destructive">*</span>
                   </Label>
                   <Input
                     id="protocolo_ido"

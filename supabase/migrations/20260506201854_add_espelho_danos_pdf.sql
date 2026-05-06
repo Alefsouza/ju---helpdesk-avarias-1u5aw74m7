@@ -65,4 +65,4 @@ BEGIN
     'Espelho de Danos preenchido e anexado com sucesso.'
   );
 END;
-$function$
+$function$;

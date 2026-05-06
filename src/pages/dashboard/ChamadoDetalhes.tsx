@@ -22,6 +22,12 @@ import {
 } from '@/components/ui/select'
 import { Label } from '@/components/ui/label'
 import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
+import {
   ArrowLeft,
   Send,
   CheckCircle2,
@@ -42,6 +48,7 @@ import {
   Link as LinkIcon,
   Copy,
   Share2,
+  MoreVertical,
 } from 'lucide-react'
 import { supabase } from '@/lib/supabase/client'
 import { useAuth } from '@/hooks/use-auth'
@@ -1208,64 +1215,82 @@ export default function ChamadoDetalhes() {
         )}
 
         {isSupport && (
-          <div className="pt-4 border-t">
-            <div className="bg-slate-50 rounded-xl border shadow-sm p-4 sm:p-6 space-y-4">
-              <div className="flex items-center gap-2 mb-2">
-                <LinkIcon className="h-5 w-5 text-slate-500" />
-                <h3 className="text-base font-bold text-slate-700 uppercase tracking-wider">
-                  Link do Formulário - DADOS DO BOLETIM DE OCORRÊNCIA
-                </h3>
+          <div className="pt-4 border-t space-y-2">
+            <div className="flex flex-col gap-2">
+              <div className="flex items-center justify-between gap-2 border-b border-slate-100 pb-2">
+                <div className="flex items-center gap-2 overflow-hidden flex-1">
+                  <LinkIcon className="h-4 w-4 text-slate-400 shrink-0" />
+                  <span className="text-[12px] font-medium text-slate-700 shrink-0 hidden sm:inline-block">
+                    Formulário IDO:
+                  </span>
+                  <span className="text-[12px] text-slate-500 truncate select-all">{`${window.location.origin}/ido/${id}`}</span>
+                </div>
+                <div className="flex items-center gap-1 shrink-0">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="h-8 text-xs px-2 sm:px-3 bg-white"
+                    onClick={handleCopiarLinkIdo}
+                  >
+                    <Copy className="h-3.5 w-3.5 sm:mr-2" />
+                    <span className="hidden sm:inline">Copiar</span>
+                  </Button>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 text-slate-500 hover:text-slate-900"
+                      >
+                        <MoreVertical className="h-4 w-4" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuItem onClick={handleCompartilharIdo}>
+                        <Share2 className="mr-2 h-4 w-4" />
+                        Compartilhar
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </div>
               </div>
-              <div className="flex items-center gap-2 bg-white border rounded-md p-3 overflow-hidden">
-                <span className="text-sm text-slate-600 truncate flex-1 select-all">
-                  {`${window.location.origin}/ido/${id}`}
-                </span>
-              </div>
-              <div className="flex flex-col sm:flex-row gap-2 justify-end">
-                <Button
-                  variant="outline"
-                  onClick={handleCopiarLinkIdo}
-                  className="w-full sm:w-auto bg-white hover:bg-slate-100"
-                >
-                  <Copy className="mr-2 h-4 w-4" />
-                  Copiar link
-                </Button>
-                <Button onClick={handleCompartilharIdo} className="w-full sm:w-auto">
-                  <Share2 className="mr-2 h-4 w-4" />
-                  Compartilhar
-                </Button>
-              </div>
-            </div>
-          </div>
-        )}
 
-        {isSupport && (
-          <div className="pt-4 border-t">
-            <div className="bg-slate-50 rounded-xl border shadow-sm p-4 sm:p-6 space-y-4">
-              <div className="flex items-center gap-2 mb-2">
-                <LinkIcon className="h-5 w-5 text-slate-500" />
-                <h3 className="text-base font-bold text-slate-700 uppercase tracking-wider">
-                  Link do Formulário - ESPELHO DE DANOS
-                </h3>
-              </div>
-              <div className="flex items-center gap-2 bg-white border rounded-md p-3 overflow-hidden">
-                <span className="text-sm text-slate-600 truncate flex-1 select-all">
-                  {`${window.location.origin}/espelho-danos/${id}`}
-                </span>
-              </div>
-              <div className="flex flex-col sm:flex-row gap-2 justify-end">
-                <Button
-                  variant="outline"
-                  onClick={handleCopiarLinkEspelho}
-                  className="w-full sm:w-auto bg-white hover:bg-slate-100"
-                >
-                  <Copy className="mr-2 h-4 w-4" />
-                  Copiar link
-                </Button>
-                <Button onClick={handleCompartilharEspelho} className="w-full sm:w-auto">
-                  <Share2 className="mr-2 h-4 w-4" />
-                  Compartilhar
-                </Button>
+              <div className="flex items-center justify-between gap-2">
+                <div className="flex items-center gap-2 overflow-hidden flex-1">
+                  <LinkIcon className="h-4 w-4 text-slate-400 shrink-0" />
+                  <span className="text-[12px] font-medium text-slate-700 shrink-0 hidden sm:inline-block">
+                    Espelho de Danos:
+                  </span>
+                  <span className="text-[12px] text-slate-500 truncate select-all">{`${window.location.origin}/espelho-danos/${id}`}</span>
+                </div>
+                <div className="flex items-center gap-1 shrink-0">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="h-8 text-xs px-2 sm:px-3 bg-white"
+                    onClick={handleCopiarLinkEspelho}
+                  >
+                    <Copy className="h-3.5 w-3.5 sm:mr-2" />
+                    <span className="hidden sm:inline">Copiar</span>
+                  </Button>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 text-slate-500 hover:text-slate-900"
+                      >
+                        <MoreVertical className="h-4 w-4" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuItem onClick={handleCompartilharEspelho}>
+                        <Share2 className="mr-2 h-4 w-4" />
+                        Compartilhar
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </div>
               </div>
             </div>
           </div>

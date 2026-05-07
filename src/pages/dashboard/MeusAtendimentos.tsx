@@ -14,8 +14,18 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import { Skeleton } from '@/components/ui/skeleton'
-import { Search, Inbox, AlertCircle, ArrowRight, CheckCircle2, ArrowUpDown } from 'lucide-react'
+import { Search, Inbox, AlertCircle, ArrowRight, Check, ArrowUpDown } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog'
 import { Card, CardContent } from '@/components/ui/card'
 import {
   Select,
@@ -39,6 +49,7 @@ export default function MeusAtendimentos() {
   const [searchTerm, setSearchTerm] = useState('')
   const [debouncedSearch, setDebouncedSearch] = useState('')
   const [completingId, setCompletingId] = useState<string | null>(null)
+  const [confirmFinalizarId, setConfirmFinalizarId] = useState<string | null>(null)
   const [sortConfig, setSortConfig] = useState<{ key: string; direction: 'asc' | 'desc' } | null>(
     null,
   )
@@ -178,11 +189,9 @@ export default function MeusAtendimentos() {
     }
   }, [user, filterStatus])
 
-  const handleFinalizar = async (chamadoId: string, e?: React.MouseEvent) => {
-    if (e) e.stopPropagation()
-    if (!window.confirm('Tem certeza que deseja finalizar este chamado?')) return
-
+  const handleFinalizar = async (chamadoId: string) => {
     setCompletingId(chamadoId)
+    setConfirmFinalizarId(null)
     try {
       const { error: updateError } = await supabase
         .from('chamados')
@@ -521,15 +530,17 @@ export default function MeusAtendimentos() {
                         </Button>
                         {c.responsavel_id === user?.id && c.status !== 'finalizado' && (
                           <Button
-                            variant="default"
+                            variant="outline"
                             size="sm"
-                            className="bg-green-600 hover:bg-green-700 text-white px-2"
-                            onClick={(e) => handleFinalizar(c.id, e)}
+                            className="px-2"
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              setConfirmFinalizarId(c.id)
+                            }}
                             disabled={completingId === c.id}
                             title="Finalizar"
                           >
-                            <CheckCircle2 className="mr-2 h-4 w-4" />
-                            {completingId === c.id ? '...' : 'Finalizar'}
+                            <Check className="h-4 w-4" />
                           </Button>
                         )}
                       </div>
@@ -591,12 +602,16 @@ export default function MeusAtendimentos() {
                     </Button>
                     {c.responsavel_id === user?.id && c.status !== 'finalizado' && (
                       <Button
-                        className="flex-1 bg-green-600 hover:bg-green-700 text-white"
-                        onClick={(e) => handleFinalizar(c.id, e)}
+                        variant="outline"
+                        className="flex-1"
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          setConfirmFinalizarId(c.id)
+                        }}
                         disabled={completingId === c.id}
+                        title="Finalizar"
                       >
-                        <CheckCircle2 className="mr-2 h-4 w-4" />
-                        {completingId === c.id ? '...' : 'Finalizar'}
+                        <Check className="h-4 w-4" />
                       </Button>
                     )}
                   </div>
@@ -606,6 +621,29 @@ export default function MeusAtendimentos() {
           </div>
         </>
       )}
+
+      <AlertDialog
+        open={!!confirmFinalizarId}
+        onOpenChange={(open) => !open && setConfirmFinalizarId(null)}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Finalizar Atendimento</AlertDialogTitle>
+            <AlertDialogDescription>
+              Tem certeza que deseja finalizar este atendimento? Esta ação não poderá ser desfeita.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => confirmFinalizarId && handleFinalizar(confirmFinalizarId)}
+              className="bg-green-600 hover:bg-green-700 text-white"
+            >
+              Sim, Finalizar
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   )
 }

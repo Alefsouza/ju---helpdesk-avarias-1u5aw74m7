@@ -11,6 +11,7 @@ import ChamadosAbertos from './pages/dashboard/ChamadosAbertos'
 import MeusAtendimentos from './pages/dashboard/MeusAtendimentos'
 import AdminDashboard from './pages/dashboard/Admin'
 import Relatorios from './pages/dashboard/Relatorios'
+import Documentos from './pages/dashboard/Documentos'
 import Perfil from './pages/dashboard/Perfil'
 import ChamadoDetalhes from './pages/dashboard/ChamadoDetalhes'
 import FormularioIdo from './pages/ido/FormularioIdo'
@@ -39,6 +40,7 @@ const App = () => (
             <Route path="/dashboard/chamados/:id" element={<ChamadoDetalhes />} />
             <Route path="/dashboard/admin" element={<AdminDashboard />} />
             <Route path="/dashboard/relatorios" element={<Relatorios />} />
+            <Route path="/dashboard/documentos" element={<Documentos />} />
             <Route path="/dashboard/perfil" element={<Perfil />} />
           </Route>
           <Route path="/ido/sucesso" element={<SucessoIdo />} />

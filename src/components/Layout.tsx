@@ -25,6 +25,7 @@ import {
   PlayCircle,
   FileBarChart,
   PlusCircle,
+  Folder,
 } from 'lucide-react'
 import { Skeleton } from '@/components/ui/skeleton'
 import { useEffect, useState } from 'react'
@@ -177,6 +178,22 @@ function AppSidebar() {
       </SidebarContent>
       <SidebarFooter className="border-t border-white/10 p-4 bg-[#225f3d]">
         <div className="flex flex-col gap-4">
+          {(isResponsavel || isAdmin) && (
+            <SidebarMenu>
+              <SidebarMenuItem>
+                <SidebarMenuButton
+                  asChild
+                  isActive={location.pathname === '/dashboard/documentos'}
+                  className="data-[active=true]:bg-transparent data-[active=true]:text-[#c8e6c9] hover:bg-[#c8e6c9]/10 hover:text-[#c8e6c9] text-white transition-colors"
+                >
+                  <Link to="/dashboard/documentos">
+                    <Folder />
+                    <span>Documentos</span>
+                  </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+            </SidebarMenu>
+          )}
           <div className="flex items-center gap-2 px-2">
             {profile?.foto_url ? (
               <img

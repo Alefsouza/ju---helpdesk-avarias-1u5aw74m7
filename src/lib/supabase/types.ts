@@ -151,6 +151,53 @@ export type Database = {
         }
         Relationships: []
       }
+      documentos: {
+        Row: {
+          arquivo_url: string
+          atualizado_em: string
+          cargo_responsavel: string | null
+          chamado_id: string | null
+          criado_em: string
+          id: string
+          nome_arquivo: string
+          nome_responsavel: string | null
+          registro_responsavel: string | null
+          tipo_documento: string
+        }
+        Insert: {
+          arquivo_url: string
+          atualizado_em?: string
+          cargo_responsavel?: string | null
+          chamado_id?: string | null
+          criado_em?: string
+          id?: string
+          nome_arquivo: string
+          nome_responsavel?: string | null
+          registro_responsavel?: string | null
+          tipo_documento: string
+        }
+        Update: {
+          arquivo_url?: string
+          atualizado_em?: string
+          cargo_responsavel?: string | null
+          chamado_id?: string | null
+          criado_em?: string
+          id?: string
+          nome_arquivo?: string
+          nome_responsavel?: string | null
+          registro_responsavel?: string | null
+          tipo_documento?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: 'documentos_chamado_id_fkey'
+            columns: ['chamado_id']
+            isOneToOne: false
+            referencedRelation: 'chamados'
+            referencedColumns: ['id']
+          },
+        ]
+      }
       formularios_espelho_danos: {
         Row: {
           atualizado_em: string
@@ -596,6 +643,17 @@ export const Constants = {
 //   criado_em: timestamp with time zone (not null, default: now())
 //   atualizado_em: timestamp with time zone (not null, default: now())
 //   pia: text (nullable)
+// Table: documentos
+//   id: uuid (not null, default: gen_random_uuid())
+//   tipo_documento: text (not null)
+//   nome_arquivo: text (not null)
+//   arquivo_url: text (not null)
+//   registro_responsavel: text (nullable)
+//   nome_responsavel: text (nullable)
+//   cargo_responsavel: text (nullable)
+//   chamado_id: uuid (nullable)
+//   criado_em: timestamp with time zone (not null, default: now())
+//   atualizado_em: timestamp with time zone (not null, default: now())
 // Table: formularios_espelho_danos
 //   id: uuid (not null, default: gen_random_uuid())
 //   chamado_id: uuid (not null)
@@ -677,6 +735,10 @@ export const Constants = {
 //   FOREIGN KEY chamados_responsavel_id_fkey: FOREIGN KEY (responsavel_id) REFERENCES auth.users(id) ON DELETE SET NULL
 //   CHECK chamados_status_check: CHECK ((status = ANY (ARRAY['aberto'::text, 'em_atendimento'::text, 'finalizado'::text])))
 //   FOREIGN KEY chamados_usuario_id_fkey: FOREIGN KEY (usuario_id) REFERENCES auth.users(id) ON DELETE CASCADE
+// Table: documentos
+//   FOREIGN KEY documentos_chamado_id_fkey: FOREIGN KEY (chamado_id) REFERENCES chamados(id) ON DELETE SET NULL
+//   PRIMARY KEY documentos_pkey: PRIMARY KEY (id)
+//   CHECK documentos_tipo_documento_check: CHECK ((tipo_documento = ANY (ARRAY['IDO'::text, 'Espelho de Danos'::text])))
 // Table: formularios_espelho_danos
 //   FOREIGN KEY formularios_espelho_danos_chamado_id_fkey: FOREIGN KEY (chamado_id) REFERENCES chamados(id) ON DELETE CASCADE
 //   PRIMARY KEY formularios_espelho_danos_pkey: PRIMARY KEY (id)
@@ -724,6 +786,14 @@ export const Constants = {
 //     USING: ((usuario_id = auth.uid()) OR is_responsavel() OR is_admin())
 //   Policy "chamados_update" (UPDATE, PERMISSIVE) roles={authenticated}
 //     USING: ((usuario_id = auth.uid()) OR (is_responsavel() AND ((responsavel_id = auth.uid()) OR (status = 'aberto'::text))) OR is_admin())
+// Table: documentos
+//   Policy "documentos_insert" (INSERT, PERMISSIVE) roles={public}
+//     WITH CHECK: true
+//   Policy "documentos_select" (SELECT, PERMISSIVE) roles={authenticated}
+//     USING: true
+//   Policy "documentos_update" (UPDATE, PERMISSIVE) roles={authenticated}
+//     USING: (chamado_id IN ( SELECT chamados.id    FROM chamados   WHERE (chamados.responsavel_id = auth.uid())))
+//     WITH CHECK: (chamado_id IN ( SELECT chamados.id    FROM chamados   WHERE (chamados.responsavel_id = auth.uid())))
 // Table: formularios_espelho_danos
 //   Policy "formularios_espelho_danos_insert" (INSERT, PERMISSIVE) roles={public}
 //     WITH CHECK: true
@@ -945,8 +1015,27 @@ export const Constants = {
 //   END;
 //   $function$
 //
+// FUNCTION update_documentos_atualizado_em()
+//   CREATE OR REPLACE FUNCTION public.update_documentos_atualizado_em()
+//    RETURNS trigger
+//    LANGUAGE plpgsql
+//   AS $function$
+//   BEGIN
+//     NEW.atualizado_em = NOW();
+//     RETURN NEW;
+//   END;
+//   $function$
+//
+
+// --- TRIGGERS ---
+// Table: documentos
+//   update_documentos_atualizado_em_trigger: CREATE TRIGGER update_documentos_atualizado_em_trigger BEFORE UPDATE ON public.documentos FOR EACH ROW EXECUTE FUNCTION update_documentos_atualizado_em()
 
 // --- INDEXES ---
+// Table: documentos
+//   CREATE INDEX documentos_chamado_id_idx ON public.documentos USING btree (chamado_id)
+//   CREATE INDEX documentos_registro_responsavel_idx ON public.documentos USING btree (registro_responsavel)
+//   CREATE INDEX documentos_tipo_documento_idx ON public.documentos USING btree (tipo_documento)
 // Table: formularios_espelho_danos
 //   CREATE INDEX formularios_espelho_danos_chamado_id_idx ON public.formularios_espelho_danos USING btree (chamado_id)
 // Table: formularios_ido

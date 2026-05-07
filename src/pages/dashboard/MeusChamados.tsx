@@ -1,8 +1,8 @@
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState, useCallback, useRef } from 'react'
 import { Link } from 'react-router-dom'
 import { supabase } from '@/lib/supabase/client'
 import { Card, CardContent } from '@/components/ui/card'
-import { Ticket, Search, Trash2, AlertCircle, Plus } from 'lucide-react'
+import { Ticket, Search, Trash2, AlertCircle, Plus, ArrowUpDown } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import {
@@ -40,6 +40,7 @@ type Chamado = {
   status: string
   prioridade: string
   criado_em: string
+  pia?: string | null
 }
 
 const statusColors: Record<string, string> = {
@@ -85,6 +86,10 @@ export default function MeusChamados() {
   const [debouncedSearch, setDebouncedSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState('todos')
   const [priorityFilter, setPriorityFilter] = useState('todas')
+  const [sortConfig, setSortConfig] = useState<{ field: string; direction: 'asc' | 'desc' }>({
+    field: 'criado_em',
+    direction: 'desc',
+  })
 
   const [deleteId, setDeleteId] = useState<string | null>(null)
   const { toast } = useToast()
@@ -108,9 +113,13 @@ export default function MeusChamados() {
 
       let query = supabase
         .from('chamados')
-        .select('id, titulo, status, prioridade, criado_em')
+        .select('id, titulo, status, prioridade, criado_em, pia')
         .eq('usuario_id', user.id)
-        .order('criado_em', { ascending: false })
+        .order(sortConfig.field, { ascending: sortConfig.direction === 'asc' })
+
+      if (sortConfig.field !== 'criado_em') {
+        query = query.order('criado_em', { ascending: false })
+      }
 
       if (statusFilter !== 'todos') {
         query = query.eq('status', statusFilter)
@@ -139,11 +148,43 @@ export default function MeusChamados() {
     } finally {
       setLoading(false)
     }
-  }, [debouncedSearch, statusFilter, priorityFilter])
+  }, [debouncedSearch, statusFilter, priorityFilter, sortConfig.field, sortConfig.direction])
+
+  const fetchChamadosRef = useRef(fetchChamados)
+  useEffect(() => {
+    fetchChamadosRef.current = fetchChamados
+  }, [fetchChamados])
 
   useEffect(() => {
     fetchChamados()
   }, [fetchChamados])
+
+  useEffect(() => {
+    const channel = supabase
+      .channel('meus_chamados_changes')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'chamados' }, () => {
+        fetchChamadosRef.current()
+      })
+      .subscribe()
+
+    return () => {
+      supabase.removeChannel(channel)
+    }
+  }, [])
+
+  const handleSort = (field: string) => {
+    if (sortConfig.field === field) {
+      setSortConfig({
+        field,
+        direction: sortConfig.direction === 'asc' ? 'desc' : 'asc',
+      })
+    } else {
+      setSortConfig({
+        field,
+        direction: field === 'pia' ? 'asc' : 'desc',
+      })
+    }
+  }
 
   const confirmDelete = async () => {
     if (!deleteId) return
@@ -153,14 +194,12 @@ export default function MeusChamados() {
       } = await supabase.auth.getUser()
       if (!user) throw new Error('Autenticação necessária')
 
-      // 1. Registra no histórico ANTES de deletar
       await supabase.from('historico_chamado').insert({
         chamado_id: deleteId,
         acao: 'deletado',
         usuario_id: user.id,
       })
 
-      // 2. Deleta o chamado (cascade delete limpará anexos e respostas relacionados)
       const { error: delError } = await supabase.from('chamados').delete().eq('id', deleteId)
       if (delError) throw delError
 
@@ -272,8 +311,25 @@ export default function MeusChamados() {
                 <TableRow>
                   <TableHead>Título</TableHead>
                   <TableHead>Status</TableHead>
+                  <TableHead
+                    className="cursor-pointer hover:text-primary transition-colors"
+                    onClick={() => handleSort('pia')}
+                  >
+                    <div className="flex items-center">
+                      R.A.
+                      <ArrowUpDown className="ml-2 h-4 w-4" />
+                    </div>
+                  </TableHead>
                   <TableHead>Prioridade</TableHead>
-                  <TableHead>Data de Criação</TableHead>
+                  <TableHead
+                    className="cursor-pointer hover:text-primary transition-colors"
+                    onClick={() => handleSort('criado_em')}
+                  >
+                    <div className="flex items-center">
+                      Data de Criação
+                      <ArrowUpDown className="ml-2 h-4 w-4" />
+                    </div>
+                  </TableHead>
                   <TableHead className="text-right">Ações</TableHead>
                 </TableRow>
               </TableHeader>
@@ -293,6 +349,7 @@ export default function MeusChamados() {
                         {statusLabels[c.status] || c.status}
                       </Badge>
                     </TableCell>
+                    <TableCell className="font-medium text-slate-600">{c.pia || '—'}</TableCell>
                     <TableCell>
                       <Badge variant="outline" className={priorityColors[c.prioridade] || ''}>
                         {priorityLabels[c.prioridade] || c.prioridade}
@@ -343,10 +400,15 @@ export default function MeusChamados() {
                     {c.titulo}
                   </Link>
 
-                  <div className="flex gap-2 mt-2">
+                  <div className="flex flex-wrap gap-2 mt-2">
                     <Badge variant="outline" className={statusColors[c.status] || ''}>
                       {statusLabels[c.status] || c.status}
                     </Badge>
+                    {c.pia && (
+                      <Badge variant="outline" className="bg-slate-100 text-slate-700">
+                        RA: {c.pia}
+                      </Badge>
+                    )}
                     <Badge variant="outline" className={priorityColors[c.prioridade] || ''}>
                       {priorityLabels[c.prioridade] || c.prioridade}
                     </Badge>

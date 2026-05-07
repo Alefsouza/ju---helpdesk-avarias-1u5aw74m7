@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '@/lib/supabase/client'
 import { useAuth } from '@/hooks/use-auth'
@@ -89,8 +89,24 @@ export default function ChamadosAbertos() {
     }
   }
 
+  const fetchChamadosRef = useRef(fetchChamados)
+  useEffect(() => {
+    fetchChamadosRef.current = fetchChamados
+  }, [fetchChamados])
+
   useEffect(() => {
     fetchChamados()
+
+    const channel = supabase
+      .channel('chamados_abertos_changes')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'chamados' }, () => {
+        fetchChamadosRef.current()
+      })
+      .subscribe()
+
+    return () => {
+      supabase.removeChannel(channel)
+    }
   }, [])
 
   const handlePegarChamado = async (chamadoId: string, e?: React.MouseEvent) => {
@@ -152,7 +168,9 @@ export default function ChamadosAbertos() {
     .filter((c) => {
       const term = debouncedSearch.toLowerCase()
       const matchesSearch =
-        c.titulo.toLowerCase().includes(term) || c.id.toLowerCase().includes(term)
+        c.titulo.toLowerCase().includes(term) ||
+        c.id.toLowerCase().includes(term) ||
+        (c.pia && c.pia.toLowerCase().includes(term))
       const matchesPriority = filterPriority === 'todas' || c.prioridade === filterPriority
       const matchesDate = !filterDate || c.criado_em.startsWith(filterDate)
       return matchesSearch && matchesPriority && matchesDate
@@ -176,7 +194,7 @@ export default function ChamadosAbertos() {
         <div className="relative flex-1">
           <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-slate-500" />
           <Input
-            placeholder="Buscar por título..."
+            placeholder="Buscar por título ou R.A..."
             className="pl-9 bg-white shadow-sm"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
@@ -249,6 +267,7 @@ export default function ChamadosAbertos() {
                 <TableRow className="bg-slate-50">
                   <TableHead>Título</TableHead>
                   <TableHead>Solicitante</TableHead>
+                  <TableHead>R.A.</TableHead>
                   <TableHead>Prioridade</TableHead>
                   <TableHead>Data</TableHead>
                   <TableHead className="text-right">Ação</TableHead>
@@ -266,6 +285,9 @@ export default function ChamadosAbertos() {
                     </TableCell>
                     <TableCell className="text-sm">
                       <span className="font-medium text-slate-700">{c.nome_usuario}</span>
+                    </TableCell>
+                    <TableCell className="text-sm font-medium text-slate-600">
+                      {c.pia || '—'}
                     </TableCell>
                     <TableCell>
                       <PriorityBadge priority={c.prioridade} />
@@ -309,6 +331,11 @@ export default function ChamadosAbertos() {
                     <span className="font-medium text-slate-700 truncate mr-2">
                       {c.nome_usuario}
                     </span>
+                    {c.pia && (
+                      <span className="font-medium text-slate-600 bg-slate-200 px-2 py-0.5 rounded text-xs mr-2">
+                        RA: {c.pia}
+                      </span>
+                    )}
                     <span className="whitespace-nowrap">{formatDate(c.criado_em)}</span>
                   </div>
                   <Button

@@ -1,15 +1,18 @@
 import { useState, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { useForm, Controller } from 'react-hook-form'
+import { zodResolver } from '@hookform/resolvers/zod'
+import * as z from 'zod'
 import { supabase } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Separator } from '@/components/ui/separator'
 import { useToast } from '@/hooks/use-toast'
-import { Loader2, FileSignature } from 'lucide-react'
 import { jsPDF } from 'jspdf'
 
-function SignaturePad({ onChange, error }: { onChange: (val: string) => void; error?: boolean }) {
+function SignaturePad({ onChange, error }: { onChange: (val: string) => void; error?: string }) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const [isDrawing, setIsDrawing] = useState(false)
 
@@ -83,56 +86,62 @@ function SignaturePad({ onChange, error }: { onChange: (val: string) => void; er
           Limpar Assinatura
         </Button>
       </div>
-      {error && <span className="text-xs text-destructive">Assinatura é obrigatória</span>}
+      {error && <span className="text-xs text-destructive">{error}</span>}
     </div>
   )
 }
 
+const testemunhaSchema = z
+  .object({
+    nome: z.string().optional(),
+    endereco: z.string().optional(),
+    rg: z.string().optional(),
+    telefone: z.string().optional(),
+  })
+  .refine(
+    (data) => {
+      const values = [data.nome, data.endereco, data.rg, data.telefone].filter(
+        (v) => v !== undefined && v.trim() !== '',
+      )
+      return values.length === 0 || values.length === 4
+    },
+    {
+      message: 'Preencha todos os campos da testemunha',
+      path: ['nome'],
+    },
+  )
+
+const formSchema = z.object({
+  protocolo_ido: z.string().min(1, 'Protocolo é obrigatório'),
+  colaborador_nome: z.string().min(1, 'Nome é obrigatório'),
+  colaborador_registro: z.string().min(1, 'Registro é obrigatório'),
+  assinatura_base64: z.string().min(1, 'Assinatura é obrigatória'),
+  testemunha_1: testemunhaSchema,
+  testemunha_2: testemunhaSchema,
+  testemunha_3: testemunhaSchema,
+})
+
+type FormValues = z.infer<typeof formSchema>
+
 export default function FormularioIdoFixo() {
   const navigate = useNavigate()
   const { toast } = useToast()
-  const [loading, setLoading] = useState(false)
-  const [formData, setFormData] = useState({
-    protocolo: '',
-    nome_colaborador: '',
-    registro_colaborador: '',
-    t1_nome: '',
-    t1_endereco: '',
-    t1_sg: '',
-    t1_telefone: '',
-    t2_nome: '',
-    t2_endereco: '',
-    t2_sg: '',
-    t2_telefone: '',
-    t3_nome: '',
-    t3_endereco: '',
-    t3_sg: '',
-    t3_telefone: '',
-    assinatura: '',
+  const [isSubmitting, setIsSubmitting] = useState(false)
+
+  const form = useForm<FormValues>({
+    resolver: zodResolver(formSchema),
+    defaultValues: {
+      protocolo_ido: '',
+      colaborador_nome: '',
+      colaborador_registro: '',
+      assinatura_base64: '',
+      testemunha_1: { nome: '', endereco: '', rg: '', telefone: '' },
+      testemunha_2: { nome: '', endereco: '', rg: '', telefone: '' },
+      testemunha_3: { nome: '', endereco: '', rg: '', telefone: '' },
+    },
   })
-  const [errors, setErrors] = useState<Record<string, boolean>>({})
 
-  const handleChange = (field: string, value: string) => {
-    setFormData((prev) => ({ ...prev, [field]: value }))
-    if (errors[field]) {
-      setErrors((prev) => ({ ...prev, [field]: false }))
-    }
-  }
-
-  const validate = () => {
-    const newErrors: Record<string, boolean> = {}
-    let isValid = true
-    Object.keys(formData).forEach((k) => {
-      if (!formData[k as keyof typeof formData]) {
-        newErrors[k] = true
-        isValid = false
-      }
-    })
-    setErrors(newErrors)
-    return isValid
-  }
-
-  const generatePDFDoc = async (data: typeof formData) => {
+  const generatePDFDoc = async (data: FormValues) => {
     const doc = new jsPDF()
 
     let logoBase64: string | null = null
@@ -210,39 +219,24 @@ export default function FormularioIdoFixo() {
 
     drawHeader()
 
-    drawField('Protocolo do BO/TOKEN:', data.protocolo)
-    drawField('Nome do colaborador:', data.nome_colaborador)
-    drawField('Registro do colaborador:', data.registro_colaborador)
+    drawField('Protocolo do BO/TOKEN:', data.protocolo_ido)
+    drawField('Nome do colaborador:', data.colaborador_nome)
+    drawField('Registro do colaborador:', data.colaborador_registro)
 
     const drawTestemunha = (num: number, t: any) => {
       if (t && t.nome) {
         drawField(`Testemunha ${num} - Nome:`, t.nome)
         drawField(`Testemunha ${num} - Endereço:`, t.endereco)
-        drawField(`Testemunha ${num} - SG:`, t.sg)
+        drawField(`Testemunha ${num} - SG:`, t.rg)
         drawField(`Testemunha ${num} - Telefone:`, t.telefone)
       }
     }
 
-    drawTestemunha(1, {
-      nome: data.t1_nome,
-      endereco: data.t1_endereco,
-      sg: data.t1_sg,
-      telefone: data.t1_telefone,
-    })
-    drawTestemunha(2, {
-      nome: data.t2_nome,
-      endereco: data.t2_endereco,
-      sg: data.t2_sg,
-      telefone: data.t2_telefone,
-    })
-    drawTestemunha(3, {
-      nome: data.t3_nome,
-      endereco: data.t3_endereco,
-      sg: data.t3_sg,
-      telefone: data.t3_telefone,
-    })
+    drawTestemunha(1, data.testemunha_1)
+    drawTestemunha(2, data.testemunha_2)
+    drawTestemunha(3, data.testemunha_3)
 
-    if (data.assinatura) {
+    if (data.assinatura_base64) {
       checkPageBreak(30 + 8)
       doc.setFont('helvetica', 'bold')
       doc.setFontSize(10)
@@ -250,7 +244,7 @@ export default function FormularioIdoFixo() {
       doc.text('Assinatura Digital:', margin, y)
       y += 6
       try {
-        doc.addImage(data.assinatura, 'PNG', margin, y, 50, 30)
+        doc.addImage(data.assinatura_base64, 'PNG', margin, y, 50, 30)
         y += 30 + 8
       } catch (e) {
         console.error('Failed to add signature image', e)
@@ -278,22 +272,13 @@ export default function FormularioIdoFixo() {
     return doc
   }
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!validate()) {
-      toast({
-        title: 'Erro de validação',
-        description: 'Preencha todos os campos obrigatórios.',
-        variant: 'destructive',
-      })
-      return
-    }
+  const onSubmit = async (data: FormValues) => {
+    setIsSubmitting(true)
 
-    setLoading(true)
     try {
       let pdfBlob: Blob
       try {
-        const doc = await generatePDFDoc(formData)
+        const doc = await generatePDFDoc(data)
         pdfBlob = doc.output('blob')
       } catch (err) {
         console.error(err)
@@ -309,7 +294,10 @@ export default function FormularioIdoFixo() {
           upsert: false,
         })
 
-      if (uploadError) throw uploadError
+      if (uploadError) {
+        console.error(uploadError)
+        throw new Error('Erro ao salvar documento. Tente novamente')
+      }
 
       const { data: urlData } = supabase.storage.from('documentos').getPublicUrl(fileName)
 
@@ -317,110 +305,174 @@ export default function FormularioIdoFixo() {
         tipo_documento: 'IDO',
         nome_arquivo: fileName,
         arquivo_url: urlData.publicUrl,
-        registro_responsavel: formData.registro_colaborador,
-        nome_responsavel: formData.nome_colaborador,
+        registro_responsavel: data.colaborador_registro,
+        nome_responsavel: data.colaborador_nome,
         cargo_responsavel: 'Colaborador',
         chamado_id: null,
       })
 
-      if (dbError) throw dbError
+      if (dbError) {
+        console.error(dbError)
+        throw new Error('Erro ao registrar documento.')
+      }
 
-      toast({ title: 'Sucesso', description: 'Formulário enviado com sucesso.' })
-      navigate('/ido-fixo/sucesso', { state: { fileName, tipo: 'IDO' } })
-    } catch (err: any) {
-      console.error(err)
       toast({
-        title: 'Erro',
-        description: 'Erro ao enviar formulário. Tente novamente.',
+        title: 'Sucesso',
+        description: 'Formulário enviado com sucesso!',
+      })
+      navigate('/ido-fixo/sucesso', { state: { fileName, tipo: 'IDO' } })
+    } catch (error: any) {
+      console.error(error)
+      toast({
+        title: 'Erro ao enviar',
+        description: error.message || 'Erro ao enviar formulário. Tente novamente.',
         variant: 'destructive',
       })
     } finally {
-      setLoading(false)
+      setIsSubmitting(false)
     }
   }
 
-  const renderInput = (label: string, field: string, placeholder: string) => (
-    <div className="space-y-2">
-      <Label htmlFor={field}>{label}</Label>
-      <Input
-        id={field}
-        placeholder={placeholder}
-        value={formData[field as keyof typeof formData]}
-        onChange={(e) => handleChange(field, e.target.value)}
-        className={errors[field] ? 'border-destructive' : ''}
-      />
-      {errors[field] && <span className="text-xs text-destructive">Campo obrigatório</span>}
-    </div>
-  )
-
   return (
-    <div className="min-h-screen bg-slate-50 py-8 px-4 sm:px-6">
-      <div className="max-w-3xl mx-auto">
-        <div className="flex flex-col items-center text-center mb-8">
-          <img
-            src="https://wrnhfpncasqifaisvyaf.supabase.co/storage/v1/object/public/documentos/logo-via-sudeste.png"
-            alt="Via Sudeste"
-            className="h-12 object-contain mb-4"
-          />
-          <h1 className="text-2xl font-bold text-slate-900">Boletim IDO</h1>
-          <p className="text-slate-500 mt-1">Preencha os dados da ocorrência</p>
-        </div>
+    <div className="container max-w-3xl py-8 md:py-12 mx-auto px-4">
+      <Card>
+        <CardHeader>
+          <CardTitle>DADOS DO BOLETIM DE OCORRENCIA&nbsp;</CardTitle>
+          <CardDescription>
+            Preencha os dados abaixo para registrar as informações do boletim de ocorrência.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
+            <div className="space-y-4">
+              <h3 className="text-lg font-medium">Dados do Colaborador</h3>
 
-        <form onSubmit={handleSubmit} className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>Dados Principais</CardTitle>
-              <CardDescription>Informações básicas do boletim e do colaborador.</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {renderInput('Protocolo IDO', 'protocolo', 'Informe o protocolo')}
-              {renderInput('Nome do colaborador', 'nome_colaborador', 'Informe o nome')}
-              {renderInput('Registro do colaborador', 'registro_colaborador', 'Informe o registro')}
-            </CardContent>
-          </Card>
-
-          {[1, 2, 3].map((num) => (
-            <Card key={num}>
-              <CardHeader>
-                <CardTitle>Testemunha {num}</CardTitle>
-                <CardDescription>Dados da testemunha {num}.</CardDescription>
-              </CardHeader>
-              <CardContent className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                {renderInput('Nome', `t${num}_nome`, 'Nome da testemunha')}
-                {renderInput('Telefone', `t${num}_telefone`, 'Telefone')}
-                <div className="sm:col-span-2">
-                  {renderInput('Endereço', `t${num}_endereco`, 'Endereço completo')}
+              <div className="grid gap-4 md:grid-cols-2">
+                <div className="space-y-2">
+                  <Label htmlFor="protocolo_ido">
+                    Protocolo ou TOKEN do BO&nbsp;<span className="text-destructive">*</span>
+                  </Label>
+                  <Input
+                    id="protocolo_ido"
+                    placeholder="Informe o número de protocolo"
+                    {...form.register('protocolo_ido')}
+                  />
+                  {form.formState.errors.protocolo_ido && (
+                    <span className="text-sm text-destructive">
+                      {form.formState.errors.protocolo_ido.message}
+                    </span>
+                  )}
                 </div>
-                {renderInput('SG', `t${num}_sg`, 'SG da testemunha')}
-              </CardContent>
-            </Card>
-          ))}
 
-          <Card>
-            <CardHeader>
-              <CardTitle>Assinatura</CardTitle>
-              <CardDescription>Assine no quadro abaixo para validar o documento.</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <SignaturePad
-                error={errors.assinatura}
-                onChange={(val) => handleChange('assinatura', val)}
+                <div className="space-y-2">
+                  <Label htmlFor="colaborador_nome">
+                    Nome do colaborador <span className="text-destructive">*</span>
+                  </Label>
+                  <Input
+                    id="colaborador_nome"
+                    placeholder="Informe seu nome completo"
+                    {...form.register('colaborador_nome')}
+                  />
+                  {form.formState.errors.colaborador_nome && (
+                    <span className="text-sm text-destructive">
+                      {form.formState.errors.colaborador_nome.message}
+                    </span>
+                  )}
+                </div>
+
+                <div className="space-y-2 md:col-span-2">
+                  <Label htmlFor="colaborador_registro">
+                    Registro do colaborador <span className="text-destructive">*</span>
+                  </Label>
+                  <Input
+                    id="colaborador_registro"
+                    placeholder="Informe seu número de registro"
+                    {...form.register('colaborador_registro')}
+                  />
+                  {form.formState.errors.colaborador_registro && (
+                    <span className="text-sm text-destructive">
+                      {form.formState.errors.colaborador_registro.message}
+                    </span>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            <Separator />
+
+            <div className="space-y-4">
+              <h3 className="text-lg font-medium">Testemunhas (Opcional)</h3>
+              <p className="text-sm text-muted-foreground">
+                Você pode adicionar até 3 testemunhas. Se preencher uma testemunha, todos os seus
+                campos tornam-se obrigatórios.
+              </p>
+
+              {[1, 2, 3].map((num) => {
+                const prefix = `testemunha_${num}` as const
+                const errorObj = form.formState.errors[prefix] as any
+                const rootError = errorObj?.nome?.message
+
+                return (
+                  <div key={num} className="p-4 border rounded-lg space-y-4">
+                    <h4 className="font-medium">Testemunha {num}</h4>
+                    <div className="grid gap-4 md:grid-cols-2">
+                      <div className="space-y-2">
+                        <Label>Nome</Label>
+                        <Input
+                          placeholder="Nome da testemunha"
+                          {...form.register(`${prefix}.nome`)}
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Endereço</Label>
+                        <Input
+                          placeholder="Endereço da testemunha"
+                          {...form.register(`${prefix}.endereco`)}
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>RG</Label>
+                        <Input placeholder="RG da testemunha" {...form.register(`${prefix}.rg`)} />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Telefone</Label>
+                        <Input
+                          placeholder="Telefone da testemunha"
+                          {...form.register(`${prefix}.telefone`)}
+                        />
+                      </div>
+                    </div>
+                    {rootError && <p className="text-sm text-destructive">{rootError}</p>}
+                  </div>
+                )
+              })}
+            </div>
+
+            <Separator />
+
+            <div className="space-y-4">
+              <h3 className="text-lg font-medium">
+                Assinatura Digital <span className="text-destructive">*</span>
+              </h3>
+              <p className="text-sm text-muted-foreground">
+                Assine no quadro abaixo usando o mouse ou o dedo.
+              </p>
+
+              <Controller
+                control={form.control}
+                name="assinatura_base64"
+                render={({ field, fieldState }) => (
+                  <SignaturePad onChange={field.onChange} error={fieldState.error?.message} />
+                )}
               />
-            </CardContent>
-          </Card>
+            </div>
 
-          <Button type="submit" className="w-full" size="lg" disabled={loading}>
-            {loading ? (
-              <>
-                <Loader2 className="w-5 h-5 mr-2 animate-spin" />
-                Enviando...
-              </>
-            ) : (
-              'Enviar Formulário'
-            )}
-          </Button>
-        </form>
-      </div>
+            <Button type="submit" className="w-full" disabled={isSubmitting}>
+              {isSubmitting ? 'Enviando...' : 'Enviar formulário'}
+            </Button>
+          </form>
+        </CardContent>
+      </Card>
     </div>
   )
 }

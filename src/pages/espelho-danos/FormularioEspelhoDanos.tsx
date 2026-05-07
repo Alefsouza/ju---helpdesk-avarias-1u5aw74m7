@@ -238,7 +238,9 @@ export default function FormularioEspelhoDanos() {
       if (rpcError) throw new Error('Erro ao registrar documento. Tente novamente')
 
       toast({ title: 'Sucesso', description: 'Formulário enviado com sucesso' })
-      navigate('/espelho-danos/sucesso')
+      navigate('/espelho-danos/sucesso', {
+        state: { chamadoId: id, fileName, tipo: 'Espelho de Danos' },
+      })
     } catch (error: any) {
       toast({
         variant: 'destructive',

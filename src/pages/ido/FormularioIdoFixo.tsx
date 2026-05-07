@@ -244,7 +244,7 @@ export default function FormularioIdoFixo() {
       if (dbError) throw dbError
 
       toast({ title: 'Sucesso', description: 'Formulário enviado com sucesso.' })
-      navigate('/ido-fixo/sucesso')
+      navigate('/ido-fixo/sucesso', { state: { fileName, tipo: 'IDO' } })
     } catch (err: any) {
       console.error(err)
       toast({

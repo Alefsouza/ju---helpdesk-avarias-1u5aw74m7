@@ -103,7 +103,7 @@ export default function FormularioEspelhoDanosFixo() {
       if (dbError) throw dbError
 
       toast({ title: 'Sucesso', description: 'Formulário enviado com sucesso' })
-      navigate('/espelho-danos-fixo/sucesso')
+      navigate('/espelho-danos-fixo/sucesso', { state: { fileName, tipo: 'Espelho de Danos' } })
     } catch (error) {
       toast({
         variant: 'destructive',

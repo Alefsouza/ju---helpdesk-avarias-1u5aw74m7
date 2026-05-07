@@ -262,7 +262,7 @@ export default function FormularioIdo() {
         title: 'Sucesso',
         description: 'Documento salvo com sucesso!',
       })
-      navigate('/ido/sucesso')
+      navigate('/ido/sucesso', { state: { chamadoId: id, fileName, tipo: 'IDO' } })
     } catch (error: any) {
       console.error(error)
       toast({

@@ -1,9 +1,17 @@
-import { CheckCircle2 } from 'lucide-react'
+import { CheckCircle2, FileText, Calendar, FileType } from 'lucide-react'
+import { useLocation, useNavigate } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
-import { useNavigate } from 'react-router-dom'
+import { format } from 'date-fns'
+import { ptBR } from 'date-fns/locale'
 
 export default function SucessoEspelhoDanosFixo() {
+  const location = useLocation()
   const navigate = useNavigate()
+  const state = location.state as { fileName?: string; tipo?: string } | null
+
+  const dataAtual = format(new Date(), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })
+  const fileName = state?.fileName || 'Documento gerado'
+  const tipo = state?.tipo || 'Espelho de Danos'
 
   return (
     <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
@@ -15,16 +23,40 @@ export default function SucessoEspelhoDanosFixo() {
         </div>
 
         <div className="space-y-2">
-          <h1 className="text-2xl font-bold text-slate-900">Formulário Enviado!</h1>
+          <h1 className="text-2xl font-bold text-slate-900">Formulário enviado com sucesso</h1>
           <p className="text-slate-500">
-            O formulário de Espelho de Danos foi registrado com sucesso e o documento foi gerado e
-            salvo no sistema.
+            Seu documento foi registrado e está disponível em Documentos
           </p>
         </div>
 
+        <div className="bg-slate-50 border rounded-lg p-4 text-left space-y-3">
+          <div className="flex items-center gap-3 text-sm text-slate-600">
+            <FileText className="h-4 w-4 text-slate-400" />
+            <span className="font-medium text-slate-900">Tipo:</span> {tipo}
+          </div>
+          <div className="flex items-center gap-3 text-sm text-slate-600">
+            <Calendar className="h-4 w-4 text-slate-400" />
+            <span className="font-medium text-slate-900">Data de envio:</span> {dataAtual}
+          </div>
+          <div className="flex items-center gap-3 text-sm text-slate-600 overflow-hidden">
+            <FileType className="h-4 w-4 text-slate-400 shrink-0" />
+            <span className="font-medium text-slate-900 shrink-0">Arquivo:</span>
+            <span className="truncate" title={fileName}>
+              {fileName}
+            </span>
+          </div>
+        </div>
+
         <div className="pt-4 space-y-3">
-          <Button className="w-full" onClick={() => navigate('/espelho-danos-fixo')}>
-            Preencher novo formulário
+          <Button className="w-full" onClick={() => navigate('/dashboard/documentos')}>
+            Ver documentos
+          </Button>
+          <Button
+            variant="outline"
+            className="w-full"
+            onClick={() => navigate('/espelho-danos-fixo')}
+          >
+            Preencher outro formulário
           </Button>
         </div>
       </div>

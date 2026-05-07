@@ -139,7 +139,8 @@ export default function FormularioIdoFixo() {
     try {
       const img = new Image()
       img.crossOrigin = 'Anonymous'
-      img.src = 'https://img.usecurling.com/p/100/50?q=logo'
+      img.src =
+        'https://wrnhfpncasqifaisvyaf.supabase.co/storage/v1/object/public/documentos/logo-via-sudeste.png'
       await new Promise((resolve, reject) => {
         img.onload = resolve
         img.onerror = reject

@@ -108,6 +108,51 @@ export default function Documentos() {
     toast.success('Link copiado para a área de transferência')
   }
 
+  const handleDocumentAction = async (doc: Documento, action: 'view' | 'download') => {
+    try {
+      const url = doc.arquivo_url
+      let finalUrl = url
+
+      // Tenta gerar Signed URL se for arquivo do Supabase Storage
+      if (url.includes('/storage/v1/object/public/')) {
+        const parts = url.split('/public/')
+        if (parts.length === 2) {
+          const pathParts = parts[1].split('/')
+          const bucketName = pathParts[0]
+          const filePath = pathParts.slice(1).join('/')
+
+          const { data, error } = await supabase.storage
+            .from(bucketName)
+            .createSignedUrl(filePath, 3600, {
+              download: action === 'download' ? doc.nome_arquivo : false,
+            })
+
+          if (!error && data?.signedUrl) {
+            finalUrl = data.signedUrl
+          }
+        }
+      } else if (action === 'download') {
+        const separator = url.includes('?') ? '&' : '?'
+        finalUrl = `${url}${separator}download=true`
+      }
+
+      if (action === 'view') {
+        window.open(finalUrl, '_blank', 'noopener,noreferrer')
+      } else {
+        const link = document.createElement('a')
+        link.href = finalUrl
+        link.download = doc.nome_arquivo || 'documento'
+        link.target = '_blank'
+        document.body.appendChild(link)
+        link.click()
+        document.body.removeChild(link)
+      }
+    } catch (error) {
+      console.error('Erro ao acessar o documento:', error)
+      toast.error('Erro ao acessar o documento. Tente novamente mais tarde.')
+    }
+  }
+
   if (!isAdmin && !isResponsavel) {
     return (
       <div className="flex flex-col items-center justify-center h-[50vh] text-slate-500">
@@ -304,22 +349,22 @@ export default function Documentos() {
                       </div>
 
                       <div className="flex gap-2 pt-2">
-                        <Button variant="outline" size="sm" className="flex-1" asChild>
-                          <a href={doc.arquivo_url} target="_blank" rel="noopener noreferrer">
-                            <Eye className="w-4 h-4 mr-2" />
-                            Visualizar
-                          </a>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="flex-1"
+                          onClick={() => handleDocumentAction(doc, 'view')}
+                        >
+                          <Eye className="w-4 h-4 mr-2" />
+                          Visualizar
                         </Button>
-                        <Button size="sm" className="flex-1" asChild>
-                          <a
-                            href={doc.arquivo_url}
-                            download
-                            target="_blank"
-                            rel="noopener noreferrer"
-                          >
-                            <Download className="w-4 h-4 mr-2" />
-                            Baixar
-                          </a>
+                        <Button
+                          size="sm"
+                          className="flex-1"
+                          onClick={() => handleDocumentAction(doc, 'download')}
+                        >
+                          <Download className="w-4 h-4 mr-2" />
+                          Baixar
                         </Button>
                       </div>
                     </CardContent>
@@ -375,30 +420,21 @@ export default function Documentos() {
                               variant="outline"
                               size="sm"
                               className="h-8 bg-white hover:bg-slate-50"
-                              asChild
+                              onClick={() => handleDocumentAction(doc, 'view')}
                               title="Visualizar"
                             >
-                              <a href={doc.arquivo_url} target="_blank" rel="noopener noreferrer">
-                                <Eye className="w-4 h-4 mr-2" />
-                                Visualizar
-                              </a>
+                              <Eye className="w-4 h-4 mr-2" />
+                              Visualizar
                             </Button>
                             <Button
                               variant="default"
                               size="sm"
                               className="h-8"
-                              asChild
+                              onClick={() => handleDocumentAction(doc, 'download')}
                               title="Baixar arquivo"
                             >
-                              <a
-                                href={doc.arquivo_url}
-                                download
-                                target="_blank"
-                                rel="noopener noreferrer"
-                              >
-                                <Download className="w-4 h-4 mr-2" />
-                                Baixar
-                              </a>
+                              <Download className="w-4 h-4 mr-2" />
+                              Baixar
                             </Button>
                           </div>
                         </TableCell>

@@ -33,8 +33,9 @@ import {
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { useAuth } from '@/hooks/use-auth'
-import { toast } from 'sonner'
+import { useDocumentAction } from '@/hooks/use-document-action'
 import { Database } from '@/lib/supabase/types'
+import { toast } from 'sonner'
 
 type Documento = Database['public']['Tables']['documentos']['Row']
 
@@ -102,55 +103,12 @@ export default function Documentos() {
     currentPage * ITEMS_PER_PAGE,
   )
 
+  const { handleDocumentAction, loadingAction } = useDocumentAction()
+
   const handleCopyLink = (path: string) => {
     const url = `${window.location.origin}${path}`
     navigator.clipboard.writeText(url)
     toast.success('Link copiado para a área de transferência')
-  }
-
-  const handleDocumentAction = async (doc: Documento, action: 'view' | 'download') => {
-    try {
-      const url = doc.arquivo_url
-      let finalUrl = url
-
-      // Tenta gerar Signed URL se for arquivo do Supabase Storage
-      if (url.includes('/storage/v1/object/public/')) {
-        const parts = url.split('/public/')
-        if (parts.length === 2) {
-          const pathParts = parts[1].split('/')
-          const bucketName = pathParts[0]
-          const filePath = pathParts.slice(1).join('/')
-
-          const { data, error } = await supabase.storage
-            .from(bucketName)
-            .createSignedUrl(filePath, 3600, {
-              download: action === 'download' ? doc.nome_arquivo : false,
-            })
-
-          if (!error && data?.signedUrl) {
-            finalUrl = data.signedUrl
-          }
-        }
-      } else if (action === 'download') {
-        const separator = url.includes('?') ? '&' : '?'
-        finalUrl = `${url}${separator}download=true`
-      }
-
-      if (action === 'view') {
-        window.open(finalUrl, '_blank', 'noopener,noreferrer')
-      } else {
-        const link = document.createElement('a')
-        link.href = finalUrl
-        link.download = doc.nome_arquivo || 'documento'
-        link.target = '_blank'
-        document.body.appendChild(link)
-        link.click()
-        document.body.removeChild(link)
-      }
-    } catch (error) {
-      console.error('Erro ao acessar o documento:', error)
-      toast.error('Erro ao acessar o documento. Tente novamente mais tarde.')
-    }
   }
 
   if (!isAdmin && !isResponsavel) {
@@ -353,17 +311,36 @@ export default function Documentos() {
                           variant="outline"
                           size="sm"
                           className="flex-1"
-                          onClick={() => handleDocumentAction(doc, 'view')}
+                          disabled={!!loadingAction}
+                          onClick={() =>
+                            handleDocumentAction(doc.id, doc.arquivo_url, doc.nome_arquivo, 'view')
+                          }
                         >
-                          <Eye className="w-4 h-4 mr-2" />
+                          {loadingAction === `${doc.id}-view` ? (
+                            <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                          ) : (
+                            <Eye className="w-4 h-4 mr-2" />
+                          )}
                           Visualizar
                         </Button>
                         <Button
                           size="sm"
                           className="flex-1"
-                          onClick={() => handleDocumentAction(doc, 'download')}
+                          disabled={!!loadingAction}
+                          onClick={() =>
+                            handleDocumentAction(
+                              doc.id,
+                              doc.arquivo_url,
+                              doc.nome_arquivo,
+                              'download',
+                            )
+                          }
                         >
-                          <Download className="w-4 h-4 mr-2" />
+                          {loadingAction === `${doc.id}-download` ? (
+                            <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                          ) : (
+                            <Download className="w-4 h-4 mr-2" />
+                          )}
                           Baixar
                         </Button>
                       </div>
@@ -420,20 +397,44 @@ export default function Documentos() {
                               variant="outline"
                               size="sm"
                               className="h-8 bg-white hover:bg-slate-50"
-                              onClick={() => handleDocumentAction(doc, 'view')}
+                              disabled={!!loadingAction}
+                              onClick={() =>
+                                handleDocumentAction(
+                                  doc.id,
+                                  doc.arquivo_url,
+                                  doc.nome_arquivo,
+                                  'view',
+                                )
+                              }
                               title="Visualizar"
                             >
-                              <Eye className="w-4 h-4 mr-2" />
+                              {loadingAction === `${doc.id}-view` ? (
+                                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                              ) : (
+                                <Eye className="w-4 h-4 mr-2" />
+                              )}
                               Visualizar
                             </Button>
                             <Button
                               variant="default"
                               size="sm"
                               className="h-8"
-                              onClick={() => handleDocumentAction(doc, 'download')}
+                              disabled={!!loadingAction}
+                              onClick={() =>
+                                handleDocumentAction(
+                                  doc.id,
+                                  doc.arquivo_url,
+                                  doc.nome_arquivo,
+                                  'download',
+                                )
+                              }
                               title="Baixar arquivo"
                             >
-                              <Download className="w-4 h-4 mr-2" />
+                              {loadingAction === `${doc.id}-download` ? (
+                                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                              ) : (
+                                <Download className="w-4 h-4 mr-2" />
+                              )}
                               Baixar
                             </Button>
                           </div>

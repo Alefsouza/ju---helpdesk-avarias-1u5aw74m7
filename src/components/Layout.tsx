@@ -1,4 +1,4 @@
-import { Outlet, useLocation, Navigate, Link } from 'react-router-dom'
+import { Outlet, useLocation, Navigate, Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '@/hooks/use-auth'
 import {
   Sidebar,
@@ -26,6 +26,7 @@ import {
   FileBarChart,
   PlusCircle,
   Folder,
+  FileText,
 } from 'lucide-react'
 import { Skeleton } from '@/components/ui/skeleton'
 import { useEffect, useState } from 'react'
@@ -232,7 +233,9 @@ function AppSidebar() {
   )
 }
 
-function useRealtimeNotifications(userId: string | undefined) {
+function useRealtimeNotifications(userId: string | undefined, profile: any) {
+  const navigate = useNavigate()
+
   useEffect(() => {
     if (!userId) return
 
@@ -259,12 +262,59 @@ function useRealtimeNotifications(userId: string | undefined) {
           }
         },
       )
+      .on(
+        'postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'documentos' },
+        async (payload) => {
+          const doc = payload.new
+          let shouldNotify = false
+
+          if (doc.chamado_id) {
+            const { data } = await supabase
+              .from('chamados')
+              .select('responsavel_id')
+              .eq('id', doc.chamado_id)
+              .single()
+
+            if (data && data.responsavel_id === userId) {
+              shouldNotify = true
+            }
+          } else {
+            if (profile?.tipo_usuario === 'responsavel' || profile?.tipo_usuario === 'admin') {
+              shouldNotify = true
+            }
+          }
+
+          if (shouldNotify) {
+            toast('Novo documento recebido', {
+              description: `Um novo documento foi anexado: ${doc.tipo_documento} - ${doc.nome_arquivo}`,
+              icon: <FileText className="h-5 w-5 text-[#225f3d]" />,
+              duration: 5000,
+              position: 'bottom-right',
+              action: {
+                label: 'Ver',
+                onClick: () => navigate('/dashboard/documentos'),
+              },
+              cancel: {
+                label: 'Fechar',
+                onClick: () => {},
+              },
+              style: {
+                background: '#ffffff',
+                borderLeft: '4px solid #225f3d',
+                boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)',
+                color: '#0f172a',
+              },
+            })
+          }
+        },
+      )
       .subscribe()
 
     return () => {
       supabase.removeChannel(channel)
     }
-  }, [userId])
+  }, [userId, profile, navigate])
 }
 
 export default function Layout() {
@@ -272,7 +322,7 @@ export default function Layout() {
   const location = useLocation()
   const isAuthRoute = location.pathname === '/' || location.pathname === '/cadastro'
 
-  useRealtimeNotifications(user?.id)
+  useRealtimeNotifications(user?.id, profile)
 
   if (loading) {
     return (

@@ -196,7 +196,9 @@ export default function FormularioIdoFixo() {
       if (y + neededSpace > pageHeight - 35) {
         doc.addPage()
         drawHeader()
+        return true
       }
+      return false
     }
 
     const drawField = (
@@ -255,7 +257,11 @@ export default function FormularioIdoFixo() {
     drawTestemunha(3, data.testemunha_3)
 
     if (data.assinatura_base64) {
-      checkPageBreak(30 + 8)
+      const extraGap = 20
+      const isNewPage = checkPageBreak(30 + 8 + extraGap)
+      if (!isNewPage) {
+        y += extraGap
+      }
       doc.setFont('helvetica', 'bold')
       doc.setFontSize(10)
       doc.setTextColor(43, 43, 43)

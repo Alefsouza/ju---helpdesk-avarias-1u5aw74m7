@@ -176,13 +176,20 @@ export default function FormularioIdoFixo() {
 
     const drawHeader = () => {
       if (logoBase64) {
-        doc.addImage(logoBase64, 'PNG', 20, 20, 25, 12)
+        doc.addImage(logoBase64, 'PNG', margin, 20, 25, 12)
       }
+
+      doc.setFillColor(240, 240, 240)
+      doc.rect(margin, 40, contentWidth, 10, 'F')
       doc.setFont('helvetica', 'bold')
-      doc.setFontSize(12)
+      doc.setFontSize(14)
       doc.setTextColor(43, 43, 43)
-      doc.text('DADOS DO BOLETIM DE OCORRÊNCIA', 50, 28)
-      y = 45
+
+      const title = 'IDO'
+      const titleWidth = doc.getTextWidth(title)
+      doc.text(title, margin + (contentWidth - titleWidth) / 2, 47)
+
+      y = 58
     }
 
     const checkPageBreak = (neededSpace: number) => {
@@ -223,16 +230,23 @@ export default function FormularioIdoFixo() {
 
     drawHeader()
 
-    drawField('Protocolo do BO/TOKEN:', data.protocolo_ido)
-    drawField('Registro do colaborador:', data.colaborador_registro)
-    drawField('Nome do colaborador:', data.colaborador_nome)
+    drawField('Protocolo do BO/TOKEN:', data.protocolo_ido, 8)
+    drawField('Registro do colaborador:', data.colaborador_registro, 8)
+    drawField('Nome do colaborador:', data.colaborador_nome, 8)
 
     const drawTestemunha = (num: number, t: any) => {
       if (t && t.nome) {
-        drawField(`Testemunha ${num} - Nome:`, t.nome, 4)
-        drawField(`Testemunha ${num} - Endereço:`, t.endereco, 4)
-        drawField(`Testemunha ${num} - SG:`, t.rg, 4)
-        drawField(`Testemunha ${num} - Telefone:`, t.telefone, 8)
+        checkPageBreak(12)
+        doc.setFont('helvetica', 'bold')
+        doc.setFontSize(11)
+        doc.setTextColor(43, 43, 43)
+        doc.text(`Testemunha ${num}`, margin, y)
+        y += 8
+
+        drawField(`Nome:`, t.nome, 5)
+        drawField(`Endereço:`, t.endereco, 5)
+        drawField(`RG:`, t.rg, 5)
+        drawField(`Telefone:`, t.telefone, 8)
       }
     }
 

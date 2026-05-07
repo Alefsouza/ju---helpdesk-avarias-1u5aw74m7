@@ -787,6 +787,8 @@ export const Constants = {
 //   Policy "chamados_update" (UPDATE, PERMISSIVE) roles={authenticated}
 //     USING: ((usuario_id = auth.uid()) OR (is_responsavel() AND ((responsavel_id = auth.uid()) OR (status = 'aberto'::text))) OR is_admin())
 // Table: documentos
+//   Policy "documentos_delete" (DELETE, PERMISSIVE) roles={authenticated}
+//     USING: (is_admin() OR is_responsavel())
 //   Policy "documentos_insert" (INSERT, PERMISSIVE) roles={public}
 //     WITH CHECK: true
 //   Policy "documentos_select" (SELECT, PERMISSIVE) roles={authenticated}

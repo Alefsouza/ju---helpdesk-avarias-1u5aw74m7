@@ -74,11 +74,7 @@ export default function Index() {
     <Card className="border-slate-200 shadow-sm">
       <CardHeader className="space-y-4">
         <div className="flex justify-center mb-2">
-          <img
-            src="https://wrnhfpncasqifaisvyaf.supabase.co/storage/v1/object/public/documentos/logo-via-sudeste.png"
-            alt="Via Sudeste"
-            className="h-16 object-contain"
-          />
+          <h1 className="text-4xl font-bold text-[#2D6246] tracking-tight">Avarias</h1>
         </div>
         <CardDescription className="text-center">
           Insira seu e-mail e senha para acessar sua conta

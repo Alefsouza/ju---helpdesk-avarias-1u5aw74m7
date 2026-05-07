@@ -15,7 +15,7 @@ import {
 } from '@/components/ui/select'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { useToast } from '@/hooks/use-toast'
-import { Loader2 } from 'lucide-react'
+import { Loader2, FileText, User, Bus, CheckCircle2 } from 'lucide-react'
 import { jsPDF } from 'jspdf'
 import { format } from 'date-fns'
 
@@ -32,11 +32,11 @@ function FormGroup({
 }) {
   return (
     <div className="space-y-2">
-      <Label>
+      <Label className="text-sm font-medium text-slate-700">
         {label} {required && <span className="text-destructive">*</span>}
       </Label>
       {children}
-      {error && <span className="text-xs text-destructive">{error}</span>}
+      {error && <span className="text-xs text-destructive font-medium">{error}</span>}
     </div>
   )
 }
@@ -271,80 +271,102 @@ export default function FormularioEspelhoDanosFixo() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 py-8 px-4 sm:px-6">
-      <div className="max-w-3xl mx-auto">
-        <div className="flex flex-col items-center text-center mb-8">
-          <img
-            src="https://wrnhfpncasqifaisvyaf.supabase.co/storage/v1/object/public/documentos/logo-via-sudeste.png"
-            alt="Via Sudeste"
-            className="h-12 object-contain mb-4"
-          />
-          <h1 className="text-2xl font-bold text-slate-900">Espelho de Danos</h1>
-          <p className="text-slate-500 mt-1">Formulário de registro de avarias</p>
+    <div className="min-h-screen bg-slate-50/50">
+      {/* App Header */}
+      <header className="bg-white border-b sticky top-0 z-10 shadow-sm">
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <img
+              src="https://wrnhfpncasqifaisvyaf.supabase.co/storage/v1/object/public/documentos/logo-via-sudeste.png"
+              alt="Via Sudeste"
+              className="h-8 object-contain"
+            />
+            <div className="h-6 w-px bg-slate-200 hidden sm:block"></div>
+            <div className="hidden sm:block">
+              <h1 className="text-lg font-bold text-slate-900 leading-tight">Espelho de Danos</h1>
+              <p className="text-xs text-slate-500">Registro de Avarias</p>
+            </div>
+          </div>
         </div>
+      </header>
+
+      <main className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div className="sm:hidden mb-6">
+          <h1 className="text-2xl font-bold text-slate-900">Espelho de Danos</h1>
+          <p className="text-sm text-slate-500 mt-1">Formulário de registro de avarias</p>
+        </div>
+
         <form onSubmit={handleSubmit} className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>Dados Principais</CardTitle>
+          <Card className="border-0 shadow-sm ring-1 ring-slate-200 overflow-hidden">
+            <CardHeader className="bg-slate-50/50 border-b pb-4">
+              <CardTitle className="flex items-center gap-2 text-lg">
+                <FileText className="h-5 w-5 text-primary" />
+                Dados Principais
+              </CardTitle>
               <CardDescription>Informações básicas da avaria.</CardDescription>
             </CardHeader>
-            <CardContent className="space-y-4">
-              <FormGroup label="Número de OS" error={errors.numeroOs}>
-                <Input
-                  name="numeroOs"
-                  placeholder="Informe o número de OS"
-                  value={data.numeroOs}
-                  onChange={handleChange}
-                />
-              </FormGroup>
-              <FormGroup label="Garagem" error={errors.garagem}>
-                <Select value={data.garagem} onValueChange={(v) => handleSelect('garagem', v)}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Selecione uma garagem" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="Cursino">Cursino</SelectItem>
-                    <SelectItem value="Sapopemba">Sapopemba</SelectItem>
-                  </SelectContent>
-                </Select>
-              </FormGroup>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <CardContent className="p-6 space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <FormGroup label="Número de OS" error={errors.numeroOs}>
+                  <Input
+                    name="numeroOs"
+                    placeholder="Informe o número"
+                    value={data.numeroOs}
+                    onChange={handleChange}
+                  />
+                </FormGroup>
+                <FormGroup label="Garagem" error={errors.garagem}>
+                  <Select value={data.garagem} onValueChange={(v) => handleSelect('garagem', v)}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecione" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Cursino">Cursino</SelectItem>
+                      <SelectItem value="Sapopemba">Sapopemba</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </FormGroup>
                 <FormGroup label="Data" error={errors.data}>
                   <Input name="data" type="date" value={data.data} onChange={handleChange} />
                 </FormGroup>
                 <FormGroup label="Horário" error={errors.horario}>
                   <Input name="horario" type="time" value={data.horario} onChange={handleChange} />
                 </FormGroup>
+                <FormGroup label="Linha" error={errors.linha}>
+                  <Input
+                    name="linha"
+                    placeholder="Informe a linha"
+                    value={data.linha}
+                    onChange={handleChange}
+                  />
+                </FormGroup>
+                <FormGroup label="Ocorrência" error={errors.ocorrencia}>
+                  <RadioGroup
+                    value={data.ocorrencia}
+                    onValueChange={(v) => handleSelect('ocorrencia', v)}
+                    className="flex gap-6 mt-2"
+                  >
+                    <div className="flex items-center space-x-2">
+                      <RadioGroupItem value="Sim" id="oc-sim" />
+                      <Label htmlFor="oc-sim" className="cursor-pointer">
+                        Sim
+                      </Label>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <RadioGroupItem value="Não" id="oc-nao" />
+                      <Label htmlFor="oc-nao" className="cursor-pointer">
+                        Não
+                      </Label>
+                    </div>
+                  </RadioGroup>
+                </FormGroup>
               </div>
-              <FormGroup label="Ocorrência" error={errors.ocorrencia}>
-                <RadioGroup
-                  value={data.ocorrencia}
-                  onValueChange={(v) => handleSelect('ocorrencia', v)}
-                  className="flex gap-4"
-                >
-                  <div className="flex items-center space-x-2">
-                    <RadioGroupItem value="Sim" id="oc-sim" />
-                    <Label htmlFor="oc-sim">Sim</Label>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <RadioGroupItem value="Não" id="oc-nao" />
-                    <Label htmlFor="oc-nao">Não</Label>
-                  </div>
-                </RadioGroup>
-              </FormGroup>
-              <FormGroup label="Linha" error={errors.linha}>
-                <Input
-                  name="linha"
-                  placeholder="Informe o número da linha"
-                  value={data.linha}
-                  onChange={handleChange}
-                />
-              </FormGroup>
+
               <FormGroup label="Descrição dos danos" error={errors.descricaoDanos}>
                 <Textarea
                   name="descricaoDanos"
                   placeholder="Descreva os danos encontrados"
-                  className="min-h-[100px]"
+                  className="min-h-[120px] resize-y"
                   value={data.descricaoDanos}
                   onChange={handleChange}
                 />
@@ -352,68 +374,83 @@ export default function FormularioEspelhoDanosFixo() {
             </CardContent>
           </Card>
 
-          <Card>
-            <CardHeader>
-              <CardTitle>Dados do Vistoriador</CardTitle>
+          <Card className="border-0 shadow-sm ring-1 ring-slate-200 overflow-hidden">
+            <CardHeader className="bg-slate-50/50 border-b pb-4">
+              <CardTitle className="flex items-center gap-2 text-lg">
+                <User className="h-5 w-5 text-primary" />
+                Dados do Vistoriador
+              </CardTitle>
               <CardDescription>Informações de quem realizou a vistoria.</CardDescription>
             </CardHeader>
-            <CardContent className="space-y-4">
-              <FormGroup label="Registro do vistoriador" error={errors.registroVistoriador}>
-                <Input
-                  name="registroVistoriador"
-                  placeholder="Informe o registro do vistoriador"
-                  value={data.registroVistoriador}
-                  onChange={handleChange}
-                />
-              </FormGroup>
-              <FormGroup label="Nome do vistoriador" error={errors.nomeVistoriador}>
-                <Input
-                  name="nomeVistoriador"
-                  placeholder="Informe o nome do vistoriador"
-                  value={data.nomeVistoriador}
-                  onChange={handleChange}
-                />
-              </FormGroup>
+            <CardContent className="p-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <FormGroup label="Registro do vistoriador" error={errors.registroVistoriador}>
+                  <Input
+                    name="registroVistoriador"
+                    placeholder="Informe o registro"
+                    value={data.registroVistoriador}
+                    onChange={handleChange}
+                  />
+                </FormGroup>
+                <FormGroup label="Nome do vistoriador" error={errors.nomeVistoriador}>
+                  <Input
+                    name="nomeVistoriador"
+                    placeholder="Informe o nome"
+                    value={data.nomeVistoriador}
+                    onChange={handleChange}
+                  />
+                </FormGroup>
+              </div>
             </CardContent>
           </Card>
 
-          <Card>
-            <CardHeader>
-              <CardTitle>Dados do Motorista</CardTitle>
+          <Card className="border-0 shadow-sm ring-1 ring-slate-200 overflow-hidden">
+            <CardHeader className="bg-slate-50/50 border-b pb-4">
+              <CardTitle className="flex items-center gap-2 text-lg">
+                <Bus className="h-5 w-5 text-primary" />
+                Dados do Motorista
+              </CardTitle>
               <CardDescription>Informações do motorista envolvido.</CardDescription>
             </CardHeader>
-            <CardContent className="space-y-4">
-              <FormGroup label="Registro do motorista" error={errors.registroMotorista}>
-                <Input
-                  name="registroMotorista"
-                  placeholder="Informe o registro do motorista"
-                  value={data.registroMotorista}
-                  onChange={handleChange}
-                />
-              </FormGroup>
-              <FormGroup label="Nome do motorista" error={errors.nomeMotorista}>
-                <Input
-                  name="nomeMotorista"
-                  placeholder="Informe o nome do motorista"
-                  value={data.nomeMotorista}
-                  onChange={handleChange}
-                />
-              </FormGroup>
+            <CardContent className="p-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <FormGroup label="Registro do motorista" error={errors.registroMotorista}>
+                  <Input
+                    name="registroMotorista"
+                    placeholder="Informe o registro"
+                    value={data.registroMotorista}
+                    onChange={handleChange}
+                  />
+                </FormGroup>
+                <FormGroup label="Nome do motorista" error={errors.nomeMotorista}>
+                  <Input
+                    name="nomeMotorista"
+                    placeholder="Informe o nome"
+                    value={data.nomeMotorista}
+                    onChange={handleChange}
+                  />
+                </FormGroup>
+              </div>
             </CardContent>
           </Card>
 
-          <Button type="submit" className="w-full" size="lg" disabled={loading}>
-            {loading ? (
-              <>
-                <Loader2 className="w-5 h-5 mr-2 animate-spin" />
-                Enviando...
-              </>
-            ) : (
-              'Enviar Formulário'
-            )}
-          </Button>
+          <div className="flex justify-end pt-4">
+            <Button type="submit" size="lg" className="w-full sm:w-auto px-8" disabled={loading}>
+              {loading ? (
+                <>
+                  <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+                  Enviando...
+                </>
+              ) : (
+                <>
+                  <CheckCircle2 className="w-5 h-5 mr-2" />
+                  Enviar Formulário
+                </>
+              )}
+            </Button>
+          </div>
         </form>
-      </div>
+      </main>
     </div>
   )
 }

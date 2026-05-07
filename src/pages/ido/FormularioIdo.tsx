@@ -269,6 +269,8 @@ export default function FormularioIdo() {
         arquivo_url: urlData.publicUrl,
         registro_responsavel: data.colaborador_registro,
         nome_responsavel: data.colaborador_nome,
+        registro_motorista: null,
+        numero_os: null,
         chamado_id: id,
       } as any)
 

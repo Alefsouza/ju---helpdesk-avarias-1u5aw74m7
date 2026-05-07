@@ -307,9 +307,8 @@ export default function FormularioIdoFixo() {
         arquivo_url: urlData.publicUrl,
         registro_responsavel: data.colaborador_registro,
         nome_responsavel: data.colaborador_nome,
-        cargo_responsavel: 'Colaborador',
         chamado_id: null,
-      })
+      } as any)
 
       if (dbError) {
         console.error(dbError)

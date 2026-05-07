@@ -269,9 +269,8 @@ export default function FormularioIdo() {
         arquivo_url: urlData.publicUrl,
         registro_responsavel: data.colaborador_registro,
         nome_responsavel: data.colaborador_nome,
-        cargo_responsavel: 'Colaborador',
         chamado_id: id,
-      })
+      } as any)
 
       if (docError) {
         console.error(docError)

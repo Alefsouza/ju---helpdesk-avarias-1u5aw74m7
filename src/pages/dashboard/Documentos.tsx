@@ -38,7 +38,11 @@ import { useDocumentAction } from '@/hooks/use-document-action'
 import { Database } from '@/lib/supabase/types'
 import { toast } from 'sonner'
 
-type Documento = Database['public']['Tables']['documentos']['Row']
+type Documento = Database['public']['Tables']['documentos']['Row'] & {
+  registro_motorista?: string | null
+  nome_motorista?: string | null
+  numero_os?: string | null
+}
 
 const ITEMS_PER_PAGE = 20
 
@@ -49,7 +53,7 @@ export default function Documentos() {
 
   const [search, setSearch] = useState('')
   const [tipoFiltro, setTipoFiltro] = useState<string>('todos')
-  const [registroFiltro, setRegistroFiltro] = useState<string>('todos')
+  const [colaboradorFiltro, setColaboradorFiltro] = useState<string>('todos')
   const [currentPage, setCurrentPage] = useState(1)
   const [highlightedDocId, setHighlightedDocId] = useState<string | null>(null)
   const [deletingId, setDeletingId] = useState<string | null>(null)
@@ -57,10 +61,10 @@ export default function Documentos() {
   const isAdmin = profile?.tipo_usuario === 'admin'
   const isResponsavel = profile?.tipo_usuario === 'responsavel'
 
-  const filtrosRef = useRef({ search, tipoFiltro, registroFiltro })
+  const filtrosRef = useRef({ search, tipoFiltro, colaboradorFiltro })
   useEffect(() => {
-    filtrosRef.current = { search, tipoFiltro, registroFiltro }
-  }, [search, tipoFiltro, registroFiltro])
+    filtrosRef.current = { search, tipoFiltro, colaboradorFiltro }
+  }, [search, tipoFiltro, colaboradorFiltro])
 
   useEffect(() => {
     if (!isAdmin && !isResponsavel) return
@@ -73,7 +77,7 @@ export default function Documentos() {
           .order('criado_em', { ascending: false })
 
         if (error) throw error
-        setDocumentos(data || [])
+        setDocumentos((data as Documento[]) || [])
       } catch (error: any) {
         console.error('Erro ao buscar documentos:', error)
         toast.error('Não foi possível carregar os documentos.')
@@ -101,13 +105,13 @@ export default function Documentos() {
               return [newDoc, ...prev]
             })
 
-            const { search, tipoFiltro, registroFiltro } = filtrosRef.current
+            const { search, tipoFiltro, colaboradorFiltro } = filtrosRef.current
             const matchSearch = newDoc.nome_arquivo.toLowerCase().includes(search.toLowerCase())
             const matchTipo = tipoFiltro === 'todos' || newDoc.tipo_documento === tipoFiltro
-            const matchRegistro =
-              registroFiltro === 'todos' || newDoc.registro_responsavel === registroFiltro
+            const matchColaborador =
+              colaboradorFiltro === 'todos' || newDoc.nome_responsavel === colaboradorFiltro
 
-            if (matchSearch && matchTipo && matchRegistro) {
+            if (matchSearch && matchTipo && matchColaborador) {
               toast.success('Novo documento adicionado')
               setHighlightedDocId(newDoc.id)
               setCurrentPage(1)
@@ -136,22 +140,22 @@ export default function Documentos() {
   // Reset pagination when filters change
   useEffect(() => {
     setCurrentPage(1)
-  }, [search, tipoFiltro, registroFiltro])
+  }, [search, tipoFiltro, colaboradorFiltro])
 
-  const registrosUnicos = useMemo(() => {
-    const regs = documentos.map((d) => d.registro_responsavel).filter(Boolean) as string[]
-    return Array.from(new Set(regs)).sort()
+  const colaboradoresUnicos = useMemo(() => {
+    const cols = documentos.map((d) => d.nome_responsavel).filter(Boolean) as string[]
+    return Array.from(new Set(cols)).sort()
   }, [documentos])
 
   const documentosFiltrados = useMemo(() => {
     return documentos.filter((doc) => {
       const matchSearch = doc.nome_arquivo.toLowerCase().includes(search.toLowerCase())
       const matchTipo = tipoFiltro === 'todos' || doc.tipo_documento === tipoFiltro
-      const matchRegistro =
-        registroFiltro === 'todos' || doc.registro_responsavel === registroFiltro
-      return matchSearch && matchTipo && matchRegistro
+      const matchColaborador =
+        colaboradorFiltro === 'todos' || doc.nome_responsavel === colaboradorFiltro
+      return matchSearch && matchTipo && matchColaborador
     })
-  }, [documentos, search, tipoFiltro, registroFiltro])
+  }, [documentos, search, tipoFiltro, colaboradorFiltro])
 
   const totalPages = Math.ceil(documentosFiltrados.length / ITEMS_PER_PAGE)
   const paginatedDocs = documentosFiltrados.slice(
@@ -288,28 +292,28 @@ export default function Documentos() {
             </Select>
           </div>
           <div className="w-full md:w-56">
-            <Select value={registroFiltro} onValueChange={setRegistroFiltro}>
+            <Select value={colaboradorFiltro} onValueChange={setColaboradorFiltro}>
               <SelectTrigger>
-                <SelectValue placeholder="Registro" />
+                <SelectValue placeholder="Colaborador" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="todos">Todos os Registros</SelectItem>
-                {registrosUnicos.map((reg) => (
-                  <SelectItem key={reg} value={reg}>
-                    {reg}
+                <SelectItem value="todos">Todos os Colaboradores</SelectItem>
+                {colaboradoresUnicos.map((col) => (
+                  <SelectItem key={col} value={col}>
+                    {col}
                   </SelectItem>
                 ))}
               </SelectContent>
             </Select>
           </div>
-          {(search || tipoFiltro !== 'todos' || registroFiltro !== 'todos') && (
+          {(search || tipoFiltro !== 'todos' || colaboradorFiltro !== 'todos') && (
             <Button
               variant="ghost"
               className="text-slate-500 hover:text-slate-900 shrink-0"
               onClick={() => {
                 setSearch('')
                 setTipoFiltro('todos')
-                setRegistroFiltro('todos')
+                setColaboradorFiltro('todos')
               }}
             >
               <X className="w-4 h-4 mr-2" />
@@ -367,22 +371,20 @@ export default function Documentos() {
 
                       <div className="bg-slate-50 p-3 rounded-md text-sm space-y-2 border border-slate-100">
                         <div className="flex justify-between gap-4">
-                          <span className="text-slate-500 shrink-0">Responsável:</span>
+                          <span className="text-slate-500 shrink-0">Colaborador:</span>
                           <span className="font-medium text-slate-700 text-right truncate">
                             {doc.nome_responsavel || '-'}
                           </span>
                         </div>
                         <div className="flex justify-between gap-4">
-                          <span className="text-slate-500 shrink-0">Registro:</span>
+                          <span className="text-slate-500 shrink-0">Motorista:</span>
                           <span className="text-slate-700 truncate">
-                            {doc.registro_responsavel || '-'}
+                            {doc.nome_motorista || '-'}
                           </span>
                         </div>
                         <div className="flex justify-between gap-4">
-                          <span className="text-slate-500 shrink-0">Cargo:</span>
-                          <span className="text-slate-700 truncate">
-                            {doc.cargo_responsavel || '-'}
-                          </span>
+                          <span className="text-slate-500 shrink-0">OS:</span>
+                          <span className="text-slate-700 truncate">{doc.numero_os || '-'}</span>
                         </div>
                       </div>
 
@@ -450,9 +452,9 @@ export default function Documentos() {
                     <TableRow className="bg-slate-50/50 hover:bg-slate-50/50">
                       <TableHead>Documento</TableHead>
                       <TableHead>Tipo</TableHead>
-                      <TableHead>Registro</TableHead>
-                      <TableHead>Responsável</TableHead>
-                      <TableHead>Cargo</TableHead>
+                      <TableHead>Colaborador</TableHead>
+                      <TableHead>Motorista</TableHead>
+                      <TableHead>OS</TableHead>
                       <TableHead>Data</TableHead>
                       <TableHead className="text-right">Ações</TableHead>
                     </TableRow>
@@ -476,14 +478,14 @@ export default function Documentos() {
                             {doc.tipo_documento === 'IDO' ? 'BO' : doc.tipo_documento}
                           </Badge>
                         </TableCell>
-                        <TableCell className="text-slate-600">
-                          {doc.registro_responsavel || '-'}
-                        </TableCell>
                         <TableCell className="text-slate-600 truncate max-w-[150px]">
                           {doc.nome_responsavel || '-'}
                         </TableCell>
                         <TableCell className="text-slate-600 truncate max-w-[150px]">
-                          {doc.cargo_responsavel || '-'}
+                          {doc.nome_motorista || '-'}
+                        </TableCell>
+                        <TableCell className="text-slate-600 truncate max-w-[100px]">
+                          {doc.numero_os || '-'}
                         </TableCell>
                         <TableCell className="text-slate-500 text-sm whitespace-nowrap">
                           {format(new Date(doc.criado_em), "dd/MM/yyyy 'às' HH:mm", {

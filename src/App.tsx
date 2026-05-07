@@ -20,6 +20,8 @@ import FormularioIdoFixo from './pages/ido/FormularioIdoFixo'
 import SucessoIdoFixo from './pages/ido/SucessoIdoFixo'
 import FormularioEspelhoDanos from './pages/espelho-danos/FormularioEspelhoDanos'
 import SucessoEspelhoDanos from './pages/espelho-danos/Sucesso'
+import FormularioEspelhoDanosFixo from './pages/espelho-danos/FormularioEspelhoDanosFixo'
+import SucessoEspelhoDanosFixo from './pages/espelho-danos/SucessoEspelhoDanosFixo'
 import NotFound from './pages/NotFound'
 import Layout from './components/Layout'
 import { AuthProvider } from './hooks/use-auth'
@@ -45,6 +47,8 @@ const App = () => (
             <Route path="/dashboard/documentos" element={<Documentos />} />
             <Route path="/dashboard/perfil" element={<Perfil />} />
           </Route>
+          <Route path="/espelho-danos-fixo/sucesso" element={<SucessoEspelhoDanosFixo />} />
+          <Route path="/espelho-danos-fixo" element={<FormularioEspelhoDanosFixo />} />
           <Route path="/ido-fixo/sucesso" element={<SucessoIdoFixo />} />
           <Route path="/ido-fixo" element={<FormularioIdoFixo />} />
           <Route path="/ido/sucesso" element={<SucessoIdo />} />

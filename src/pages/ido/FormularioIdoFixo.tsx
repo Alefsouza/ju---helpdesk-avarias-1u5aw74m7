@@ -132,6 +132,147 @@ export default function FormularioIdoFixo() {
     return isValid
   }
 
+  const generatePDFDoc = async (data: typeof formData) => {
+    const doc = new jsPDF()
+
+    let logoBase64 = null
+    try {
+      const img = new Image()
+      img.crossOrigin = 'Anonymous'
+      img.src = '/image-019dff11-886e-74db-932e-be9cefd195ef.png'
+      await new Promise((resolve, reject) => {
+        img.onload = resolve
+        img.onerror = reject
+      })
+      const canvas = document.createElement('canvas')
+      canvas.width = img.width
+      canvas.height = img.height
+      const ctx = canvas.getContext('2d')
+      ctx?.drawImage(img, 0, 0)
+      logoBase64 = canvas.toDataURL('image/png')
+    } catch (e) {
+      console.error('Failed to load logo', e)
+    }
+
+    const pageWidth = doc.internal.pageSize.getWidth()
+    const pageHeight = doc.internal.pageSize.getHeight()
+    const margin = 25
+    const contentWidth = pageWidth - margin * 2
+    let y = margin
+
+    const drawHeader = () => {
+      if (logoBase64) {
+        doc.addImage(logoBase64, 'PNG', 20, 20, 25, 12)
+      }
+      doc.setFont('helvetica', 'bold')
+      doc.setFontSize(12)
+      doc.setTextColor(43, 43, 43)
+      doc.text('DADOS DO BOLETIM DE OCORRÊNCIA', 50, 28)
+      y = 45
+    }
+
+    const checkPageBreak = (neededSpace: number) => {
+      if (y + neededSpace > pageHeight - 35) {
+        doc.addPage()
+        drawHeader()
+      }
+    }
+
+    const drawField = (title: string, value: string | undefined | null) => {
+      if (!value) return
+
+      const titleHeight = 4
+      const spaceBetween = 2
+      const lineSpacing = 4
+
+      doc.setFont('helvetica', 'bold')
+      doc.setFontSize(10)
+      doc.setTextColor(43, 43, 43)
+
+      const splitValue = doc.splitTextToSize(String(value), contentWidth)
+      const valueHeight = splitValue.length * lineSpacing
+
+      checkPageBreak(titleHeight + spaceBetween + valueHeight + 8)
+
+      doc.text(title, margin, y)
+      y += spaceBetween + 4
+
+      doc.setFont('helvetica', 'normal')
+      doc.setTextColor(0, 0, 0)
+      doc.text(splitValue, margin, y)
+      y += (splitValue.length - 1) * lineSpacing + 8
+    }
+
+    drawHeader()
+
+    drawField('Protocolo do BO/TOKEN:', data.protocolo)
+    drawField('Nome do colaborador:', data.nome_colaborador)
+    drawField('Registro do colaborador:', data.registro_colaborador)
+
+    const drawTestemunha = (num: number, t: any) => {
+      if (t && t.nome) {
+        drawField(`Testemunha ${num} - Nome:`, t.nome)
+        drawField(`Testemunha ${num} - Endereço:`, t.endereco)
+        drawField(`Testemunha ${num} - SG:`, t.sg)
+        drawField(`Testemunha ${num} - Telefone:`, t.telefone)
+      }
+    }
+
+    drawTestemunha(1, {
+      nome: data.t1_nome,
+      endereco: data.t1_endereco,
+      sg: data.t1_sg,
+      telefone: data.t1_telefone,
+    })
+    drawTestemunha(2, {
+      nome: data.t2_nome,
+      endereco: data.t2_endereco,
+      sg: data.t2_sg,
+      telefone: data.t2_telefone,
+    })
+    drawTestemunha(3, {
+      nome: data.t3_nome,
+      endereco: data.t3_endereco,
+      sg: data.t3_sg,
+      telefone: data.t3_telefone,
+    })
+
+    if (data.assinatura) {
+      checkPageBreak(30 + 8)
+      doc.setFont('helvetica', 'bold')
+      doc.setFontSize(10)
+      doc.setTextColor(43, 43, 43)
+      doc.text('Assinatura Digital:', margin, y)
+      y += 6
+      try {
+        doc.addImage(data.assinatura, 'PNG', margin, y, 50, 30)
+        y += 30 + 8
+      } catch (e) {
+        console.error('Failed to add signature image', e)
+      }
+    }
+
+    const totalPages = doc.getNumberOfPages()
+    for (let i = 1; i <= totalPages; i++) {
+      doc.setPage(i)
+      const dateStr = new Date().toLocaleString('pt-BR')
+      doc.setDrawColor(224, 224, 224)
+      doc.setLineWidth(0.5)
+      doc.line(margin, pageHeight - 25, pageWidth - margin, pageHeight - 25)
+
+      doc.setFont('helvetica', 'normal')
+      doc.setFontSize(9)
+      doc.setTextColor(150, 150, 150)
+      doc.text(`Data e hora de criação: ${dateStr}`, margin, pageHeight - 25 + 5)
+
+      const pageStr = `Página ${i} de ${totalPages}`
+      const textWidth = doc.getTextWidth(pageStr)
+      doc.text(pageStr, pageWidth - margin - textWidth, pageHeight - 25 + 5)
+    }
+
+    return doc
+  }
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!validate()) {
@@ -145,149 +286,23 @@ export default function FormularioIdoFixo() {
 
     setLoading(true)
     try {
-      const doc = new jsPDF()
-
-      let logoBase64 = null
+      let pdfBlob: Blob
       try {
-        const img = new Image()
-        img.crossOrigin = 'Anonymous'
-        img.src = '/image-019dff11-886e-74db-932e-be9cefd195ef.png'
-        await new Promise((resolve, reject) => {
-          img.onload = resolve
-          img.onerror = reject
-        })
-        const canvas = document.createElement('canvas')
-        canvas.width = img.width
-        canvas.height = img.height
-        const ctx = canvas.getContext('2d')
-        ctx?.drawImage(img, 0, 0)
-        logoBase64 = canvas.toDataURL('image/png')
-      } catch (e) {
-        console.error('Failed to load logo', e)
+        const doc = await generatePDFDoc(formData)
+        pdfBlob = doc.output('blob')
+      } catch (err) {
+        console.error(err)
+        throw new Error('Erro ao gerar documento. Tente novamente')
       }
 
-      const pageWidth = doc.internal.pageSize.getWidth()
-      const pageHeight = doc.internal.pageSize.getHeight()
-      const margin = 25
-      const contentWidth = pageWidth - margin * 2
-      let y = margin
-
-      const drawHeader = () => {
-        if (logoBase64) {
-          doc.addImage(logoBase64, 'PNG', 20, 20, 25, 12)
-        }
-        doc.setFont('helvetica', 'bold')
-        doc.setFontSize(12)
-        doc.setTextColor(43, 43, 43)
-        doc.text('DADOS DO BOLETIM DE OCORRÊNCIA', 50, 28)
-        y = 45
-      }
-
-      const checkPageBreak = (neededSpace: number) => {
-        if (y + neededSpace > pageHeight - 35) {
-          doc.addPage()
-          drawHeader()
-        }
-      }
-
-      const drawField = (title: string, value: string | undefined | null) => {
-        if (!value) return
-
-        const titleHeight = 4
-        const spaceBetween = 2
-        const lineSpacing = 4
-
-        doc.setFont('helvetica', 'bold')
-        doc.setFontSize(10)
-        doc.setTextColor(43, 43, 43)
-
-        const splitValue = doc.splitTextToSize(String(value), contentWidth)
-        const valueHeight = splitValue.length * lineSpacing
-
-        checkPageBreak(titleHeight + spaceBetween + valueHeight + 8)
-
-        doc.text(title, margin, y)
-        y += spaceBetween + 4
-
-        doc.setFont('helvetica', 'normal')
-        doc.setTextColor(0, 0, 0)
-        doc.text(splitValue, margin, y)
-        y += (splitValue.length - 1) * lineSpacing + 8
-      }
-
-      drawHeader()
-
-      drawField('Protocolo do BO/TOKEN:', formData.protocolo)
-      drawField('Nome do colaborador:', formData.nome_colaborador)
-      drawField('Registro do colaborador:', formData.registro_colaborador)
-
-      const drawTestemunha = (num: number, t: any) => {
-        if (t && t.nome) {
-          drawField(`Testemunha ${num} - Nome:`, t.nome)
-          drawField(`Testemunha ${num} - Endereço:`, t.endereco)
-          drawField(`Testemunha ${num} - SG:`, t.sg)
-          drawField(`Testemunha ${num} - Telefone:`, t.telefone)
-        }
-      }
-
-      drawTestemunha(1, {
-        nome: formData.t1_nome,
-        endereco: formData.t1_endereco,
-        sg: formData.t1_sg,
-        telefone: formData.t1_telefone,
-      })
-      drawTestemunha(2, {
-        nome: formData.t2_nome,
-        endereco: formData.t2_endereco,
-        sg: formData.t2_sg,
-        telefone: formData.t2_telefone,
-      })
-      drawTestemunha(3, {
-        nome: formData.t3_nome,
-        endereco: formData.t3_endereco,
-        sg: formData.t3_sg,
-        telefone: formData.t3_telefone,
-      })
-
-      if (formData.assinatura) {
-        checkPageBreak(30 + 8)
-        doc.setFont('helvetica', 'bold')
-        doc.setFontSize(10)
-        doc.setTextColor(43, 43, 43)
-        doc.text('Assinatura Digital:', margin, y)
-        y += 6
-        try {
-          doc.addImage(formData.assinatura, 'PNG', margin, y, 50, 30)
-          y += 30 + 8
-        } catch (e) {
-          console.error('Failed to add signature image', e)
-        }
-      }
-
-      const totalPages = doc.getNumberOfPages()
-      for (let i = 1; i <= totalPages; i++) {
-        doc.setPage(i)
-        const dateStr = new Date().toLocaleString('pt-BR')
-        doc.setDrawColor(224, 224, 224)
-        doc.setLineWidth(0.5)
-        doc.line(margin, pageHeight - 25, pageWidth - margin, pageHeight - 25)
-
-        doc.setFont('helvetica', 'normal')
-        doc.setFontSize(9)
-        doc.setTextColor(150, 150, 150)
-        doc.text(`Data e hora de criação: ${dateStr}`, margin, pageHeight - 25 + 5)
-
-        const pageStr = `Página ${i} de ${totalPages}`
-        const textWidth = doc.getTextWidth(pageStr)
-        doc.text(pageStr, pageWidth - margin - textWidth, pageHeight - 25 + 5)
-      }
-
-      const blob = doc.output('blob')
       const fileName = `DADOS_DO_BOLETIM_ELETRONICO_${Date.now()}.pdf`
 
       const { error: uploadError } = await supabase.storage
         .from('documentos')
-        .upload(fileName, blob, { contentType: 'application/pdf' })
+        .upload(fileName, pdfBlob, {
+          contentType: 'application/pdf',
+          upsert: false,
+        })
 
       if (uploadError) throw uploadError
 

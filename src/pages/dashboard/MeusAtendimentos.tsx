@@ -14,7 +14,7 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import { Skeleton } from '@/components/ui/skeleton'
-import { Search, Inbox, AlertCircle, ArrowRight, CheckCircle2 } from 'lucide-react'
+import { Search, Inbox, AlertCircle, ArrowRight, CheckCircle2, ArrowUpDown } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent } from '@/components/ui/card'
 import {
@@ -39,6 +39,9 @@ export default function MeusAtendimentos() {
   const [searchTerm, setSearchTerm] = useState('')
   const [debouncedSearch, setDebouncedSearch] = useState('')
   const [completingId, setCompletingId] = useState<string | null>(null)
+  const [sortConfig, setSortConfig] = useState<{ key: string; direction: 'asc' | 'desc' } | null>(
+    null,
+  )
 
   useEffect(() => {
     const timer = setTimeout(() => setDebouncedSearch(searchTerm), 300)
@@ -103,6 +106,17 @@ export default function MeusAtendimentos() {
 
   useEffect(() => {
     fetchChamados()
+
+    const channel = supabase
+      .channel('meus_atendimentos_realtime')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'chamados' }, () => {
+        fetchChamados()
+      })
+      .subscribe()
+
+    return () => {
+      supabase.removeChannel(channel)
+    }
   }, [user, filterStatus])
 
   const handleFinalizar = async (chamadoId: string, e?: React.MouseEvent) => {
@@ -159,6 +173,16 @@ export default function MeusAtendimentos() {
     )
   }
 
+  const handleSort = (key: string) => {
+    setSortConfig((current) => {
+      if (current?.key === key) {
+        if (current.direction === 'asc') return { key, direction: 'desc' }
+        return null
+      }
+      return { key, direction: 'asc' }
+    })
+  }
+
   const filteredChamados = chamados
     .filter((c) => {
       if (!debouncedSearch) return true
@@ -170,6 +194,14 @@ export default function MeusAtendimentos() {
       )
     })
     .sort((a, b) => {
+      if (sortConfig) {
+        const aVal = String(a[sortConfig.key] || '').toLowerCase()
+        const bVal = String(b[sortConfig.key] || '').toLowerCase()
+        if (aVal < bVal) return sortConfig.direction === 'asc' ? -1 : 1
+        if (aVal > bVal) return sortConfig.direction === 'asc' ? 1 : -1
+        return 0
+      }
+
       const aIsMine = a.responsavel_id === user?.id
       const bIsMine = b.responsavel_id === user?.id
 
@@ -194,7 +226,7 @@ export default function MeusAtendimentos() {
         <div className="relative flex-1">
           <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-slate-500" />
           <Input
-            placeholder="Pesquisar por Solicitante, PIA ou Título..."
+            placeholder="Pesquisar por Solicitante, R.A. ou Título..."
             className="pl-9 bg-white shadow-sm max-w-md"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
@@ -250,18 +282,30 @@ export default function MeusAtendimentos() {
             <Table>
               <TableHeader>
                 <TableRow className="bg-slate-50">
+                  <TableHead
+                    className="cursor-pointer hover:bg-slate-100 transition-colors w-24"
+                    onClick={() => handleSort('pia')}
+                  >
+                    <div className="flex items-center gap-1">
+                      R.A.
+                      <ArrowUpDown className="h-3 w-3" />
+                    </div>
+                  </TableHead>
                   <TableHead>Título</TableHead>
                   <TableHead>Solicitante</TableHead>
                   <TableHead>Prioridade</TableHead>
                   <TableHead>Colaborador</TableHead>
                   <TableHead>Status</TableHead>
-                  <TableHead>Última Atualização</TableHead>
+                  <TableHead className="whitespace-nowrap">Última Atualização</TableHead>
                   <TableHead className="text-right">Ações</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {filteredChamados.map((c) => (
                   <TableRow key={c.id} className="hover:bg-slate-50/80 transition-colors">
+                    <TableCell>
+                      <span className="font-semibold text-slate-700">{c.pia || '—'}</span>
+                    </TableCell>
                     <TableCell>
                       <div className="font-medium text-slate-900 line-clamp-1">{c.titulo}</div>
                     </TableCell>
@@ -322,6 +366,9 @@ export default function MeusAtendimentos() {
                 <CardContent className="p-4 space-y-4">
                   <div className="flex justify-between items-start gap-2">
                     <div className="flex-1 min-w-0">
+                      <div className="text-xs font-semibold text-slate-500 mb-1 flex items-center gap-1">
+                        R.A.: {c.pia || '—'}
+                      </div>
                       <h3 className="font-semibold text-slate-900 line-clamp-1">{c.titulo}</h3>
                     </div>
                   </div>

@@ -135,22 +135,26 @@ export default function FormularioIdoFixo() {
   const generatePDFDoc = async (data: typeof formData) => {
     const doc = new jsPDF()
 
-    let logoBase64 = null
+    let logoBase64: string | null = null
     try {
-      const img = new Image()
-      img.crossOrigin = 'Anonymous'
-      img.src =
-        'https://wrnhfpncasqifaisvyaf.supabase.co/storage/v1/object/public/documentos/logo-via-sudeste.png'
-      await new Promise((resolve, reject) => {
-        img.onload = resolve
-        img.onerror = reject
-      })
-      const canvas = document.createElement('canvas')
-      canvas.width = img.width
-      canvas.height = img.height
-      const ctx = canvas.getContext('2d')
-      ctx?.drawImage(img, 0, 0)
-      logoBase64 = canvas.toDataURL('image/png')
+      const res = await fetch(
+        'https://wrnhfpncasqifaisvyaf.supabase.co/storage/v1/object/public/documentos/logo-via-sudeste.png',
+      )
+      if (res.ok) {
+        const resBlob = await res.blob()
+        logoBase64 = await new Promise<string>((resolve, reject) => {
+          const reader = new FileReader()
+          reader.onloadend = () => {
+            let result = reader.result as string
+            if (!result.startsWith('data:image/')) {
+              result = result.replace(/^data:[^;]+;base64,/, 'data:image/png;base64,')
+            }
+            resolve(result)
+          }
+          reader.onerror = reject
+          reader.readAsDataURL(resBlob)
+        })
+      }
     } catch (e) {
       console.error('Failed to load logo', e)
     }

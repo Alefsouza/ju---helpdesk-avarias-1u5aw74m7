@@ -171,7 +171,7 @@ export default function FormularioEspelhoDanosFixo() {
         currentLineY += 4.2
       }
 
-      currentY = currentLineY - 4.2 + 11
+      currentY = currentLineY - 4.2 + 8
     }
 
     let dataFormatada = 'Data é obrigatória'

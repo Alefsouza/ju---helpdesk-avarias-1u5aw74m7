@@ -220,8 +220,8 @@ export default function FormularioIdoFixo() {
     drawHeader()
 
     drawField('Protocolo do BO/TOKEN:', data.protocolo_ido)
-    drawField('Nome do colaborador:', data.colaborador_nome)
     drawField('Registro do colaborador:', data.colaborador_registro)
+    drawField('Nome do colaborador:', data.colaborador_nome)
 
     const drawTestemunha = (num: number, t: any) => {
       if (t && t.nome) {
@@ -365,22 +365,6 @@ export default function FormularioIdoFixo() {
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="colaborador_nome">
-                    Nome do colaborador <span className="text-destructive">*</span>
-                  </Label>
-                  <Input
-                    id="colaborador_nome"
-                    placeholder="Informe seu nome completo"
-                    {...form.register('colaborador_nome')}
-                  />
-                  {form.formState.errors.colaborador_nome && (
-                    <span className="text-sm text-destructive">
-                      {form.formState.errors.colaborador_nome.message}
-                    </span>
-                  )}
-                </div>
-
-                <div className="space-y-2 md:col-span-2">
                   <Label htmlFor="colaborador_registro">
                     Registro do colaborador <span className="text-destructive">*</span>
                   </Label>
@@ -392,6 +376,22 @@ export default function FormularioIdoFixo() {
                   {form.formState.errors.colaborador_registro && (
                     <span className="text-sm text-destructive">
                       {form.formState.errors.colaborador_registro.message}
+                    </span>
+                  )}
+                </div>
+
+                <div className="space-y-2 md:col-span-2">
+                  <Label htmlFor="colaborador_nome">
+                    Nome do colaborador <span className="text-destructive">*</span>
+                  </Label>
+                  <Input
+                    id="colaborador_nome"
+                    placeholder="Informe seu nome completo"
+                    {...form.register('colaborador_nome')}
+                  />
+                  {form.formState.errors.colaborador_nome && (
+                    <span className="text-sm text-destructive">
+                      {form.formState.errors.colaborador_nome.message}
                     </span>
                   )}
                 </div>

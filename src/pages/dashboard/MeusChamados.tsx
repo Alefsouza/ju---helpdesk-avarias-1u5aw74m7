@@ -309,8 +309,6 @@ export default function MeusChamados() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Título</TableHead>
-                  <TableHead>Status</TableHead>
                   <TableHead
                     className="cursor-pointer hover:text-primary transition-colors"
                     onClick={() => handleSort('pia')}
@@ -320,6 +318,8 @@ export default function MeusChamados() {
                       <ArrowUpDown className="ml-2 h-4 w-4" />
                     </div>
                   </TableHead>
+                  <TableHead>Título</TableHead>
+                  <TableHead>Status</TableHead>
                   <TableHead>Prioridade</TableHead>
                   <TableHead
                     className="cursor-pointer hover:text-primary transition-colors"
@@ -336,6 +336,7 @@ export default function MeusChamados() {
               <TableBody>
                 {chamados.map((c) => (
                   <TableRow key={c.id} className="hover:bg-muted/50">
+                    <TableCell className="font-medium text-slate-600">{c.pia || '—'}</TableCell>
                     <TableCell className="font-medium">
                       <Link
                         to={`/dashboard/chamados/${c.id}`}
@@ -349,7 +350,6 @@ export default function MeusChamados() {
                         {statusLabels[c.status] || c.status}
                       </Badge>
                     </TableCell>
-                    <TableCell className="font-medium text-slate-600">{c.pia || '—'}</TableCell>
                     <TableCell>
                       <Badge variant="outline" className={priorityColors[c.prioridade] || ''}>
                         {priorityLabels[c.prioridade] || c.prioridade}

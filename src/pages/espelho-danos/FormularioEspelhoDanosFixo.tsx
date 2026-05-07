@@ -15,6 +15,8 @@ import {
 } from '@/components/ui/select'
 import { useToast } from '@/hooks/use-toast'
 import { Loader2, FileText } from 'lucide-react'
+import { jsPDF } from 'jspdf'
+import { format } from 'date-fns'
 
 function FormGroup({
   label,
@@ -81,8 +83,133 @@ export default function FormularioEspelhoDanosFixo() {
     setLoading(true)
 
     try {
-      const content = `ESPELHO DE DANOS\n\nOS: ${data.numeroOs}\nGaragem: ${data.garagem}\nData: ${data.data}\nHorário: ${data.horario}\nOcorrência: ${data.ocorrencia}\nLinha: ${data.linha}\n\nDescrição dos Danos:\n${data.descricaoDanos}\n\nVistoriador: ${data.nomeVistoriador} (${data.registroVistoriador})\nMotorista: ${data.nomeMotorista} (${data.registroMotorista})\n`
-      const blob = new Blob([content], { type: 'application/pdf' })
+      let logoBase64: string | null = null
+      try {
+        const res = await fetch('/image-019dff11-886e-74db-932e-be9cefd195ef.png')
+        if (res.ok) {
+          const resBlob = await res.blob()
+          logoBase64 = await new Promise<string>((resolve, reject) => {
+            const reader = new FileReader()
+            reader.onloadend = () => {
+              let result = reader.result as string
+              if (!result.startsWith('data:image/')) {
+                result = result.replace(/^data:[^;]+;base64,/, 'data:image/png;base64,')
+              }
+              resolve(result)
+            }
+            reader.onerror = reject
+            reader.readAsDataURL(resBlob)
+          })
+        }
+      } catch (err) {
+        console.error('Erro ao carregar logo:', err)
+      }
+
+      const doc = new jsPDF({ format: 'a4', unit: 'mm' })
+      const pageWidth = doc.internal.pageSize.getWidth()
+      const pageHeight = doc.internal.pageSize.getHeight()
+      const margin = 25
+      const contentWidth = pageWidth - 2 * margin
+      let currentY = margin
+      let pageNumber = 1
+
+      const addHeader = () => {
+        if (logoBase64) {
+          doc.addImage(logoBase64, 'PNG', 20, 20, 25, 12)
+        }
+
+        doc.setFont('helvetica', 'bold')
+        doc.setFontSize(18)
+        doc.setTextColor(43, 43, 43)
+        doc.text('Espelho de Danos', pageWidth / 2, 28, { align: 'center' })
+
+        currentY = 45
+      }
+
+      const addFooter = () => {
+        const footerY = pageHeight - 25
+        doc.setDrawColor(224, 224, 224)
+        doc.setLineWidth(0.5)
+        doc.line(25, footerY, pageWidth - 25, footerY)
+
+        doc.setFont('helvetica', 'normal')
+        doc.setFontSize(9)
+        doc.setTextColor(150, 150, 150)
+        const dateStr = `Gerado em: ${format(new Date(), 'dd/MM/yyyy HH:mm:ss')}`
+        doc.text(dateStr, 25, footerY + 5)
+      }
+
+      addHeader()
+      addFooter()
+
+      const renderField = (title: string, value: string) => {
+        doc.setFontSize(10)
+        const lines = doc.splitTextToSize(value || '-', contentWidth)
+
+        if (currentY + 10 > pageHeight - 30) {
+          doc.addPage()
+          pageNumber++
+          addHeader()
+          addFooter()
+        }
+
+        doc.setFont('helvetica', 'bold')
+        doc.setTextColor(43, 43, 43)
+        doc.text(title, margin, currentY)
+
+        let currentLineY = currentY + 6
+
+        doc.setFont('helvetica', 'normal')
+        doc.setTextColor(0, 0, 0)
+
+        for (let i = 0; i < lines.length; i++) {
+          if (currentLineY > pageHeight - 30) {
+            doc.addPage()
+            pageNumber++
+            addHeader()
+            addFooter()
+            currentLineY = currentY
+          }
+          doc.text(lines[i], margin, currentLineY)
+          currentLineY += 4.2
+        }
+
+        currentY = currentLineY - 4.2 + 11
+      }
+
+      let dataFormatada = 'Data é obrigatória'
+      if (data.data) {
+        const parts = data.data.split('-')
+        if (parts.length === 3) {
+          dataFormatada = `${parts[2]}/${parts[1]}/${parts[0]}`
+        } else {
+          dataFormatada = 'Data inválida'
+        }
+      }
+
+      renderField('Número de OS', data.numeroOs)
+      renderField('Garagem', data.garagem)
+      renderField('Data', dataFormatada)
+      renderField('Horário', data.horario)
+      renderField('Ocorrência', data.ocorrencia)
+      renderField('Linha', data.linha)
+      renderField('Descrição dos Danos', data.descricaoDanos)
+      renderField('Registro do Vistoriador', data.registroVistoriador)
+      renderField('Nome do Vistoriador', data.nomeVistoriador)
+      renderField('Registro do Motorista', data.registroMotorista)
+      renderField('Nome do Motorista', data.nomeMotorista)
+
+      for (let i = 1; i <= pageNumber; i++) {
+        doc.setPage(i)
+        doc.setFont('helvetica', 'normal')
+        doc.setFontSize(9)
+        doc.setTextColor(150, 150, 150)
+        doc.text(`Página ${i} de ${pageNumber}`, pageWidth - 25, pageHeight - 25 + 5, {
+          align: 'right',
+        })
+      }
+
+      const blob = doc.output('blob')
       const fileName = `ESPELHO_DE_DANOS_${Date.now()}.pdf`
 
       const { error: uploadError } = await supabase.storage

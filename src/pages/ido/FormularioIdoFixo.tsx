@@ -7,6 +7,7 @@ import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { useToast } from '@/hooks/use-toast'
 import { Loader2, FileSignature } from 'lucide-react'
+import { jsPDF } from 'jspdf'
 
 function SignaturePad({ onChange, error }: { onChange: (val: string) => void; error?: boolean }) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
@@ -144,83 +145,144 @@ export default function FormularioIdoFixo() {
 
     setLoading(true)
     try {
-      const html = `
-        <!DOCTYPE html>
-        <html>
-        <head>
-          <meta charset="utf-8">
-          <title>IDO - ${formData.protocolo}</title>
-          <style>
-            body { font-family: sans-serif; padding: 40px; color: #333; max-width: 800px; margin: 0 auto; }
-            .header { display: flex; align-items: center; margin-bottom: 30px; border-bottom: 2px solid #eee; padding-bottom: 20px; }
-            .logo { width: 50px; height: 50px; background: #2563eb; border-radius: 8px; margin-right: 20px; }
-            h1 { margin: 0; color: #1e40af; font-size: 24px; }
-            .section { margin-bottom: 24px; padding: 20px; background: #f8fafc; border-radius: 8px; }
-            h3 { margin-top: 0; color: #0f172a; font-size: 18px; border-bottom: 1px solid #cbd5e1; padding-bottom: 8px; }
-            .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
-            .field { margin-bottom: 12px; }
-            .label { font-size: 12px; color: #64748b; text-transform: uppercase; font-weight: bold; margin-bottom: 4px; }
-            .value { font-size: 16px; font-weight: 500; color: #0f172a; }
-            .signature-container { margin-top: 40px; text-align: center; page-break-inside: avoid; }
-            .signature-img { max-width: 300px; height: auto; border-bottom: 1px solid #000; margin-bottom: 8px; }
-            .signature-name { font-weight: bold; font-size: 16px; }
-            .signature-role { color: #64748b; font-size: 14px; }
-          </style>
-        </head>
-        <body>
-          <div class="header">
-            <div class="logo"></div>
-            <h1>Boletim IDO - Protocolo: ${formData.protocolo}</h1>
-          </div>
-          
-          <div class="section">
-            <h3>Dados do Colaborador</h3>
-            <div class="grid">
-              <div class="field"><div class="label">Nome Completo</div><div class="value">${formData.nome_colaborador}</div></div>
-              <div class="field"><div class="label">Registro</div><div class="value">${formData.registro_colaborador}</div></div>
-            </div>
-          </div>
+      const doc = new jsPDF()
 
-          <div class="section">
-            <h3>Testemunha 1</h3>
-            <div class="grid">
-              <div class="field"><div class="label">Nome</div><div class="value">${formData.t1_nome}</div></div>
-              <div class="field"><div class="label">Telefone</div><div class="value">${formData.t1_telefone}</div></div>
-              <div class="field"><div class="label">Endereço</div><div class="value">${formData.t1_endereco}</div></div>
-              <div class="field"><div class="label">SG</div><div class="value">${formData.t1_sg}</div></div>
-            </div>
-          </div>
+      let logoBase64 = null
+      try {
+        const img = new Image()
+        img.crossOrigin = 'Anonymous'
+        img.src = '/image-019dff11-886e-74db-932e-be9cefd195ef.png'
+        await new Promise((resolve, reject) => {
+          img.onload = resolve
+          img.onerror = reject
+        })
+        const canvas = document.createElement('canvas')
+        canvas.width = img.width
+        canvas.height = img.height
+        const ctx = canvas.getContext('2d')
+        ctx?.drawImage(img, 0, 0)
+        logoBase64 = canvas.toDataURL('image/png')
+      } catch (e) {
+        console.error('Failed to load logo', e)
+      }
 
-          <div class="section">
-            <h3>Testemunha 2</h3>
-            <div class="grid">
-              <div class="field"><div class="label">Nome</div><div class="value">${formData.t2_nome}</div></div>
-              <div class="field"><div class="label">Telefone</div><div class="value">${formData.t2_telefone}</div></div>
-              <div class="field"><div class="label">Endereço</div><div class="value">${formData.t2_endereco}</div></div>
-              <div class="field"><div class="label">SG</div><div class="value">${formData.t2_sg}</div></div>
-            </div>
-          </div>
+      const pageWidth = doc.internal.pageSize.getWidth()
+      const pageHeight = doc.internal.pageSize.getHeight()
+      const margin = 25
+      const contentWidth = pageWidth - margin * 2
+      let y = margin
 
-          <div class="section">
-            <h3>Testemunha 3</h3>
-            <div class="grid">
-              <div class="field"><div class="label">Nome</div><div class="value">${formData.t3_nome}</div></div>
-              <div class="field"><div class="label">Telefone</div><div class="value">${formData.t3_telefone}</div></div>
-              <div class="field"><div class="label">Endereço</div><div class="value">${formData.t3_endereco}</div></div>
-              <div class="field"><div class="label">SG</div><div class="value">${formData.t3_sg}</div></div>
-            </div>
-          </div>
+      const drawHeader = () => {
+        if (logoBase64) {
+          doc.addImage(logoBase64, 'PNG', 20, 20, 25, 12)
+        }
+        doc.setFont('helvetica', 'bold')
+        doc.setFontSize(12)
+        doc.setTextColor(43, 43, 43)
+        doc.text('DADOS DO BOLETIM DE OCORRÊNCIA', 50, 28)
+        y = 45
+      }
 
-          <div class="signature-container">
-            <img class="signature-img" src="${formData.assinatura}" alt="Assinatura" />
-            <div class="signature-name">${formData.nome_colaborador}</div>
-            <div class="signature-role">Colaborador (Registro: ${formData.registro_colaborador})</div>
-          </div>
-        </body>
-        </html>
-      `
+      const checkPageBreak = (neededSpace: number) => {
+        if (y + neededSpace > pageHeight - 35) {
+          doc.addPage()
+          drawHeader()
+        }
+      }
 
-      const blob = new Blob([html], { type: 'application/pdf' })
+      const drawField = (title: string, value: string | undefined | null) => {
+        if (!value) return
+
+        const titleHeight = 4
+        const spaceBetween = 2
+        const lineSpacing = 4
+
+        doc.setFont('helvetica', 'bold')
+        doc.setFontSize(10)
+        doc.setTextColor(43, 43, 43)
+
+        const splitValue = doc.splitTextToSize(String(value), contentWidth)
+        const valueHeight = splitValue.length * lineSpacing
+
+        checkPageBreak(titleHeight + spaceBetween + valueHeight + 8)
+
+        doc.text(title, margin, y)
+        y += spaceBetween + 4
+
+        doc.setFont('helvetica', 'normal')
+        doc.setTextColor(0, 0, 0)
+        doc.text(splitValue, margin, y)
+        y += (splitValue.length - 1) * lineSpacing + 8
+      }
+
+      drawHeader()
+
+      drawField('Protocolo do BO/TOKEN:', formData.protocolo)
+      drawField('Nome do colaborador:', formData.nome_colaborador)
+      drawField('Registro do colaborador:', formData.registro_colaborador)
+
+      const drawTestemunha = (num: number, t: any) => {
+        if (t && t.nome) {
+          drawField(`Testemunha ${num} - Nome:`, t.nome)
+          drawField(`Testemunha ${num} - Endereço:`, t.endereco)
+          drawField(`Testemunha ${num} - SG:`, t.sg)
+          drawField(`Testemunha ${num} - Telefone:`, t.telefone)
+        }
+      }
+
+      drawTestemunha(1, {
+        nome: formData.t1_nome,
+        endereco: formData.t1_endereco,
+        sg: formData.t1_sg,
+        telefone: formData.t1_telefone,
+      })
+      drawTestemunha(2, {
+        nome: formData.t2_nome,
+        endereco: formData.t2_endereco,
+        sg: formData.t2_sg,
+        telefone: formData.t2_telefone,
+      })
+      drawTestemunha(3, {
+        nome: formData.t3_nome,
+        endereco: formData.t3_endereco,
+        sg: formData.t3_sg,
+        telefone: formData.t3_telefone,
+      })
+
+      if (formData.assinatura) {
+        checkPageBreak(30 + 8)
+        doc.setFont('helvetica', 'bold')
+        doc.setFontSize(10)
+        doc.setTextColor(43, 43, 43)
+        doc.text('Assinatura Digital:', margin, y)
+        y += 6
+        try {
+          doc.addImage(formData.assinatura, 'PNG', margin, y, 50, 30)
+          y += 30 + 8
+        } catch (e) {
+          console.error('Failed to add signature image', e)
+        }
+      }
+
+      const totalPages = doc.getNumberOfPages()
+      for (let i = 1; i <= totalPages; i++) {
+        doc.setPage(i)
+        const dateStr = new Date().toLocaleString('pt-BR')
+        doc.setDrawColor(224, 224, 224)
+        doc.setLineWidth(0.5)
+        doc.line(margin, pageHeight - 25, pageWidth - margin, pageHeight - 25)
+
+        doc.setFont('helvetica', 'normal')
+        doc.setFontSize(9)
+        doc.setTextColor(150, 150, 150)
+        doc.text(`Data e hora de criação: ${dateStr}`, margin, pageHeight - 25 + 5)
+
+        const pageStr = `Página ${i} de ${totalPages}`
+        const textWidth = doc.getTextWidth(pageStr)
+        doc.text(pageStr, pageWidth - margin - textWidth, pageHeight - 25 + 5)
+      }
+
+      const blob = doc.output('blob')
       const fileName = `DADOS_DO_BOLETIM_ELETRONICO_${Date.now()}.pdf`
 
       const { error: uploadError } = await supabase.storage

@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo, useRef } from 'react'
 import { supabase } from '@/lib/supabase/client'
 import { format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
@@ -50,9 +50,15 @@ export default function Documentos() {
   const [tipoFiltro, setTipoFiltro] = useState<string>('todos')
   const [registroFiltro, setRegistroFiltro] = useState<string>('todos')
   const [currentPage, setCurrentPage] = useState(1)
+  const [highlightedDocId, setHighlightedDocId] = useState<string | null>(null)
 
   const isAdmin = profile?.tipo_usuario === 'admin'
   const isResponsavel = profile?.tipo_usuario === 'responsavel'
+
+  const filtrosRef = useRef({ search, tipoFiltro, registroFiltro })
+  useEffect(() => {
+    filtrosRef.current = { search, tipoFiltro, registroFiltro }
+  }, [search, tipoFiltro, registroFiltro])
 
   useEffect(() => {
     if (!isAdmin && !isResponsavel) return
@@ -75,6 +81,41 @@ export default function Documentos() {
     }
 
     fetchDocumentos()
+
+    const channel = supabase
+      .channel('documentos_changes')
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'documentos',
+        },
+        (payload) => {
+          const newDoc = payload.new as Documento
+          setDocumentos((prev) => [newDoc, ...prev])
+
+          const { search, tipoFiltro, registroFiltro } = filtrosRef.current
+          const matchSearch = newDoc.nome_arquivo.toLowerCase().includes(search.toLowerCase())
+          const matchTipo = tipoFiltro === 'todos' || newDoc.tipo_documento === tipoFiltro
+          const matchRegistro =
+            registroFiltro === 'todos' || newDoc.registro_responsavel === registroFiltro
+
+          if (matchSearch && matchTipo && matchRegistro) {
+            toast.success('Novo documento adicionado')
+            setHighlightedDocId(newDoc.id)
+            setCurrentPage(1)
+            setTimeout(() => {
+              setHighlightedDocId(null)
+            }, 2000)
+          }
+        },
+      )
+      .subscribe()
+
+    return () => {
+      supabase.removeChannel(channel)
+    }
   }, [isAdmin, isResponsavel])
 
   // Reset pagination when filters change
@@ -266,7 +307,14 @@ export default function Documentos() {
               {/* Mobile View (Cards) */}
               <div className="grid grid-cols-1 gap-4 p-4 md:hidden">
                 {paginatedDocs.map((doc) => (
-                  <Card key={doc.id} className="border border-slate-200 shadow-sm overflow-hidden">
+                  <Card
+                    key={doc.id}
+                    className={`border shadow-sm overflow-hidden transition-colors duration-500 ${
+                      highlightedDocId === doc.id
+                        ? 'border-primary/50 bg-primary/5'
+                        : 'border-slate-200 bg-card'
+                    }`}
+                  >
                     <CardContent className="p-4 space-y-3">
                       <div>
                         <h4
@@ -365,7 +413,12 @@ export default function Documentos() {
                   </TableHeader>
                   <TableBody>
                     {paginatedDocs.map((doc) => (
-                      <TableRow key={doc.id}>
+                      <TableRow
+                        key={doc.id}
+                        className={`transition-colors duration-500 ${
+                          highlightedDocId === doc.id ? 'bg-primary/5 hover:bg-primary/5' : ''
+                        }`}
+                      >
                         <TableCell
                           className="font-medium text-slate-700 max-w-[250px] truncate"
                           title={doc.nome_arquivo}

@@ -130,7 +130,7 @@ export default function Documentos() {
           <CardHeader className="pb-2">
             <CardTitle className="text-base font-semibold flex items-center gap-2">
               <FileText className="w-4 h-4 text-primary" />
-              Formulário IDO
+              Formulário Boletim de Ocorrência
             </CardTitle>
             <CardDescription>Link público para preenchimento de Boletim de IDO</CardDescription>
           </CardHeader>

@@ -40,7 +40,6 @@ import { toast } from 'sonner'
 
 type Documento = Database['public']['Tables']['documentos']['Row'] & {
   registro_motorista?: string | null
-  nome_motorista?: string | null
   numero_os?: string | null
 }
 
@@ -377,9 +376,11 @@ export default function Documentos() {
                           </span>
                         </div>
                         <div className="flex justify-between gap-4">
-                          <span className="text-slate-500 shrink-0">Motorista:</span>
+                          <span className="text-slate-500 shrink-0">Registro:</span>
                           <span className="text-slate-700 truncate">
-                            {doc.nome_motorista || '-'}
+                            {doc.tipo_documento === 'IDO'
+                              ? doc.registro_responsavel || '-'
+                              : doc.registro_motorista || '-'}
                           </span>
                         </div>
                         <div className="flex justify-between gap-4">
@@ -450,12 +451,12 @@ export default function Documentos() {
                 <Table>
                   <TableHeader>
                     <TableRow className="bg-slate-50/50 hover:bg-slate-50/50">
-                      <TableHead>Documento</TableHead>
+                      <TableHead>Nome do documento</TableHead>
                       <TableHead>Tipo</TableHead>
                       <TableHead>Colaborador</TableHead>
-                      <TableHead>Motorista</TableHead>
+                      <TableHead>Registro</TableHead>
                       <TableHead>OS</TableHead>
-                      <TableHead>Data</TableHead>
+                      <TableHead>Data de criação</TableHead>
                       <TableHead className="text-right">Ações</TableHead>
                     </TableRow>
                   </TableHeader>
@@ -482,7 +483,9 @@ export default function Documentos() {
                           {doc.nome_responsavel || '-'}
                         </TableCell>
                         <TableCell className="text-slate-600 truncate max-w-[150px]">
-                          {doc.nome_motorista || '-'}
+                          {doc.tipo_documento === 'IDO'
+                            ? doc.registro_responsavel || '-'
+                            : doc.registro_motorista || '-'}
                         </TableCell>
                         <TableCell className="text-slate-600 truncate max-w-[100px]">
                           {doc.numero_os || '-'}

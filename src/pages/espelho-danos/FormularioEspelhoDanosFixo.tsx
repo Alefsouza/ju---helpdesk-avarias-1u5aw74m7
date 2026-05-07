@@ -222,11 +222,10 @@ export default function FormularioEspelhoDanosFixo() {
         nome_arquivo: fileName,
         arquivo_url: publicUrlData.publicUrl,
         registro_responsavel: values.registro_vistoriador,
-        nome_responsavel: values.nome_vistoriador,
+        nome_responsavel: values.nome_motorista,
         chamado_id: null,
         numero_os: values.numero_os,
         registro_motorista: values.registro_motorista,
-        nome_motorista: values.nome_motorista,
       } as any)
 
       if (docError) {

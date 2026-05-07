@@ -155,36 +155,42 @@ export type Database = {
         Row: {
           arquivo_url: string
           atualizado_em: string
-          cargo_responsavel: string | null
           chamado_id: string | null
           criado_em: string
           id: string
           nome_arquivo: string
+          nome_motorista: string | null
           nome_responsavel: string | null
+          numero_os: string | null
+          registro_motorista: string | null
           registro_responsavel: string | null
           tipo_documento: string
         }
         Insert: {
           arquivo_url: string
           atualizado_em?: string
-          cargo_responsavel?: string | null
           chamado_id?: string | null
           criado_em?: string
           id?: string
           nome_arquivo: string
+          nome_motorista?: string | null
           nome_responsavel?: string | null
+          numero_os?: string | null
+          registro_motorista?: string | null
           registro_responsavel?: string | null
           tipo_documento: string
         }
         Update: {
           arquivo_url?: string
           atualizado_em?: string
-          cargo_responsavel?: string | null
           chamado_id?: string | null
           criado_em?: string
           id?: string
           nome_arquivo?: string
+          nome_motorista?: string | null
           nome_responsavel?: string | null
+          numero_os?: string | null
+          registro_motorista?: string | null
           registro_responsavel?: string | null
           tipo_documento?: string
         }
@@ -650,10 +656,12 @@ export const Constants = {
 //   arquivo_url: text (not null)
 //   registro_responsavel: text (nullable)
 //   nome_responsavel: text (nullable)
-//   cargo_responsavel: text (nullable)
 //   chamado_id: uuid (nullable)
 //   criado_em: timestamp with time zone (not null, default: now())
 //   atualizado_em: timestamp with time zone (not null, default: now())
+//   registro_motorista: text (nullable)
+//   nome_motorista: text (nullable)
+//   numero_os: text (nullable)
 // Table: formularios_espelho_danos
 //   id: uuid (not null, default: gen_random_uuid())
 //   chamado_id: uuid (not null)

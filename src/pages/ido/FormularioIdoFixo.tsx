@@ -354,16 +354,16 @@ export default function FormularioIdoFixo() {
   )
 
   return (
-    <div className="min-h-screen bg-muted py-8 px-4 sm:px-6">
+    <div className="min-h-screen bg-slate-50 py-8 px-4 sm:px-6">
       <div className="max-w-3xl mx-auto">
-        <div className="flex items-center gap-3 mb-8">
-          <div className="w-12 h-12 bg-primary rounded-xl flex items-center justify-center text-primary-foreground shadow-sm">
-            <FileSignature className="w-6 h-6" />
-          </div>
-          <div>
-            <h1 className="text-2xl font-bold text-foreground">Boletim IDO</h1>
-            <p className="text-muted-foreground">Preencha os dados da ocorrência</p>
-          </div>
+        <div className="flex flex-col items-center text-center mb-8">
+          <img
+            src="https://wrnhfpncasqifaisvyaf.supabase.co/storage/v1/object/public/documentos/logo-via-sudeste.png"
+            alt="Via Sudeste"
+            className="h-12 object-contain mb-4"
+          />
+          <h1 className="text-2xl font-bold text-slate-900">Boletim IDO</h1>
+          <p className="text-slate-500 mt-1">Preencha os dados da ocorrência</p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-6">

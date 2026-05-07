@@ -133,7 +133,7 @@ export default function Documentos() {
               Formulário Boletim de Ocorrência
             </CardTitle>
             <CardDescription>
-              Link público para preenchimento de Boletim de ocorrência.
+              Link público para preenchimento de Boletim de Ocorrência.
             </CardDescription>
           </CardHeader>
           <CardContent className="flex items-center gap-2">

@@ -99,20 +99,20 @@ export default function FormularioIdo() {
 
     const drawHeader = () => {
       if (logoBase64) {
-        doc.addImage(logoBase64, 'PNG', margin, 20, 25, 12)
+        doc.addImage(logoBase64, 'PNG', margin, 15, 25, 12)
       }
 
       doc.setFillColor(240, 240, 240)
-      doc.rect(margin, 40, contentWidth, 10, 'F')
+      doc.rect(margin, 32, contentWidth, 10, 'F')
       doc.setFont('helvetica', 'bold')
       doc.setFontSize(14)
       doc.setTextColor(43, 43, 43)
 
-      const title = 'IDO'
+      const title = 'DADOS DO BOLETIM DE OCORRÊNCIA'
       const titleWidth = doc.getTextWidth(title)
-      doc.text(title, margin + (contentWidth - titleWidth) / 2, 47)
+      doc.text(title, margin + (contentWidth - titleWidth) / 2, 39)
 
-      y = 58
+      y = 50
     }
 
     const checkPageBreak = (neededSpace: number) => {

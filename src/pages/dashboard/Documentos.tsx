@@ -394,28 +394,6 @@ export default function Documentos() {
                         <TableCell className="text-right whitespace-nowrap">
                           <div className="flex justify-end gap-2">
                             <Button
-                              variant="outline"
-                              size="sm"
-                              className="h-8 bg-white hover:bg-slate-50"
-                              disabled={!!loadingAction}
-                              onClick={() =>
-                                handleDocumentAction(
-                                  doc.id,
-                                  doc.arquivo_url,
-                                  doc.nome_arquivo,
-                                  'view',
-                                )
-                              }
-                              title="Visualizar"
-                            >
-                              {loadingAction === `${doc.id}-view` ? (
-                                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                              ) : (
-                                <Eye className="w-4 h-4 mr-2" />
-                              )}
-                              Visualizar
-                            </Button>
-                            <Button
                               variant="default"
                               size="sm"
                               className="h-8"

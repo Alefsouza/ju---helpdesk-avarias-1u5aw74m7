@@ -132,7 +132,9 @@ export default function Documentos() {
               <FileText className="w-4 h-4 text-primary" />
               Formulário Boletim de Ocorrência
             </CardTitle>
-            <CardDescription>Link público para preenchimento de Boletim de IDO</CardDescription>
+            <CardDescription>
+              Link público para preenchimento de Boletim de ocorrência.
+            </CardDescription>
           </CardHeader>
           <CardContent className="flex items-center gap-2">
             <div className="bg-slate-50 px-3 py-2 rounded-md flex-1 truncate text-sm text-slate-500 border border-slate-200 select-all">

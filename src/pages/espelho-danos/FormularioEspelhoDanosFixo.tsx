@@ -13,9 +13,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { useToast } from '@/hooks/use-toast'
-import { Loader2, FileText, User, Bus, CheckCircle2 } from 'lucide-react'
+import { Loader2, Calendar, Clock } from 'lucide-react'
 import { jsPDF } from 'jspdf'
 import { format } from 'date-fns'
 
@@ -33,10 +32,10 @@ function FormGroup({
   return (
     <div className="space-y-2">
       <Label className="text-sm font-medium text-slate-700">
-        {label} {required && <span className="text-destructive">*</span>}
+        {label} {required && <span className="text-red-500">*</span>}
       </Label>
       {children}
-      {error && <span className="text-xs text-destructive font-medium">{error}</span>}
+      {error && <span className="text-xs text-red-500 font-medium">{error}</span>}
     </div>
   )
 }
@@ -271,7 +270,7 @@ export default function FormularioEspelhoDanosFixo() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50/50">
+    <div className="min-h-screen bg-slate-50/50 flex flex-col">
       {/* App Header */}
       <header className="bg-white border-b sticky top-0 z-10 shadow-sm">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
@@ -290,22 +289,17 @@ export default function FormularioEspelhoDanosFixo() {
         </div>
       </header>
 
-      <main className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="sm:hidden mb-6">
-          <h1 className="text-2xl font-bold text-slate-900">Espelho de Danos</h1>
-          <p className="text-sm text-slate-500 mt-1">Formulário de registro de avarias</p>
-        </div>
+      <main className="flex-1 max-w-3xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 md:py-12">
+        <div className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden">
+          <div className="p-6 md:p-8">
+            <div className="mb-8">
+              <h2 className="text-2xl font-bold text-slate-900">Espelho de Danos</h2>
+              <p className="text-slate-500 mt-1 text-sm">
+                Preencha os dados abaixo para registrar as avarias.
+              </p>
+            </div>
 
-        <form onSubmit={handleSubmit} className="space-y-6">
-          <Card className="border-0 shadow-sm ring-1 ring-slate-200 overflow-hidden">
-            <CardHeader className="bg-slate-50/50 border-b pb-4">
-              <CardTitle className="flex items-center gap-2 text-lg">
-                <FileText className="h-5 w-5 text-primary" />
-                Dados Principais
-              </CardTitle>
-              <CardDescription>Informações básicas da avaria.</CardDescription>
-            </CardHeader>
-            <CardContent className="p-6 space-y-6">
+            <form onSubmit={handleSubmit} className="space-y-8">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <FormGroup label="Número de OS" error={errors.numeroOs}>
                   <Input
@@ -315,6 +309,7 @@ export default function FormularioEspelhoDanosFixo() {
                     onChange={handleChange}
                   />
                 </FormGroup>
+
                 <FormGroup label="Garagem" error={errors.garagem}>
                   <Select value={data.garagem} onValueChange={(v) => handleSelect('garagem', v)}>
                     <SelectTrigger>
@@ -326,20 +321,37 @@ export default function FormularioEspelhoDanosFixo() {
                     </SelectContent>
                   </Select>
                 </FormGroup>
+
                 <FormGroup label="Data" error={errors.data}>
-                  <Input name="data" type="date" value={data.data} onChange={handleChange} />
+                  <div className="relative">
+                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                      <Calendar className="h-4 w-4 text-slate-400" />
+                    </div>
+                    <Input
+                      name="data"
+                      type="date"
+                      className="pl-10"
+                      value={data.data}
+                      onChange={handleChange}
+                    />
+                  </div>
                 </FormGroup>
+
                 <FormGroup label="Horário" error={errors.horario}>
-                  <Input name="horario" type="time" value={data.horario} onChange={handleChange} />
+                  <div className="relative">
+                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                      <Clock className="h-4 w-4 text-slate-400" />
+                    </div>
+                    <Input
+                      name="horario"
+                      type="time"
+                      className="pl-10"
+                      value={data.horario}
+                      onChange={handleChange}
+                    />
+                  </div>
                 </FormGroup>
-                <FormGroup label="Linha" error={errors.linha}>
-                  <Input
-                    name="linha"
-                    placeholder="Informe a linha"
-                    value={data.linha}
-                    onChange={handleChange}
-                  />
-                </FormGroup>
+
                 <FormGroup label="Ocorrência" error={errors.ocorrencia}>
                   <RadioGroup
                     value={data.ocorrencia}
@@ -348,21 +360,30 @@ export default function FormularioEspelhoDanosFixo() {
                   >
                     <div className="flex items-center space-x-2">
                       <RadioGroupItem value="Sim" id="oc-sim" />
-                      <Label htmlFor="oc-sim" className="cursor-pointer">
+                      <Label htmlFor="oc-sim" className="cursor-pointer text-slate-700">
                         Sim
                       </Label>
                     </div>
                     <div className="flex items-center space-x-2">
                       <RadioGroupItem value="Não" id="oc-nao" />
-                      <Label htmlFor="oc-nao" className="cursor-pointer">
+                      <Label htmlFor="oc-nao" className="cursor-pointer text-slate-700">
                         Não
                       </Label>
                     </div>
                   </RadioGroup>
                 </FormGroup>
+
+                <FormGroup label="Linha" error={errors.linha}>
+                  <Input
+                    name="linha"
+                    placeholder="Informe a linha"
+                    value={data.linha}
+                    onChange={handleChange}
+                  />
+                </FormGroup>
               </div>
 
-              <FormGroup label="Descrição dos danos" error={errors.descricaoDanos}>
+              <FormGroup label="Descrição dos Danos" error={errors.descricaoDanos}>
                 <Textarea
                   name="descricaoDanos"
                   placeholder="Descreva os danos encontrados"
@@ -371,20 +392,9 @@ export default function FormularioEspelhoDanosFixo() {
                   onChange={handleChange}
                 />
               </FormGroup>
-            </CardContent>
-          </Card>
 
-          <Card className="border-0 shadow-sm ring-1 ring-slate-200 overflow-hidden">
-            <CardHeader className="bg-slate-50/50 border-b pb-4">
-              <CardTitle className="flex items-center gap-2 text-lg">
-                <User className="h-5 w-5 text-primary" />
-                Dados do Vistoriador
-              </CardTitle>
-              <CardDescription>Informações de quem realizou a vistoria.</CardDescription>
-            </CardHeader>
-            <CardContent className="p-6">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <FormGroup label="Registro do vistoriador" error={errors.registroVistoriador}>
+                <FormGroup label="Registro do Vistoriador" error={errors.registroVistoriador}>
                   <Input
                     name="registroVistoriador"
                     placeholder="Informe o registro"
@@ -392,7 +402,8 @@ export default function FormularioEspelhoDanosFixo() {
                     onChange={handleChange}
                   />
                 </FormGroup>
-                <FormGroup label="Nome do vistoriador" error={errors.nomeVistoriador}>
+
+                <FormGroup label="Nome do Vistoriador" error={errors.nomeVistoriador}>
                   <Input
                     name="nomeVistoriador"
                     placeholder="Informe o nome"
@@ -400,21 +411,8 @@ export default function FormularioEspelhoDanosFixo() {
                     onChange={handleChange}
                   />
                 </FormGroup>
-              </div>
-            </CardContent>
-          </Card>
 
-          <Card className="border-0 shadow-sm ring-1 ring-slate-200 overflow-hidden">
-            <CardHeader className="bg-slate-50/50 border-b pb-4">
-              <CardTitle className="flex items-center gap-2 text-lg">
-                <Bus className="h-5 w-5 text-primary" />
-                Dados do Motorista
-              </CardTitle>
-              <CardDescription>Informações do motorista envolvido.</CardDescription>
-            </CardHeader>
-            <CardContent className="p-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <FormGroup label="Registro do motorista" error={errors.registroMotorista}>
+                <FormGroup label="Registro do Motorista" error={errors.registroMotorista}>
                   <Input
                     name="registroMotorista"
                     placeholder="Informe o registro"
@@ -422,7 +420,8 @@ export default function FormularioEspelhoDanosFixo() {
                     onChange={handleChange}
                   />
                 </FormGroup>
-                <FormGroup label="Nome do motorista" error={errors.nomeMotorista}>
+
+                <FormGroup label="Nome do Motorista" error={errors.nomeMotorista}>
                   <Input
                     name="nomeMotorista"
                     placeholder="Informe o nome"
@@ -431,25 +430,27 @@ export default function FormularioEspelhoDanosFixo() {
                   />
                 </FormGroup>
               </div>
-            </CardContent>
-          </Card>
 
-          <div className="flex justify-end pt-4">
-            <Button type="submit" size="lg" className="w-full sm:w-auto px-8" disabled={loading}>
-              {loading ? (
-                <>
-                  <Loader2 className="w-5 h-5 mr-2 animate-spin" />
-                  Enviando...
-                </>
-              ) : (
-                <>
-                  <CheckCircle2 className="w-5 h-5 mr-2" />
-                  Enviar Formulário
-                </>
-              )}
-            </Button>
+              <div className="pt-6 border-t border-slate-100">
+                <Button
+                  type="submit"
+                  size="lg"
+                  className="w-full bg-[#2D6246] hover:bg-[#2D6246]/90 text-white font-medium"
+                  disabled={loading}
+                >
+                  {loading ? (
+                    <>
+                      <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+                      Enviando...
+                    </>
+                  ) : (
+                    'Enviar formulário'
+                  )}
+                </Button>
+              </div>
+            </form>
           </div>
-        </form>
+        </div>
       </main>
     </div>
   )

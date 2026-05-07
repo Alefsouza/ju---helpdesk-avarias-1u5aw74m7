@@ -89,27 +89,40 @@ export default function Documentos() {
       .on(
         'postgres_changes',
         {
-          event: 'INSERT',
+          event: '*',
           schema: 'public',
           table: 'documentos',
         },
         (payload) => {
-          const newDoc = payload.new as Documento
-          setDocumentos((prev) => [newDoc, ...prev])
+          if (payload.eventType === 'INSERT') {
+            const newDoc = payload.new as Documento
+            setDocumentos((prev) => {
+              if (prev.some((d) => d.id === newDoc.id)) return prev
+              return [newDoc, ...prev]
+            })
 
-          const { search, tipoFiltro, registroFiltro } = filtrosRef.current
-          const matchSearch = newDoc.nome_arquivo.toLowerCase().includes(search.toLowerCase())
-          const matchTipo = tipoFiltro === 'todos' || newDoc.tipo_documento === tipoFiltro
-          const matchRegistro =
-            registroFiltro === 'todos' || newDoc.registro_responsavel === registroFiltro
+            const { search, tipoFiltro, registroFiltro } = filtrosRef.current
+            const matchSearch = newDoc.nome_arquivo.toLowerCase().includes(search.toLowerCase())
+            const matchTipo = tipoFiltro === 'todos' || newDoc.tipo_documento === tipoFiltro
+            const matchRegistro =
+              registroFiltro === 'todos' || newDoc.registro_responsavel === registroFiltro
 
-          if (matchSearch && matchTipo && matchRegistro) {
-            toast.success('Novo documento adicionado')
-            setHighlightedDocId(newDoc.id)
-            setCurrentPage(1)
-            setTimeout(() => {
-              setHighlightedDocId(null)
-            }, 2000)
+            if (matchSearch && matchTipo && matchRegistro) {
+              toast.success('Novo documento adicionado')
+              setHighlightedDocId(newDoc.id)
+              setCurrentPage(1)
+              setTimeout(() => {
+                setHighlightedDocId(null)
+              }, 2000)
+            }
+          } else if (payload.eventType === 'DELETE') {
+            setDocumentos((prev) => prev.filter((d) => d.id !== payload.old.id))
+          } else if (payload.eventType === 'UPDATE') {
+            setDocumentos((prev) =>
+              prev.map((d) =>
+                d.id === payload.new.id ? ({ ...d, ...payload.new } as Documento) : d,
+              ),
+            )
           }
         },
       )

@@ -80,7 +80,7 @@ export default function FormularioEspelhoDanosFixo() {
   const generatePDFDoc = async (values: typeof data) => {
     let logoBase64: string | null = null
     try {
-      const res = await fetch('/image-019dff11-886e-74db-932e-be9cefd195ef.png')
+      const res = await fetch('https://img.usecurling.com/p/100/50?q=logo')
       if (res.ok) {
         const resBlob = await res.blob()
         logoBase64 = await new Promise<string>((resolve, reject) => {

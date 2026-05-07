@@ -71,7 +71,7 @@ export default function FormularioIdo() {
     try {
       const img = new Image()
       img.crossOrigin = 'Anonymous'
-      img.src = '/image-019dff11-886e-74db-932e-be9cefd195ef.png'
+      img.src = 'https://img.usecurling.com/p/100/50?q=logo'
       await new Promise((resolve, reject) => {
         img.onload = resolve
         img.onerror = reject

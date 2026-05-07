@@ -206,7 +206,7 @@ export default function Documentos() {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="todos">Todos os Tipos</SelectItem>
-                <SelectItem value="IDO">IDO</SelectItem>
+                <SelectItem value="IDO">BO</SelectItem>
                 <SelectItem value="Espelho de Danos">Espelho de Danos</SelectItem>
               </SelectContent>
             </Select>
@@ -274,7 +274,7 @@ export default function Documentos() {
                         </h4>
                         <div className="flex items-center justify-between mt-2">
                           <Badge variant="outline" className="bg-slate-50 font-normal">
-                            {doc.tipo_documento}
+                            {doc.tipo_documento === 'IDO' ? 'BO' : doc.tipo_documento}
                           </Badge>
                           <span className="text-xs text-slate-500">
                             {format(new Date(doc.criado_em), 'dd/MM/yy HH:mm')}
@@ -352,7 +352,7 @@ export default function Documentos() {
                         </TableCell>
                         <TableCell>
                           <Badge variant="outline" className="bg-slate-50 font-normal">
-                            {doc.tipo_documento}
+                            {doc.tipo_documento === 'IDO' ? 'BO' : doc.tipo_documento}
                           </Badge>
                         </TableCell>
                         <TableCell className="text-slate-600">

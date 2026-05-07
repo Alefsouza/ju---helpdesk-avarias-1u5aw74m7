@@ -115,7 +115,11 @@ export default function FormularioIdo() {
       }
     }
 
-    const drawField = (title: string, value: string | undefined | null) => {
+    const drawField = (
+      title: string,
+      value: string | undefined | null,
+      spacingAfter: number = 8,
+    ) => {
       if (!value) return
 
       const titleHeight = 4
@@ -129,7 +133,7 @@ export default function FormularioIdo() {
       const splitValue = doc.splitTextToSize(String(value), contentWidth)
       const valueHeight = splitValue.length * lineSpacing
 
-      checkPageBreak(titleHeight + spaceBetween + valueHeight + 8)
+      checkPageBreak(titleHeight + spaceBetween + valueHeight + spacingAfter)
 
       doc.text(title, margin, y)
       y += spaceBetween + 4
@@ -137,7 +141,7 @@ export default function FormularioIdo() {
       doc.setFont('helvetica', 'normal')
       doc.setTextColor(0, 0, 0)
       doc.text(splitValue, margin, y)
-      y += (splitValue.length - 1) * lineSpacing + 8
+      y += (splitValue.length - 1) * lineSpacing + spacingAfter
     }
 
     drawHeader()
@@ -148,10 +152,10 @@ export default function FormularioIdo() {
 
     const drawTestemunha = (num: number, t: any) => {
       if (t && t.nome) {
-        drawField(`Testemunha ${num} - Nome:`, t.nome)
-        drawField(`Testemunha ${num} - Endereço:`, t.endereco)
-        drawField(`Testemunha ${num} - SG:`, t.rg)
-        drawField(`Testemunha ${num} - Telefone:`, t.telefone)
+        drawField(`Testemunha ${num} - Nome:`, t.nome, 4)
+        drawField(`Testemunha ${num} - Endereço:`, t.endereco, 4)
+        drawField(`Testemunha ${num} - SG:`, t.rg, 4)
+        drawField(`Testemunha ${num} - Telefone:`, t.telefone, 8)
       }
     }
 

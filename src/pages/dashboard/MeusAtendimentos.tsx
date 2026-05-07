@@ -43,6 +43,65 @@ export default function MeusAtendimentos() {
     null,
   )
 
+  const defaultWidths: Record<string, number> = {
+    pia: 120,
+    titulo: 300,
+    solicitante: 180,
+    prioridade: 120,
+    colaborador: 180,
+    status: 160,
+    atualizacao: 160,
+    acoes: 140,
+  }
+
+  const [columnWidths, setColumnWidths] = useState<Record<string, number>>(() => {
+    try {
+      const saved = localStorage.getItem('atendimentos_col_widths')
+      return saved ? JSON.parse(saved) : defaultWidths
+    } catch {
+      return defaultWidths
+    }
+  })
+
+  const [resizingCol, setResizingCol] = useState<string | null>(null)
+  const [startX, setStartX] = useState(0)
+  const [startWidth, setStartWidth] = useState(0)
+
+  const onDragStart = (e: React.MouseEvent, colId: string) => {
+    e.preventDefault()
+    e.stopPropagation()
+    setResizingCol(colId)
+    setStartX(e.clientX)
+    setStartWidth(columnWidths[colId] || defaultWidths[colId] || 150)
+  }
+
+  useEffect(() => {
+    if (!resizingCol) return
+
+    const onMouseMove = (e: MouseEvent) => {
+      const diff = e.clientX - startX
+      const newWidth = Math.max(50, startWidth + diff)
+
+      setColumnWidths((prev) => {
+        const updated = { ...prev, [resizingCol]: newWidth }
+        localStorage.setItem('atendimentos_col_widths', JSON.stringify(updated))
+        return updated
+      })
+    }
+
+    const onMouseUp = () => {
+      setResizingCol(null)
+    }
+
+    document.addEventListener('mousemove', onMouseMove)
+    document.addEventListener('mouseup', onMouseUp)
+
+    return () => {
+      document.removeEventListener('mousemove', onMouseMove)
+      document.removeEventListener('mouseup', onMouseUp)
+    }
+  }, [resizingCol, startX, startWidth])
+
   useEffect(() => {
     const timer = setTimeout(() => setDebouncedSearch(searchTerm), 300)
     return () => clearTimeout(timer)
@@ -278,47 +337,163 @@ export default function MeusAtendimentos() {
       ) : (
         <>
           {/* Desktop Table */}
-          <div className="hidden md:block rounded-md border bg-white shadow-sm overflow-hidden">
-            <Table>
+          <div className="hidden md:block rounded-md border bg-white shadow-sm overflow-x-auto w-full relative select-none">
+            <Table style={{ tableLayout: 'fixed', minWidth: 'max-content' }} className="w-full">
               <TableHeader>
                 <TableRow className="bg-slate-50">
                   <TableHead
-                    className="cursor-pointer hover:bg-slate-100 transition-colors w-24"
+                    className="relative cursor-pointer hover:bg-slate-100 transition-colors group"
                     onClick={() => handleSort('pia')}
+                    style={{ width: columnWidths.pia }}
                   >
-                    <div className="flex items-center gap-1">
-                      R.A.
-                      <ArrowUpDown className="h-3 w-3" />
+                    <div className="flex items-center gap-1 overflow-hidden pr-2">
+                      <span className="truncate">R.A.</span>
+                      <ArrowUpDown className="h-3 w-3 shrink-0 text-slate-400 group-hover:text-slate-600" />
                     </div>
+                    <div
+                      className="absolute right-0 top-0 h-full w-[3px] cursor-col-resize bg-slate-200 hover:bg-slate-400 active:bg-slate-600 z-10 transition-colors"
+                      onMouseDown={(e) => onDragStart(e, 'pia')}
+                      onClick={(e) => e.stopPropagation()}
+                    />
                   </TableHead>
-                  <TableHead>Título</TableHead>
-                  <TableHead>Solicitante</TableHead>
-                  <TableHead>Prioridade</TableHead>
-                  <TableHead>Colaborador</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead className="whitespace-nowrap">Última Atualização</TableHead>
-                  <TableHead className="text-right">Ações</TableHead>
+
+                  <TableHead
+                    className="relative cursor-pointer hover:bg-slate-100 transition-colors group"
+                    onClick={() => handleSort('titulo')}
+                    style={{ width: columnWidths.titulo }}
+                  >
+                    <div className="flex items-center gap-1 overflow-hidden pr-2">
+                      <span className="truncate">Título</span>
+                      <ArrowUpDown className="h-3 w-3 shrink-0 text-slate-400 group-hover:text-slate-600" />
+                    </div>
+                    <div
+                      className="absolute right-0 top-0 h-full w-[3px] cursor-col-resize bg-slate-200 hover:bg-slate-400 active:bg-slate-600 z-10 transition-colors"
+                      onMouseDown={(e) => onDragStart(e, 'titulo')}
+                      onClick={(e) => e.stopPropagation()}
+                    />
+                  </TableHead>
+
+                  <TableHead
+                    className="relative cursor-pointer hover:bg-slate-100 transition-colors group"
+                    onClick={() => handleSort('nome_usuario')}
+                    style={{ width: columnWidths.solicitante }}
+                  >
+                    <div className="flex items-center gap-1 overflow-hidden pr-2">
+                      <span className="truncate">Solicitante</span>
+                      <ArrowUpDown className="h-3 w-3 shrink-0 text-slate-400 group-hover:text-slate-600" />
+                    </div>
+                    <div
+                      className="absolute right-0 top-0 h-full w-[3px] cursor-col-resize bg-slate-200 hover:bg-slate-400 active:bg-slate-600 z-10 transition-colors"
+                      onMouseDown={(e) => onDragStart(e, 'solicitante')}
+                      onClick={(e) => e.stopPropagation()}
+                    />
+                  </TableHead>
+
+                  <TableHead
+                    className="relative cursor-pointer hover:bg-slate-100 transition-colors group"
+                    onClick={() => handleSort('prioridade')}
+                    style={{ width: columnWidths.prioridade }}
+                  >
+                    <div className="flex items-center gap-1 overflow-hidden pr-2">
+                      <span className="truncate">Prioridade</span>
+                      <ArrowUpDown className="h-3 w-3 shrink-0 text-slate-400 group-hover:text-slate-600" />
+                    </div>
+                    <div
+                      className="absolute right-0 top-0 h-full w-[3px] cursor-col-resize bg-slate-200 hover:bg-slate-400 active:bg-slate-600 z-10 transition-colors"
+                      onMouseDown={(e) => onDragStart(e, 'prioridade')}
+                      onClick={(e) => e.stopPropagation()}
+                    />
+                  </TableHead>
+
+                  <TableHead
+                    className="relative cursor-pointer hover:bg-slate-100 transition-colors group"
+                    onClick={() => handleSort('nome_responsavel')}
+                    style={{ width: columnWidths.colaborador }}
+                  >
+                    <div className="flex items-center gap-1 overflow-hidden pr-2">
+                      <span className="truncate">Colaborador</span>
+                      <ArrowUpDown className="h-3 w-3 shrink-0 text-slate-400 group-hover:text-slate-600" />
+                    </div>
+                    <div
+                      className="absolute right-0 top-0 h-full w-[3px] cursor-col-resize bg-slate-200 hover:bg-slate-400 active:bg-slate-600 z-10 transition-colors"
+                      onMouseDown={(e) => onDragStart(e, 'colaborador')}
+                      onClick={(e) => e.stopPropagation()}
+                    />
+                  </TableHead>
+
+                  <TableHead
+                    className="relative cursor-pointer hover:bg-slate-100 transition-colors group"
+                    onClick={() => handleSort('status')}
+                    style={{ width: columnWidths.status }}
+                  >
+                    <div className="flex items-center gap-1 overflow-hidden pr-2">
+                      <span className="truncate">Status</span>
+                      <ArrowUpDown className="h-3 w-3 shrink-0 text-slate-400 group-hover:text-slate-600" />
+                    </div>
+                    <div
+                      className="absolute right-0 top-0 h-full w-[3px] cursor-col-resize bg-slate-200 hover:bg-slate-400 active:bg-slate-600 z-10 transition-colors"
+                      onMouseDown={(e) => onDragStart(e, 'status')}
+                      onClick={(e) => e.stopPropagation()}
+                    />
+                  </TableHead>
+
+                  <TableHead
+                    className="relative cursor-pointer hover:bg-slate-100 transition-colors group"
+                    onClick={() => handleSort('atualizado_em')}
+                    style={{ width: columnWidths.atualizacao }}
+                  >
+                    <div className="flex items-center gap-1 overflow-hidden pr-2">
+                      <span className="truncate whitespace-nowrap">Última Atualização</span>
+                      <ArrowUpDown className="h-3 w-3 shrink-0 text-slate-400 group-hover:text-slate-600" />
+                    </div>
+                    <div
+                      className="absolute right-0 top-0 h-full w-[3px] cursor-col-resize bg-slate-200 hover:bg-slate-400 active:bg-slate-600 z-10 transition-colors"
+                      onMouseDown={(e) => onDragStart(e, 'atualizacao')}
+                      onClick={(e) => e.stopPropagation()}
+                    />
+                  </TableHead>
+
+                  <TableHead className="relative text-right" style={{ width: columnWidths.acoes }}>
+                    <div className="pr-2">Ações</div>
+                  </TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {filteredChamados.map((c) => (
-                  <TableRow key={c.id} className="hover:bg-slate-50/80 transition-colors">
-                    <TableCell>
-                      <span className="font-semibold text-slate-700">{c.pia || '—'}</span>
+                  <TableRow key={c.id} className="hover:bg-slate-50/80 transition-colors h-[60px]">
+                    <TableCell className="align-middle">
+                      <div
+                        className="line-clamp-2 font-semibold text-slate-700"
+                        title={c.pia || ''}
+                      >
+                        {c.pia || '—'}
+                      </div>
                     </TableCell>
-                    <TableCell>
-                      <div className="font-medium text-slate-900 line-clamp-1">{c.titulo}</div>
+                    <TableCell className="align-middle">
+                      <div className="line-clamp-2 font-medium text-slate-900" title={c.titulo}>
+                        {c.titulo}
+                      </div>
                     </TableCell>
-                    <TableCell className="text-sm">
-                      <span className="font-medium text-slate-700">{c.nome_usuario}</span>
+                    <TableCell className="align-middle text-sm">
+                      <div
+                        className="line-clamp-2 font-medium text-slate-700"
+                        title={c.nome_usuario}
+                      >
+                        {c.nome_usuario}
+                      </div>
                     </TableCell>
-                    <TableCell>
+                    <TableCell className="align-middle">
                       <PriorityBadge priority={c.prioridade} />
                     </TableCell>
-                    <TableCell className="text-sm">
-                      <span className="font-medium text-slate-700">{c.nome_responsavel}</span>
+                    <TableCell className="align-middle text-sm">
+                      <div
+                        className="line-clamp-2 font-medium text-slate-700"
+                        title={c.nome_responsavel}
+                      >
+                        {c.nome_responsavel}
+                      </div>
                     </TableCell>
-                    <TableCell>
+                    <TableCell className="align-middle">
                       <Badge
                         variant="outline"
                         className={
@@ -330,25 +505,31 @@ export default function MeusAtendimentos() {
                         {c.status === 'finalizado' ? 'FINALIZADO' : 'EM ATENDIMENTO'}
                       </Badge>
                     </TableCell>
-                    <TableCell className="text-sm text-slate-500 whitespace-nowrap">
+                    <TableCell className="align-middle text-sm text-slate-500 whitespace-nowrap">
                       {formatDate(c.atualizado_em)}
                     </TableCell>
-                    <TableCell className="text-right whitespace-nowrap">
+                    <TableCell className="align-middle text-right whitespace-nowrap">
                       <div className="flex justify-end gap-2">
-                        <Button variant="outline" size="sm" onClick={() => navigateToDetails(c.id)}>
-                          Continuar
-                          <ArrowRight className="ml-2 h-4 w-4" />
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => navigateToDetails(c.id)}
+                          title="Abrir Atendimento"
+                          className="px-2"
+                        >
+                          <ArrowRight className="h-4 w-4" />
                         </Button>
                         {c.responsavel_id === user?.id && c.status !== 'finalizado' && (
                           <Button
                             variant="default"
                             size="sm"
-                            className="bg-green-600 hover:bg-green-700 text-white"
+                            className="bg-green-600 hover:bg-green-700 text-white px-2"
                             onClick={(e) => handleFinalizar(c.id, e)}
                             disabled={completingId === c.id}
+                            title="Finalizar"
                           >
                             <CheckCircle2 className="mr-2 h-4 w-4" />
-                            {completingId === c.id ? 'Finalizando...' : 'Finalizar'}
+                            {completingId === c.id ? '...' : 'Finalizar'}
                           </Button>
                         )}
                       </div>
@@ -404,12 +585,13 @@ export default function MeusAtendimentos() {
                       variant="outline"
                       className="flex-1"
                       onClick={() => navigateToDetails(c.id)}
+                      title="Abrir Atendimento"
                     >
-                      Continuar
+                      <ArrowRight className="h-4 w-4" />
                     </Button>
                     {c.responsavel_id === user?.id && c.status !== 'finalizado' && (
                       <Button
-                        className="flex-1 bg-green-600 hover:bg-green-700"
+                        className="flex-1 bg-green-600 hover:bg-green-700 text-white"
                         onClick={(e) => handleFinalizar(c.id, e)}
                         disabled={completingId === c.id}
                       >

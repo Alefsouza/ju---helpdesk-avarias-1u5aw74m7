@@ -67,21 +67,26 @@ export default function FormularioIdo() {
   const generatePDFDoc = async (data: FormValues) => {
     const doc = new jsPDF()
 
-    let logoBase64 = null
+    let logoBase64: string | null = null
     try {
-      const img = new Image()
-      img.crossOrigin = 'Anonymous'
-      img.src = 'https://img.usecurling.com/p/100/50?q=logo'
-      await new Promise((resolve, reject) => {
-        img.onload = resolve
-        img.onerror = reject
-      })
-      const canvas = document.createElement('canvas')
-      canvas.width = img.width
-      canvas.height = img.height
-      const ctx = canvas.getContext('2d')
-      ctx?.drawImage(img, 0, 0)
-      logoBase64 = canvas.toDataURL('image/png')
+      const res = await fetch(
+        'https://wrnhfpncasqifaisvyaf.supabase.co/storage/v1/object/public/documentos/logo-via-sudeste.png',
+      )
+      if (res.ok) {
+        const resBlob = await res.blob()
+        logoBase64 = await new Promise<string>((resolve, reject) => {
+          const reader = new FileReader()
+          reader.onloadend = () => {
+            let result = reader.result as string
+            if (!result.startsWith('data:image/')) {
+              result = result.replace(/^data:[^;]+;base64,/, 'data:image/png;base64,')
+            }
+            resolve(result)
+          }
+          reader.onerror = reject
+          reader.readAsDataURL(resBlob)
+        })
+      }
     } catch (e) {
       console.error('Failed to load logo', e)
     }
@@ -256,6 +261,21 @@ export default function FormularioIdo() {
       if (rpcError) {
         console.error(rpcError)
         throw new Error('Erro ao registrar documento. Tente novamente')
+      }
+
+      const { error: docError } = await supabase.from('documentos').insert({
+        tipo_documento: 'IDO',
+        nome_arquivo: fileName,
+        arquivo_url: urlData.publicUrl,
+        registro_responsavel: data.colaborador_registro,
+        nome_responsavel: data.colaborador_nome,
+        cargo_responsavel: 'Colaborador',
+        chamado_id: id,
+      })
+
+      if (docError) {
+        console.error(docError)
+        throw new Error('Erro ao registrar documento.')
       }
 
       toast({

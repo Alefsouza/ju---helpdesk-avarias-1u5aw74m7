@@ -81,7 +81,9 @@ export default function FormularioEspelhoDanos() {
 
       let logoBase64: string | null = null
       try {
-        const res = await fetch('https://img.usecurling.com/p/100/50?q=logo')
+        const res = await fetch(
+          'https://wrnhfpncasqifaisvyaf.supabase.co/storage/v1/object/public/documentos/logo-via-sudeste.png',
+        )
         if (res.ok) {
           const blob = await res.blob()
           logoBase64 = await new Promise<string>((resolve, reject) => {
@@ -236,6 +238,21 @@ export default function FormularioEspelhoDanos() {
       })
 
       if (rpcError) throw new Error('Erro ao registrar documento. Tente novamente')
+
+      const { error: docError } = await supabase.from('documentos').insert({
+        tipo_documento: 'Espelho de Danos',
+        nome_arquivo: fileName,
+        arquivo_url: publicUrlData.publicUrl,
+        registro_responsavel: values.registro_vistoriador,
+        nome_responsavel: values.nome_vistoriador,
+        cargo_responsavel: 'Vistoriador',
+        chamado_id: id,
+      })
+
+      if (docError) {
+        console.error(docError)
+        throw new Error('Erro ao registrar documento.')
+      }
 
       toast({ title: 'Sucesso', description: 'Formulário enviado com sucesso' })
       navigate('/espelho-danos/sucesso', {

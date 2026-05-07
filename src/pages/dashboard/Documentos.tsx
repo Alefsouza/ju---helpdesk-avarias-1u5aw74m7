@@ -12,6 +12,7 @@ import {
   Search,
   X,
   Eye,
+  Trash2,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -51,6 +52,7 @@ export default function Documentos() {
   const [registroFiltro, setRegistroFiltro] = useState<string>('todos')
   const [currentPage, setCurrentPage] = useState(1)
   const [highlightedDocId, setHighlightedDocId] = useState<string | null>(null)
+  const [deletingId, setDeletingId] = useState<string | null>(null)
 
   const isAdmin = profile?.tipo_usuario === 'admin'
   const isResponsavel = profile?.tipo_usuario === 'responsavel'
@@ -150,6 +152,23 @@ export default function Documentos() {
     const url = `${window.location.origin}${path}`
     navigator.clipboard.writeText(url)
     toast.success('Link copiado para a área de transferência')
+  }
+
+  const handleDeleteDocument = async (id: string) => {
+    if (!window.confirm('Tem certeza que deseja excluir este documento?')) return
+
+    try {
+      setDeletingId(id)
+      const { error } = await supabase.from('documentos').delete().eq('id', id)
+      if (error) throw error
+      setDocumentos((prev) => prev.filter((d) => d.id !== id))
+      toast.success('Documento excluído com sucesso')
+    } catch (error) {
+      console.error('Erro ao excluir documento:', error)
+      toast.error('Erro ao excluir documento')
+    } finally {
+      setDeletingId(null)
+    }
   }
 
   if (!isAdmin && !isResponsavel) {
@@ -359,7 +378,7 @@ export default function Documentos() {
                           variant="outline"
                           size="sm"
                           className="flex-1"
-                          disabled={!!loadingAction}
+                          disabled={!!loadingAction || deletingId === doc.id}
                           onClick={() =>
                             handleDocumentAction(doc.id, doc.arquivo_url, doc.nome_arquivo, 'view')
                           }
@@ -374,7 +393,7 @@ export default function Documentos() {
                         <Button
                           size="sm"
                           className="flex-1"
-                          disabled={!!loadingAction}
+                          disabled={!!loadingAction || deletingId === doc.id}
                           onClick={() =>
                             handleDocumentAction(
                               doc.id,
@@ -390,6 +409,20 @@ export default function Documentos() {
                             <Download className="w-4 h-4 mr-2" />
                           )}
                           Baixar
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="text-red-500 hover:text-red-600 hover:bg-red-50 shrink-0 px-2"
+                          disabled={!!loadingAction || deletingId === doc.id}
+                          onClick={() => handleDeleteDocument(doc.id)}
+                          title="Excluir documento"
+                        >
+                          {deletingId === doc.id ? (
+                            <Loader2 className="w-4 h-4 animate-spin" />
+                          ) : (
+                            <Trash2 className="w-4 h-4" />
+                          )}
                         </Button>
                       </div>
                     </CardContent>
@@ -445,12 +478,12 @@ export default function Documentos() {
                           })}
                         </TableCell>
                         <TableCell className="text-right whitespace-nowrap">
-                          <div className="flex justify-end gap-2">
+                          <div className="flex justify-end gap-2 items-center">
                             <Button
                               variant="default"
                               size="sm"
                               className="h-8"
-                              disabled={!!loadingAction}
+                              disabled={!!loadingAction || deletingId === doc.id}
                               onClick={() =>
                                 handleDocumentAction(
                                   doc.id,
@@ -467,6 +500,20 @@ export default function Documentos() {
                                 <Download className="w-4 h-4 mr-2" />
                               )}
                               Baixar
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-8 w-8 p-0 text-red-500 hover:text-red-600 hover:bg-red-50"
+                              disabled={!!loadingAction || deletingId === doc.id}
+                              onClick={() => handleDeleteDocument(doc.id)}
+                              title="Excluir documento"
+                            >
+                              {deletingId === doc.id ? (
+                                <Loader2 className="w-4 h-4 animate-spin" />
+                              ) : (
+                                <Trash2 className="w-4 h-4" />
+                              )}
                             </Button>
                           </div>
                         </TableCell>

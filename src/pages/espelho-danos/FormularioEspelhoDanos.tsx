@@ -1,8 +1,10 @@
 import { useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
+import { useRef } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import * as z from 'zod'
+import { Camera, RefreshCcw } from 'lucide-react'
 import { supabase } from '@/lib/supabase/client'
 import { useToast } from '@/hooks/use-toast'
 import { jsPDF } from 'jspdf'
@@ -40,6 +42,7 @@ const formSchema = z.object({
   nome_vistoriador: z.string().min(1, 'Campo obrigatório'),
   registro_motorista: z.string().min(1, 'Campo obrigatório'),
   nome_motorista: z.string().min(1, 'Campo obrigatório'),
+  foto_dano: z.string().min(1, 'Foto obrigatória'),
 })
 
 type FormValues = z.infer<typeof formSchema>
@@ -49,6 +52,7 @@ export default function FormularioEspelhoDanos() {
   const navigate = useNavigate()
   const { toast } = useToast()
   const [loading, setLoading] = useState(false)
+  const fileInputRef = useRef<HTMLInputElement>(null)
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
@@ -64,6 +68,7 @@ export default function FormularioEspelhoDanos() {
       nome_vistoriador: '',
       registro_motorista: '',
       nome_motorista: '',
+      foto_dano: '',
     },
   })
 
@@ -73,11 +78,39 @@ export default function FormularioEspelhoDanos() {
     try {
       const espelhoId = crypto.randomUUID()
 
+      const { foto_dano, ...formValuesToSave } = values
+
       const { error: espelhoError } = await supabase
         .from('formularios_espelho_danos')
-        .insert({ id: espelhoId, chamado_id: id, ...values })
+        .insert({ id: espelhoId, chamado_id: id, ...formValuesToSave })
 
       if (espelhoError) throw new Error('Erro ao salvar os dados do formulário')
+
+      let fotoUrl = null
+      if (values.foto_dano) {
+        const base64Data = values.foto_dano.split(',')[1]
+        const contentType = values.foto_dano.split(';')[0].split(':')[1]
+        const byteCharacters = atob(base64Data)
+        const byteNumbers = new Array(byteCharacters.length)
+        for (let i = 0; i < byteCharacters.length; i++) {
+          byteNumbers[i] = byteCharacters.charCodeAt(i)
+        }
+        const byteArray = new Uint8Array(byteNumbers)
+        const blob = new Blob([byteArray], { type: contentType })
+        const fotoFileName = `${espelhoId}-espelho-danos-foto.jpg`
+
+        const { error: fotoUploadError } = await supabase.storage
+          .from('documentos')
+          .upload(fotoFileName, blob, { contentType, upsert: true })
+
+        if (fotoUploadError) throw new Error('Erro ao salvar a foto. Tente novamente')
+
+        const { data: publicFotoUrlData } = supabase.storage
+          .from('documentos')
+          .getPublicUrl(fotoFileName)
+
+        fotoUrl = publicFotoUrlData.publicUrl
+      }
 
       let logoBase64: string | null = null
       try {
@@ -142,9 +175,8 @@ export default function FormularioEspelhoDanos() {
         addHeader()
         addFooter()
 
-        const renderField = (title: string, value: string) => {
+        const renderField = (title: string, value: string, isImage = false) => {
           doc.setFontSize(10)
-          const lines = doc.splitTextToSize(value || '-', contentWidth)
 
           if (currentY + 10 > pageHeight - 30) {
             doc.addPage()
@@ -162,19 +194,44 @@ export default function FormularioEspelhoDanos() {
           doc.setFont('helvetica', 'normal')
           doc.setTextColor(0, 0, 0)
 
-          for (let i = 0; i < lines.length; i++) {
-            if (currentLineY > pageHeight - 30) {
+          if (isImage && value) {
+            if (currentLineY + 75 > pageHeight - 30) {
               doc.addPage()
               pageNumber++
               addHeader()
               addFooter()
-              currentLineY = currentY
+              currentLineY = 45
+              doc.setFont('helvetica', 'bold')
+              doc.setTextColor(43, 43, 43)
+              doc.text(title + ' (Continuação)', margin, currentLineY)
+              currentLineY += 6
+              doc.setFont('helvetica', 'normal')
+              doc.setTextColor(0, 0, 0)
             }
-            doc.text(lines[i], margin, currentLineY)
-            currentLineY += 4.2
+            try {
+              const imageType = value.startsWith('data:image/png') ? 'PNG' : 'JPEG'
+              doc.addImage(value, imageType, margin, currentLineY, 100, 75)
+              currentLineY += 75
+            } catch (e) {
+              doc.text('[Erro ao renderizar imagem]', margin, currentLineY)
+              currentLineY += 6
+            }
+            currentY = currentLineY + 11
+          } else {
+            const lines = doc.splitTextToSize(value || '-', contentWidth)
+            for (let i = 0; i < lines.length; i++) {
+              if (currentLineY > pageHeight - 30) {
+                doc.addPage()
+                pageNumber++
+                addHeader()
+                addFooter()
+                currentLineY = 45
+              }
+              doc.text(lines[i], margin, currentLineY)
+              currentLineY += 4.2
+            }
+            currentY = currentLineY - 4.2 + 11
           }
-
-          currentY = currentLineY - 4.2 + 11
         }
 
         let dataFormatada = 'Data é obrigatória'
@@ -194,6 +251,7 @@ export default function FormularioEspelhoDanos() {
         renderField('Ocorrência', values.ocorrencia)
         renderField('Linha', values.linha)
         renderField('Descrição dos Danos', values.descricao_danos)
+        renderField('Foto do Dano', values.foto_dano, true)
         renderField('Registro do Vistoriador', values.registro_vistoriador)
         renderField('Nome do Vistoriador', values.nome_vistoriador)
         renderField('Registro do Motorista', values.registro_motorista)
@@ -248,6 +306,7 @@ export default function FormularioEspelhoDanos() {
         registro_motorista: values.registro_motorista,
         numero_os: values.numero_os,
         chamado_id: id,
+        foto_url: fotoUrl,
       } as any)
 
       if (docError) {
@@ -393,6 +452,66 @@ export default function FormularioEspelhoDanos() {
                     <FormLabel>Descrição dos Danos *</FormLabel>
                     <FormControl>
                       <Textarea placeholder="Descreva os danos encontrados" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="foto_dano"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Foto do Dano *</FormLabel>
+                    <FormControl>
+                      <div className="space-y-4">
+                        <input
+                          type="file"
+                          accept="image/*"
+                          capture="environment"
+                          className="hidden"
+                          ref={fileInputRef}
+                          onChange={(e) => {
+                            const file = e.target.files?.[0]
+                            if (file) {
+                              const reader = new FileReader()
+                              reader.onloadend = () => {
+                                field.onChange(reader.result as string)
+                              }
+                              reader.readAsDataURL(file)
+                            }
+                          }}
+                        />
+                        {!field.value ? (
+                          <Button
+                            type="button"
+                            variant="outline"
+                            className="w-full h-32 flex flex-col items-center justify-center border-dashed"
+                            onClick={() => fileInputRef.current?.click()}
+                          >
+                            <Camera className="w-8 h-8 mb-2 text-muted-foreground" />
+                            <span>Tirar Foto</span>
+                          </Button>
+                        ) : (
+                          <div className="relative rounded-md overflow-hidden border bg-black/5 flex items-center justify-center p-2">
+                            <img
+                              src={field.value}
+                              alt="Preview"
+                              className="max-w-full max-h-[300px] object-contain rounded-sm"
+                            />
+                            <Button
+                              type="button"
+                              variant="secondary"
+                              size="sm"
+                              className="absolute bottom-4 right-4 shadow-sm"
+                              onClick={() => fileInputRef.current?.click()}
+                            >
+                              <RefreshCcw className="w-4 h-4 mr-2" />
+                              Retomar Foto
+                            </Button>
+                          </div>
+                        )}
+                      </div>
                     </FormControl>
                     <FormMessage />
                   </FormItem>

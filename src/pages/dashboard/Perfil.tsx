@@ -26,6 +26,14 @@ import {
   CardFooter,
 } from '@/components/ui/card'
 import { Loader2, User, Trash2, Upload } from 'lucide-react'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
 
 const formSchema = z.object({
   nome_completo: z.string().min(1, 'Nome completo é obrigatório'),
@@ -35,8 +43,26 @@ const formSchema = z.object({
 
 type FormValues = z.infer<typeof formSchema>
 
+const passwordSchema = z
+  .object({
+    senha_atual: z.string().min(1, 'Senha atual é obrigatória'),
+    nova_senha: z
+      .string()
+      .min(8, 'Mínimo de 8 caracteres')
+      .regex(/[A-Z]/, 'Deve conter pelo menos uma letra maiúscula')
+      .regex(/[0-9]/, 'Deve conter pelo menos um número')
+      .regex(/[^a-zA-Z0-9]/, 'Deve conter pelo menos um caractere especial'),
+    confirmar_senha: z.string(),
+  })
+  .refine((data) => data.nova_senha === data.confirmar_senha, {
+    message: 'As senhas não coincidem',
+    path: ['confirmar_senha'],
+  })
+
+type PasswordValues = z.infer<typeof passwordSchema>
+
 export default function Perfil() {
-  const { user, refreshProfile } = useAuth()
+  const { user, refreshProfile, signOut } = useAuth()
   const navigate = useNavigate()
   const { toast } = useToast()
   const [loading, setLoading] = useState(true)
@@ -47,6 +73,9 @@ export default function Perfil() {
   const [uploading, setUploading] = useState(false)
   const [fotoUrl, setFotoUrl] = useState<string | null>(null)
 
+  const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false)
+  const [changingPassword, setChangingPassword] = useState(false)
+
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -55,6 +84,63 @@ export default function Perfil() {
       endereco: '',
     },
   })
+
+  const passwordForm = useForm<PasswordValues>({
+    resolver: zodResolver(passwordSchema),
+    defaultValues: {
+      senha_atual: '',
+      nova_senha: '',
+      confirmar_senha: '',
+    },
+  })
+
+  useEffect(() => {
+    if (!isPasswordModalOpen) {
+      passwordForm.reset()
+    }
+  }, [isPasswordModalOpen, passwordForm])
+
+  const onPasswordSubmit = async (values: PasswordValues) => {
+    if (!email) return
+
+    setChangingPassword(true)
+    try {
+      const { error: signInError } = await supabase.auth.signInWithPassword({
+        email: email,
+        password: values.senha_atual,
+      })
+
+      if (signInError) {
+        passwordForm.setError('senha_atual', { message: 'Senha atual incorreta' })
+        setChangingPassword(false)
+        return
+      }
+
+      const { error: updateError } = await supabase.auth.updateUser({
+        password: values.nova_senha,
+      })
+
+      if (updateError) throw updateError
+
+      toast({
+        title: 'Sucesso',
+        description: 'Senha alterada com sucesso. Faça login novamente.',
+      })
+
+      setIsPasswordModalOpen(false)
+      await signOut()
+      navigate('/cadastro')
+    } catch (error) {
+      console.error('Erro ao alterar senha:', error)
+      toast({
+        title: 'Erro',
+        description: 'Ocorreu um erro ao alterar a senha. Tente novamente.',
+        variant: 'destructive',
+      })
+    } finally {
+      setChangingPassword(false)
+    }
+  }
 
   useEffect(() => {
     async function loadProfile() {
@@ -397,6 +483,88 @@ export default function Perfil() {
           </form>
         </Form>
       </Card>
+
+      <Card className="mt-6">
+        <CardHeader>
+          <CardTitle>Segurança</CardTitle>
+          <CardDescription>Gerencie a segurança da sua conta.</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Button variant="outline" onClick={() => setIsPasswordModalOpen(true)}>
+            Alterar Senha
+          </Button>
+        </CardContent>
+      </Card>
+
+      <Dialog open={isPasswordModalOpen} onOpenChange={setIsPasswordModalOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Alterar Senha</DialogTitle>
+            <DialogDescription>
+              Defina uma nova senha para sua conta. Você será desconectado após a alteração.
+            </DialogDescription>
+          </DialogHeader>
+          <Form {...passwordForm}>
+            <form onSubmit={passwordForm.handleSubmit(onPasswordSubmit)}>
+              <div className="space-y-4 py-4">
+                <FormField
+                  control={passwordForm.control}
+                  name="senha_atual"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Senha Atual *</FormLabel>
+                      <FormControl>
+                        <Input type="password" placeholder="Sua senha atual" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={passwordForm.control}
+                  name="nova_senha"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Nova Senha *</FormLabel>
+                      <FormControl>
+                        <Input type="password" placeholder="Mínimo 8 caracteres" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={passwordForm.control}
+                  name="confirmar_senha"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Confirmar Nova Senha *</FormLabel>
+                      <FormControl>
+                        <Input type="password" placeholder="Repita a nova senha" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+              <DialogFooter>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setIsPasswordModalOpen(false)}
+                  disabled={changingPassword}
+                >
+                  Cancelar
+                </Button>
+                <Button type="submit" disabled={changingPassword}>
+                  {changingPassword && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                  Salvar
+                </Button>
+              </DialogFooter>
+            </form>
+          </Form>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

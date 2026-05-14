@@ -59,12 +59,14 @@ const priorityColors: Record<string, string> = {
   baixa: 'bg-slate-100 text-slate-800 border-transparent',
   media: 'bg-orange-100 text-orange-800 border-transparent',
   alta: 'bg-red-100 text-red-800 border-transparent',
+  urgente: 'bg-red-600 text-white border-red-700',
 }
 
 const priorityLabels: Record<string, string> = {
   baixa: 'Baixa',
   media: 'Média',
   alta: 'Alta',
+  urgente: 'Urgente',
 }
 
 const formatDate = (dateString: string) => {
@@ -125,7 +127,11 @@ export default function MeusChamados() {
         query = query.eq('status', statusFilter)
       }
       if (priorityFilter !== 'todas') {
-        query = query.eq('prioridade', priorityFilter)
+        if (priorityFilter === 'nao_definida') {
+          query = query.is('prioridade', null)
+        } else {
+          query = query.eq('prioridade', priorityFilter)
+        }
       }
       if (debouncedSearch) {
         const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(
@@ -267,9 +273,11 @@ export default function MeusChamados() {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="todas">Todas as Prioridades</SelectItem>
-              <SelectItem value="baixa">Baixa</SelectItem>
-              <SelectItem value="media">Média</SelectItem>
+              <SelectItem value="urgente">Urgente</SelectItem>
               <SelectItem value="alta">Alta</SelectItem>
+              <SelectItem value="media">Média</SelectItem>
+              <SelectItem value="baixa">Baixa</SelectItem>
+              <SelectItem value="nao_definida">Não Definida</SelectItem>
             </SelectContent>
           </Select>
         </div>
@@ -351,8 +359,15 @@ export default function MeusChamados() {
                       </Badge>
                     </TableCell>
                     <TableCell>
-                      <Badge variant="outline" className={priorityColors[c.prioridade] || ''}>
-                        {priorityLabels[c.prioridade] || c.prioridade}
+                      <Badge
+                        variant="outline"
+                        className={
+                          priorityColors[c.prioridade] ||
+                          'bg-slate-100 text-slate-500 border-slate-200'
+                        }
+                      >
+                        {priorityLabels[c.prioridade] ||
+                          (c.prioridade ? c.prioridade.toUpperCase() : 'NÃO DEFINIDA')}
                       </Badge>
                     </TableCell>
                     <TableCell className="text-muted-foreground text-sm">
@@ -409,8 +424,15 @@ export default function MeusChamados() {
                         RA: {c.pia}
                       </Badge>
                     )}
-                    <Badge variant="outline" className={priorityColors[c.prioridade] || ''}>
-                      {priorityLabels[c.prioridade] || c.prioridade}
+                    <Badge
+                      variant="outline"
+                      className={
+                        priorityColors[c.prioridade] ||
+                        'bg-slate-100 text-slate-500 border-slate-200'
+                      }
+                    >
+                      {priorityLabels[c.prioridade] ||
+                        (c.prioridade ? c.prioridade.toUpperCase() : 'NÃO DEFINIDA')}
                     </Badge>
                   </div>
 

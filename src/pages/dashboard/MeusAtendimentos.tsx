@@ -228,11 +228,18 @@ export default function MeusAtendimentos() {
     })
   }
 
-  const PriorityBadge = ({ priority }: { priority: string }) => {
+  const PriorityBadge = ({ priority }: { priority: string | null }) => {
+    if (!priority)
+      return (
+        <Badge variant="outline" className="bg-slate-100 text-slate-500 border-slate-200">
+          NÃO DEFINIDA
+        </Badge>
+      )
     const colors: Record<string, string> = {
       alta: 'bg-red-100 text-red-800 border-red-200',
       media: 'bg-orange-100 text-orange-800 border-orange-200',
       baixa: 'bg-slate-100 text-slate-800 border-slate-200',
+      urgente: 'bg-red-600 text-white border-red-700',
     }
     return (
       <Badge variant="outline" className={colors[priority] || ''}>

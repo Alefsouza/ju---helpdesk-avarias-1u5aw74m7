@@ -119,7 +119,7 @@ export type Database = {
           descricao: string
           id: string
           pia: string | null
-          prioridade: string
+          prioridade: string | null
           responsavel_id: string | null
           status: string
           titulo: string
@@ -131,7 +131,7 @@ export type Database = {
           descricao: string
           id?: string
           pia?: string | null
-          prioridade?: string
+          prioridade?: string | null
           responsavel_id?: string | null
           status?: string
           titulo: string
@@ -143,7 +143,7 @@ export type Database = {
           descricao?: string
           id?: string
           pia?: string | null
-          prioridade?: string
+          prioridade?: string | null
           responsavel_id?: string | null
           status?: string
           titulo?: string
@@ -640,7 +640,7 @@ export const Constants = {
 //   usuario_id: uuid (not null)
 //   titulo: text (not null)
 //   descricao: text (not null)
-//   prioridade: text (not null, default: 'media'::text)
+//   prioridade: text (nullable)
 //   status: text (not null, default: 'aberto'::text)
 //   responsavel_id: uuid (nullable)
 //   criado_em: timestamp with time zone (not null, default: now())
@@ -735,7 +735,7 @@ export const Constants = {
 //   FOREIGN KEY auditoria_admin_usuario_id_fkey: FOREIGN KEY (usuario_id) REFERENCES auth.users(id) ON DELETE CASCADE
 // Table: chamados
 //   PRIMARY KEY chamados_pkey: PRIMARY KEY (id)
-//   CHECK chamados_prioridade_check: CHECK ((prioridade = ANY (ARRAY['baixa'::text, 'media'::text, 'alta'::text])))
+//   CHECK chamados_prioridade_check: CHECK (((prioridade IS NULL) OR (prioridade = ANY (ARRAY['baixa'::text, 'media'::text, 'alta'::text, 'urgente'::text]))))
 //   FOREIGN KEY chamados_responsavel_id_fkey: FOREIGN KEY (responsavel_id) REFERENCES auth.users(id) ON DELETE SET NULL
 //   CHECK chamados_status_check: CHECK ((status = ANY (ARRAY['aberto'::text, 'em_atendimento'::text, 'finalizado'::text])))
 //   FOREIGN KEY chamados_usuario_id_fkey: FOREIGN KEY (usuario_id) REFERENCES auth.users(id) ON DELETE CASCADE

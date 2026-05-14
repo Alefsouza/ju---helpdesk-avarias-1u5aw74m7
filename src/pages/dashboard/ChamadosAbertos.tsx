@@ -151,11 +151,18 @@ export default function ChamadosAbertos() {
     })
   }
 
-  const PriorityBadge = ({ priority }: { priority: string }) => {
+  const PriorityBadge = ({ priority }: { priority: string | null }) => {
+    if (!priority)
+      return (
+        <Badge variant="outline" className="bg-slate-100 text-slate-500 border-slate-200">
+          NÃO DEFINIDA
+        </Badge>
+      )
     const colors: Record<string, string> = {
       alta: 'bg-red-100 text-red-800 border-red-200',
       media: 'bg-orange-100 text-orange-800 border-orange-200',
       baixa: 'bg-slate-100 text-slate-800 border-slate-200',
+      urgente: 'bg-red-600 text-white border-red-700',
     }
     return (
       <Badge variant="outline" className={colors[priority] || ''}>
@@ -171,13 +178,18 @@ export default function ChamadosAbertos() {
         c.titulo.toLowerCase().includes(term) ||
         c.id.toLowerCase().includes(term) ||
         (c.pia && c.pia.toLowerCase().includes(term))
-      const matchesPriority = filterPriority === 'todas' || c.prioridade === filterPriority
+      const matchesPriority =
+        filterPriority === 'todas' ||
+        c.prioridade === filterPriority ||
+        (filterPriority === 'nao_definida' && !c.prioridade)
       const matchesDate = !filterDate || c.criado_em.startsWith(filterDate)
       return matchesSearch && matchesPriority && matchesDate
     })
     .sort((a, b) => {
-      const p: Record<string, number> = { alta: 3, media: 2, baixa: 1 }
-      if (p[a.prioridade] !== p[b.prioridade]) return p[b.prioridade] - p[a.prioridade]
+      const p: Record<string, number> = { urgente: 4, alta: 3, media: 2, baixa: 1 }
+      const aP = p[a.prioridade] || 0
+      const bP = p[b.prioridade] || 0
+      if (aP !== bP) return bP - aP
       return new Date(a.criado_em).getTime() - new Date(b.criado_em).getTime()
     })
 
@@ -213,9 +225,11 @@ export default function ChamadosAbertos() {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="todas">Todas</SelectItem>
+              <SelectItem value="urgente">Urgente</SelectItem>
               <SelectItem value="alta">Alta</SelectItem>
               <SelectItem value="media">Média</SelectItem>
               <SelectItem value="baixa">Baixa</SelectItem>
+              <SelectItem value="nao_definida">Não Definida</SelectItem>
             </SelectContent>
           </Select>
         </div>

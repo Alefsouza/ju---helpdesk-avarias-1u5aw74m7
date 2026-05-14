@@ -56,15 +56,6 @@ const processImage = (file: File): Promise<string> => {
         let width = img.width
         let height = img.height
 
-        const MAX_SIZE = 1200
-        if (width > height && width > MAX_SIZE) {
-          height = Math.round((height * MAX_SIZE) / width)
-          width = MAX_SIZE
-        } else if (height > width && height > MAX_SIZE) {
-          width = Math.round((width * MAX_SIZE) / height)
-          height = MAX_SIZE
-        }
-
         canvas.width = width
         canvas.height = height
         const ctx = canvas.getContext('2d')
@@ -293,7 +284,23 @@ export default function FormularioEspelhoDanosFixo() {
 
             try {
               const imageType = foto.startsWith('data:image/png') ? 'PNG' : 'JPEG'
-              doc.addImage(foto, imageType, xPos, photosStartY, photoWidth, photoHeight)
+              const props = doc.getImageProperties(foto)
+              const imgRatio = props.width / props.height
+              const boxRatio = photoWidth / photoHeight
+
+              let finalWidth = photoWidth
+              let finalHeight = photoHeight
+
+              if (imgRatio > boxRatio) {
+                finalHeight = photoWidth / imgRatio
+              } else {
+                finalWidth = photoHeight * imgRatio
+              }
+
+              const xOffset = xPos + (photoWidth - finalWidth) / 2
+              const yOffset = photosStartY + (photoHeight - finalHeight) / 2
+
+              doc.addImage(foto, imageType, xOffset, yOffset, finalWidth, finalHeight)
             } catch (e) {
               doc.setFontSize(10)
               doc.setFont('helvetica', 'normal')

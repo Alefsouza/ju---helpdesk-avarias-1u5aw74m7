@@ -158,6 +158,7 @@ export type Database = {
           chamado_id: string | null
           criado_em: string
           foto_url: string | null
+          fotos_urls: Json | null
           id: string
           nome_arquivo: string
           nome_responsavel: string | null
@@ -172,6 +173,7 @@ export type Database = {
           chamado_id?: string | null
           criado_em?: string
           foto_url?: string | null
+          fotos_urls?: Json | null
           id?: string
           nome_arquivo: string
           nome_responsavel?: string | null
@@ -186,6 +188,7 @@ export type Database = {
           chamado_id?: string | null
           criado_em?: string
           foto_url?: string | null
+          fotos_urls?: Json | null
           id?: string
           nome_arquivo?: string
           nome_responsavel?: string | null
@@ -662,6 +665,7 @@ export const Constants = {
 //   registro_motorista: text (nullable)
 //   numero_os: text (nullable)
 //   foto_url: text (nullable)
+//   fotos_urls: jsonb (nullable, default: '[]'::jsonb)
 // Table: formularios_espelho_danos
 //   id: uuid (not null, default: gen_random_uuid())
 //   chamado_id: uuid (not null)

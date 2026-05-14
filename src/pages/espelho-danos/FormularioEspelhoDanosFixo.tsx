@@ -46,6 +46,41 @@ const formSchema = z.object({
 
 type FormValues = z.infer<typeof formSchema>
 
+const processImage = (file: File): Promise<string> => {
+  return new Promise((resolve) => {
+    const reader = new FileReader()
+    reader.onload = (e) => {
+      const img = new Image()
+      img.onload = () => {
+        const canvas = document.createElement('canvas')
+        let width = img.width
+        let height = img.height
+
+        const MAX_SIZE = 1200
+        if (width > height && width > MAX_SIZE) {
+          height = Math.round((height * MAX_SIZE) / width)
+          width = MAX_SIZE
+        } else if (height > width && height > MAX_SIZE) {
+          width = Math.round((width * MAX_SIZE) / height)
+          height = MAX_SIZE
+        }
+
+        canvas.width = width
+        canvas.height = height
+        const ctx = canvas.getContext('2d')
+        if (ctx) {
+          ctx.drawImage(img, 0, 0, width, height)
+          resolve(canvas.toDataURL('image/jpeg', 0.8))
+        } else {
+          resolve(e.target?.result as string)
+        }
+      }
+      img.src = e.target?.result as string
+    }
+    reader.readAsDataURL(file)
+  })
+}
+
 export default function FormularioEspelhoDanosFixo() {
   const navigate = useNavigate()
   const { toast } = useToast()
@@ -482,15 +517,12 @@ export default function FormularioEspelhoDanosFixo() {
                           capture="environment"
                           className="hidden"
                           ref={fileInputRef}
-                          onChange={(e) => {
+                          onChange={async (e) => {
                             const file = e.target.files?.[0]
                             if (file) {
-                              const reader = new FileReader()
-                              reader.onloadend = () => {
-                                const newFotos = [...field.value, reader.result as string]
-                                field.onChange(newFotos)
-                              }
-                              reader.readAsDataURL(file)
+                              const processedBase64 = await processImage(file)
+                              const newFotos = [...field.value, processedBase64]
+                              field.onChange(newFotos)
                             }
                             if (fileInputRef.current) fileInputRef.current.value = ''
                           }}

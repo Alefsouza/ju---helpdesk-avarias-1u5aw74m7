@@ -157,6 +157,7 @@ export type Database = {
           atualizado_em: string
           chamado_id: string | null
           criado_em: string
+          foto_url: string | null
           id: string
           nome_arquivo: string
           nome_responsavel: string | null
@@ -170,6 +171,7 @@ export type Database = {
           atualizado_em?: string
           chamado_id?: string | null
           criado_em?: string
+          foto_url?: string | null
           id?: string
           nome_arquivo: string
           nome_responsavel?: string | null
@@ -183,6 +185,7 @@ export type Database = {
           atualizado_em?: string
           chamado_id?: string | null
           criado_em?: string
+          foto_url?: string | null
           id?: string
           nome_arquivo?: string
           nome_responsavel?: string | null
@@ -658,6 +661,7 @@ export const Constants = {
 //   atualizado_em: timestamp with time zone (not null, default: now())
 //   registro_motorista: text (nullable)
 //   numero_os: text (nullable)
+//   foto_url: text (nullable)
 // Table: formularios_espelho_danos
 //   id: uuid (not null, default: gen_random_uuid())
 //   chamado_id: uuid (not null)

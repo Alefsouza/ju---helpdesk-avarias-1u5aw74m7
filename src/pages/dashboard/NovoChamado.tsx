@@ -55,7 +55,6 @@ export default function NovoChamado() {
 
   const [titulo, setTitulo] = useState('')
   const [descricao, setDescricao] = useState('')
-  const [prioridade, setPrioridade] = useState('media')
 
   const [files, setFiles] = useState<FileItem[]>([])
   const [isDragActive, setIsDragActive] = useState(false)
@@ -240,7 +239,7 @@ export default function NovoChamado() {
         .insert({
           titulo,
           descricao,
-          prioridade,
+          prioridade: 'media',
           usuario_id: user.id,
           responsavel_id: null,
           status: 'aberto',
@@ -304,22 +303,6 @@ export default function NovoChamado() {
                   onChange={(e) => setTitulo(e.target.value)}
                   required
                 />
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="prioridade">Prioridade *</Label>
-                  <Select value={prioridade} onValueChange={setPrioridade}>
-                    <SelectTrigger id="prioridade">
-                      <SelectValue placeholder="Selecione" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="baixa">Baixa</SelectItem>
-                      <SelectItem value="media">Média</SelectItem>
-                      <SelectItem value="alta">Alta</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
               </div>
 
               <div className="space-y-2">

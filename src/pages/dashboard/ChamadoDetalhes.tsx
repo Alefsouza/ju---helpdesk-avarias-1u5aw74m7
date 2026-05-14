@@ -144,6 +144,8 @@ export default function ChamadoDetalhes() {
 
   const [pia, setPia] = useState('')
   const [savingPia, setSavingPia] = useState(false)
+  const [prioridade, setPrioridade] = useState('')
+  const [savingPrioridade, setSavingPrioridade] = useState(false)
 
   const [files, setFiles] = useState<FileItem[]>([])
   const [isDragActive, setIsDragActive] = useState(false)
@@ -175,6 +177,7 @@ export default function ChamadoDetalhes() {
     }
     setChamado(chamadoData)
     setPia(chamadoData.pia || '')
+    setPrioridade(chamadoData.prioridade || 'media')
 
     const { data: solicitanteData } = await supabase
       .from('perfil_usuario')
@@ -395,6 +398,9 @@ export default function ChamadoDetalhes() {
           setChamado(payload.new as any)
           if (payload.new.pia !== undefined) {
             setPia(payload.new.pia || '')
+          }
+          if (payload.new.prioridade !== undefined) {
+            setPrioridade(payload.new.prioridade || 'media')
           }
         },
       )
@@ -860,6 +866,30 @@ export default function ChamadoDetalhes() {
     toast.success(files.length > 0 ? 'Resposta enviada com anexos' : 'Resposta enviada')
   }
 
+  const handleSalvarPrioridade = async (novaPrioridade: string) => {
+    const isSupportUser =
+      currentUserProfile?.tipo_usuario === 'responsavel' ||
+      currentUserProfile?.tipo_usuario === 'admin'
+
+    if (!isSupportUser) return
+
+    setSavingPrioridade(true)
+    setPrioridade(novaPrioridade)
+    setChamado((prev: any) => (prev ? { ...prev, prioridade: novaPrioridade } : prev))
+
+    const { error } = await supabase
+      .from('chamados')
+      .update({ prioridade: novaPrioridade, atualizado_em: new Date().toISOString() })
+      .eq('id', id as string)
+
+    setSavingPrioridade(false)
+    if (error) {
+      toast.error('Erro ao atualizar Prioridade. Tente novamente')
+    } else {
+      toast.success('Prioridade atualizada com sucesso')
+    }
+  }
+
   const handleSalvarPia = async () => {
     const isSupportUser =
       currentUserProfile?.tipo_usuario === 'responsavel' ||
@@ -873,6 +903,7 @@ export default function ChamadoDetalhes() {
     }
 
     setSavingPia(true)
+    setChamado((prev: any) => (prev ? { ...prev, pia } : prev))
     const { error } = await supabase
       .from('chamados')
       .update({ pia })
@@ -1176,38 +1207,71 @@ export default function ChamadoDetalhes() {
 
         {(isSupport || (chamado.pia && chamado.pia.trim() !== '')) && (
           <div className="pt-4 border-t">
-            <div className="border-2 border-green-700 bg-[rgba(200,230,201,0.1)] rounded-xl shadow-sm p-4 sm:p-6 space-y-4">
-              <div className="flex items-center gap-2 mb-2">
-                <AlertCircle className="h-5 w-5 text-green-800" />
-                <h3 className="text-base font-bold text-green-800 uppercase tracking-wider">
-                  R.A.
-                </h3>
-              </div>
-              <Input
-                type="text"
-                placeholder="Informe o número de R.A."
-                value={pia}
-                onChange={(e) => setPia(e.target.value)}
-                className={cn(
-                  'bg-white border-green-300 focus-visible:ring-green-700',
-                  !canEditRA && 'opacity-70 disabled:cursor-default',
-                )}
-                disabled={savingPia || !canEditRA}
-              />
-              {canEditRA && (
-                <div className="flex justify-end">
-                  <Button
-                    onClick={handleSalvarPia}
-                    disabled={savingPia}
-                    className="bg-green-700 hover:bg-green-800 text-white"
-                  >
-                    {savingPia ? (
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    ) : (
-                      <CheckCircle2 className="mr-2 h-4 w-4" />
+            <div
+              className={cn('grid gap-4', isSupport ? 'grid-cols-1 md:grid-cols-2' : 'grid-cols-1')}
+            >
+              <div className="border-2 border-green-700 bg-[rgba(200,230,201,0.1)] rounded-xl shadow-sm p-4 sm:p-6 space-y-4 flex flex-col justify-between">
+                <div>
+                  <div className="flex items-center gap-2 mb-2">
+                    <AlertCircle className="h-5 w-5 text-green-800" />
+                    <h3 className="text-base font-bold text-green-800 uppercase tracking-wider">
+                      R.A.
+                    </h3>
+                  </div>
+                  <Input
+                    type="text"
+                    placeholder="Informe o número de R.A."
+                    value={pia}
+                    onChange={(e) => setPia(e.target.value)}
+                    className={cn(
+                      'bg-white border-green-300 focus-visible:ring-green-700',
+                      !canEditRA && 'opacity-70 disabled:cursor-default',
                     )}
-                    {savingPia ? 'Salvando...' : 'Salvar R.A.'}
-                  </Button>
+                    disabled={savingPia || !canEditRA}
+                  />
+                </div>
+                {canEditRA && (
+                  <div className="flex justify-end mt-4">
+                    <Button
+                      onClick={handleSalvarPia}
+                      disabled={savingPia}
+                      className="bg-green-700 hover:bg-green-800 text-white w-full sm:w-auto"
+                    >
+                      {savingPia ? (
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      ) : (
+                        <CheckCircle2 className="mr-2 h-4 w-4" />
+                      )}
+                      {savingPia ? 'Salvando...' : 'Salvar R.A.'}
+                    </Button>
+                  </div>
+                )}
+              </div>
+
+              {isSupport && (
+                <div className="border-2 border-orange-200 bg-orange-50/30 rounded-xl shadow-sm p-4 sm:p-6 space-y-4 flex flex-col justify-between">
+                  <div>
+                    <div className="flex items-center gap-2 mb-2">
+                      <AlertCircle className="h-5 w-5 text-orange-800" />
+                      <h3 className="text-base font-bold text-orange-800 uppercase tracking-wider">
+                        Prioridade
+                      </h3>
+                    </div>
+                    <Select
+                      value={prioridade}
+                      onValueChange={handleSalvarPrioridade}
+                      disabled={savingPrioridade || chamado.status === 'finalizado'}
+                    >
+                      <SelectTrigger className="bg-white border-orange-200 focus:ring-orange-500">
+                        <SelectValue placeholder="Selecione a prioridade" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="baixa">Baixa</SelectItem>
+                        <SelectItem value="media">Média</SelectItem>
+                        <SelectItem value="alta">Alta</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
                 </div>
               )}
             </div>

@@ -239,7 +239,7 @@ export default function NovoChamado() {
         .insert({
           titulo,
           descricao,
-          prioridade: 'media',
+          prioridade: null,
           usuario_id: user.id,
           responsavel_id: null,
           status: 'aberto',

@@ -105,11 +105,13 @@ const prioridadeColors: Record<string, string> = {
   baixa: 'bg-slate-100 text-slate-800 border-slate-200',
   media: 'bg-orange-100 text-orange-800 border-orange-200',
   alta: 'bg-red-100 text-red-800 border-red-200',
+  urgente: 'bg-red-600 text-white border-red-700',
 }
 const prioridadeLabels: Record<string, string> = {
   baixa: 'Baixa',
   media: 'Média',
   alta: 'Alta',
+  urgente: 'Urgente',
 }
 
 const MAX_FILES = 10
@@ -177,7 +179,7 @@ export default function ChamadoDetalhes() {
     }
     setChamado(chamadoData)
     setPia(chamadoData.pia || '')
-    setPrioridade(chamadoData.prioridade || 'media')
+    setPrioridade(chamadoData.prioridade || '')
 
     const { data: solicitanteData } = await supabase
       .from('perfil_usuario')
@@ -400,7 +402,7 @@ export default function ChamadoDetalhes() {
             setPia(payload.new.pia || '')
           }
           if (payload.new.prioridade !== undefined) {
-            setPrioridade(payload.new.prioridade || 'media')
+            setPrioridade(payload.new.prioridade || '')
           }
         },
       )
@@ -1163,15 +1165,17 @@ export default function ChamadoDetalhes() {
               >
                 {statusLabels[chamado.status]}
               </Badge>
-              <Badge
-                variant="outline"
-                className={cn(
-                  'px-2.5 py-0.5 uppercase text-[10px] font-bold tracking-wider',
-                  prioridadeColors[chamado.prioridade],
-                )}
-              >
-                {prioridadeLabels[chamado.prioridade]}
-              </Badge>
+              {chamado.prioridade && prioridadeLabels[chamado.prioridade] && (
+                <Badge
+                  variant="outline"
+                  className={cn(
+                    'px-2.5 py-0.5 uppercase text-[10px] font-bold tracking-wider',
+                    prioridadeColors[chamado.prioridade],
+                  )}
+                >
+                  {prioridadeLabels[chamado.prioridade]}
+                </Badge>
+              )}
             </div>
             <h1 className="text-2xl font-bold text-slate-900">{chamado.titulo}</h1>
           </div>
@@ -1207,9 +1211,37 @@ export default function ChamadoDetalhes() {
 
         {(isSupport || (chamado.pia && chamado.pia.trim() !== '')) && (
           <div className="pt-4 border-t">
-            <div
-              className={cn('grid gap-4', isSupport ? 'grid-cols-1 md:grid-cols-2' : 'grid-cols-1')}
-            >
+            <div className="flex flex-col gap-4">
+              {isSupport && (
+                <div className="border border-orange-200 bg-orange-50/40 rounded-lg p-3 sm:p-4">
+                  <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+                    <div className="flex items-center gap-1.5 shrink-0 sm:w-32">
+                      <AlertCircle className="h-4 w-4 text-orange-700" />
+                      <h3 className="text-sm font-semibold text-orange-800 uppercase tracking-wider">
+                        Prioridade
+                      </h3>
+                    </div>
+                    <div className="w-full sm:max-w-xs">
+                      <Select
+                        value={prioridade || undefined}
+                        onValueChange={handleSalvarPrioridade}
+                        disabled={savingPrioridade || chamado.status === 'finalizado'}
+                      >
+                        <SelectTrigger className="bg-white border-orange-200 focus:ring-orange-400 h-9 text-sm">
+                          <SelectValue placeholder="Selecione uma prioridade" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="baixa">Baixa</SelectItem>
+                          <SelectItem value="media">Média</SelectItem>
+                          <SelectItem value="alta">Alta</SelectItem>
+                          <SelectItem value="urgente">Urgente</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                </div>
+              )}
+
               <div className="border-2 border-green-700 bg-[rgba(200,230,201,0.1)] rounded-xl shadow-sm p-4 sm:p-6 space-y-4 flex flex-col justify-between">
                 <div>
                   <div className="flex items-center gap-2 mb-2">
@@ -1247,33 +1279,6 @@ export default function ChamadoDetalhes() {
                   </div>
                 )}
               </div>
-
-              {isSupport && (
-                <div className="border-2 border-orange-200 bg-orange-50/30 rounded-xl shadow-sm p-4 sm:p-6 space-y-4 flex flex-col justify-between">
-                  <div>
-                    <div className="flex items-center gap-2 mb-2">
-                      <AlertCircle className="h-5 w-5 text-orange-800" />
-                      <h3 className="text-base font-bold text-orange-800 uppercase tracking-wider">
-                        Prioridade
-                      </h3>
-                    </div>
-                    <Select
-                      value={prioridade}
-                      onValueChange={handleSalvarPrioridade}
-                      disabled={savingPrioridade || chamado.status === 'finalizado'}
-                    >
-                      <SelectTrigger className="bg-white border-orange-200 focus:ring-orange-500">
-                        <SelectValue placeholder="Selecione a prioridade" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="baixa">Baixa</SelectItem>
-                        <SelectItem value="media">Média</SelectItem>
-                        <SelectItem value="alta">Alta</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-              )}
             </div>
           </div>
         )}

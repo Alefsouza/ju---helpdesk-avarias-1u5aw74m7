@@ -82,6 +82,7 @@ export function DashboardTable({
     baixa: 'bg-[#404040] text-white hover:bg-[#404040]/90 border-transparent',
     media: 'bg-orange-100 text-orange-800 hover:bg-orange-100',
     alta: 'bg-red-100 text-red-800 hover:bg-red-100',
+    urgente: 'bg-red-600 text-white hover:bg-red-700',
   }
 
   const statusLabel: Record<string, string> = {
@@ -89,7 +90,12 @@ export function DashboardTable({
     em_atendimento: 'Em Atendimento',
     finalizado: 'Finalizado',
   }
-  const prioLabel: Record<string, string> = { baixa: 'Baixa', media: 'Média', alta: 'Alta' }
+  const prioLabel: Record<string, string> = {
+    baixa: 'Baixa',
+    media: 'Média',
+    alta: 'Alta',
+    urgente: 'Urgente',
+  }
 
   const clearFilters = () => {
     setSearch('')
@@ -183,6 +189,7 @@ export function DashboardTable({
               <SelectItem value="baixa">Baixa</SelectItem>
               <SelectItem value="media">Média</SelectItem>
               <SelectItem value="alta">Alta</SelectItem>
+              <SelectItem value="urgente">Urgente</SelectItem>
             </SelectContent>
           </Select>
           <Select value={resp} onValueChange={setResp}>
@@ -253,9 +260,13 @@ export function DashboardTable({
                         </Badge>
                       </TableCell>
                       <TableCell className="hidden lg:table-cell">
-                        <Badge className={prioColor[c.prioridade]} variant="secondary">
-                          {prioLabel[c.prioridade]}
-                        </Badge>
+                        {c.prioridade ? (
+                          <Badge className={prioColor[c.prioridade]} variant="secondary">
+                            {prioLabel[c.prioridade]}
+                          </Badge>
+                        ) : (
+                          <span className="text-slate-400 text-sm">-</span>
+                        )}
                       </TableCell>
                       <TableCell className="text-sm text-[#212121]">
                         {c.responsavel?.nome_completo || '-'}
@@ -297,9 +308,11 @@ export function DashboardTable({
                       <Badge className={statusColor[c.status]} variant="secondary">
                         {statusLabel[c.status]}
                       </Badge>
-                      <Badge className={prioColor[c.prioridade]} variant="secondary">
-                        {prioLabel[c.prioridade]}
-                      </Badge>
+                      {c.prioridade && (
+                        <Badge className={prioColor[c.prioridade]} variant="secondary">
+                          {prioLabel[c.prioridade]}
+                        </Badge>
+                      )}
                     </div>
                     <div className="flex justify-between items-center text-sm text-slate-600">
                       <span>{c.responsavel?.nome_completo || 'Sem responsável'}</span>

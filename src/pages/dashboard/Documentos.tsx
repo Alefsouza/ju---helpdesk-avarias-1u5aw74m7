@@ -522,6 +522,27 @@ export default function Documentos() {
                             <Button
                               variant="ghost"
                               size="sm"
+                              className="h-8 w-8 p-0 text-slate-500 hover:text-slate-900"
+                              disabled={!!loadingAction || deletingId === doc.id}
+                              onClick={() =>
+                                handleDocumentAction(
+                                  doc.id,
+                                  doc.arquivo_url,
+                                  doc.nome_arquivo,
+                                  'view',
+                                )
+                              }
+                              title="Visualizar documento"
+                            >
+                              {loadingAction === `${doc.id}-view` ? (
+                                <Loader2 className="w-4 h-4 animate-spin" />
+                              ) : (
+                                <Eye className="w-4 h-4" />
+                              )}
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
                               className="h-8 w-8 p-0 text-red-500 hover:text-red-600 hover:bg-red-50"
                               disabled={!!loadingAction || deletingId === doc.id}
                               onClick={() => handleDeleteDocument(doc.id)}

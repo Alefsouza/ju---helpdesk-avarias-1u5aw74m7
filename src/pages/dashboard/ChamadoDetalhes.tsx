@@ -49,6 +49,7 @@ import {
   Copy,
   Share2,
   MoreVertical,
+  Eye,
 } from 'lucide-react'
 import { supabase } from '@/lib/supabase/client'
 import { useAuth } from '@/hooks/use-auth'
@@ -158,6 +159,7 @@ export default function ChamadoDetalhes() {
   const [transferObservacao, setTransferObservacao] = useState('')
   const [transferLoading, setTransferLoading] = useState(false)
   const [uploadingInternal, setUploadingInternal] = useState(false)
+  const [viewingInternalId, setViewingInternalId] = useState<string | null>(null)
 
   const fileInputRef = useRef<HTMLInputElement>(null)
   const internalFileInputRef = useRef<HTMLInputElement>(null)
@@ -695,6 +697,40 @@ export default function ChamadoDetalhes() {
       toast.success('Anexo interno deletado')
     } catch (error) {
       toast.error('Erro ao deletar anexo interno')
+    }
+  }
+
+  const handleViewInternal = async (anexo: AnexoInterno) => {
+    try {
+      setViewingInternalId(anexo.id)
+      const urlParts = anexo.arquivo_url.split('/anexos_chamados_interno/')
+      const path = urlParts.length > 1 ? urlParts[1] : null
+
+      let blob: Blob
+
+      if (path) {
+        const { data, error } = await supabase.storage
+          .from('anexos_chamados_interno')
+          .download(path)
+        if (error) throw new Error('not_found')
+        blob = data
+      } else {
+        const response = await fetch(anexo.arquivo_url)
+        if (!response.ok) throw new Error('not_found')
+        blob = await response.blob()
+      }
+
+      const url = window.URL.createObjectURL(blob)
+      window.open(url, '_blank')
+      setTimeout(() => URL.revokeObjectURL(url), 1000)
+    } catch (err: any) {
+      if (err.message === 'not_found') {
+        toast.error('Arquivo não encontrado')
+      } else {
+        toast.error('Erro ao abrir documento')
+      }
+    } finally {
+      setViewingInternalId(null)
     }
   }
 
@@ -1425,8 +1461,24 @@ export default function ChamadoDetalhes() {
                         variant="ghost"
                         className="h-8 w-8 text-slate-500 hover:text-slate-900"
                         onClick={() => handleDownloadInternal(anexo)}
+                        disabled={viewingInternalId === anexo.id}
+                        title="Baixar anexo"
                       >
                         <Download className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        className="h-8 w-8 text-slate-500 hover:text-slate-900"
+                        onClick={() => handleViewInternal(anexo)}
+                        disabled={viewingInternalId === anexo.id}
+                        title="Visualizar anexo"
+                      >
+                        {viewingInternalId === anexo.id ? (
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                        ) : (
+                          <Eye className="h-4 w-4" />
+                        )}
                       </Button>
                       {user?.id === anexo.usuario_id && (
                         <Button
@@ -1434,6 +1486,8 @@ export default function ChamadoDetalhes() {
                           variant="ghost"
                           className="h-8 w-8 text-slate-500 hover:text-red-600"
                           onClick={() => handleDeleteInternal(anexo.id, anexo.arquivo_url)}
+                          disabled={viewingInternalId === anexo.id}
+                          title="Excluir anexo"
                         >
                           <Trash2 className="h-4 w-4" />
                         </Button>

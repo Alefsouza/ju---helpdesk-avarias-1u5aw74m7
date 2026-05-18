@@ -32,7 +32,6 @@ export default function OsManutencao() {
           event: '*',
           schema: 'public',
           table: 'documentos',
-          filter: 'tipo_documento=eq.Vistoria',
         },
         () => {
           fetchDocumentos()
@@ -51,7 +50,7 @@ export default function OsManutencao() {
       const { data, error } = await supabase
         .from('documentos')
         .select('*')
-        .eq('tipo_documento', 'Vistoria')
+        .in('tipo_documento', ['Vistoria', 'Espelho de Danos'])
         .not('numero_os', 'is', null)
         .neq('numero_os', '')
         .order('criado_em', { ascending: false })

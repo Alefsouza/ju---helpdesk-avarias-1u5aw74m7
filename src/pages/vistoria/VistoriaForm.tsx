@@ -129,7 +129,7 @@ export default function VistoriaForm() {
       const docData = {
         tipo_documento: 'Vistoria',
         nome_arquivo: `Vistoria - ${values.data} - ${values.horario}`,
-        arquivo_url: uploadedUrls[0], // Required field
+        arquivo_url: '', // Initially empty, will be filled with PDF url when OS is linked
         fotos_urls: uploadedUrls,
         chamado_id: chamadoId || null,
         registro_responsavel: values.registro_vistoriador,

@@ -79,7 +79,7 @@ export default function Documentos() {
         const { data, error } = await supabase
           .from('documentos')
           .select('*')
-          .in('tipo_documento', ['IDO', 'Espelho de Danos', 'Vistoria'])
+          .in('tipo_documento', ['IDO', 'Espelho de Danos'])
           .order('criado_em', { ascending: false })
 
         if (error) throw error
@@ -110,7 +110,7 @@ export default function Documentos() {
         (payload) => {
           if (payload.eventType === 'INSERT' || payload.eventType === 'UPDATE') {
             const newDoc = payload.new as Documento
-            if (!['IDO', 'Espelho de Danos', 'Vistoria'].includes(newDoc.tipo_documento)) return
+            if (!['IDO', 'Espelho de Danos'].includes(newDoc.tipo_documento)) return
 
             // Only add/keep if it's IDO or has an OS
             const isValid = newDoc.tipo_documento === 'IDO' || !!newDoc.numero_os
@@ -334,7 +334,6 @@ export default function Documentos() {
                 <SelectItem value="todos">Todos os Tipos</SelectItem>
                 <SelectItem value="IDO">BO</SelectItem>
                 <SelectItem value="Espelho de Danos">Espelho de Danos</SelectItem>
-                <SelectItem value="Vistoria">Vistoria</SelectItem>
               </SelectContent>
             </Select>
           </div>

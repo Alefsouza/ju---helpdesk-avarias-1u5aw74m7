@@ -835,8 +835,8 @@ export const Constants = {
 //   Policy "documentos_select" (SELECT, PERMISSIVE) roles={authenticated}
 //     USING: true
 //   Policy "documentos_update" (UPDATE, PERMISSIVE) roles={authenticated}
-//     USING: (chamado_id IN ( SELECT chamados.id    FROM chamados   WHERE (chamados.responsavel_id = auth.uid())))
-//     WITH CHECK: (chamado_id IN ( SELECT chamados.id    FROM chamados   WHERE (chamados.responsavel_id = auth.uid())))
+//     USING: ((chamado_id IS NULL) OR (chamado_id IN ( SELECT chamados.id    FROM chamados   WHERE ((chamados.responsavel_id = auth.uid()) OR (chamados.usuario_id = auth.uid())))) OR is_admin() OR is_responsavel() OR is_vistoriador())
+//     WITH CHECK: ((chamado_id IS NULL) OR (chamado_id IN ( SELECT chamados.id    FROM chamados   WHERE ((chamados.responsavel_id = auth.uid()) OR (chamados.usuario_id = auth.uid())))) OR is_admin() OR is_responsavel() OR is_vistoriador())
 // Table: formularios_espelho_danos
 //   Policy "formularios_espelho_danos_insert" (INSERT, PERMISSIVE) roles={public}
 //     WITH CHECK: true

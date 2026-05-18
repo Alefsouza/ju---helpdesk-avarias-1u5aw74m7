@@ -333,13 +333,28 @@ export default function NovoChamado() {
       if (chamadoError) throw chamadoError
 
       if (files.length > 0) {
+        let orcamentoCount = 1
         const anexosData = files.map((f) => {
-          const categoryTitle =
+          let categoryTitle =
             ATTACHMENT_CATEGORIES.find((c) => c.id === f.category)?.title || 'Anexo'
+
+          if (f.category === 'orcamento_confianca') {
+            categoryTitle = `Orçamento ${orcamentoCount}`
+            orcamentoCount++
+          } else if (f.category === 'orcamento_carmg') {
+            categoryTitle = 'Orçamento CARMG'
+          } else if (f.category === 'fotos_videos') {
+            categoryTitle = 'Fotos/Vídeos'
+          } else if (f.category === 'documento_veiculo') {
+            categoryTitle = 'Documento do Veículo'
+          } else if (f.category === 'boletim') {
+            categoryTitle = 'Boletim de Ocorrência'
+          }
+
           return {
             chamado_id: chamado.id,
             url_arquivo: f.url!,
-            nome_arquivo: `[${categoryTitle}] ${f.file.name}`,
+            nome_arquivo: `[${categoryTitle}] - ${f.file.name}`,
             tipo_arquivo: getTipoArquivo(f.file.type),
             tamanho_mb: Number((f.file.size / (1024 * 1024)).toFixed(2)),
           }

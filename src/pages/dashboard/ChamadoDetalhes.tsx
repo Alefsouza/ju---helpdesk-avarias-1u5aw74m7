@@ -174,6 +174,7 @@ export default function ChamadoDetalhes() {
   const [transferLoading, setTransferLoading] = useState(false)
   const [uploadingInternal, setUploadingInternal] = useState(false)
   const [viewingInternalId, setViewingInternalId] = useState<string | null>(null)
+  const [viewingAnexoId, setViewingAnexoId] = useState<string | null>(null)
 
   const fileInputRef = useRef<HTMLInputElement>(null)
   const internalFileInputRef = useRef<HTMLInputElement>(null)
@@ -788,6 +789,100 @@ export default function ChamadoDetalhes() {
     }
   }
 
+  const getAnexoStorageInfo = (url: string) => {
+    let bucket = 'chamados'
+    let splitStr = '/chamados/'
+    if (url.includes('/anexos/')) {
+      bucket = 'anexos'
+      splitStr = '/anexos/'
+    }
+    const urlParts = url.split(splitStr)
+    const path = urlParts.length > 1 ? urlParts[1] : null
+    return { bucket, path }
+  }
+
+  const handleDeleteAnexo = async (anexoId: string, url: string) => {
+    if (!window.confirm('Tem certeza que deseja deletar este anexo?')) return
+
+    try {
+      const { bucket, path } = getAnexoStorageInfo(url)
+
+      if (path) {
+        await supabase.storage.from(bucket).remove([path])
+      }
+
+      const { error } = await supabase.from('anexos_chamado').delete().eq('id', anexoId)
+      if (error) throw error
+
+      setAnexos((prev) => prev.filter((a) => a.id !== anexoId))
+      toast.success('Anexo deletado com sucesso')
+    } catch (error) {
+      toast.error('Erro ao deletar anexo')
+    }
+  }
+
+  const handleDownloadAnexo = async (anexo: Anexo) => {
+    try {
+      const { bucket, path } = getAnexoStorageInfo(anexo.url_arquivo)
+      let blob: Blob
+
+      if (path) {
+        const { data, error } = await supabase.storage.from(bucket).download(path)
+        if (error) throw new Error('not_found')
+        blob = data
+      } else {
+        const response = await fetch(anexo.url_arquivo)
+        if (!response.ok) throw new Error('not_found')
+        blob = await response.blob()
+      }
+
+      const url = window.URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = anexo.nome_arquivo
+      document.body.appendChild(a)
+      a.click()
+      window.URL.revokeObjectURL(url)
+      document.body.removeChild(a)
+    } catch (err: any) {
+      if (err.message === 'not_found') {
+        toast.error('Arquivo não encontrado')
+      } else {
+        toast.error('Erro ao baixar arquivo. Tente novamente')
+      }
+    }
+  }
+
+  const handleViewAnexo = async (anexo: Anexo) => {
+    try {
+      setViewingAnexoId(anexo.id)
+      const { bucket, path } = getAnexoStorageInfo(anexo.url_arquivo)
+      let blob: Blob
+
+      if (path) {
+        const { data, error } = await supabase.storage.from(bucket).download(path)
+        if (error) throw new Error('not_found')
+        blob = data
+      } else {
+        const response = await fetch(anexo.url_arquivo)
+        if (!response.ok) throw new Error('not_found')
+        blob = await response.blob()
+      }
+
+      const url = window.URL.createObjectURL(blob)
+      window.open(url, '_blank')
+      setTimeout(() => URL.revokeObjectURL(url), 1000)
+    } catch (err: any) {
+      if (err.message === 'not_found') {
+        toast.error('Arquivo não encontrado')
+      } else {
+        toast.error('Erro ao abrir documento')
+      }
+    } finally {
+      setViewingAnexoId(null)
+    }
+  }
+
   const getTipoArquivo = (mime: string) => {
     if (mime.startsWith('audio/')) return 'audio'
     if (mime.startsWith('video/')) return 'video'
@@ -1168,75 +1263,6 @@ export default function ChamadoDetalhes() {
       default:
         return `Ação ${acao} por ${userNome}`
     }
-  }
-
-  const renderAnexo = (anexo: Anexo) => {
-    const isImage = anexo.tipo_arquivo.includes('imagem') || anexo.tipo_arquivo.includes('image')
-    const isVideo = anexo.tipo_arquivo.includes('video')
-    const isAudio = anexo.tipo_arquivo.includes('audio')
-
-    if (isImage) {
-      return (
-        <a
-          key={anexo.id}
-          href={anexo.url_arquivo}
-          target="_blank"
-          rel="noreferrer"
-          className="block relative group overflow-hidden rounded-md border aspect-video bg-slate-100"
-        >
-          <img
-            src={anexo.url_arquivo}
-            alt={anexo.nome_arquivo}
-            className="w-full h-full object-cover transition-transform group-hover:scale-105"
-          />
-          <div className="absolute inset-x-0 bottom-0 bg-black/60 p-2 text-xs text-white truncate opacity-0 group-hover:opacity-100 transition-opacity">
-            {anexo.nome_arquivo}
-          </div>
-        </a>
-      )
-    }
-    if (isVideo) {
-      return (
-        <div
-          key={anexo.id}
-          className="rounded-md border overflow-hidden aspect-video relative bg-black"
-        >
-          <video src={anexo.url_arquivo} controls className="w-full h-full" />
-        </div>
-      )
-    }
-    if (isAudio) {
-      return (
-        <div
-          key={anexo.id}
-          className="rounded-md border p-4 flex flex-col gap-2 bg-slate-50 items-center justify-center h-full aspect-video"
-        >
-          <Music className="h-8 w-8 text-slate-400" />
-          <span className="text-xs truncate w-full text-center" title={anexo.nome_arquivo}>
-            {anexo.nome_arquivo}
-          </span>
-          <audio src={anexo.url_arquivo} controls className="w-full h-8" />
-        </div>
-      )
-    }
-    return (
-      <a
-        key={anexo.id}
-        href={anexo.url_arquivo}
-        target="_blank"
-        rel="noreferrer"
-        className="rounded-md border p-4 flex flex-col gap-2 bg-slate-50 items-center justify-center aspect-video hover:bg-slate-100 transition-colors"
-      >
-        <FileText className="h-10 w-10 text-red-400" />
-        <span
-          className="text-sm font-medium truncate w-full text-center text-slate-700"
-          title={anexo.nome_arquivo}
-        >
-          {anexo.nome_arquivo}
-        </span>
-        <span className="text-xs text-slate-500">{anexo.tamanho_mb} MB</span>
-      </a>
-    )
   }
 
   return (
@@ -1638,8 +1664,79 @@ export default function ChamadoDetalhes() {
             <h3 className="text-sm font-bold text-slate-900 mb-3 uppercase tracking-wider flex items-center gap-2">
               Anexos <Badge variant="secondary">{anexos.length}</Badge>
             </h3>
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
-              {anexos.map(renderAnexo)}
+            <div className="flex flex-col gap-2">
+              {anexos.map((anexo) => {
+                const isImage =
+                  anexo.tipo_arquivo.includes('imagem') || anexo.tipo_arquivo.includes('image')
+                const isVideo = anexo.tipo_arquivo.includes('video')
+                const isAudio = anexo.tipo_arquivo.includes('audio')
+
+                let Icon = FileText
+                if (isImage) Icon = ImageIcon
+                if (isVideo) Icon = Video
+                if (isAudio) Icon = Music
+
+                return (
+                  <div
+                    key={anexo.id}
+                    className="flex items-center justify-between p-3 rounded-lg border bg-slate-50/50"
+                  >
+                    <div className="flex items-center gap-3 min-w-0">
+                      <Icon className="h-5 w-5 text-slate-500 shrink-0" />
+                      <div className="min-w-0">
+                        <p
+                          className="text-sm font-medium text-slate-900 truncate"
+                          title={anexo.nome_arquivo}
+                        >
+                          {anexo.nome_arquivo}
+                        </p>
+                        <p className="text-xs text-slate-500">
+                          {anexo.tamanho_mb} MB •{' '}
+                          {format(new Date(anexo.criado_em), 'dd/MM/yyyy HH:mm')}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2 shrink-0 ml-4">
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        className="h-8 w-8 text-slate-500 hover:text-slate-900"
+                        onClick={() => handleDownloadAnexo(anexo)}
+                        disabled={viewingAnexoId === anexo.id}
+                        title="Baixar anexo"
+                      >
+                        <Download className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        className="h-8 w-8 text-slate-500 hover:text-slate-900"
+                        onClick={() => handleViewAnexo(anexo)}
+                        disabled={viewingAnexoId === anexo.id}
+                        title="Visualizar anexo"
+                      >
+                        {viewingAnexoId === anexo.id ? (
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                        ) : (
+                          <Eye className="h-4 w-4" />
+                        )}
+                      </Button>
+                      {isSupport && (
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          className="h-8 w-8 text-slate-500 hover:text-red-600"
+                          onClick={() => handleDeleteAnexo(anexo.id, anexo.url_arquivo)}
+                          disabled={viewingAnexoId === anexo.id}
+                          title="Excluir anexo"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+                )
+              })}
             </div>
           </div>
         )}

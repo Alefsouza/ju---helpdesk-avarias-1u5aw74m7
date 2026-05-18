@@ -410,6 +410,10 @@ export default function OsManutencao() {
             <div className="space-y-6 py-4">
               <div className="grid grid-cols-2 gap-4 text-sm">
                 <div>
+                  <p className="text-[#333333] font-bold mb-1">Número da OS</p>
+                  <p className="text-[#333333]">{viewDoc.numero_os || '-'}</p>
+                </div>
+                <div>
                   <p className="text-[#333333] font-bold mb-1">Garagem</p>
                   <p className="text-[#333333]">{viewDoc.garagem || '-'}</p>
                 </div>

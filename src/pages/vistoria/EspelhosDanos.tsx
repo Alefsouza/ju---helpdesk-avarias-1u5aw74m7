@@ -19,7 +19,14 @@ import {
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { ScrollArea } from '@/components/ui/scroll-area'
-import { Eye, Download, Pencil } from 'lucide-react'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
+import { Eye, Download, Pencil, Search } from 'lucide-react'
 import { toast } from 'sonner'
 import { format } from 'date-fns'
 
@@ -30,6 +37,10 @@ export default function EspelhosDanos() {
   const [osInput, setOsInput] = useState('')
   const [isSaving, setIsSaving] = useState(false)
   const [expandedPhoto, setExpandedPhoto] = useState<string | null>(null)
+
+  const [searchTerm, setSearchTerm] = useState('')
+  const [month, setMonth] = useState<string>('all')
+  const [year, setYear] = useState<string>(new Date().getFullYear().toString())
 
   useEffect(() => {
     const fetchDocs = async () => {
@@ -84,10 +95,79 @@ export default function EspelhosDanos() {
     }
   }
 
+  const filteredDocumentos = documentos.filter((doc) => {
+    let matchesSearch = true
+    if (searchTerm) {
+      const term = searchTerm.toLowerCase()
+      matchesSearch =
+        (doc.linha?.toLowerCase() || '').includes(term) ||
+        (doc.numero_carro?.toLowerCase() || '').includes(term) ||
+        (doc.numero_os?.toLowerCase() || '').includes(term)
+    }
+
+    let matchesDate = true
+    if (month !== 'all' || year !== 'all') {
+      if (doc.data) {
+        const [y, m] = doc.data.split('-')
+        if (month !== 'all' && m !== month) matchesDate = false
+        if (year !== 'all' && y !== year) matchesDate = false
+      } else {
+        matchesDate = false
+      }
+    }
+
+    return matchesSearch && matchesDate
+  })
+
   return (
     <div className="flex flex-col gap-4 h-full">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold tracking-tight">Espelhos de Danos</h1>
+      </div>
+
+      <div className="flex flex-col sm:flex-row gap-4">
+        <div className="relative flex-1">
+          <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-slate-500" />
+          <Input
+            placeholder="Buscar por Linha, Carro ou número da OS..."
+            className="pl-9"
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+          />
+        </div>
+        <div className="flex gap-2">
+          <Select value={month} onValueChange={setMonth}>
+            <SelectTrigger className="w-[140px] bg-white">
+              <SelectValue placeholder="Mês" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todos os meses</SelectItem>
+              <SelectItem value="01">Janeiro</SelectItem>
+              <SelectItem value="02">Fevereiro</SelectItem>
+              <SelectItem value="03">Março</SelectItem>
+              <SelectItem value="04">Abril</SelectItem>
+              <SelectItem value="05">Maio</SelectItem>
+              <SelectItem value="06">Junho</SelectItem>
+              <SelectItem value="07">Julho</SelectItem>
+              <SelectItem value="08">Agosto</SelectItem>
+              <SelectItem value="09">Setembro</SelectItem>
+              <SelectItem value="10">Outubro</SelectItem>
+              <SelectItem value="11">Novembro</SelectItem>
+              <SelectItem value="12">Dezembro</SelectItem>
+            </SelectContent>
+          </Select>
+          <Select value={year} onValueChange={setYear}>
+            <SelectTrigger className="w-[120px] bg-white">
+              <SelectValue placeholder="Ano" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todos os anos</SelectItem>
+              <SelectItem value="2024">2024</SelectItem>
+              <SelectItem value="2025">2025</SelectItem>
+              <SelectItem value="2026">2026</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
       </div>
 
       <div className="bg-white rounded-md border shadow-sm flex-1 overflow-hidden flex flex-col">
@@ -104,14 +184,14 @@ export default function EspelhosDanos() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {documentos.length === 0 ? (
+              {filteredDocumentos.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={6} className="text-center py-8 text-slate-500">
-                    Nenhum Espelho de Danos registrado
+                    Nenhum Espelho de Danos encontrado
                   </TableCell>
                 </TableRow>
               ) : (
-                documentos.map((doc) => (
+                filteredDocumentos.map((doc) => (
                   <TableRow key={doc.id}>
                     <TableCell>
                       {doc.data ? format(new Date(doc.data), 'dd/MM/yyyy') : '-'}

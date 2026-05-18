@@ -838,7 +838,7 @@ export const Constants = {
 //   Policy "chamados_select" (SELECT, PERMISSIVE) roles={authenticated}
 //     USING: ((usuario_id = auth.uid()) OR is_responsavel() OR is_admin())
 //   Policy "chamados_update" (UPDATE, PERMISSIVE) roles={authenticated}
-//     USING: ((usuario_id = auth.uid()) OR (is_responsavel() AND ((responsavel_id = auth.uid()) OR (status = 'aberto'::text))) OR is_admin())
+//     USING: ((usuario_id = auth.uid()) OR (is_responsavel() AND ((responsavel_id = auth.uid()) OR (status = 'aberto'::text) OR (status = 'finalizado'::text))) OR is_admin())
 // Table: documentos
 //   Policy "documentos_delete" (DELETE, PERMISSIVE) roles={authenticated}
 //     USING: (is_admin() OR is_responsavel())

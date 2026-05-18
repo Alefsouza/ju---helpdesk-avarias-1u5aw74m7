@@ -1060,7 +1060,11 @@ export default function ChamadoDetalhes() {
     try {
       const { data, error: updateError } = await supabase
         .from('chamados')
-        .update({ status: 'aberto', atualizado_em: new Date().toISOString() })
+        .update({
+          status: 'aberto',
+          responsavel_id: user?.id,
+          atualizado_em: new Date().toISOString(),
+        })
         .eq('id', id)
         .select()
         .single()
@@ -1076,7 +1080,9 @@ export default function ChamadoDetalhes() {
 
       if (histError) throw histError
 
-      setChamado((prev: any) => (prev ? { ...prev, status: 'aberto' } : prev))
+      setChamado((prev: any) =>
+        prev ? { ...prev, status: 'aberto', responsavel_id: user?.id } : prev,
+      )
       setConfirmReabrirOpen(false)
       toast.success('Chamado reaberto com sucesso')
 

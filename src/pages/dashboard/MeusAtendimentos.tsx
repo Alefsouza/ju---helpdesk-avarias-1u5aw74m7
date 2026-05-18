@@ -214,7 +214,11 @@ export default function MeusAtendimentos() {
     try {
       const { data, error: updateError } = await supabase
         .from('chamados')
-        .update({ status: 'aberto', atualizado_em: new Date().toISOString() })
+        .update({
+          status: 'aberto',
+          responsavel_id: user?.id,
+          atualizado_em: new Date().toISOString(),
+        })
         .eq('id', chamadoId)
         .select()
         .single()
@@ -229,7 +233,11 @@ export default function MeusAtendimentos() {
       if (histError) throw histError
 
       toast({ title: 'Chamado reaberto com sucesso!' })
-      setChamados((prev) => prev.map((c) => (c.id === chamadoId ? { ...c, status: 'aberto' } : c)))
+      setChamados((prev) =>
+        prev.map((c) =>
+          c.id === chamadoId ? { ...c, status: 'aberto', responsavel_id: user?.id } : c,
+        ),
+      )
 
       navigate(`/dashboard/chamados/${chamadoId}`)
     } catch (e) {

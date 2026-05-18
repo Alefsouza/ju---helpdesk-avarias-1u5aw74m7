@@ -52,7 +52,7 @@ export default function SinistrosCoc() {
       const { data: allowedUsers } = await supabase
         .from('perfil_usuario')
         .select('id')
-        .in('tipo_usuario', ['coc', 'sos'])
+        .eq('tipo_usuario', 'coc')
 
       const allowedUserIds = allowedUsers?.map((u: any) => u.id) || []
 
@@ -71,7 +71,18 @@ export default function SinistrosCoc() {
         .order('criado_em', { ascending: false })
 
       if (error) throw error
-      setSinistros(data || [])
+
+      const filteredData = (data || []).filter((s) => {
+        const checkboxMarked =
+          s.tipo_chamado === 'Contém vítimas, mas não tem avarias' ||
+          s.tipo_chamado === 'Avaria sem vítima' ||
+          s.tipo_chamado === 'true' ||
+          s.tipo_chamado === true
+
+        return !checkboxMarked
+      })
+
+      setSinistros(filteredData)
     } catch (error: any) {
       toast.error('Erro ao buscar sinistros: ' + error.message)
     } finally {

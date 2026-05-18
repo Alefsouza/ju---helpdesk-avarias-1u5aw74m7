@@ -25,7 +25,15 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from '@/components/ui/dialog'
+import { Label } from '@/components/ui/label'
+import { useToast } from '@/hooks/use-toast'
 
 export default function OsManutencao() {
   const [documentos, setDocumentos] = useState<any[]>([])
@@ -34,6 +42,12 @@ export default function OsManutencao() {
   const [docToDelete, setDocToDelete] = useState<any>(null)
   const [isDeleting, setIsDeleting] = useState(false)
   const [viewDoc, setViewDoc] = useState<any>(null)
+
+  const [isModalOpen, setIsModalOpen] = useState(false)
+  const [selectedDoc, setSelectedDoc] = useState<any>(null)
+  const [numeroOS, setNumeroOS] = useState('')
+  const [isSaving, setIsSaving] = useState(false)
+  const { toast } = useToast()
 
   useEffect(() => {
     fetchDocumentos()
@@ -108,6 +122,114 @@ export default function OsManutencao() {
     } finally {
       setIsDeleting(false)
       setDocToDelete(null)
+    }
+  }
+
+  const handleOpenModal = (doc: any) => {
+    setSelectedDoc(doc)
+    setNumeroOS(doc.numero_os || '')
+    setIsModalOpen(true)
+    setViewDoc(null)
+  }
+
+  const handleCloseModal = () => {
+    if (isSaving) return
+    setIsModalOpen(false)
+    setSelectedDoc(null)
+    setNumeroOS('')
+  }
+
+  const formatDate = (dateStr: string | null) => {
+    if (!dateStr) return '-'
+    const parts = dateStr.split('-')
+    if (parts.length === 3) {
+      return `${parts[2]}/${parts[1]}/${parts[0]}`
+    }
+    try {
+      return format(new Date(dateStr), 'dd/MM/yyyy')
+    } catch {
+      return dateStr
+    }
+  }
+
+  const truncateText = (text: string | null, maxLength: number = 50) => {
+    if (!text) return '-'
+    return text.length > maxLength ? text.substring(0, maxLength) + '...' : text
+  }
+
+  const handleSaveOS = async () => {
+    if (!numeroOS.trim()) {
+      toast({
+        title: 'Atenção',
+        description: 'O número da OS é obrigatório.',
+        variant: 'destructive',
+      })
+      return
+    }
+
+    if (!selectedDoc) return
+
+    setIsSaving(true)
+    try {
+      const { data: pdfData, error: pdfError } = await supabase.functions.invoke('gerar-pdf', {
+        body: {
+          id: selectedDoc.id,
+          garagem: selectedDoc.garagem,
+          linha: selectedDoc.linha,
+          numero_carro: selectedDoc.numero_carro,
+          data: formatDate(selectedDoc.data),
+          horario: selectedDoc.horario,
+          ocorrencia: selectedDoc.ocorrencia,
+          descricao_danos: selectedDoc.descricao_danos,
+          numero_os: numeroOS.trim(),
+          nome_vistoriador: selectedDoc.nome_responsavel,
+          registro_vistoriador: selectedDoc.registro_responsavel,
+          nome_motorista: selectedDoc.nome_motorista,
+          registro_motorista: selectedDoc.registro_motorista,
+          fotos: selectedDoc.fotos_urls || (selectedDoc.foto_url ? [selectedDoc.foto_url] : []),
+        },
+      })
+
+      if (pdfError) throw pdfError
+      if (!pdfData || !pdfData.success) throw new Error(pdfData?.error || 'Erro ao gerar PDF')
+
+      const { url, nome_arquivo } = pdfData
+
+      const { data: updatedDoc, error } = await supabase
+        .from('documentos')
+        .update({
+          numero_os: numeroOS.trim(),
+          arquivo_url: url,
+          nome_arquivo: nome_arquivo || `Espelho_Danos_OS_${numeroOS.trim()}.pdf`,
+          tipo_documento: 'Espelho de Danos',
+        })
+        .eq('id', selectedDoc.id)
+        .select()
+        .maybeSingle()
+
+      if (error) throw error
+
+      toast({
+        title: 'Sucesso',
+        description: 'Número da OS atualizado e PDF gerado com sucesso.',
+      })
+
+      setDocumentos((docs) =>
+        docs.map((d) =>
+          d.id === selectedDoc.id ? { ...d, numero_os: numeroOS.trim(), arquivo_url: url } : d,
+        ),
+      )
+
+      handleCloseModal()
+    } catch (error: any) {
+      console.error('Erro ao salvar OS:', error)
+      toast({
+        title: 'Erro',
+        description: error.message || 'Ocorreu um erro ao salvar o número da OS.',
+        variant: 'destructive',
+      })
+    } finally {
+      setIsSaving(false)
     }
   }
 
@@ -274,39 +396,184 @@ export default function OsManutencao() {
         </div>
       </main>
 
+      {/* Modal Visualizar Detalhes */}
       <Dialog open={!!viewDoc} onOpenChange={(open) => !open && setViewDoc(null)}>
-        <DialogContent className="max-w-4xl h-[90vh] flex flex-col p-0 gap-0">
-          <DialogHeader className="p-4 pr-12 border-b bg-slate-50 flex flex-row items-center justify-between space-y-0">
-            <DialogTitle>Visualizar Documento</DialogTitle>
+        <DialogContent className="sm:max-w-[600px] max-h-[85vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="text-xl font-bold">
+              {viewDoc?.tipo_documento === 'Vistoria'
+                ? 'Detalhes da Vistoria'
+                : 'Detalhes do Documento'}
+            </DialogTitle>
+          </DialogHeader>
+          {viewDoc && (
+            <div className="space-y-6 py-4">
+              <div className="grid grid-cols-2 gap-4 text-sm">
+                <div>
+                  <p className="text-[#333333] font-bold mb-1">Garagem</p>
+                  <p className="text-[#333333]">{viewDoc.garagem || '-'}</p>
+                </div>
+                <div>
+                  <p className="text-[#333333] font-bold mb-1">Linha</p>
+                  <p className="text-[#333333]">{viewDoc.linha || '-'}</p>
+                </div>
+                <div>
+                  <p className="text-[#333333] font-bold mb-1">Carro</p>
+                  <p className="text-[#333333]">{viewDoc.numero_carro || '-'}</p>
+                </div>
+                <div>
+                  <p className="text-[#333333] font-bold mb-1">Data / Horário</p>
+                  <p className="text-[#333333]">
+                    {formatDate(viewDoc.data)} {viewDoc.horario ? `às ${viewDoc.horario}` : ''}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-[#333333] font-bold mb-1">Vistoriador</p>
+                  <p className="text-[#333333]">
+                    {viewDoc.nome_responsavel || '-'}
+                    {viewDoc.registro_responsavel ? ` (${viewDoc.registro_responsavel})` : ''}
+                  </p>
+                </div>
+              </div>
+
+              <div>
+                <p className="text-[#333333] font-bold mb-1 text-sm">Ocorrência</p>
+                <div className="text-sm text-[#333333] whitespace-pre-wrap">
+                  {viewDoc.ocorrencia || '-'}
+                </div>
+              </div>
+
+              <div>
+                <p className="text-[#333333] font-bold mb-1 text-sm">Descrição dos Danos</p>
+                <div className="text-sm text-[#333333] whitespace-pre-wrap">
+                  {viewDoc.descricao_danos || '-'}
+                </div>
+              </div>
+
+              <div>
+                <p className="text-[#333333] font-bold mb-3 text-sm">Fotos Anexadas</p>
+                {(() => {
+                  const fotos = []
+                  if (viewDoc.foto_url) fotos.push(viewDoc.foto_url)
+                  if (Array.isArray(viewDoc.fotos_urls)) {
+                    fotos.push(...viewDoc.fotos_urls)
+                  }
+
+                  if (fotos.length === 0) {
+                    return (
+                      <p className="text-sm text-[#333333] italic">
+                        Nenhuma foto foi anexada nesta vistoria.
+                      </p>
+                    )
+                  }
+
+                  return (
+                    <div className="grid grid-cols-2 gap-4">
+                      {fotos.map((url, idx) => (
+                        <a
+                          key={idx}
+                          href={url}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="block relative aspect-video bg-slate-100 rounded-md overflow-hidden border group"
+                        >
+                          <img
+                            src={url}
+                            alt={`Foto ${idx + 1}`}
+                            className="object-cover w-full h-full transition-transform duration-300 group-hover:scale-105"
+                          />
+                          <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors flex items-center justify-center">
+                            <Eye className="text-white opacity-0 group-hover:opacity-100 transition-opacity" />
+                          </div>
+                        </a>
+                      ))}
+                    </div>
+                  )
+                })()}
+              </div>
+            </div>
+          )}
+          <DialogFooter className="flex justify-end gap-2 sm:justify-end">
             <Button
               variant="outline"
-              size="sm"
-              onClick={(e) => {
-                if (viewDoc) handleDownload(viewDoc.arquivo_url, e as any)
-              }}
+              onClick={() => setViewDoc(null)}
+              className="bg-white border-[#333333] text-[#333333] hover:bg-slate-50"
             >
-              <Download className="h-4 w-4 mr-2" />
-              Baixar
+              Fechar
             </Button>
+            {viewDoc && (
+              <Button
+                onClick={() => {
+                  handleOpenModal(viewDoc)
+                }}
+                className="bg-[#1A522E] hover:bg-[#154224] text-white"
+              >
+                Preencher OS
+              </Button>
+            )}
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Modal Preencher OS */}
+      <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Preencher Número da OS</DialogTitle>
           </DialogHeader>
-          <div className="flex-1 overflow-hidden bg-slate-100/50 p-4">
-            {viewDoc &&
-              (viewDoc.arquivo_url?.toLowerCase().includes('.pdf') ? (
-                <iframe
-                  src={viewDoc.arquivo_url}
-                  className="w-full h-full rounded-md border bg-white"
-                  title="Documento PDF"
-                />
-              ) : (
-                <div className="w-full h-full flex items-center justify-center">
-                  <img
-                    src={viewDoc.arquivo_url}
-                    alt="Documento"
-                    className="max-w-full max-h-full object-contain rounded-md border bg-white"
-                  />
-                </div>
-              ))}
+          <div className="grid gap-4 py-4">
+            <div className="grid gap-2">
+              <Label htmlFor="os">
+                Número da OS <span className="text-red-500">*</span>
+              </Label>
+              <Input
+                id="os"
+                value={numeroOS}
+                onChange={(e) => setNumeroOS(e.target.value)}
+                placeholder="Ex: 12345"
+                type="number"
+                disabled={isSaving}
+                autoFocus
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault()
+                    handleSaveOS()
+                  }
+                }}
+              />
+            </div>
+            {selectedDoc && (
+              <div className="text-sm text-muted-foreground bg-slate-50 p-3 rounded-md border mt-2 space-y-1">
+                <p>
+                  <strong>Garagem:</strong> {selectedDoc.garagem || '-'}
+                </p>
+                <p>
+                  <strong>Linha:</strong> {selectedDoc.linha || '-'}
+                </p>
+                <p>
+                  <strong>Carro:</strong> {selectedDoc.numero_carro || '-'}
+                </p>
+                <p>
+                  <strong>Data:</strong> {formatDate(selectedDoc.data)}
+                </p>
+                <p className="line-clamp-2" title={selectedDoc.descricao_danos || ''}>
+                  <strong>Danos:</strong> {truncateText(selectedDoc.descricao_danos, 80)}
+                </p>
+              </div>
+            )}
           </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={handleCloseModal} disabled={isSaving}>
+              Cancelar
+            </Button>
+            <Button
+              onClick={handleSaveOS}
+              disabled={isSaving}
+              className="bg-[#1A522E] hover:bg-[#154224] text-white"
+            >
+              {isSaving ? 'Salvando...' : 'Salvar e Concluir'}
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
 

@@ -250,6 +250,7 @@ export type Database = {
           linha: string | null
           nome_motorista: string | null
           nome_vistoriador: string | null
+          numero_carro: string | null
           numero_os: string | null
           ocorrencia: string | null
           registro_motorista: string | null
@@ -267,6 +268,7 @@ export type Database = {
           linha?: string | null
           nome_motorista?: string | null
           nome_vistoriador?: string | null
+          numero_carro?: string | null
           numero_os?: string | null
           ocorrencia?: string | null
           registro_motorista?: string | null
@@ -284,6 +286,7 @@ export type Database = {
           linha?: string | null
           nome_motorista?: string | null
           nome_vistoriador?: string | null
+          numero_carro?: string | null
           numero_os?: string | null
           ocorrencia?: string | null
           registro_motorista?: string | null
@@ -727,6 +730,7 @@ export const Constants = {
 //   nome_motorista: text (nullable)
 //   criado_em: timestamp with time zone (not null, default: now())
 //   atualizado_em: timestamp with time zone (not null, default: now())
+//   numero_carro: text (nullable)
 // Table: formularios_ido
 //   id: uuid (not null, default: gen_random_uuid())
 //   chamado_id: uuid (not null)

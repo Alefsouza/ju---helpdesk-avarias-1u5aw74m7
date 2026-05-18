@@ -35,6 +35,8 @@ type Documento = {
   fotos_urls: string[] | null
   nome_responsavel: string | null
   registro_responsavel: string | null
+  nome_motorista: string | null
+  registro_motorista: string | null
   criado_em: string
 }
 
@@ -54,7 +56,7 @@ export default function DocumentosPendentes() {
       const { data, error } = await supabase
         .from('documentos')
         .select(
-          'id, garagem, linha, data, horario, ocorrencia, descricao_danos, foto_url, fotos_urls, nome_responsavel, registro_responsavel, criado_em',
+          'id, garagem, linha, data, horario, ocorrencia, descricao_danos, foto_url, fotos_urls, nome_responsavel, registro_responsavel, nome_motorista, registro_motorista, criado_em',
         )
         .eq('tipo_documento', 'Vistoria')
         .is('numero_os', null)
@@ -136,7 +138,11 @@ export default function DocumentosPendentes() {
           ocorrencia: selectedDoc.ocorrencia,
           descricao_danos: selectedDoc.descricao_danos,
           numero_os: numeroOS.trim(),
-          responsavel: selectedDoc.nome_responsavel || selectedDoc.registro_responsavel,
+          nome_vistoriador: selectedDoc.nome_responsavel,
+          registro_vistoriador: selectedDoc.registro_responsavel,
+          nome_motorista: selectedDoc.nome_motorista,
+          registro_motorista: selectedDoc.registro_motorista,
+          fotos: selectedDoc.fotos_urls || (selectedDoc.foto_url ? [selectedDoc.foto_url] : []),
         },
       })
 
@@ -152,6 +158,7 @@ export default function DocumentosPendentes() {
           numero_os: numeroOS.trim(),
           arquivo_url: url,
           nome_arquivo: nome_arquivo || `Espelho_Danos_OS_${numeroOS.trim()}.pdf`,
+          tipo_documento: 'Espelho de Danos',
         })
         .eq('id', selectedDoc.id)
 

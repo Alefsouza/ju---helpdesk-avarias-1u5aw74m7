@@ -395,7 +395,7 @@ export default function VistoriaForm() {
 
                 <input
                   type="file"
-                  accept="image/*"
+                  accept="image/jpeg,image/png,image/jpg"
                   multiple
                   className="hidden"
                   ref={fileInputRef}

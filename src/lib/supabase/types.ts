@@ -818,7 +818,6 @@ export const Constants = {
 // Table: anexos_chamado
 //   FOREIGN KEY anexos_chamado_chamado_id_fkey: FOREIGN KEY (chamado_id) REFERENCES chamados(id) ON DELETE CASCADE
 //   PRIMARY KEY anexos_chamado_pkey: PRIMARY KEY (id)
-//   CHECK anexos_chamado_tipo_arquivo_check: CHECK ((tipo_arquivo = ANY (ARRAY['audio'::text, 'video'::text, 'imagem'::text, 'pdf'::text])))
 // Table: anexos_chamado_interno
 //   FOREIGN KEY anexos_chamado_interno_chamado_id_fkey: FOREIGN KEY (chamado_id) REFERENCES chamados(id) ON DELETE CASCADE
 //   PRIMARY KEY anexos_chamado_interno_pkey: PRIMARY KEY (id)

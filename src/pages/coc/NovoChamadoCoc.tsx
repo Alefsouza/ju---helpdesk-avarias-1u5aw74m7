@@ -122,12 +122,12 @@ export default function NovoChamadoCoc() {
 
       if (anexoError) throw anexoError
 
-      toast.success('Chamada enviada com sucesso!')
+      toast.success('Chamado enviado com sucesso!')
       form.reset()
       setFile(null)
     } catch (error) {
       console.error(error)
-      toast.error('Erro ao enviar chamada. Tente novamente.')
+      toast.error('Erro ao enviar chamado. Tente novamente.')
     } finally {
       setIsSubmitting(false)
     }
@@ -139,7 +139,7 @@ export default function NovoChamadoCoc() {
         <CardHeader className="border-b bg-slate-50/50">
           <CardTitle className="text-2xl text-[#225f3d]">Abrir Chamado</CardTitle>
           <CardDescription>
-            Preencha os dados abaixo para registrar uma nova chamado.
+            Preencha os dados abaixo para registrar um novo chamado.
           </CardDescription>
         </CardHeader>
         <CardContent className="pt-6">
@@ -312,7 +312,7 @@ export default function NovoChamadoCoc() {
                     <FormLabel>Descrição</FormLabel>
                     <FormControl>
                       <Textarea
-                        placeholder="Descreva os detalhes da chamada"
+                        placeholder="Descreva os detalhes do chamado"
                         className="min-h-[100px]"
                         {...field}
                       />
@@ -362,7 +362,7 @@ export default function NovoChamadoCoc() {
                       Enviando...
                     </>
                   ) : (
-                    'Enviar Chamada'
+                    'Enviar Chamado'
                   )}
                 </Button>
               </div>

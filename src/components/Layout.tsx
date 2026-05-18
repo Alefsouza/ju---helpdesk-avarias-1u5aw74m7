@@ -188,7 +188,7 @@ function AppSidebar() {
                   >
                     <Link to="/sos/pendentes">
                       <LifeBuoy />
-                      <span>Chamadas Pendentes</span>
+                      <span>Chamados Pendentes</span>
                     </Link>
                   </SidebarMenuButton>
                 </SidebarMenuItem>

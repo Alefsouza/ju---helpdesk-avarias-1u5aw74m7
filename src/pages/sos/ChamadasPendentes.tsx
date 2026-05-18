@@ -51,7 +51,7 @@ export default function ChamadasPendentesSos() {
       if (error) throw error
       setChamados(data || [])
     } catch (err: any) {
-      toast.error('Erro ao buscar chamadas pendentes')
+      toast.error('Erro ao buscar chamados pendentes')
       console.error(err)
     } finally {
       setLoading(false)
@@ -130,9 +130,9 @@ export default function ChamadasPendentesSos() {
   return (
     <div className="space-y-6">
       <div className="flex flex-col gap-2">
-        <h1 className="text-3xl font-bold tracking-tight text-slate-900">Chamadas Pendentes</h1>
+        <h1 className="text-3xl font-bold tracking-tight text-slate-900">Chamados Pendentes</h1>
         <p className="text-slate-500">
-          Gestão de chamadas abertas pela equipe COC aguardando emissão de OS.
+          Gestão de chamados abertos pela equipe COC aguardando emissão de OS.
         </p>
       </div>
 
@@ -141,18 +141,16 @@ export default function ChamadasPendentesSos() {
           {loading ? (
             <div className="flex flex-col items-center justify-center py-12 text-slate-500">
               <Loader2 className="h-8 w-8 animate-spin mb-4 text-[#225f3d]" />
-              <p>Buscando chamadas pendentes...</p>
+              <p>Buscando chamados pendentes...</p>
             </div>
           ) : chamados.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-16 text-center px-4">
               <div className="w-16 h-16 bg-[#225f3d]/10 rounded-full flex items-center justify-center mb-4">
                 <ClipboardEdit className="h-8 w-8 text-[#225f3d]" />
               </div>
-              <h3 className="text-lg font-semibold text-slate-900 mb-1">
-                Nenhuma chamada pendente
-              </h3>
+              <h3 className="text-lg font-semibold text-slate-900 mb-1">Nenhum chamado pendente</h3>
               <p className="text-slate-500 max-w-sm">
-                Todas as chamadas abertas pelo COC já tiveram suas OS preenchidas.
+                Todos os chamados abertos pelo COC já tiveram suas OS preenchidas.
               </p>
             </div>
           ) : (

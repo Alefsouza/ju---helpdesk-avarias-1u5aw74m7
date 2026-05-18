@@ -7,7 +7,14 @@ import { supabase } from '@/lib/supabase/client'
 import { toast } from 'sonner'
 import { Camera, X, Loader2, ImagePlus } from 'lucide-react'
 
-import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card'
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  CardFooter,
+  CardDescription,
+} from '@/components/ui/card'
 import {
   Form,
   FormControl,

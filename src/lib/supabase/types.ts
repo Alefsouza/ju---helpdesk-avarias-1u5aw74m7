@@ -157,12 +157,18 @@ export type Database = {
           atualizado_em: string
           chamado_id: string | null
           criado_em: string
+          data: string | null
+          descricao_danos: string | null
           foto_url: string | null
           fotos_urls: Json | null
+          garagem: string | null
+          horario: string | null
           id: string
+          linha: string | null
           nome_arquivo: string
           nome_responsavel: string | null
           numero_os: string | null
+          ocorrencia: string | null
           registro_motorista: string | null
           registro_responsavel: string | null
           tipo_documento: string
@@ -172,12 +178,18 @@ export type Database = {
           atualizado_em?: string
           chamado_id?: string | null
           criado_em?: string
+          data?: string | null
+          descricao_danos?: string | null
           foto_url?: string | null
           fotos_urls?: Json | null
+          garagem?: string | null
+          horario?: string | null
           id?: string
+          linha?: string | null
           nome_arquivo: string
           nome_responsavel?: string | null
           numero_os?: string | null
+          ocorrencia?: string | null
           registro_motorista?: string | null
           registro_responsavel?: string | null
           tipo_documento: string
@@ -187,12 +199,18 @@ export type Database = {
           atualizado_em?: string
           chamado_id?: string | null
           criado_em?: string
+          data?: string | null
+          descricao_danos?: string | null
           foto_url?: string | null
           fotos_urls?: Json | null
+          garagem?: string | null
+          horario?: string | null
           id?: string
+          linha?: string | null
           nome_arquivo?: string
           nome_responsavel?: string | null
           numero_os?: string | null
+          ocorrencia?: string | null
           registro_motorista?: string | null
           registro_responsavel?: string | null
           tipo_documento?: string
@@ -667,6 +685,12 @@ export const Constants = {
 //   numero_os: text (nullable)
 //   foto_url: text (nullable)
 //   fotos_urls: jsonb (nullable, default: '[]'::jsonb)
+//   garagem: text (nullable)
+//   data: date (nullable)
+//   horario: time without time zone (nullable)
+//   ocorrencia: text (nullable)
+//   linha: text (nullable)
+//   descricao_danos: text (nullable)
 // Table: formularios_espelho_danos
 //   id: uuid (not null, default: gen_random_uuid())
 //   chamado_id: uuid (not null)
@@ -751,7 +775,7 @@ export const Constants = {
 // Table: documentos
 //   FOREIGN KEY documentos_chamado_id_fkey: FOREIGN KEY (chamado_id) REFERENCES chamados(id) ON DELETE SET NULL
 //   PRIMARY KEY documentos_pkey: PRIMARY KEY (id)
-//   CHECK documentos_tipo_documento_check: CHECK ((tipo_documento = ANY (ARRAY['IDO'::text, 'Espelho de Danos'::text])))
+//   CHECK documentos_tipo_documento_check: CHECK ((tipo_documento = ANY (ARRAY['IDO'::text, 'Espelho de Danos'::text, 'Vistoria'::text])))
 // Table: formularios_espelho_danos
 //   FOREIGN KEY formularios_espelho_danos_chamado_id_fkey: FOREIGN KEY (chamado_id) REFERENCES chamados(id) ON DELETE CASCADE
 //   PRIMARY KEY formularios_espelho_danos_pkey: PRIMARY KEY (id)

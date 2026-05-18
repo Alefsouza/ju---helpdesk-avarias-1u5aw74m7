@@ -152,7 +152,7 @@ export default function DocumentosPendentes() {
       const { url, nome_arquivo } = pdfData
 
       // 2. Atualizar documento com número da OS e URL do PDF gerado
-      const { error } = await supabase
+      const { data: updatedDoc, error } = await supabase
         .from('documentos')
         .update({
           numero_os: numeroOS.trim(),
@@ -161,6 +161,8 @@ export default function DocumentosPendentes() {
           tipo_documento: 'Espelho de Danos',
         })
         .eq('id', selectedDoc.id)
+        .select()
+        .single()
 
       if (error) throw error
 
@@ -171,6 +173,23 @@ export default function DocumentosPendentes() {
 
       setDocumentos((docs) => docs.filter((d) => d.id !== selectedDoc.id))
       handleCloseModal()
+
+      // 3. Criar chamado automaticamente em background (não bloqueia o usuário)
+      supabase.functions
+        .invoke('criar-chamado-vistoria', {
+          body: { documento: updatedDoc },
+        })
+        .then(({ error: functionError }) => {
+          if (functionError) {
+            console.error(
+              'Erro retornado pela Edge Function criar-chamado-vistoria:',
+              functionError,
+            )
+          }
+        })
+        .catch((err) => {
+          console.error('Erro ao chamar Edge Function criar-chamado-vistoria:', err)
+        })
     } catch (error: any) {
       console.error('Erro ao salvar OS:', error)
       toast({

@@ -108,7 +108,74 @@ export default function ChamadosPendentesSos() {
 
       if (error) throw error
 
-      toast.success('OS preenchida com sucesso! Chamado enviado para a fila.')
+      const anexos = getAnexos(selectedChamado)
+      const imageAnexos = anexos.filter((a: any) => a.tipo_arquivo?.includes('image'))
+      const fotosUrls = imageAnexos.map((a: any) => a.url_arquivo)
+
+      let arquivoUrl = anexos.length > 0 ? anexos[0].url_arquivo : '#'
+      let nomeArquivo = anexos.length > 0 ? anexos[0].nome_arquivo : `OS_${osNumber.trim()}.pdf`
+
+      try {
+        const dateObj = new Date(selectedChamado.criado_em)
+        const formattedDate = `${dateObj.getDate().toString().padStart(2, '0')}/${(dateObj.getMonth() + 1).toString().padStart(2, '0')}/${dateObj.getFullYear()}`
+        const horario = dateObj.toTimeString().substring(0, 5)
+
+        const { data: pdfData, error: pdfError } = await supabase.functions.invoke('gerar-pdf', {
+          body: {
+            id: selectedChamado.id,
+            garagem: selectedChamado.operacao,
+            linha: selectedChamado.linha,
+            numero_carro: selectedChamado.carro,
+            data: formattedDate,
+            horario,
+            ocorrencia: selectedChamado.tipo_chamado,
+            descricao_danos: selectedChamado.descricao,
+            numero_os: osNumber.trim(),
+            nome_vistoriador: selectedChamado.nome_cobrador || 'Equipe COC',
+            registro_vistoriador: selectedChamado.registro_cobrador,
+            nome_motorista: selectedChamado.nome_motorista,
+            registro_motorista: selectedChamado.registro_motorista,
+            fotos: fotosUrls,
+          },
+        })
+
+        if (!pdfError && pdfData?.success) {
+          arquivoUrl = pdfData.url
+          nomeArquivo = pdfData.nome_arquivo
+        }
+      } catch (pdfErr) {
+        console.error('Erro ao gerar PDF do chamado:', pdfErr)
+      }
+
+      const { error: docError } = await supabase.from('documentos').insert({
+        chamado_id: selectedChamado.id,
+        tipo_documento: 'Espelho de Danos',
+        numero_os: osNumber.trim(),
+        numero_carro: selectedChamado.carro,
+        linha: selectedChamado.linha,
+        descricao_danos: selectedChamado.descricao,
+        ocorrencia: selectedChamado.tipo_chamado,
+        nome_motorista: selectedChamado.nome_motorista,
+        registro_motorista: selectedChamado.registro_motorista,
+        nome_responsavel: selectedChamado.nome_cobrador || 'Equipe COC',
+        data: selectedChamado.criado_em
+          ? new Date(selectedChamado.criado_em).toISOString().split('T')[0]
+          : new Date().toISOString().split('T')[0],
+        horario: selectedChamado.criado_em
+          ? new Date(selectedChamado.criado_em).toTimeString().substring(0, 5)
+          : new Date().toTimeString().substring(0, 5),
+        arquivo_url: arquivoUrl,
+        nome_arquivo: nomeArquivo,
+        foto_url: imageAnexos.length > 0 ? imageAnexos[0].url_arquivo : null,
+        fotos_urls: fotosUrls.length > 0 ? fotosUrls : null,
+        garagem: selectedChamado.operacao || null,
+      })
+
+      if (docError) {
+        console.error('Erro ao criar documento para manutenção:', docError)
+      }
+
+      toast.success('OS preenchida com sucesso! Chamado enviado para a fila e manutenção.')
       setOsModalOpen(false)
       fetchChamados()
     } catch (err: any) {

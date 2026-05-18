@@ -116,6 +116,7 @@ export function GestaoEquipeModal({ open, setOpen, user, onSuccess }: any) {
                 <SelectItem value="responsavel">Responsável (Atendimento)</SelectItem>
                 <SelectItem value="admin">Administrador (Total)</SelectItem>
                 <SelectItem value="vistoriador">Vistoriador (Apenas Vistorias)</SelectItem>
+                <SelectItem value="coc">COC (Abertura de Chamadas)</SelectItem>
               </SelectContent>
             </Select>
           </div>

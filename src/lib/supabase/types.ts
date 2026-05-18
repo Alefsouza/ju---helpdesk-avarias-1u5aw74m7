@@ -115,11 +115,19 @@ export type Database = {
       chamados: {
         Row: {
           atualizado_em: string
+          cargo: string | null
           criado_em: string
           descricao: string
           id: string
+          linha: string | null
+          local_ocorrencia: string | null
+          nome_colaborador: string | null
+          nome_motorista: string | null
+          operacao: string | null
           pia: string | null
           prioridade: string | null
+          registro_colaborador: string | null
+          registro_motorista: string | null
           responsavel_id: string | null
           status: string
           tipo_chamado: string | null
@@ -128,11 +136,19 @@ export type Database = {
         }
         Insert: {
           atualizado_em?: string
+          cargo?: string | null
           criado_em?: string
           descricao: string
           id?: string
+          linha?: string | null
+          local_ocorrencia?: string | null
+          nome_colaborador?: string | null
+          nome_motorista?: string | null
+          operacao?: string | null
           pia?: string | null
           prioridade?: string | null
+          registro_colaborador?: string | null
+          registro_motorista?: string | null
           responsavel_id?: string | null
           status?: string
           tipo_chamado?: string | null
@@ -141,11 +157,19 @@ export type Database = {
         }
         Update: {
           atualizado_em?: string
+          cargo?: string | null
           criado_em?: string
           descricao?: string
           id?: string
+          linha?: string | null
+          local_ocorrencia?: string | null
+          nome_colaborador?: string | null
+          nome_motorista?: string | null
+          operacao?: string | null
           pia?: string | null
           prioridade?: string | null
+          registro_colaborador?: string | null
+          registro_motorista?: string | null
           responsavel_id?: string | null
           status?: string
           tipo_chamado?: string | null
@@ -691,6 +715,14 @@ export const Constants = {
 //   atualizado_em: timestamp with time zone (not null, default: now())
 //   pia: text (nullable)
 //   tipo_chamado: text (nullable)
+//   registro_motorista: text (nullable)
+//   nome_motorista: text (nullable)
+//   registro_colaborador: text (nullable)
+//   nome_colaborador: text (nullable)
+//   cargo: text (nullable)
+//   linha: text (nullable)
+//   local_ocorrencia: text (nullable)
+//   operacao: text (nullable)
 // Table: documentos
 //   id: uuid (not null, default: gen_random_uuid())
 //   tipo_documento: text (not null)
@@ -794,7 +826,7 @@ export const Constants = {
 //   PRIMARY KEY chamados_pkey: PRIMARY KEY (id)
 //   CHECK chamados_prioridade_check: CHECK (((prioridade IS NULL) OR (prioridade = ANY (ARRAY['baixa'::text, 'media'::text, 'alta'::text, 'urgente'::text]))))
 //   FOREIGN KEY chamados_responsavel_id_fkey: FOREIGN KEY (responsavel_id) REFERENCES auth.users(id) ON DELETE SET NULL
-//   CHECK chamados_status_check: CHECK ((status = ANY (ARRAY['aberto'::text, 'em_atendimento'::text, 'finalizado'::text])))
+//   CHECK chamados_status_check: CHECK ((status = ANY (ARRAY['aberto'::text, 'em_atendimento'::text, 'finalizado'::text, 'Pendente'::text, 'pendente'::text])))
 //   FOREIGN KEY chamados_usuario_id_fkey: FOREIGN KEY (usuario_id) REFERENCES auth.users(id) ON DELETE CASCADE
 // Table: documentos
 //   FOREIGN KEY documentos_chamado_id_fkey: FOREIGN KEY (chamado_id) REFERENCES chamados(id) ON DELETE SET NULL
@@ -814,7 +846,7 @@ export const Constants = {
 // Table: perfil_usuario
 //   FOREIGN KEY perfil_usuario_id_fkey: FOREIGN KEY (id) REFERENCES auth.users(id) ON DELETE CASCADE
 //   PRIMARY KEY perfil_usuario_pkey: PRIMARY KEY (id)
-//   CHECK perfil_usuario_tipo_usuario_check: CHECK ((tipo_usuario = ANY (ARRAY['basico'::text, 'responsavel'::text, 'admin'::text, 'vistoriador'::text])))
+//   CHECK perfil_usuario_tipo_usuario_check: CHECK ((tipo_usuario = ANY (ARRAY['basico'::text, 'responsavel'::text, 'admin'::text, 'vistoriador'::text, 'coc'::text])))
 // Table: respostas_chamado
 //   FOREIGN KEY respostas_chamado_chamado_id_fkey: FOREIGN KEY (chamado_id) REFERENCES chamados(id) ON DELETE CASCADE
 //   PRIMARY KEY respostas_chamado_pkey: PRIMARY KEY (id)

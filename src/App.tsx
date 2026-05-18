@@ -26,7 +26,7 @@ import FormularioEspelhoDanos from './pages/espelho-danos/FormularioEspelhoDanos
 import SucessoEspelhoDanos from './pages/espelho-danos/Sucesso'
 import FormularioEspelhoDanosFixo from './pages/espelho-danos/FormularioEspelhoDanosFixo'
 import SucessoEspelhoDanosFixo from './pages/espelho-danos/SucessoEspelhoDanosFixo'
-import ChamadasPendentesSos from './pages/sos/ChamadasPendentes'
+import ChamadosPendentesSos from './pages/sos/ChamadosPendentes'
 import OsManutencao from './pages/OsManutencao'
 import NotFound from './pages/NotFound'
 import Layout from './components/Layout'
@@ -56,7 +56,7 @@ const App = () => (
             <Route path="/vistoria/pendentes" element={<DocumentosPendentes />} />
             <Route path="/espelhos-danos" element={<EspelhosDanos />} />
             <Route path="/coc/novo" element={<NovoChamadoCoc />} />
-            <Route path="/sos/pendentes" element={<ChamadasPendentesSos />} />
+            <Route path="/sos/pendentes" element={<ChamadosPendentesSos />} />
           </Route>
           <Route path="/espelho-danos-fixo/sucesso" element={<SucessoEspelhoDanosFixo />} />
           <Route path="/espelho-danos-fixo" element={<FormularioEspelhoDanosFixo />} />

@@ -24,7 +24,7 @@ import { Eye, ClipboardEdit, Loader2, Download } from 'lucide-react'
 import { toast } from 'sonner'
 import { format } from 'date-fns'
 
-export default function ChamadasPendentesSos() {
+export default function ChamadosPendentesSos() {
   const [chamados, setChamados] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
 
@@ -92,18 +92,23 @@ export default function ChamadasPendentesSos() {
 
     setIsSubmitting(true)
     try {
+      const tituloAtualizado = selectedChamado.carro
+        ? `${selectedChamado.titulo} - ${selectedChamado.carro}`
+        : selectedChamado.titulo
+
       const { error } = await supabase
         .from('chamados')
         .update({
           numero_os: osNumber.trim(),
           status: 'aberto',
+          titulo: tituloAtualizado,
           atualizado_em: new Date().toISOString(),
         })
         .eq('id', selectedChamado.id)
 
       if (error) throw error
 
-      toast.success('OS preenchida com sucesso!')
+      toast.success('OS preenchida com sucesso! Chamado enviado para a fila.')
       setOsModalOpen(false)
       fetchChamados()
     } catch (err: any) {
@@ -275,6 +280,10 @@ export default function ChamadasPendentesSos() {
                     <p className="text-sm font-medium text-slate-500">Linha</p>
                     <p className="text-sm">{selectedChamado.linha || '-'}</p>
                   </div>
+                  <div className="space-y-1">
+                    <p className="text-sm font-medium text-slate-500">Tipo de Avaria</p>
+                    <p className="text-sm">{selectedChamado.tipo_chamado || '-'}</p>
+                  </div>
                 </div>
               </div>
 
@@ -347,8 +356,8 @@ export default function ChamadasPendentesSos() {
           <DialogHeader>
             <DialogTitle>Preencher Ordem de Serviço</DialogTitle>
             <DialogDescription>
-              Informe o número da OS gerada para este chamado. O chamado será movido para os
-              atendimentos abertos.
+              Informe o número da OS gerada para este chamado. O chamado será movido para a Fila de
+              Atendimento.
             </DialogDescription>
           </DialogHeader>
           <div className="py-4">

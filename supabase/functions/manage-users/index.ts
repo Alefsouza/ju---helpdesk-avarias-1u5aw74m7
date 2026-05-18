@@ -14,16 +14,18 @@ Deno.serve(async (req: Request) => {
     const supabaseClient = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_ANON_KEY') ?? '',
-      { global: { headers: { Authorization: authHeader } } }
+      { global: { headers: { Authorization: authHeader } } },
     )
 
     const supabaseAdmin = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
     )
 
     // Check if caller is admin
-    const { data: { user } } = await supabaseClient.auth.getUser()
+    const {
+      data: { user },
+    } = await supabaseClient.auth.getUser()
     if (!user) throw new Error('Unauthorized')
 
     const { data: profile } = await supabaseAdmin
@@ -41,12 +43,12 @@ Deno.serve(async (req: Request) => {
 
     if (action === 'create') {
       const { email, nome_completo, tipo_usuario } = body
-      
+
       const { data: newUser, error: createError } = await supabaseAdmin.auth.admin.createUser({
         email,
         password: 'HelpdeskUser@123', // Default initial password
         email_confirm: true,
-        user_metadata: { full_name: nome_completo }
+        user_metadata: { full_name: nome_completo },
       })
 
       if (createError) throw createError
@@ -66,7 +68,7 @@ Deno.serve(async (req: Request) => {
 
     if (action === 'delete') {
       const { userId } = body
-      
+
       const { error: deleteError } = await supabaseAdmin.auth.admin.deleteUser(userId)
       if (deleteError) throw deleteError
 
@@ -77,17 +79,17 @@ Deno.serve(async (req: Request) => {
 
     if (action === 'change_password') {
       const { userId, newPassword } = body
-      
+
       const { error: updateError } = await supabaseAdmin.auth.admin.updateUserById(userId, {
-        password: newPassword
+        password: newPassword,
       })
-      
+
       if (updateError) throw updateError
 
       const { error: auditError } = await supabaseAdmin.from('auditoria_admin').insert({
         admin_id: user.id,
         usuario_id: userId,
-        acao: 'alteracao_senha'
+        acao: 'alteracao_senha',
       })
 
       if (auditError) console.error('Erro ao registrar auditoria:', auditError)

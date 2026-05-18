@@ -4,7 +4,8 @@ import { createClient } from 'jsr:@supabase/supabase-js@2'
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, x-supabase-client-platform, apikey, content-type',
+  'Access-Control-Allow-Headers':
+    'authorization, x-client-info, x-supabase-client-platform, apikey, content-type',
 }
 
 Deno.serve(async (req: Request) => {
@@ -19,15 +20,18 @@ Deno.serve(async (req: Request) => {
     const supabaseClient = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_ANON_KEY') ?? '',
-      { global: { headers: { Authorization: authHeader } } }
+      { global: { headers: { Authorization: authHeader } } },
     )
 
     const supabaseAdmin = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
     )
 
-    const { data: { user }, error: authError } = await supabaseClient.auth.getUser()
+    const {
+      data: { user },
+      error: authError,
+    } = await supabaseClient.auth.getUser()
     if (authError || !user) throw new Error('Unauthorized')
 
     const { chamado_id, novo_responsavel_id, observacao } = await req.json()
@@ -81,7 +85,7 @@ Deno.serve(async (req: Request) => {
       .from('chamados')
       .update({
         responsavel_id: novo_responsavel_id,
-        atualizado_em: new Date().toISOString()
+        atualizado_em: new Date().toISOString(),
       })
       .eq('id', chamado_id)
 
@@ -92,14 +96,12 @@ Deno.serve(async (req: Request) => {
       ? `Transferido para ${novoResponsavel.nome_completo}. Motivo: ${observacao}`
       : `Transferido para ${novoResponsavel.nome_completo}.`
 
-    const { error: historyError } = await supabaseAdmin
-      .from('historico_chamado')
-      .insert({
-        chamado_id,
-        acao: 'transferido',
-        usuario_id: user.id,
-        detalhes
-      })
+    const { error: historyError } = await supabaseAdmin.from('historico_chamado').insert({
+      chamado_id,
+      acao: 'transferido',
+      usuario_id: user.id,
+      detalhes,
+    })
 
     if (historyError) {
       console.error('Error inserting history:', historyError)

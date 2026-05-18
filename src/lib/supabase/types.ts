@@ -1,17 +1,11 @@
 // AVOID UPDATING THIS FILE DIRECTLY. It is automatically generated.
-export type Json =
-  | string
-  | number
-  | boolean
-  | null
-  | { [key: string]: Json | undefined }
-  | Json[]
+export type Json = string | number | boolean | null | { [key: string]: Json | undefined } | Json[]
 
 export type Database = {
   // Allows to automatically instantiate createClient with right options
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
-    PostgrestVersion: "14.5"
+    PostgrestVersion: '14.5'
   }
   public: {
     Tables: {
@@ -45,11 +39,11 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: "anexos_chamado_chamado_id_fkey"
-            columns: ["chamado_id"]
+            foreignKeyName: 'anexos_chamado_chamado_id_fkey'
+            columns: ['chamado_id']
             isOneToOne: false
-            referencedRelation: "chamados"
-            referencedColumns: ["id"]
+            referencedRelation: 'chamados'
+            referencedColumns: ['id']
           },
         ]
       }
@@ -86,11 +80,11 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: "anexos_chamado_interno_chamado_id_fkey"
-            columns: ["chamado_id"]
+            foreignKeyName: 'anexos_chamado_interno_chamado_id_fkey'
+            columns: ['chamado_id']
             isOneToOne: false
-            referencedRelation: "chamados"
-            referencedColumns: ["id"]
+            referencedRelation: 'chamados'
+            referencedColumns: ['id']
           },
         ]
       }
@@ -262,11 +256,11 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: "documentos_chamado_id_fkey"
-            columns: ["chamado_id"]
+            foreignKeyName: 'documentos_chamado_id_fkey'
+            columns: ['chamado_id']
             isOneToOne: false
-            referencedRelation: "chamados"
-            referencedColumns: ["id"]
+            referencedRelation: 'chamados'
+            referencedColumns: ['id']
           },
         ]
       }
@@ -327,11 +321,11 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: "formularios_espelho_danos_chamado_id_fkey"
-            columns: ["chamado_id"]
+            foreignKeyName: 'formularios_espelho_danos_chamado_id_fkey'
+            columns: ['chamado_id']
             isOneToOne: false
-            referencedRelation: "chamados"
-            referencedColumns: ["id"]
+            referencedRelation: 'chamados'
+            referencedColumns: ['id']
           },
         ]
       }
@@ -404,11 +398,11 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: "formularios_ido_chamado_id_fkey"
-            columns: ["chamado_id"]
+            foreignKeyName: 'formularios_ido_chamado_id_fkey'
+            columns: ['chamado_id']
             isOneToOne: false
-            referencedRelation: "chamados"
-            referencedColumns: ["id"]
+            referencedRelation: 'chamados'
+            referencedColumns: ['id']
           },
         ]
       }
@@ -439,11 +433,11 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: "historico_chamado_chamado_id_fkey"
-            columns: ["chamado_id"]
+            foreignKeyName: 'historico_chamado_chamado_id_fkey'
+            columns: ['chamado_id']
             isOneToOne: false
-            referencedRelation: "chamados"
-            referencedColumns: ["id"]
+            referencedRelation: 'chamados'
+            referencedColumns: ['id']
           },
         ]
       }
@@ -510,11 +504,11 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: "respostas_chamado_chamado_id_fkey"
-            columns: ["chamado_id"]
+            foreignKeyName: 'respostas_chamado_chamado_id_fkey'
+            columns: ['chamado_id']
             isOneToOne: false
-            referencedRelation: "chamados"
-            referencedColumns: ["id"]
+            referencedRelation: 'chamados'
+            referencedColumns: ['id']
           },
         ]
       }
@@ -559,33 +553,31 @@ export type Database = {
   }
 }
 
-type DatabaseWithoutInternals = Omit<Database, "__InternalSupabase">
+type DatabaseWithoutInternals = Omit<Database, '__InternalSupabase'>
 
-type DefaultSchema = DatabaseWithoutInternals[Extract<keyof Database, "public">]
+type DefaultSchema = DatabaseWithoutInternals[Extract<keyof Database, 'public'>]
 
 export type Tables<
   DefaultSchemaTableNameOrOptions extends
-    | keyof (DefaultSchema["Tables"] & DefaultSchema["Views"])
+    | keyof (DefaultSchema['Tables'] & DefaultSchema['Views'])
     | { schema: keyof DatabaseWithoutInternals },
   TableName extends DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
-    ? keyof (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
-        DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])
+    ? keyof (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions['schema']]['Tables'] &
+        DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions['schema']]['Views'])
     : never = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
-  ? (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
-      DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])[TableName] extends {
+  ? (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions['schema']]['Tables'] &
+      DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions['schema']]['Views'])[TableName] extends {
       Row: infer R
     }
     ? R
     : never
-  : DefaultSchemaTableNameOrOptions extends keyof (DefaultSchema["Tables"] &
-        DefaultSchema["Views"])
-    ? (DefaultSchema["Tables"] &
-        DefaultSchema["Views"])[DefaultSchemaTableNameOrOptions] extends {
+  : DefaultSchemaTableNameOrOptions extends keyof (DefaultSchema['Tables'] & DefaultSchema['Views'])
+    ? (DefaultSchema['Tables'] & DefaultSchema['Views'])[DefaultSchemaTableNameOrOptions] extends {
         Row: infer R
       }
       ? R
@@ -594,23 +586,23 @@ export type Tables<
 
 export type TablesInsert<
   DefaultSchemaTableNameOrOptions extends
-    | keyof DefaultSchema["Tables"]
+    | keyof DefaultSchema['Tables']
     | { schema: keyof DatabaseWithoutInternals },
   TableName extends DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
-    ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
+    ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions['schema']]['Tables']
     : never = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
-  ? DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"][TableName] extends {
+  ? DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions['schema']]['Tables'][TableName] extends {
       Insert: infer I
     }
     ? I
     : never
-  : DefaultSchemaTableNameOrOptions extends keyof DefaultSchema["Tables"]
-    ? DefaultSchema["Tables"][DefaultSchemaTableNameOrOptions] extends {
+  : DefaultSchemaTableNameOrOptions extends keyof DefaultSchema['Tables']
+    ? DefaultSchema['Tables'][DefaultSchemaTableNameOrOptions] extends {
         Insert: infer I
       }
       ? I
@@ -619,23 +611,23 @@ export type TablesInsert<
 
 export type TablesUpdate<
   DefaultSchemaTableNameOrOptions extends
-    | keyof DefaultSchema["Tables"]
+    | keyof DefaultSchema['Tables']
     | { schema: keyof DatabaseWithoutInternals },
   TableName extends DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
-    ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
+    ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions['schema']]['Tables']
     : never = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
-  ? DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"][TableName] extends {
+  ? DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions['schema']]['Tables'][TableName] extends {
       Update: infer U
     }
     ? U
     : never
-  : DefaultSchemaTableNameOrOptions extends keyof DefaultSchema["Tables"]
-    ? DefaultSchema["Tables"][DefaultSchemaTableNameOrOptions] extends {
+  : DefaultSchemaTableNameOrOptions extends keyof DefaultSchema['Tables']
+    ? DefaultSchema['Tables'][DefaultSchemaTableNameOrOptions] extends {
         Update: infer U
       }
       ? U
@@ -644,36 +636,36 @@ export type TablesUpdate<
 
 export type Enums<
   DefaultSchemaEnumNameOrOptions extends
-    | keyof DefaultSchema["Enums"]
+    | keyof DefaultSchema['Enums']
     | { schema: keyof DatabaseWithoutInternals },
   EnumName extends DefaultSchemaEnumNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
-    ? keyof DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"]
+    ? keyof DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions['schema']]['Enums']
     : never = never,
 > = DefaultSchemaEnumNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
-  ? DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"][EnumName]
-  : DefaultSchemaEnumNameOrOptions extends keyof DefaultSchema["Enums"]
-    ? DefaultSchema["Enums"][DefaultSchemaEnumNameOrOptions]
+  ? DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions['schema']]['Enums'][EnumName]
+  : DefaultSchemaEnumNameOrOptions extends keyof DefaultSchema['Enums']
+    ? DefaultSchema['Enums'][DefaultSchemaEnumNameOrOptions]
     : never
 
 export type CompositeTypes<
   PublicCompositeTypeNameOrOptions extends
-    | keyof DefaultSchema["CompositeTypes"]
+    | keyof DefaultSchema['CompositeTypes']
     | { schema: keyof DatabaseWithoutInternals },
   CompositeTypeName extends PublicCompositeTypeNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
-    ? keyof DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"]
+    ? keyof DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions['schema']]['CompositeTypes']
     : never = never,
 > = PublicCompositeTypeNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
-  ? DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"][CompositeTypeName]
-  : PublicCompositeTypeNameOrOptions extends keyof DefaultSchema["CompositeTypes"]
-    ? DefaultSchema["CompositeTypes"][PublicCompositeTypeNameOrOptions]
+  ? DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions['schema']]['CompositeTypes'][CompositeTypeName]
+  : PublicCompositeTypeNameOrOptions extends keyof DefaultSchema['CompositeTypes']
+    ? DefaultSchema['CompositeTypes'][PublicCompositeTypeNameOrOptions]
     : never
 
 export const Constants = {
@@ -681,7 +673,6 @@ export const Constants = {
     Enums: {},
   },
 } as const
-
 
 // ====== DATABASE EXTENDED CONTEXT (auto-generated) ======
 // This section contains actual PostgreSQL column types, constraints, RLS policies,
@@ -956,7 +947,7 @@ export const Constants = {
 //     RETURN NEW;
 //   END;
 //   $function$
-//   
+//
 // FUNCTION is_admin()
 //   CREATE OR REPLACE FUNCTION public.is_admin()
 //    RETURNS boolean
@@ -969,7 +960,7 @@ export const Constants = {
 //     );
 //   END;
 //   $function$
-//   
+//
 // FUNCTION is_responsavel()
 //   CREATE OR REPLACE FUNCTION public.is_responsavel()
 //    RETURNS boolean
@@ -982,7 +973,7 @@ export const Constants = {
 //     );
 //   END;
 //   $function$
-//   
+//
 // FUNCTION is_sos()
 //   CREATE OR REPLACE FUNCTION public.is_sos()
 //    RETURNS boolean
@@ -995,7 +986,7 @@ export const Constants = {
 //     );
 //   END;
 //   $function$
-//   
+//
 // FUNCTION is_vistoriador()
 //   CREATE OR REPLACE FUNCTION public.is_vistoriador()
 //    RETURNS boolean
@@ -1008,7 +999,7 @@ export const Constants = {
 //     );
 //   END;
 //   $function$
-//   
+//
 // FUNCTION ocultar_documento_manutencao(uuid)
 //   CREATE OR REPLACE FUNCTION public.ocultar_documento_manutencao(p_id uuid)
 //    RETURNS void
@@ -1021,7 +1012,7 @@ export const Constants = {
 //     WHERE id = p_id;
 //   END;
 //   $function$
-//   
+//
 // FUNCTION registrar_boletim_ido(uuid, text, text, integer)
 //   CREATE OR REPLACE FUNCTION public.registrar_boletim_ido(p_chamado_id uuid, p_nome_arquivo text, p_arquivo_url text, p_tamanho_bytes integer)
 //    RETURNS void
@@ -1037,15 +1028,15 @@ export const Constants = {
 //     SELECT responsavel_id, usuario_id INTO v_responsavel_id, v_usuario_id
 //     FROM public.chamados
 //     WHERE id = p_chamado_id;
-//   
+//
 //     -- Determine the user ID to associate the attachment with
 //     -- If there's a responsible, use it, otherwise fallback to the creator
 //     v_alvo_id := COALESCE(v_responsavel_id, v_usuario_id);
-//   
+//
 //     IF v_alvo_id IS NULL THEN
 //       RAISE EXCEPTION 'Chamado não encontrado ou sem usuários vinculados';
 //     END IF;
-//   
+//
 //     -- Insert into anexos_chamado_interno
 //     INSERT INTO public.anexos_chamado_interno (
 //       chamado_id,
@@ -1062,7 +1053,7 @@ export const Constants = {
 //       'application/pdf',
 //       p_tamanho_bytes
 //     );
-//   
+//
 //     -- Insert notification into historico_chamado
 //     INSERT INTO public.historico_chamado (
 //       chamado_id,
@@ -1077,7 +1068,7 @@ export const Constants = {
 //     );
 //   END;
 //   $function$
-//   
+//
 // FUNCTION registrar_espelho_danos(uuid, text, text, integer)
 //   CREATE OR REPLACE FUNCTION public.registrar_espelho_danos(p_chamado_id uuid, p_nome_arquivo text, p_arquivo_url text, p_tamanho_bytes integer)
 //    RETURNS void
@@ -1093,14 +1084,14 @@ export const Constants = {
 //     SELECT responsavel_id, usuario_id INTO v_responsavel_id, v_usuario_id
 //     FROM public.chamados
 //     WHERE id = p_chamado_id;
-//   
+//
 //     -- Determine the user ID to associate the attachment with
 //     v_alvo_id := COALESCE(v_responsavel_id, v_usuario_id);
-//   
+//
 //     IF v_alvo_id IS NULL THEN
 //       RAISE EXCEPTION 'Chamado não encontrado ou sem usuários vinculados';
 //     END IF;
-//   
+//
 //     -- Insert into anexos_chamado_interno
 //     INSERT INTO public.anexos_chamado_interno (
 //       chamado_id,
@@ -1117,7 +1108,7 @@ export const Constants = {
 //       'application/pdf',
 //       p_tamanho_bytes
 //     );
-//   
+//
 //     -- Insert notification into historico_chamado
 //     INSERT INTO public.historico_chamado (
 //       chamado_id,
@@ -1132,7 +1123,7 @@ export const Constants = {
 //     );
 //   END;
 //   $function$
-//   
+//
 // FUNCTION rls_auto_enable()
 //   CREATE OR REPLACE FUNCTION public.rls_auto_enable()
 //    RETURNS event_trigger
@@ -1163,7 +1154,7 @@ export const Constants = {
 //     END LOOP;
 //   END;
 //   $function$
-//   
+//
 // FUNCTION update_documentos_atualizado_em()
 //   CREATE OR REPLACE FUNCTION public.update_documentos_atualizado_em()
 //    RETURNS trigger
@@ -1174,7 +1165,7 @@ export const Constants = {
 //     RETURN NEW;
 //   END;
 //   $function$
-//   
+//
 
 // --- TRIGGERS ---
 // Table: documentos
@@ -1189,4 +1180,3 @@ export const Constants = {
 //   CREATE INDEX formularios_espelho_danos_chamado_id_idx ON public.formularios_espelho_danos USING btree (chamado_id)
 // Table: formularios_ido
 //   CREATE INDEX formularios_ido_chamado_id_idx ON public.formularios_ido USING btree (chamado_id)
-

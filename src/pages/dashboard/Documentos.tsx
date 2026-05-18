@@ -133,6 +133,7 @@ export default function Documentos() {
             const matchSearch =
               newDoc.nome_responsavel?.toLowerCase().includes(search.toLowerCase()) ||
               newDoc.registro_responsavel?.toLowerCase().includes(search.toLowerCase()) ||
+              newDoc.registro_motorista?.toLowerCase().includes(search.toLowerCase()) ||
               newDoc.linha?.toLowerCase().includes(search.toLowerCase()) ||
               newDoc.numero_os?.toLowerCase().includes(search.toLowerCase()) ||
               newDoc.tipo_documento.toLowerCase().includes(search.toLowerCase())
@@ -170,6 +171,7 @@ export default function Documentos() {
         const matchSearch =
           doc.nome_responsavel?.toLowerCase().includes(searchTerm) ||
           doc.registro_responsavel?.toLowerCase().includes(searchTerm) ||
+          doc.registro_motorista?.toLowerCase().includes(searchTerm) ||
           doc.linha?.toLowerCase().includes(searchTerm) ||
           doc.numero_os?.toLowerCase().includes(searchTerm) ||
           doc.tipo_documento.toLowerCase().includes(searchTerm)
@@ -368,7 +370,7 @@ export default function Documentos() {
                         <div className="flex justify-between gap-4">
                           <span className="text-slate-500 shrink-0">Registro:</span>
                           <span className="text-slate-700 truncate text-right">
-                            {doc.registro_responsavel || '-'}
+                            {doc.registro_responsavel || doc.registro_motorista || '-'}
                           </span>
                         </div>
                         <div className="flex justify-between gap-4">
@@ -465,7 +467,7 @@ export default function Documentos() {
                           {doc.nome_responsavel || '-'}
                         </TableCell>
                         <TableCell className="text-slate-600 truncate max-w-[100px]">
-                          {doc.registro_responsavel || '-'}
+                          {doc.registro_responsavel || doc.registro_motorista || '-'}
                         </TableCell>
                         <TableCell className="text-slate-600 truncate max-w-[100px] font-medium">
                           {doc.numero_os || '-'}
@@ -593,7 +595,7 @@ export default function Documentos() {
                   <div className="space-y-1">
                     <span className="text-sm text-slate-500">Registro</span>
                     <p className="font-medium text-slate-900">
-                      {docToView.registro_responsavel || '-'}
+                      {docToView.registro_responsavel || docToView.registro_motorista || '-'}
                     </p>
                   </div>
                   <div className="space-y-1">

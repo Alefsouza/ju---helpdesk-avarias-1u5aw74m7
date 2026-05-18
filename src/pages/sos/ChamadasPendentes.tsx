@@ -163,7 +163,7 @@ export default function ChamadasPendentesSos() {
                     <TableHead className="w-[120px]">Data</TableHead>
                     <TableHead className="min-w-[150px]">Título</TableHead>
                     <TableHead className="min-w-[150px]">Operação / Local</TableHead>
-                    <TableHead className="min-w-[180px]">Motorista / Colaborador</TableHead>
+                    <TableHead className="min-w-[180px]">Motorista / Cobrador</TableHead>
                     <TableHead className="min-w-[120px]">Carro / Linha</TableHead>
                     <TableHead className="text-right w-[100px]">Ações</TableHead>
                   </TableRow>
@@ -195,8 +195,8 @@ export default function ChamadasPendentesSos() {
                           {c.registro_motorista ? `(${c.registro_motorista})` : ''}
                         </div>
                         <div className="text-sm">
-                          <span className="font-medium">Col:</span> {c.nome_colaborador || '-'}{' '}
-                          {c.registro_colaborador ? `(${c.registro_colaborador})` : ''}
+                          <span className="font-medium">Cob:</span> {c.nome_cobrador || '-'}{' '}
+                          {c.registro_cobrador ? `(${c.registro_cobrador})` : ''}
                         </div>
                       </TableCell>
                       <TableCell>
@@ -293,11 +293,11 @@ export default function ChamadasPendentesSos() {
                     </p>
                   </div>
                   <div>
-                    <p className="text-sm font-medium text-slate-500">Colaborador</p>
+                    <p className="text-sm font-medium text-slate-500">Cobrador</p>
                     <p className="text-sm">
-                      {selectedChamado.nome_colaborador || '-'}{' '}
-                      {selectedChamado.registro_colaborador
-                        ? `(${selectedChamado.registro_colaborador})`
+                      {selectedChamado.nome_cobrador || '-'}{' '}
+                      {selectedChamado.registro_cobrador
+                        ? `(${selectedChamado.registro_cobrador})`
                         : ''}
                     </p>
                   </div>

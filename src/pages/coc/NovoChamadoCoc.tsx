@@ -32,8 +32,8 @@ const formSchema = z.object({
   descricao: z.string().min(5, 'A descrição é obrigatória'),
   registro_motorista: z.string().min(1, 'Obrigatório'),
   nome_motorista: z.string().min(1, 'Obrigatório'),
-  registro_colaborador: z.string().min(1, 'Obrigatório'),
-  nome_colaborador: z.string().min(1, 'Obrigatório'),
+  registro_cobrador: z.string().min(1, 'Obrigatório'),
+  nome_cobrador: z.string().min(1, 'Obrigatório'),
   carro: z.string().min(1, 'Obrigatório'),
   linha: z.string().min(1, 'Obrigatório'),
   local_ocorrencia: z.string().min(1, 'Obrigatório'),
@@ -53,8 +53,8 @@ export default function NovoChamadoCoc() {
       descricao: '',
       registro_motorista: '',
       nome_motorista: '',
-      registro_colaborador: '',
-      nome_colaborador: '',
+      registro_cobrador: '',
+      nome_cobrador: '',
       carro: '',
       linha: '',
       local_ocorrencia: '',
@@ -82,8 +82,8 @@ export default function NovoChamadoCoc() {
           status: 'Pendente',
           registro_motorista: values.registro_motorista,
           nome_motorista: values.nome_motorista,
-          registro_colaborador: values.registro_colaborador,
-          nome_colaborador: values.nome_colaborador,
+          registro_cobrador: values.registro_cobrador,
+          nome_cobrador: values.nome_cobrador,
           carro: values.carro,
           linha: values.linha,
           local_ocorrencia: values.local_ocorrencia,
@@ -181,10 +181,10 @@ export default function NovoChamadoCoc() {
 
                 <FormField
                   control={form.control}
-                  name="registro_colaborador"
+                  name="registro_cobrador"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Registro do Colaborador</FormLabel>
+                      <FormLabel>Registro do Cobrador</FormLabel>
                       <FormControl>
                         <Input placeholder="Ex: 54321" {...field} />
                       </FormControl>
@@ -195,10 +195,10 @@ export default function NovoChamadoCoc() {
 
                 <FormField
                   control={form.control}
-                  name="nome_colaborador"
+                  name="nome_cobrador"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Nome do Colaborador</FormLabel>
+                      <FormLabel>Nome do Cobrador</FormLabel>
                       <FormControl>
                         <Input placeholder="Nome completo" {...field} />
                       </FormControl>

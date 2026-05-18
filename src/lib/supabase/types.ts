@@ -121,13 +121,13 @@ export type Database = {
           id: string
           linha: string | null
           local_ocorrencia: string | null
-          nome_colaborador: string | null
+          nome_cobrador: string | null
           nome_motorista: string | null
           numero_os: string | null
           operacao: string | null
           pia: string | null
           prioridade: string | null
-          registro_colaborador: string | null
+          registro_cobrador: string | null
           registro_motorista: string | null
           responsavel_id: string | null
           status: string
@@ -143,13 +143,13 @@ export type Database = {
           id?: string
           linha?: string | null
           local_ocorrencia?: string | null
-          nome_colaborador?: string | null
+          nome_cobrador?: string | null
           nome_motorista?: string | null
           numero_os?: string | null
           operacao?: string | null
           pia?: string | null
           prioridade?: string | null
-          registro_colaborador?: string | null
+          registro_cobrador?: string | null
           registro_motorista?: string | null
           responsavel_id?: string | null
           status?: string
@@ -165,13 +165,13 @@ export type Database = {
           id?: string
           linha?: string | null
           local_ocorrencia?: string | null
-          nome_colaborador?: string | null
+          nome_cobrador?: string | null
           nome_motorista?: string | null
           numero_os?: string | null
           operacao?: string | null
           pia?: string | null
           prioridade?: string | null
-          registro_colaborador?: string | null
+          registro_cobrador?: string | null
           registro_motorista?: string | null
           responsavel_id?: string | null
           status?: string
@@ -721,8 +721,8 @@ export const Constants = {
 //   tipo_chamado: text (nullable)
 //   registro_motorista: text (nullable)
 //   nome_motorista: text (nullable)
-//   registro_colaborador: text (nullable)
-//   nome_colaborador: text (nullable)
+//   registro_cobrador: text (nullable)
+//   nome_cobrador: text (nullable)
 //   carro: text (nullable)
 //   linha: text (nullable)
 //   local_ocorrencia: text (nullable)

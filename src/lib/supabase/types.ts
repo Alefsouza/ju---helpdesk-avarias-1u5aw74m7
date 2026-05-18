@@ -123,6 +123,7 @@ export type Database = {
           local_ocorrencia: string | null
           nome_colaborador: string | null
           nome_motorista: string | null
+          numero_os: string | null
           operacao: string | null
           pia: string | null
           prioridade: string | null
@@ -144,6 +145,7 @@ export type Database = {
           local_ocorrencia?: string | null
           nome_colaborador?: string | null
           nome_motorista?: string | null
+          numero_os?: string | null
           operacao?: string | null
           pia?: string | null
           prioridade?: string | null
@@ -165,6 +167,7 @@ export type Database = {
           local_ocorrencia?: string | null
           nome_colaborador?: string | null
           nome_motorista?: string | null
+          numero_os?: string | null
           operacao?: string | null
           pia?: string | null
           prioridade?: string | null
@@ -516,6 +519,7 @@ export type Database = {
     Functions: {
       is_admin: { Args: never; Returns: boolean }
       is_responsavel: { Args: never; Returns: boolean }
+      is_sos: { Args: never; Returns: boolean }
       is_vistoriador: { Args: never; Returns: boolean }
       ocultar_documento_manutencao: {
         Args: { p_id: string }
@@ -723,6 +727,7 @@ export const Constants = {
 //   linha: text (nullable)
 //   local_ocorrencia: text (nullable)
 //   operacao: text (nullable)
+//   numero_os: text (nullable)
 // Table: documentos
 //   id: uuid (not null, default: gen_random_uuid())
 //   tipo_documento: text (not null)
@@ -846,7 +851,7 @@ export const Constants = {
 // Table: perfil_usuario
 //   FOREIGN KEY perfil_usuario_id_fkey: FOREIGN KEY (id) REFERENCES auth.users(id) ON DELETE CASCADE
 //   PRIMARY KEY perfil_usuario_pkey: PRIMARY KEY (id)
-//   CHECK perfil_usuario_tipo_usuario_check: CHECK ((tipo_usuario = ANY (ARRAY['basico'::text, 'responsavel'::text, 'admin'::text, 'vistoriador'::text, 'coc'::text])))
+//   CHECK perfil_usuario_tipo_usuario_check: CHECK ((tipo_usuario = ANY (ARRAY['basico'::text, 'responsavel'::text, 'admin'::text, 'vistoriador'::text, 'coc'::text, 'sos'::text])))
 // Table: respostas_chamado
 //   FOREIGN KEY respostas_chamado_chamado_id_fkey: FOREIGN KEY (chamado_id) REFERENCES chamados(id) ON DELETE CASCADE
 //   PRIMARY KEY respostas_chamado_pkey: PRIMARY KEY (id)
@@ -864,7 +869,7 @@ export const Constants = {
 //   Policy "anexos_internos_insert" (INSERT, PERMISSIVE) roles={authenticated}
 //     WITH CHECK: (is_responsavel() OR is_admin())
 //   Policy "anexos_internos_select" (SELECT, PERMISSIVE) roles={authenticated}
-//     USING: (is_responsavel() OR is_admin())
+//     USING: (is_responsavel() OR is_admin() OR is_sos())
 //   Policy "anexos_internos_update" (UPDATE, PERMISSIVE) roles={authenticated}
 //     USING: ((usuario_id = auth.uid()) AND (is_responsavel() OR is_admin()))
 // Table: auditoria_admin
@@ -876,9 +881,9 @@ export const Constants = {
 //   Policy "chamados_insert" (INSERT, PERMISSIVE) roles={authenticated}
 //     WITH CHECK: (usuario_id = auth.uid())
 //   Policy "chamados_select" (SELECT, PERMISSIVE) roles={authenticated}
-//     USING: ((usuario_id = auth.uid()) OR is_responsavel() OR is_admin())
+//     USING: ((usuario_id = auth.uid()) OR is_responsavel() OR is_admin() OR is_sos())
 //   Policy "chamados_update" (UPDATE, PERMISSIVE) roles={authenticated}
-//     USING: ((usuario_id = auth.uid()) OR (is_responsavel() AND ((responsavel_id = auth.uid()) OR (status = 'aberto'::text) OR (status = 'finalizado'::text))) OR is_admin())
+//     USING: ((usuario_id = auth.uid()) OR (is_responsavel() AND ((responsavel_id = auth.uid()) OR (status = 'aberto'::text) OR (status = 'finalizado'::text))) OR is_admin() OR is_sos())
 // Table: documentos
 //   Policy "documentos_delete" (DELETE, PERMISSIVE) roles={authenticated}
 //     USING: (is_admin() OR is_responsavel())
@@ -966,6 +971,19 @@ export const Constants = {
 //   BEGIN
 //     RETURN EXISTS (
 //       SELECT 1 FROM public.perfil_usuario WHERE id = auth.uid() AND tipo_usuario = 'responsavel'
+//     );
+//   END;
+//   $function$
+//
+// FUNCTION is_sos()
+//   CREATE OR REPLACE FUNCTION public.is_sos()
+//    RETURNS boolean
+//    LANGUAGE plpgsql
+//    SECURITY DEFINER
+//   AS $function$
+//   BEGIN
+//     RETURN EXISTS (
+//       SELECT 1 FROM public.perfil_usuario WHERE id = auth.uid() AND tipo_usuario = 'sos'
 //     );
 //   END;
 //   $function$

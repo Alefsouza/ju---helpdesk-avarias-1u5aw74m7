@@ -22,6 +22,36 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { useGestaoEquipe } from '@/hooks/use-gestao-equipe'
 import { GestaoEquipeModal } from './gestao-equipe-modal'
 
+const getBadgeStyles = (tipo: string) => {
+  switch (tipo) {
+    case 'admin':
+      return 'border-purple-200 text-purple-700 bg-purple-50'
+    case 'vistoriador':
+      return 'border-orange-200 text-orange-700 bg-orange-50'
+    case 'coc':
+      return 'border-yellow-200 text-yellow-700 bg-yellow-50'
+    case 'sos':
+      return 'border-red-200 text-red-700 bg-red-50'
+    default:
+      return 'border-blue-200 text-blue-700 bg-blue-50'
+  }
+}
+
+const getRoleLabel = (tipo: string) => {
+  switch (tipo) {
+    case 'admin':
+      return 'Admin'
+    case 'vistoriador':
+      return 'Vistoriador'
+    case 'coc':
+      return 'COC'
+    case 'sos':
+      return 'SOS'
+    default:
+      return 'Responsável'
+  }
+}
+
 export function GestaoEquipe() {
   const { users, loading, loadUsers, toggleActive, handleDelete } = useGestaoEquipe()
   const [modalOpen, setModalOpen] = useState(false)
@@ -74,21 +104,8 @@ export function GestaoEquipe() {
                       <TableCell className="font-medium">{u.nome_completo}</TableCell>
                       <TableCell>{u.email}</TableCell>
                       <TableCell>
-                        <Badge
-                          variant="outline"
-                          className={
-                            u.tipo_usuario === 'admin'
-                              ? 'border-purple-200 text-purple-700 bg-purple-50'
-                              : u.tipo_usuario === 'vistoriador'
-                                ? 'border-orange-200 text-orange-700 bg-orange-50'
-                                : 'border-blue-200 text-blue-700 bg-blue-50'
-                          }
-                        >
-                          {u.tipo_usuario === 'admin'
-                            ? 'Admin'
-                            : u.tipo_usuario === 'vistoriador'
-                              ? 'Vistoriador'
-                              : 'Responsável'}
+                        <Badge variant="outline" className={getBadgeStyles(u.tipo_usuario)}>
+                          {getRoleLabel(u.tipo_usuario)}
                         </Badge>
                       </TableCell>
                       <TableCell>
@@ -161,21 +178,8 @@ export function GestaoEquipe() {
                   </CardHeader>
                   <CardContent>
                     <div className="flex gap-2">
-                      <Badge
-                        variant="outline"
-                        className={
-                          u.tipo_usuario === 'admin'
-                            ? 'border-purple-200 text-purple-700 bg-purple-50'
-                            : u.tipo_usuario === 'vistoriador'
-                              ? 'border-orange-200 text-orange-700 bg-orange-50'
-                              : 'border-blue-200 text-blue-700 bg-blue-50'
-                        }
-                      >
-                        {u.tipo_usuario === 'admin'
-                          ? 'Admin'
-                          : u.tipo_usuario === 'vistoriador'
-                            ? 'Vistoriador'
-                            : 'Responsável'}
+                      <Badge variant="outline" className={getBadgeStyles(u.tipo_usuario)}>
+                        {getRoleLabel(u.tipo_usuario)}
                       </Badge>
                       <Badge
                         variant={u.ativo ? 'default' : 'secondary'}

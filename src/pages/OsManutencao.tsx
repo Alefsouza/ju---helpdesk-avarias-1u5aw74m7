@@ -25,6 +25,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 
 export default function OsManutencao() {
   const [documentos, setDocumentos] = useState<any[]>([])
@@ -32,6 +33,7 @@ export default function OsManutencao() {
   const [search, setSearch] = useState('')
   const [docToDelete, setDocToDelete] = useState<any>(null)
   const [isDeleting, setIsDeleting] = useState(false)
+  const [viewDoc, setViewDoc] = useState<any>(null)
 
   useEffect(() => {
     fetchDocumentos()
@@ -234,12 +236,10 @@ export default function OsManutencao() {
                                 variant="ghost"
                                 size="icon"
                                 className="h-8 w-8 text-slate-500 hover:text-primary hover:bg-primary/10"
-                                asChild
+                                onClick={() => setViewDoc(doc)}
                                 title="Visualizar documento"
                               >
-                                <a href={doc.arquivo_url} target="_blank" rel="noopener noreferrer">
-                                  <Eye className="h-4 w-4" />
-                                </a>
+                                <Eye className="h-4 w-4" />
                               </Button>
                               <Button
                                 variant="ghost"
@@ -271,6 +271,42 @@ export default function OsManutencao() {
           </Card>
         </div>
       </main>
+
+      <Dialog open={!!viewDoc} onOpenChange={(open) => !open && setViewDoc(null)}>
+        <DialogContent className="max-w-4xl h-[90vh] flex flex-col p-0 gap-0">
+          <DialogHeader className="p-4 pr-12 border-b bg-slate-50 flex flex-row items-center justify-between space-y-0">
+            <DialogTitle>Visualizar Documento</DialogTitle>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={(e) => {
+                if (viewDoc) handleDownload(viewDoc.arquivo_url, e as any)
+              }}
+            >
+              <Download className="h-4 w-4 mr-2" />
+              Baixar
+            </Button>
+          </DialogHeader>
+          <div className="flex-1 overflow-hidden bg-slate-100/50 p-4">
+            {viewDoc &&
+              (viewDoc.arquivo_url?.toLowerCase().includes('.pdf') ? (
+                <iframe
+                  src={viewDoc.arquivo_url}
+                  className="w-full h-full rounded-md border bg-white"
+                  title="Documento PDF"
+                />
+              ) : (
+                <div className="w-full h-full flex items-center justify-center">
+                  <img
+                    src={viewDoc.arquivo_url}
+                    alt="Documento"
+                    className="max-w-full max-h-full object-contain rounded-md border bg-white"
+                  />
+                </div>
+              ))}
+          </div>
+        </DialogContent>
+      </Dialog>
 
       <AlertDialog
         open={!!docToDelete}

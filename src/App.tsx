@@ -18,6 +18,7 @@ import VistoriaForm from './pages/vistoria/VistoriaForm'
 import DocumentosPendentes from './pages/vistoria/DocumentosPendentes'
 import EspelhosDanos from './pages/vistoria/EspelhosDanos'
 import NovoChamadoCoc from './pages/coc/NovoChamadoCoc'
+import SinistrosCoc from './pages/coc/SinistrosCoc'
 import FormularioIdo from './pages/ido/FormularioIdo'
 import SucessoIdo from './pages/ido/Sucesso'
 import FormularioIdoFixo from './pages/ido/FormularioIdoFixo'
@@ -56,6 +57,7 @@ const App = () => (
             <Route path="/vistoria/pendentes" element={<DocumentosPendentes />} />
             <Route path="/espelhos-danos" element={<EspelhosDanos />} />
             <Route path="/coc/novo" element={<NovoChamadoCoc />} />
+            <Route path="/coc/sinistros" element={<SinistrosCoc />} />
             <Route path="/sos/pendentes" element={<ChamadosPendentesSos />} />
           </Route>
           <Route path="/espelho-danos-fixo/sucesso" element={<SucessoEspelhoDanosFixo />} />

@@ -15,32 +15,14 @@ Deno.serve(async (req: Request) => {
     const supabaseClient = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_ANON_KEY') ?? '',
-      { global: { headers: { Authorization: authHeader } } },
+      { global: { headers: { Authorization: authHeader } } }
     )
 
-    const {
-      data: { user },
-      error: authError,
-    } = await supabaseClient.auth.getUser()
+    const { data: { user }, error: authError } = await supabaseClient.auth.getUser()
     if (authError || !user) throw new Error('Unauthorized')
 
     const body = await req.json()
-    const {
-      id,
-      garagem,
-      linha,
-      numero_carro,
-      data,
-      horario,
-      ocorrencia,
-      descricao_danos,
-      numero_os,
-      nome_vistoriador,
-      registro_vistoriador,
-      nome_motorista,
-      registro_motorista,
-      fotos,
-    } = body
+    const { id, garagem, linha, numero_carro, data, horario, ocorrencia, descricao_danos, numero_os, nome_vistoriador, registro_vistoriador, nome_motorista, registro_motorista, fotos } = body
 
     if (!id || !numero_os) {
       throw new Error('ID e Número da OS são obrigatórios')
@@ -83,7 +65,7 @@ Deno.serve(async (req: Request) => {
     drawText(`Ocorrencia Confirmada: ${ocorrencia || '-'}`)
     y -= 15
     drawText('Descricao dos Danos:', true, 14)
-
+    
     // Split description into multiple lines to avoid overflow
     const desc = descricao_danos || 'Nenhuma descricao fornecida.'
     const words = desc.split(' ')
@@ -102,18 +84,18 @@ Deno.serve(async (req: Request) => {
     if (fotos && Array.isArray(fotos) && fotos.length > 0) {
       y -= 20
       drawText('Fotos da Vistoria:', true, 14)
-
+      
       for (let i = 0; i < fotos.length; i++) {
         const fotoUrl = fotos[i]
         try {
           const imgRes = await fetch(fotoUrl)
           if (!imgRes.ok) continue
           const imgBytes = await imgRes.arrayBuffer()
-
+          
           let pdfImage
           const contentType = imgRes.headers.get('content-type') || ''
           const isPng = fotoUrl.toLowerCase().includes('.png') || contentType.includes('png')
-
+          
           if (isPng) {
             pdfImage = await pdfDoc.embedPng(imgBytes)
           } else {
@@ -134,7 +116,7 @@ Deno.serve(async (req: Request) => {
             height: imgDims.height,
           })
 
-          y -= imgDims.height + 20
+          y -= (imgDims.height + 20)
         } catch (err) {
           console.error('Failed to embed image', fotoUrl, err)
         }
@@ -147,25 +129,26 @@ Deno.serve(async (req: Request) => {
     const fileName = `espelho_danos_${id}_${Date.now()}.pdf`
     const supabaseAdmin = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     )
 
     const { error: uploadError } = await supabaseAdmin.storage
       .from('vistorias')
       .upload(fileName, pdfBytes, {
         contentType: 'application/pdf',
-        upsert: false,
+        upsert: false
       })
 
     if (uploadError) throw uploadError
 
-    const {
-      data: { publicUrl },
-    } = supabaseAdmin.storage.from('vistorias').getPublicUrl(fileName)
+    const { data: { publicUrl } } = supabaseAdmin.storage
+      .from('vistorias')
+      .getPublicUrl(fileName)
 
     return new Response(JSON.stringify({ success: true, url: publicUrl, nome_arquivo: fileName }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     })
+
   } catch (error: any) {
     return new Response(JSON.stringify({ error: error.message }), {
       status: 400,

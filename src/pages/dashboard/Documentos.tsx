@@ -281,6 +281,37 @@ export default function Documentos() {
             </Button>
           </CardContent>
         </Card>
+
+        <Card className="shadow-sm border-slate-200/60">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-base font-semibold flex items-center gap-2">
+              <FileText className="w-4 h-4 text-primary" />
+              Formulário Boletim de Ocorrência
+            </CardTitle>
+            <CardDescription>
+              Link público para preenchimento de Boletim de Ocorrência (BO)
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="flex items-center gap-2">
+            <div className="bg-slate-50 px-3 py-2 rounded-md flex-1 truncate text-sm text-slate-500 border border-slate-200 select-all">
+              {window.location.origin}/ido-fixo
+            </div>
+            <Button
+              variant="outline"
+              size="icon"
+              onClick={() => handleCopyLink('/ido-fixo')}
+              title="Copiar link"
+              className="shrink-0"
+            >
+              <Copy className="w-4 h-4 text-slate-600" />
+            </Button>
+            <Button variant="outline" size="icon" asChild title="Abrir link" className="shrink-0">
+              <a href="/ido-fixo" target="_blank" rel="noopener noreferrer">
+                <ExternalLink className="w-4 h-4 text-slate-600" />
+              </a>
+            </Button>
+          </CardContent>
+        </Card>
       </div>
 
       <Card className="shadow-sm border-slate-200/60">

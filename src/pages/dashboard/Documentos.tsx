@@ -297,7 +297,7 @@ export default function Documentos() {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="todos">Todos os Tipos</SelectItem>
-                <SelectItem value="IDO">IDO</SelectItem>
+                <SelectItem value="IDO">BO</SelectItem>
                 <SelectItem value="Espelho de Danos">Espelho de Danos</SelectItem>
                 <SelectItem value="Vistoria">Vistoria</SelectItem>
               </SelectContent>
@@ -350,7 +350,7 @@ export default function Documentos() {
                       <div>
                         <div className="flex items-center justify-between">
                           <Badge variant="outline" className="bg-slate-50 font-normal">
-                            {doc.tipo_documento}
+                            {doc.tipo_documento === 'IDO' ? 'BO' : doc.tipo_documento}
                           </Badge>
                           <span className="text-xs text-slate-500">{formatData(doc)}</span>
                         </div>
@@ -449,7 +449,7 @@ export default function Documentos() {
                       >
                         <TableCell>
                           <Badge variant="outline" className="bg-slate-50 font-normal">
-                            {doc.tipo_documento}
+                            {doc.tipo_documento === 'IDO' ? 'BO' : doc.tipo_documento}
                           </Badge>
                         </TableCell>
                         <TableCell className="text-slate-600 truncate max-w-[150px]">
@@ -558,7 +558,8 @@ export default function Documentos() {
           <DialogHeader className="px-6 py-4 border-b shrink-0">
             <DialogTitle>Detalhes do Documento</DialogTitle>
             <DialogDescription>
-              Informações registradas no formulário de {docToView?.tipo_documento}
+              Informações registradas no formulário de{' '}
+              {docToView?.tipo_documento === 'IDO' ? 'BO' : docToView?.tipo_documento}
             </DialogDescription>
           </DialogHeader>
           <ScrollArea className="flex-1 px-6 py-4">
@@ -567,7 +568,9 @@ export default function Documentos() {
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                   <div className="space-y-1">
                     <span className="text-sm text-slate-500">Tipo</span>
-                    <p className="font-medium text-slate-900">{docToView.tipo_documento}</p>
+                    <p className="font-medium text-slate-900">
+                      {docToView.tipo_documento === 'IDO' ? 'BO' : docToView.tipo_documento}
+                    </p>
                   </div>
                   <div className="space-y-1">
                     <span className="text-sm text-slate-500">Garagem</span>

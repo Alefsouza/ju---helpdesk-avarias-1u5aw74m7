@@ -1,7 +1,6 @@
 import { useState, useEffect, useMemo, useRef } from 'react'
 import { supabase } from '@/lib/supabase/client'
-import { format } from 'date-fns'
-import { ptBR } from 'date-fns/locale'
+import { format, parseISO } from 'date-fns'
 import {
   FileText,
   Download,
@@ -13,6 +12,7 @@ import {
   X,
   Eye,
   Trash2,
+  Images,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -37,11 +37,16 @@ import { useAuth } from '@/hooks/use-auth'
 import { useDocumentAction } from '@/hooks/use-document-action'
 import { Database } from '@/lib/supabase/types'
 import { toast } from 'sonner'
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from '@/components/ui/dialog'
+import { ScrollArea } from '@/components/ui/scroll-area'
 
-type Documento = Database['public']['Tables']['documentos']['Row'] & {
-  registro_motorista?: string | null
-  numero_os?: string | null
-}
+type Documento = Database['public']['Tables']['documentos']['Row']
 
 const ITEMS_PER_PAGE = 20
 
@@ -52,27 +57,29 @@ export default function Documentos() {
 
   const [search, setSearch] = useState('')
   const [tipoFiltro, setTipoFiltro] = useState<string>('todos')
-  const [colaboradorFiltro, setColaboradorFiltro] = useState<string>('todos')
   const [currentPage, setCurrentPage] = useState(1)
   const [highlightedDocId, setHighlightedDocId] = useState<string | null>(null)
   const [deletingId, setDeletingId] = useState<string | null>(null)
 
-  const isAdmin = profile?.tipo_usuario === 'admin'
+  const [docToView, setDocToView] = useState<Documento | null>(null)
+  const { handleDocumentAction, loadingAction } = useDocumentAction()
+
   const isResponsavel = profile?.tipo_usuario === 'responsavel'
 
-  const filtrosRef = useRef({ search, tipoFiltro, colaboradorFiltro })
+  const filtrosRef = useRef({ search, tipoFiltro })
   useEffect(() => {
-    filtrosRef.current = { search, tipoFiltro, colaboradorFiltro }
-  }, [search, tipoFiltro, colaboradorFiltro])
+    filtrosRef.current = { search, tipoFiltro }
+  }, [search, tipoFiltro])
 
   useEffect(() => {
-    if (!isAdmin && !isResponsavel) return
+    if (!isResponsavel) return
 
     const fetchDocumentos = async () => {
       try {
         const { data, error } = await supabase
           .from('documentos')
           .select('*')
+          .in('tipo_documento', ['Espelho de Danos', 'Vistoria'])
           .order('criado_em', { ascending: false })
 
         if (error) throw error
@@ -99,18 +106,23 @@ export default function Documentos() {
         (payload) => {
           if (payload.eventType === 'INSERT') {
             const newDoc = payload.new as Documento
+            if (!['Espelho de Danos', 'Vistoria'].includes(newDoc.tipo_documento)) return
+
             setDocumentos((prev) => {
               if (prev.some((d) => d.id === newDoc.id)) return prev
               return [newDoc, ...prev]
             })
 
-            const { search, tipoFiltro, colaboradorFiltro } = filtrosRef.current
-            const matchSearch = newDoc.nome_arquivo.toLowerCase().includes(search.toLowerCase())
-            const matchTipo = tipoFiltro === 'todos' || newDoc.tipo_documento === tipoFiltro
-            const matchColaborador =
-              colaboradorFiltro === 'todos' || newDoc.nome_responsavel === colaboradorFiltro
+            const { search, tipoFiltro } = filtrosRef.current
+            const matchSearch =
+              newDoc.garagem?.toLowerCase().includes(search.toLowerCase()) ||
+              newDoc.linha?.toLowerCase().includes(search.toLowerCase()) ||
+              newDoc.numero_os?.toLowerCase().includes(search.toLowerCase()) ||
+              newDoc.tipo_documento.toLowerCase().includes(search.toLowerCase())
 
-            if (matchSearch && matchTipo && matchColaborador) {
+            const matchTipo = tipoFiltro === 'todos' || newDoc.tipo_documento === tipoFiltro
+
+            if (matchSearch && matchTipo) {
               toast.success('Novo documento adicionado')
               setHighlightedDocId(newDoc.id)
               setCurrentPage(1)
@@ -134,35 +146,33 @@ export default function Documentos() {
     return () => {
       supabase.removeChannel(channel)
     }
-  }, [isAdmin, isResponsavel])
+  }, [isResponsavel])
 
-  // Reset pagination when filters change
   useEffect(() => {
     setCurrentPage(1)
-  }, [search, tipoFiltro, colaboradorFiltro])
-
-  const colaboradoresUnicos = useMemo(() => {
-    const cols = documentos.map((d) => d.nome_responsavel).filter(Boolean) as string[]
-    return Array.from(new Set(cols)).sort()
-  }, [documentos])
+  }, [search, tipoFiltro])
 
   const documentosFiltrados = useMemo(() => {
-    return documentos.filter((doc) => {
-      const matchSearch = doc.nome_arquivo.toLowerCase().includes(search.toLowerCase())
-      const matchTipo = tipoFiltro === 'todos' || doc.tipo_documento === tipoFiltro
-      const matchColaborador =
-        colaboradorFiltro === 'todos' || doc.nome_responsavel === colaboradorFiltro
-      return matchSearch && matchTipo && matchColaborador
-    })
-  }, [documentos, search, tipoFiltro, colaboradorFiltro])
+    return documentos
+      .filter((doc) => {
+        const searchTerm = search.toLowerCase()
+        const matchSearch =
+          doc.garagem?.toLowerCase().includes(searchTerm) ||
+          doc.linha?.toLowerCase().includes(searchTerm) ||
+          doc.numero_os?.toLowerCase().includes(searchTerm) ||
+          doc.tipo_documento.toLowerCase().includes(searchTerm)
+
+        const matchTipo = tipoFiltro === 'todos' || doc.tipo_documento === tipoFiltro
+        return matchSearch && matchTipo
+      })
+      .sort((a, b) => new Date(b.criado_em).getTime() - new Date(a.criado_em).getTime())
+  }, [documentos, search, tipoFiltro])
 
   const totalPages = Math.ceil(documentosFiltrados.length / ITEMS_PER_PAGE)
   const paginatedDocs = documentosFiltrados.slice(
     (currentPage - 1) * ITEMS_PER_PAGE,
     currentPage * ITEMS_PER_PAGE,
   )
-
-  const { handleDocumentAction, loadingAction } = useDocumentAction()
 
   const handleCopyLink = (path: string) => {
     const url = `${window.location.origin}${path}`
@@ -177,8 +187,7 @@ export default function Documentos() {
       setDeletingId(id)
       const { error } = await supabase.from('documentos').delete().eq('id', id)
       if (error) throw error
-      setDocumentos((prev) => prev.filter((d) => d.id !== id))
-      toast.success('Documento excluído com sucesso')
+      // A atualização do estado ocorrerá via Realtime
     } catch (error) {
       console.error('Erro ao excluir documento:', error)
       toast.error('Erro ao excluir documento')
@@ -187,7 +196,31 @@ export default function Documentos() {
     }
   }
 
-  if (!isAdmin && !isResponsavel) {
+  const formatData = (doc: Documento) => {
+    if (doc.data) {
+      try {
+        return format(parseISO(doc.data), 'dd/MM/yyyy')
+      } catch {
+        return doc.data
+      }
+    }
+    return format(new Date(doc.criado_em), 'dd/MM/yyyy')
+  }
+
+  const parseFotos = (fotos: any): string[] => {
+    if (!fotos) return []
+    if (Array.isArray(fotos)) return fotos
+    if (typeof fotos === 'string') {
+      try {
+        return JSON.parse(fotos)
+      } catch {
+        return []
+      }
+    }
+    return []
+  }
+
+  if (!isResponsavel) {
     return (
       <div className="flex flex-col items-center justify-center h-[50vh] text-slate-500">
         <FolderOpen className="w-12 h-12 mb-4 text-slate-300" />
@@ -200,42 +233,12 @@ export default function Documentos() {
     <div className="space-y-6 max-w-7xl mx-auto">
       <div>
         <h1 className="text-2xl font-bold text-slate-800 tracking-tight">Documentos</h1>
-        <p className="text-slate-500 mt-1">Histórico de documentos gerados no sistema.</p>
+        <p className="text-slate-500 mt-1">
+          Gestão de formulários preenchidos (Espelho de Danos e Vistorias).
+        </p>
       </div>
 
-      {/* Seção 1 — Links fixos */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <Card className="shadow-sm border-slate-200/60">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-base font-semibold flex items-center gap-2">
-              <FileText className="w-4 h-4 text-primary" />
-              Formulário Boletim de Ocorrência
-            </CardTitle>
-            <CardDescription>
-              Link público para preenchimento de Boletim de Ocorrência.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="flex items-center gap-2">
-            <div className="bg-slate-50 px-3 py-2 rounded-md flex-1 truncate text-sm text-slate-500 border border-slate-200 select-all">
-              {window.location.origin}/ido-fixo
-            </div>
-            <Button
-              variant="outline"
-              size="icon"
-              onClick={() => handleCopyLink('/ido-fixo')}
-              title="Copiar link"
-              className="shrink-0"
-            >
-              <Copy className="w-4 h-4 text-slate-600" />
-            </Button>
-            <Button variant="outline" size="icon" asChild title="Abrir link" className="shrink-0">
-              <a href="/ido-fixo" target="_blank" rel="noopener noreferrer">
-                <ExternalLink className="w-4 h-4 text-slate-600" />
-              </a>
-            </Button>
-          </CardContent>
-        </Card>
-
         <Card className="shadow-sm border-slate-200/60">
           <CardHeader className="pb-2">
             <CardTitle className="text-base font-semibold flex items-center gap-2">
@@ -266,13 +269,12 @@ export default function Documentos() {
         </Card>
       </div>
 
-      {/* Seção 2 — Filtros e pesquisa */}
       <Card className="shadow-sm border-slate-200/60">
         <CardContent className="p-4 flex flex-col md:flex-row gap-4">
           <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
             <Input
-              placeholder="Pesquisar documento..."
+              placeholder="Pesquisar por garagem, linha, OS..."
               className="pl-9"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
@@ -285,34 +287,18 @@ export default function Documentos() {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="todos">Todos os Tipos</SelectItem>
-                <SelectItem value="IDO">BO</SelectItem>
                 <SelectItem value="Espelho de Danos">Espelho de Danos</SelectItem>
+                <SelectItem value="Vistoria">Vistoria</SelectItem>
               </SelectContent>
             </Select>
           </div>
-          <div className="w-full md:w-56">
-            <Select value={colaboradorFiltro} onValueChange={setColaboradorFiltro}>
-              <SelectTrigger>
-                <SelectValue placeholder="Colaborador" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="todos">Todos os Colaboradores</SelectItem>
-                {colaboradoresUnicos.map((col) => (
-                  <SelectItem key={col} value={col}>
-                    {col}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          {(search || tipoFiltro !== 'todos' || colaboradorFiltro !== 'todos') && (
+          {(search || tipoFiltro !== 'todos') && (
             <Button
               variant="ghost"
               className="text-slate-500 hover:text-slate-900 shrink-0"
               onClick={() => {
                 setSearch('')
                 setTipoFiltro('todos')
-                setColaboradorFiltro('todos')
               }}
             >
               <X className="w-4 h-4 mr-2" />
@@ -322,7 +308,6 @@ export default function Documentos() {
         </CardContent>
       </Card>
 
-      {/* Seção 3 — Lista de documentos */}
       <Card className="shadow-sm border-slate-200/60">
         <CardContent className="p-0">
           {loading ? (
@@ -339,7 +324,7 @@ export default function Documentos() {
             </div>
           ) : (
             <>
-              {/* Mobile View (Cards) */}
+              {/* Mobile View */}
               <div className="grid grid-cols-1 gap-4 p-4 md:hidden">
                 {paginatedDocs.map((doc) => (
                   <Card
@@ -352,40 +337,30 @@ export default function Documentos() {
                   >
                     <CardContent className="p-4 space-y-3">
                       <div>
-                        <h4
-                          className="font-medium text-slate-900 line-clamp-2"
-                          title={doc.nome_arquivo}
-                        >
-                          {doc.nome_arquivo}
-                        </h4>
-                        <div className="flex items-center justify-between mt-2">
+                        <div className="flex items-center justify-between">
                           <Badge variant="outline" className="bg-slate-50 font-normal">
-                            {doc.tipo_documento === 'IDO' ? 'BO' : doc.tipo_documento}
+                            {doc.tipo_documento}
                           </Badge>
-                          <span className="text-xs text-slate-500">
-                            {format(new Date(doc.criado_em), 'dd/MM/yy HH:mm')}
-                          </span>
+                          <span className="text-xs text-slate-500">{formatData(doc)}</span>
                         </div>
                       </div>
 
                       <div className="bg-slate-50 p-3 rounded-md text-sm space-y-2 border border-slate-100">
                         <div className="flex justify-between gap-4">
-                          <span className="text-slate-500 shrink-0">Colaborador:</span>
+                          <span className="text-slate-500 shrink-0">Garagem:</span>
                           <span className="font-medium text-slate-700 text-right truncate">
-                            {doc.nome_responsavel || '-'}
+                            {doc.garagem || '-'}
                           </span>
                         </div>
                         <div className="flex justify-between gap-4">
-                          <span className="text-slate-500 shrink-0">Registro:</span>
-                          <span className="text-slate-700 truncate">
-                            {doc.tipo_documento === 'IDO'
-                              ? doc.registro_responsavel || '-'
-                              : doc.registro_motorista || '-'}
-                          </span>
+                          <span className="text-slate-500 shrink-0">Linha:</span>
+                          <span className="text-slate-700 truncate">{doc.linha || '-'}</span>
                         </div>
                         <div className="flex justify-between gap-4">
                           <span className="text-slate-500 shrink-0">OS:</span>
-                          <span className="text-slate-700 truncate">{doc.numero_os || '-'}</span>
+                          <span className="text-slate-700 truncate font-medium">
+                            {doc.numero_os || '-'}
+                          </span>
                         </div>
                       </div>
 
@@ -394,23 +369,17 @@ export default function Documentos() {
                           variant="outline"
                           size="sm"
                           className="flex-1"
-                          disabled={!!loadingAction || deletingId === doc.id}
-                          onClick={() =>
-                            handleDocumentAction(doc.id, doc.arquivo_url, doc.nome_arquivo, 'view')
-                          }
+                          onClick={() => setDocToView(doc)}
                         >
-                          {loadingAction === `${doc.id}-view` ? (
-                            <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                          ) : (
-                            <Eye className="w-4 h-4 mr-2" />
-                          )}
-                          Visualizar
+                          <Eye className="w-4 h-4 mr-2" />
+                          Ver
                         </Button>
                         <Button
                           size="sm"
                           className="flex-1"
-                          disabled={!!loadingAction || deletingId === doc.id}
+                          disabled={!!loadingAction || deletingId === doc.id || !doc.arquivo_url}
                           onClick={() =>
+                            doc.arquivo_url &&
                             handleDocumentAction(
                               doc.id,
                               doc.arquivo_url,
@@ -432,7 +401,7 @@ export default function Documentos() {
                           className="text-red-500 hover:text-red-600 hover:bg-red-50 shrink-0 px-2"
                           disabled={!!loadingAction || deletingId === doc.id}
                           onClick={() => handleDeleteDocument(doc.id)}
-                          title="Excluir documento"
+                          title="Excluir"
                         >
                           {deletingId === doc.id ? (
                             <Loader2 className="w-4 h-4 animate-spin" />
@@ -446,17 +415,16 @@ export default function Documentos() {
                 ))}
               </div>
 
-              {/* Desktop View (Table) */}
+              {/* Desktop View */}
               <div className="hidden md:block w-full overflow-x-auto">
                 <Table>
                   <TableHeader>
                     <TableRow className="bg-slate-50/50 hover:bg-slate-50/50">
-                      <TableHead>Nome do documento</TableHead>
                       <TableHead>Tipo</TableHead>
-                      <TableHead>Colaborador</TableHead>
-                      <TableHead>Registro</TableHead>
+                      <TableHead>Garagem</TableHead>
+                      <TableHead>Linha</TableHead>
+                      <TableHead>Data</TableHead>
                       <TableHead>OS</TableHead>
-                      <TableHead>Data de criação</TableHead>
                       <TableHead className="text-right">Ações</TableHead>
                     </TableRow>
                   </TableHeader>
@@ -468,41 +436,43 @@ export default function Documentos() {
                           highlightedDocId === doc.id ? 'bg-primary/5 hover:bg-primary/5' : ''
                         }`}
                       >
-                        <TableCell
-                          className="font-medium text-slate-700 max-w-[250px] truncate"
-                          title={doc.nome_arquivo}
-                        >
-                          {doc.nome_arquivo}
-                        </TableCell>
                         <TableCell>
                           <Badge variant="outline" className="bg-slate-50 font-normal">
-                            {doc.tipo_documento === 'IDO' ? 'BO' : doc.tipo_documento}
+                            {doc.tipo_documento}
                           </Badge>
                         </TableCell>
                         <TableCell className="text-slate-600 truncate max-w-[150px]">
-                          {doc.nome_responsavel || '-'}
+                          {doc.garagem || '-'}
                         </TableCell>
                         <TableCell className="text-slate-600 truncate max-w-[150px]">
-                          {doc.tipo_documento === 'IDO'
-                            ? doc.registro_responsavel || '-'
-                            : doc.registro_motorista || '-'}
+                          {doc.linha || '-'}
                         </TableCell>
-                        <TableCell className="text-slate-600 truncate max-w-[100px]">
+                        <TableCell className="text-slate-500 whitespace-nowrap">
+                          {formatData(doc)}
+                        </TableCell>
+                        <TableCell className="text-slate-600 truncate max-w-[100px] font-medium">
                           {doc.numero_os || '-'}
-                        </TableCell>
-                        <TableCell className="text-slate-500 text-sm whitespace-nowrap">
-                          {format(new Date(doc.criado_em), "dd/MM/yyyy 'às' HH:mm", {
-                            locale: ptBR,
-                          })}
                         </TableCell>
                         <TableCell className="text-right whitespace-nowrap">
                           <div className="flex justify-end gap-2 items-center">
                             <Button
-                              variant="default"
+                              variant="ghost"
                               size="sm"
-                              className="h-8"
-                              disabled={!!loadingAction || deletingId === doc.id}
+                              className="h-8 w-8 p-0 text-slate-500 hover:text-slate-900"
+                              onClick={() => setDocToView(doc)}
+                              title="Visualizar detalhes"
+                            >
+                              <Eye className="w-4 h-4" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-8 w-8 p-0 text-slate-500 hover:text-primary"
+                              disabled={
+                                !!loadingAction || deletingId === doc.id || !doc.arquivo_url
+                              }
                               onClick={() =>
+                                doc.arquivo_url &&
                                 handleDocumentAction(
                                   doc.id,
                                   doc.arquivo_url,
@@ -513,31 +483,9 @@ export default function Documentos() {
                               title="Baixar arquivo"
                             >
                               {loadingAction === `${doc.id}-download` ? (
-                                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                              ) : (
-                                <Download className="w-4 h-4 mr-2" />
-                              )}
-                              Baixar
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className="h-8 w-8 p-0 text-slate-500 hover:text-slate-900"
-                              disabled={!!loadingAction || deletingId === doc.id}
-                              onClick={() =>
-                                handleDocumentAction(
-                                  doc.id,
-                                  doc.arquivo_url,
-                                  doc.nome_arquivo,
-                                  'view',
-                                )
-                              }
-                              title="Visualizar documento"
-                            >
-                              {loadingAction === `${doc.id}-view` ? (
                                 <Loader2 className="w-4 h-4 animate-spin" />
                               ) : (
-                                <Eye className="w-4 h-4" />
+                                <Download className="w-4 h-4" />
                               )}
                             </Button>
                             <Button
@@ -593,6 +541,88 @@ export default function Documentos() {
           )}
         </CardContent>
       </Card>
+
+      <Dialog open={!!docToView} onOpenChange={(open) => !open && setDocToView(null)}>
+        <DialogContent className="max-w-3xl max-h-[90vh] flex flex-col p-0">
+          <DialogHeader className="px-6 py-4 border-b shrink-0">
+            <DialogTitle>Detalhes do Documento</DialogTitle>
+            <DialogDescription>
+              Informações registradas no formulário de {docToView?.tipo_documento}
+            </DialogDescription>
+          </DialogHeader>
+          <ScrollArea className="flex-1 px-6 py-4">
+            {docToView && (
+              <div className="space-y-6">
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  <div className="space-y-1">
+                    <span className="text-sm text-slate-500">Tipo</span>
+                    <p className="font-medium text-slate-900">{docToView.tipo_documento}</p>
+                  </div>
+                  <div className="space-y-1">
+                    <span className="text-sm text-slate-500">Garagem</span>
+                    <p className="font-medium text-slate-900">{docToView.garagem || '-'}</p>
+                  </div>
+                  <div className="space-y-1">
+                    <span className="text-sm text-slate-500">Linha</span>
+                    <p className="font-medium text-slate-900">{docToView.linha || '-'}</p>
+                  </div>
+                  <div className="space-y-1">
+                    <span className="text-sm text-slate-500">OS</span>
+                    <p className="font-medium text-slate-900">{docToView.numero_os || '-'}</p>
+                  </div>
+                  <div className="space-y-1">
+                    <span className="text-sm text-slate-500">Data</span>
+                    <p className="font-medium text-slate-900">{formatData(docToView)}</p>
+                  </div>
+                  <div className="space-y-1">
+                    <span className="text-sm text-slate-500">Horário</span>
+                    <p className="font-medium text-slate-900">{docToView.horario || '-'}</p>
+                  </div>
+                  <div className="space-y-1">
+                    <span className="text-sm text-slate-500">Ocorrência</span>
+                    <p className="font-medium text-slate-900">{docToView.ocorrencia || '-'}</p>
+                  </div>
+                </div>
+
+                {docToView.descricao_danos && (
+                  <div className="space-y-2">
+                    <span className="text-sm text-slate-500 font-medium">Descrição dos Danos</span>
+                    <div className="bg-slate-50 p-4 rounded-md text-slate-700 whitespace-pre-wrap">
+                      {docToView.descricao_danos}
+                    </div>
+                  </div>
+                )}
+
+                {parseFotos(docToView.fotos_urls).length > 0 && (
+                  <div className="space-y-3">
+                    <div className="flex items-center gap-2">
+                      <Images className="w-5 h-5 text-slate-500" />
+                      <h3 className="font-medium text-slate-900">Fotos Anexadas</h3>
+                    </div>
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+                      {parseFotos(docToView.fotos_urls).map((fotoUrl, idx) => (
+                        <a
+                          key={idx}
+                          href={fotoUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="block aspect-video rounded-md overflow-hidden bg-slate-100 border border-slate-200 hover:opacity-90 transition-opacity"
+                        >
+                          <img
+                            src={fotoUrl}
+                            alt={`Foto ${idx + 1}`}
+                            className="w-full h-full object-cover"
+                          />
+                        </a>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+          </ScrollArea>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

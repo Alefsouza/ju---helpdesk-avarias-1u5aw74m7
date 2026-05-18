@@ -207,7 +207,7 @@ function AppSidebar() {
           </SidebarGroupContent>
         </SidebarGroup>
 
-        {(isResponsavel || isAdmin) && (
+        {isResponsavel && (
           <SidebarGroup className="mt-auto">
             <SidebarGroupContent>
               <SidebarMenu>

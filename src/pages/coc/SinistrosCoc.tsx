@@ -36,7 +36,9 @@ export default function SinistrosCoc() {
   const [sinistros, setSinistros] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
 
-  const [monthFilter, setMonthFilter] = useState('all')
+  const [filterType, setFilterType] = useState<'all' | 'month' | 'day'>('all')
+  const [selectedMonth, setSelectedMonth] = useState('')
+  const [selectedDay, setSelectedDay] = useState('')
   const [searchQuery, setSearchQuery] = useState('')
 
   const [viewModalOpen, setViewModalOpen] = useState(false)
@@ -47,14 +49,14 @@ export default function SinistrosCoc() {
 
   const fetchSinistros = async () => {
     try {
-      const { data: cocUsers } = await supabase
+      const { data: allowedUsers } = await supabase
         .from('perfil_usuario')
         .select('id')
-        .eq('tipo_usuario', 'coc')
+        .in('tipo_usuario', ['coc', 'sos'])
 
-      const cocUserIds = cocUsers?.map((u: any) => u.id) || []
+      const allowedUserIds = allowedUsers?.map((u: any) => u.id) || []
 
-      if (cocUserIds.length === 0) {
+      if (allowedUserIds.length === 0) {
         setSinistros([])
         return
       }
@@ -65,7 +67,7 @@ export default function SinistrosCoc() {
           *,
           anexos_chamado(url_arquivo)
         `)
-        .in('usuario_id', cocUserIds)
+        .in('usuario_id', allowedUserIds)
         .order('criado_em', { ascending: false })
 
       if (error) throw error
@@ -102,10 +104,24 @@ export default function SinistrosCoc() {
     return str.charAt(0).toUpperCase() + str.slice(1)
   }
 
+  useEffect(() => {
+    if (filterType === 'month' && !selectedMonth && uniqueMonths.length > 0) {
+      setSelectedMonth(uniqueMonths[0])
+    }
+  }, [filterType, selectedMonth, uniqueMonths])
+
   const filteredSinistros = useMemo(() => {
     return sinistros.filter((s) => {
-      if (monthFilter !== 'all' && format(parseISO(s.criado_em), 'yyyy-MM') !== monthFilter) {
-        return false
+      if (filterType === 'month' && selectedMonth) {
+        if (format(parseISO(s.criado_em), 'yyyy-MM') !== selectedMonth) {
+          return false
+        }
+      }
+
+      if (filterType === 'day' && selectedDay) {
+        if (format(parseISO(s.criado_em), 'yyyy-MM-dd') !== selectedDay) {
+          return false
+        }
       }
 
       if (searchQuery.trim() !== '') {
@@ -122,7 +138,7 @@ export default function SinistrosCoc() {
 
       return true
     })
-  }, [sinistros, monthFilter, searchQuery])
+  }, [sinistros, filterType, selectedMonth, selectedDay, searchQuery])
 
   const handleSaveOS = async () => {
     if (!osNumber.trim()) {
@@ -167,22 +183,58 @@ export default function SinistrosCoc() {
       </div>
 
       <div className="flex flex-col sm:flex-row gap-4 bg-white p-4 rounded-lg shadow-sm border border-slate-200">
-        <div className="space-y-2 w-full sm:w-64 shrink-0">
-          <Label>Data (Mês)</Label>
-          <Select value={monthFilter} onValueChange={setMonthFilter}>
+        <div className="space-y-2 w-full sm:w-48 shrink-0">
+          <Label>Filtrar por Período</Label>
+          <Select
+            value={filterType}
+            onValueChange={(v) => setFilterType(v as 'all' | 'month' | 'day')}
+          >
             <SelectTrigger>
-              <SelectValue placeholder="Todos" />
+              <SelectValue placeholder="Selecione..." />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">Todos</SelectItem>
-              {uniqueMonths.map((m) => (
-                <SelectItem key={m} value={m}>
-                  {formatMonth(m)}
-                </SelectItem>
-              ))}
+              <SelectItem value="all">Todo o período</SelectItem>
+              <SelectItem value="month">Por Mês</SelectItem>
+              <SelectItem value="day">Por Dia</SelectItem>
             </SelectContent>
           </Select>
         </div>
+
+        {filterType === 'month' && (
+          <div className="space-y-2 w-full sm:w-48 shrink-0 animate-fade-in">
+            <Label>Mês</Label>
+            <Select value={selectedMonth} onValueChange={setSelectedMonth}>
+              <SelectTrigger>
+                <SelectValue placeholder="Selecione o mês" />
+              </SelectTrigger>
+              <SelectContent>
+                {uniqueMonths.length === 0 ? (
+                  <SelectItem value="empty" disabled>
+                    Nenhum dado
+                  </SelectItem>
+                ) : (
+                  uniqueMonths.map((m) => (
+                    <SelectItem key={m} value={m}>
+                      {formatMonth(m)}
+                    </SelectItem>
+                  ))
+                )}
+              </SelectContent>
+            </Select>
+          </div>
+        )}
+
+        {filterType === 'day' && (
+          <div className="space-y-2 w-full sm:w-48 shrink-0 animate-fade-in">
+            <Label>Data Específica</Label>
+            <Input
+              type="date"
+              value={selectedDay}
+              onChange={(e) => setSelectedDay(e.target.value)}
+            />
+          </div>
+        )}
+
         <div className="space-y-2 flex-1">
           <Label>Pesquisar</Label>
           <div className="relative">

@@ -149,6 +149,8 @@ export default function ChamadoDetalhes() {
   const [savingPia, setSavingPia] = useState(false)
   const [prioridade, setPrioridade] = useState('')
   const [savingPrioridade, setSavingPrioridade] = useState(false)
+  const [tipoChamado, setTipoChamado] = useState('')
+  const [savingTipoChamado, setSavingTipoChamado] = useState(false)
 
   const [files, setFiles] = useState<FileItem[]>([])
   const [isDragActive, setIsDragActive] = useState(false)
@@ -182,6 +184,7 @@ export default function ChamadoDetalhes() {
     setChamado(chamadoData)
     setPia(chamadoData.pia || '')
     setPrioridade(chamadoData.prioridade || '')
+    setTipoChamado(chamadoData.tipo_chamado || '')
 
     const { data: solicitanteData } = await supabase
       .from('perfil_usuario')
@@ -405,6 +408,9 @@ export default function ChamadoDetalhes() {
           }
           if (payload.new.prioridade !== undefined) {
             setPrioridade(payload.new.prioridade || '')
+          }
+          if (payload.new.tipo_chamado !== undefined) {
+            setTipoChamado(payload.new.tipo_chamado || '')
           }
         },
       )
@@ -928,6 +934,30 @@ export default function ChamadoDetalhes() {
     }
   }
 
+  const handleSalvarTipoChamado = async (novoTipo: string) => {
+    const isSupportUser =
+      currentUserProfile?.tipo_usuario === 'responsavel' ||
+      currentUserProfile?.tipo_usuario === 'admin'
+
+    if (!isSupportUser) return
+
+    setSavingTipoChamado(true)
+    setTipoChamado(novoTipo)
+    setChamado((prev: any) => (prev ? { ...prev, tipo_chamado: novoTipo } : prev))
+
+    const { error } = await supabase
+      .from('chamados')
+      .update({ tipo_chamado: novoTipo, atualizado_em: new Date().toISOString() })
+      .eq('id', id as string)
+
+    setSavingTipoChamado(false)
+    if (error) {
+      toast.error('Erro ao atualizar Tipo de Chamado. Tente novamente')
+    } else {
+      toast.success('Tipo de Chamado atualizado com sucesso')
+    }
+  }
+
   const handleSalvarPia = async () => {
     const isSupportUser =
       currentUserProfile?.tipo_usuario === 'responsavel' ||
@@ -1212,6 +1242,14 @@ export default function ChamadoDetalhes() {
                   {prioridadeLabels[chamado.prioridade]}
                 </Badge>
               )}
+              {chamado.tipo_chamado && (
+                <Badge
+                  variant="outline"
+                  className="px-2.5 py-0.5 uppercase text-[10px] font-bold tracking-wider bg-purple-100 text-purple-800 border-purple-200"
+                >
+                  {chamado.tipo_chamado}
+                </Badge>
+              )}
             </div>
             <h1 className="text-2xl font-bold text-slate-900">{chamado.titulo}</h1>
           </div>
@@ -1250,29 +1288,55 @@ export default function ChamadoDetalhes() {
             <div className="flex flex-col gap-4">
               {isSupport && (
                 <div className="border border-orange-200 bg-orange-50/40 rounded-lg p-3 sm:p-4">
-                  <div className="flex flex-col sm:flex-row sm:items-center gap-3">
-                    <div className="flex items-center gap-1.5 shrink-0 sm:w-32">
-                      <AlertCircle className="h-4 w-4 text-orange-700" />
-                      <h3 className="text-sm font-semibold text-orange-800 uppercase tracking-wider">
-                        Prioridade
-                      </h3>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+                      <div className="flex items-center gap-1.5 shrink-0 sm:w-32">
+                        <AlertCircle className="h-4 w-4 text-orange-700" />
+                        <h3 className="text-sm font-semibold text-orange-800 uppercase tracking-wider">
+                          Prioridade
+                        </h3>
+                      </div>
+                      <div className="w-full">
+                        <Select
+                          value={prioridade || undefined}
+                          onValueChange={handleSalvarPrioridade}
+                          disabled={savingPrioridade || chamado.status === 'finalizado'}
+                        >
+                          <SelectTrigger className="bg-white border-orange-200 focus:ring-orange-400 h-9 text-sm">
+                            <SelectValue placeholder="Selecione uma prioridade" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="baixa">Baixa</SelectItem>
+                            <SelectItem value="media">Média</SelectItem>
+                            <SelectItem value="alta">Alta</SelectItem>
+                            <SelectItem value="urgente">Urgente</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
                     </div>
-                    <div className="w-full sm:max-w-xs">
-                      <Select
-                        value={prioridade || undefined}
-                        onValueChange={handleSalvarPrioridade}
-                        disabled={savingPrioridade || chamado.status === 'finalizado'}
-                      >
-                        <SelectTrigger className="bg-white border-orange-200 focus:ring-orange-400 h-9 text-sm">
-                          <SelectValue placeholder="Selecione uma prioridade" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="baixa">Baixa</SelectItem>
-                          <SelectItem value="media">Média</SelectItem>
-                          <SelectItem value="alta">Alta</SelectItem>
-                          <SelectItem value="urgente">Urgente</SelectItem>
-                        </SelectContent>
-                      </Select>
+                    <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+                      <div className="flex items-center gap-1.5 shrink-0 sm:w-32">
+                        <AlertCircle className="h-4 w-4 text-orange-700" />
+                        <h3 className="text-sm font-semibold text-orange-800 uppercase tracking-wider">
+                          Tipo de Chamado
+                        </h3>
+                      </div>
+                      <div className="w-full">
+                        <Select
+                          value={tipoChamado || undefined}
+                          onValueChange={handleSalvarTipoChamado}
+                          disabled={savingTipoChamado || chamado.status === 'finalizado'}
+                        >
+                          <SelectTrigger className="bg-white border-orange-200 focus:ring-orange-400 h-9 text-sm">
+                            <SelectValue placeholder="Selecione o tipo" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="Interno">Interno</SelectItem>
+                            <SelectItem value="Externo">Externo</SelectItem>
+                            <SelectItem value="Vítima">Vítima</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
                     </div>
                   </div>
                 </div>

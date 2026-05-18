@@ -159,6 +159,7 @@ export type Database = {
           criado_em: string
           data: string | null
           descricao_danos: string | null
+          excluido_manutencao: boolean
           foto_url: string | null
           fotos_urls: Json | null
           garagem: string | null
@@ -181,6 +182,7 @@ export type Database = {
           criado_em?: string
           data?: string | null
           descricao_danos?: string | null
+          excluido_manutencao?: boolean
           foto_url?: string | null
           fotos_urls?: Json | null
           garagem?: string | null
@@ -203,6 +205,7 @@ export type Database = {
           criado_em?: string
           data?: string | null
           descricao_danos?: string | null
+          excluido_manutencao?: boolean
           foto_url?: string | null
           fotos_urls?: Json | null
           garagem?: string | null
@@ -481,6 +484,10 @@ export type Database = {
       is_admin: { Args: never; Returns: boolean }
       is_responsavel: { Args: never; Returns: boolean }
       is_vistoriador: { Args: never; Returns: boolean }
+      ocultar_documento_manutencao: {
+        Args: { p_id: string }
+        Returns: undefined
+      }
       registrar_boletim_ido: {
         Args: {
           p_arquivo_url: string
@@ -695,6 +702,7 @@ export const Constants = {
 //   linha: text (nullable)
 //   descricao_danos: text (nullable)
 //   nome_motorista: text (nullable)
+//   excluido_manutencao: boolean (not null, default: false)
 // Table: formularios_espelho_danos
 //   id: uuid (not null, default: gen_random_uuid())
 //   chamado_id: uuid (not null)
@@ -928,6 +936,19 @@ export const Constants = {
 //     RETURN EXISTS (
 //       SELECT 1 FROM public.perfil_usuario WHERE id = auth.uid() AND tipo_usuario = 'vistoriador'
 //     );
+//   END;
+//   $function$
+//
+// FUNCTION ocultar_documento_manutencao(uuid)
+//   CREATE OR REPLACE FUNCTION public.ocultar_documento_manutencao(p_id uuid)
+//    RETURNS void
+//    LANGUAGE plpgsql
+//    SECURITY DEFINER
+//   AS $function$
+//   BEGIN
+//     UPDATE public.documentos
+//     SET excluido_manutencao = TRUE
+//     WHERE id = p_id;
 //   END;
 //   $function$
 //

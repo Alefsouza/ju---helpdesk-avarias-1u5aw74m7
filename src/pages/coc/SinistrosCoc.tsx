@@ -251,40 +251,78 @@ export default function SinistrosCoc() {
 
       <div className="bg-white rounded-lg shadow-sm border border-slate-200 overflow-hidden flex-1">
         <div className="overflow-x-auto">
-          <Table>
+          <Table className="w-max min-w-full">
             <TableHeader>
               <TableRow>
-                <TableHead className="whitespace-nowrap">Data</TableHead>
-                <TableHead className="whitespace-nowrap">Título</TableHead>
-                <TableHead className="whitespace-nowrap">Motorista</TableHead>
-                <TableHead className="whitespace-nowrap">Cobrador</TableHead>
-                <TableHead className="whitespace-nowrap">Linha</TableHead>
-                <TableHead className="whitespace-nowrap">Carro</TableHead>
-                <TableHead className="whitespace-nowrap">Local</TableHead>
-                <TableHead className="whitespace-nowrap">OS</TableHead>
-                <TableHead className="text-right whitespace-nowrap">Ações</TableHead>
+                <TableHead className="p-0 border-r border-slate-200/50 hover:bg-slate-50 transition-colors">
+                  <div className="resize-x overflow-hidden w-[140px] min-w-[80px] h-12 px-4 flex items-center">
+                    Operações
+                  </div>
+                </TableHead>
+                <TableHead className="p-0 border-r border-slate-200/50 hover:bg-slate-50 transition-colors">
+                  <div className="resize-x overflow-hidden w-[120px] min-w-[80px] h-12 px-4 flex items-center">
+                    Data
+                  </div>
+                </TableHead>
+                <TableHead className="p-0 border-r border-slate-200/50 hover:bg-slate-50 transition-colors">
+                  <div className="resize-x overflow-hidden w-[250px] min-w-[100px] h-12 px-4 flex items-center">
+                    Título
+                  </div>
+                </TableHead>
+                <TableHead className="p-0 border-r border-slate-200/50 hover:bg-slate-50 transition-colors">
+                  <div className="resize-x overflow-hidden w-[180px] min-w-[100px] h-12 px-4 flex items-center">
+                    Motorista
+                  </div>
+                </TableHead>
+                <TableHead className="p-0 border-r border-slate-200/50 hover:bg-slate-50 transition-colors">
+                  <div className="resize-x overflow-hidden w-[180px] min-w-[100px] h-12 px-4 flex items-center">
+                    Cobrador
+                  </div>
+                </TableHead>
+                <TableHead className="p-0 border-r border-slate-200/50 hover:bg-slate-50 transition-colors">
+                  <div className="resize-x overflow-hidden w-[100px] min-w-[60px] h-12 px-4 flex items-center">
+                    Linha
+                  </div>
+                </TableHead>
+                <TableHead className="p-0 border-r border-slate-200/50 hover:bg-slate-50 transition-colors">
+                  <div className="resize-x overflow-hidden w-[100px] min-w-[60px] h-12 px-4 flex items-center">
+                    Carro
+                  </div>
+                </TableHead>
+                <TableHead className="p-0 border-r border-slate-200/50 hover:bg-slate-50 transition-colors">
+                  <div className="resize-x overflow-hidden w-[200px] min-w-[100px] h-12 px-4 flex items-center">
+                    Local
+                  </div>
+                </TableHead>
+                <TableHead className="p-0 border-r border-slate-200/50 hover:bg-slate-50 transition-colors">
+                  <div className="resize-x overflow-hidden w-[120px] min-w-[80px] h-12 px-4 flex items-center">
+                    OS
+                  </div>
+                </TableHead>
+                <TableHead className="text-right whitespace-nowrap px-4">Ações</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {loading ? (
                 <TableRow>
-                  <TableCell colSpan={9} className="text-center py-8 text-slate-500">
+                  <TableCell colSpan={10} className="text-center py-8 text-slate-500">
                     Carregando...
                   </TableCell>
                 </TableRow>
               ) : filteredSinistros.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={9} className="text-center py-8 text-slate-500">
+                  <TableCell colSpan={10} className="text-center py-8 text-slate-500">
                     Nenhum sinistro encontrado
                   </TableCell>
                 </TableRow>
               ) : (
                 filteredSinistros.map((s) => (
                   <TableRow key={s.id}>
+                    <TableCell className="whitespace-nowrap">{s.operacao || '-'}</TableCell>
                     <TableCell className="whitespace-nowrap">
-                      {format(parseISO(s.criado_em), 'dd/MM/yyyy HH:mm')}
+                      {format(parseISO(s.criado_em), 'dd/MM/yyyy')}
                     </TableCell>
-                    <TableCell className="max-w-[200px] truncate" title={s.titulo}>
+                    <TableCell className="max-w-[400px] truncate" title={s.titulo}>
                       {s.titulo}
                     </TableCell>
                     <TableCell className="whitespace-nowrap">
@@ -297,7 +335,7 @@ export default function SinistrosCoc() {
                     </TableCell>
                     <TableCell className="whitespace-nowrap">{s.linha || '-'}</TableCell>
                     <TableCell className="whitespace-nowrap">{s.carro || '-'}</TableCell>
-                    <TableCell className="max-w-[150px] truncate" title={s.local_ocorrencia}>
+                    <TableCell className="max-w-[300px] truncate" title={s.local_ocorrencia}>
                       {s.local_ocorrencia || '-'}
                     </TableCell>
                     <TableCell className="whitespace-nowrap">

@@ -24,6 +24,7 @@ import FormularioEspelhoDanos from './pages/espelho-danos/FormularioEspelhoDanos
 import SucessoEspelhoDanos from './pages/espelho-danos/Sucesso'
 import FormularioEspelhoDanosFixo from './pages/espelho-danos/FormularioEspelhoDanosFixo'
 import SucessoEspelhoDanosFixo from './pages/espelho-danos/SucessoEspelhoDanosFixo'
+import OsManutencao from './pages/OsManutencao'
 import NotFound from './pages/NotFound'
 import Layout from './components/Layout'
 import { AuthProvider } from './hooks/use-auth'
@@ -59,6 +60,7 @@ const App = () => (
           <Route path="/ido/:id" element={<FormularioIdo />} />
           <Route path="/espelho-danos/sucesso" element={<SucessoEspelhoDanos />} />
           <Route path="/espelho-danos/:id" element={<FormularioEspelhoDanos />} />
+          <Route path="/os-manutencao" element={<OsManutencao />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </TooltipProvider>

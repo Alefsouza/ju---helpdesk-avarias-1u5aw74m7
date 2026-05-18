@@ -145,11 +145,11 @@ export default function MeusAtendimentos() {
       let query = supabase.from('chamados').select('*')
 
       if (filterStatus === 'em_atendimento') {
-        query = query.eq('status', 'em_atendimento')
+        query = query.in('status', ['em_atendimento', 'aberto'])
       } else if (filterStatus === 'finalizado') {
         query = query.eq('status', 'finalizado')
       } else if (filterStatus === 'ambos') {
-        query = query.in('status', ['em_atendimento', 'finalizado'])
+        query = query.in('status', ['em_atendimento', 'aberto', 'finalizado'])
       }
 
       const { data, error: err } = await query.order('criado_em', { ascending: false })
@@ -561,10 +561,16 @@ export default function MeusAtendimentos() {
                         className={
                           c.status === 'finalizado'
                             ? 'bg-slate-100 text-slate-800 border-slate-200'
-                            : 'bg-yellow-100 text-yellow-800 border-yellow-200'
+                            : c.status === 'aberto'
+                              ? 'bg-blue-100 text-blue-800 border-blue-200'
+                              : 'bg-yellow-100 text-yellow-800 border-yellow-200'
                         }
                       >
-                        {c.status === 'finalizado' ? 'FINALIZADO' : 'EM ATENDIMENTO'}
+                        {c.status === 'finalizado'
+                          ? 'FINALIZADO'
+                          : c.status === 'aberto'
+                            ? 'ABERTO'
+                            : 'EM ATENDIMENTO'}
                       </Badge>
                     </TableCell>
                     <TableCell className="align-middle text-sm text-slate-500 whitespace-nowrap">
@@ -640,10 +646,16 @@ export default function MeusAtendimentos() {
                       className={
                         c.status === 'finalizado'
                           ? 'bg-slate-100 text-slate-800 border-slate-200'
-                          : 'bg-yellow-100 text-yellow-800 border-yellow-200'
+                          : c.status === 'aberto'
+                            ? 'bg-blue-100 text-blue-800 border-blue-200'
+                            : 'bg-yellow-100 text-yellow-800 border-yellow-200'
                       }
                     >
-                      {c.status === 'finalizado' ? 'FINALIZADO' : 'EM ATENDIMENTO'}
+                      {c.status === 'finalizado'
+                        ? 'FINALIZADO'
+                        : c.status === 'aberto'
+                          ? 'ABERTO'
+                          : 'EM ATENDIMENTO'}
                     </Badge>
                   </div>
 

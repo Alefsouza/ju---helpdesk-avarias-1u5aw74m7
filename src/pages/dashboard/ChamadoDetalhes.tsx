@@ -1066,6 +1066,9 @@ export default function ChamadoDetalhes() {
       setCompleting(false)
       return
     }
+
+    setChamado((prev: any) => (prev ? { ...prev, status: 'aberto' } : prev))
+
     await supabase.from('historico_chamado').insert({
       chamado_id: id as string,
       acao: 'reaberto',
@@ -1073,7 +1076,6 @@ export default function ChamadoDetalhes() {
     })
     setCompleting(false)
     toast.success('Chamado reaberto com sucesso')
-    navigate('/dashboard/meus-atendimentos')
   }
 
   const handleFinalizar = async () => {

@@ -130,7 +130,7 @@ export default function NovoChamadoCoc() {
         <CardHeader className="border-b bg-slate-50/50">
           <CardTitle className="text-2xl text-[#225f3d]">Abrir Chamado</CardTitle>
           <CardDescription>
-            Preencha os dados abaixo para registrar uma nova chamada.
+            Preencha os dados abaixo para registrar uma nova chamado.
           </CardDescription>
         </CardHeader>
         <CardContent className="pt-6">

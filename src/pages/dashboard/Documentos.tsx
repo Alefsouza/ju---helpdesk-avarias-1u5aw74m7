@@ -79,12 +79,15 @@ export default function Documentos() {
         const { data, error } = await supabase
           .from('documentos')
           .select('*')
-          .in('tipo_documento', ['Espelho de Danos', 'Vistoria'])
-          .not('numero_os', 'is', null)
+          .in('tipo_documento', ['IDO', 'Espelho de Danos', 'Vistoria'])
           .order('criado_em', { ascending: false })
 
         if (error) throw error
-        setDocumentos((data as Documento[]) || [])
+
+        const docs = ((data as Documento[]) || []).filter(
+          (doc) => doc.tipo_documento === 'IDO' || !!doc.numero_os,
+        )
+        setDocumentos(docs)
       } catch (error: any) {
         console.error('Erro ao buscar documentos:', error)
         toast.error('Não foi possível carregar os documentos.')
@@ -107,10 +110,12 @@ export default function Documentos() {
         (payload) => {
           if (payload.eventType === 'INSERT' || payload.eventType === 'UPDATE') {
             const newDoc = payload.new as Documento
-            if (!['Espelho de Danos', 'Vistoria'].includes(newDoc.tipo_documento)) return
+            if (!['IDO', 'Espelho de Danos', 'Vistoria'].includes(newDoc.tipo_documento)) return
 
-            // Only add/keep if it has an OS
-            if (!newDoc.numero_os) {
+            // Only add/keep if it's IDO or has an OS
+            const isValid = newDoc.tipo_documento === 'IDO' || !!newDoc.numero_os
+
+            if (!isValid) {
               if (payload.eventType === 'UPDATE') {
                 setDocumentos((prev) => prev.filter((d) => d.id !== newDoc.id))
               }
@@ -239,7 +244,7 @@ export default function Documentos() {
       <div>
         <h1 className="text-2xl font-bold text-slate-800 tracking-tight">Documentos</h1>
         <p className="text-slate-500 mt-1">
-          Gestão de formulários preenchidos (Espelho de Danos e Vistorias).
+          Gestão de formulários preenchidos (IDO, Espelho de Danos e Vistorias).
         </p>
       </div>
 
@@ -292,6 +297,7 @@ export default function Documentos() {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="todos">Todos os Tipos</SelectItem>
+                <SelectItem value="IDO">IDO</SelectItem>
                 <SelectItem value="Espelho de Danos">Espelho de Danos</SelectItem>
                 <SelectItem value="Vistoria">Vistoria</SelectItem>
               </SelectContent>

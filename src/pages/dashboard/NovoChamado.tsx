@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback } from 'react'
+import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '@/lib/supabase/client'
 import { useAuth } from '@/hooks/use-auth'
@@ -7,13 +7,6 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
 import { Progress } from '@/components/ui/progress'
 import { toast } from 'sonner'
 import {
@@ -26,8 +19,81 @@ import {
   Loader2,
 } from 'lucide-react'
 
+type FileCategory =
+  | 'boletim'
+  | 'orcamento_confianca'
+  | 'orcamento_carmg'
+  | 'cnh'
+  | 'documento_veiculo'
+  | 'fotos_videos'
+
+const ATTACHMENT_CATEGORIES = [
+  {
+    id: 'boletim' as const,
+    title: 'Boletim de Ocorrência',
+    description: 'Anexe o boletim de ocorrência do sinistro',
+    required: true,
+    min: 1,
+    max: 1,
+    accept: '.pdf,image/*',
+    allowedPrefixes: ['application/pdf', 'image/'],
+  },
+  {
+    id: 'orcamento_confianca' as const,
+    title: '02 Orçamentos de funilarias de sua confiança',
+    description: 'Anexe 2 orçamentos de funilarias diferentes',
+    required: true,
+    min: 2,
+    max: 2,
+    accept: '.pdf,image/*',
+    allowedPrefixes: ['application/pdf', 'image/'],
+  },
+  {
+    id: 'orcamento_carmg' as const,
+    title: '01 Orçamento da Nossa funilaria credenciada',
+    description:
+      'CARMG Funilaria e Pintura - R. Bom Pastor, 2454 - Ipiranga - Contato: (11) 94004-1866 / Marcos',
+    required: true,
+    min: 1,
+    max: 1,
+    accept: '.pdf,image/*',
+    allowedPrefixes: ['application/pdf', 'image/'],
+  },
+  {
+    id: 'cnh' as const,
+    title: 'CNH',
+    description: 'Anexe a Carteira Nacional de Habilitação do condutor',
+    required: true,
+    min: 1,
+    max: 1,
+    accept: '.pdf,image/*',
+    allowedPrefixes: ['application/pdf', 'image/'],
+  },
+  {
+    id: 'documento_veiculo' as const,
+    title: 'Documento do veículo',
+    description: 'Anexe o documento do veículo (CRLV ou RG do veículo)',
+    required: true,
+    min: 1,
+    max: 1,
+    accept: '.pdf,image/*',
+    allowedPrefixes: ['application/pdf', 'image/'],
+  },
+  {
+    id: 'fotos_videos' as const,
+    title: 'Fotos e/ou vídeos do veículo avariado',
+    description: 'Anexe fotos ou vídeos do veículo com os danos',
+    required: false,
+    min: 0,
+    max: 10,
+    accept: 'image/*,video/*',
+    allowedPrefixes: ['image/', 'video/'],
+  },
+]
+
 type FileItem = {
   id: string
+  category: FileCategory
   file: File
   status: 'pending' | 'uploading' | 'success' | 'error'
   progress: number
@@ -36,18 +102,8 @@ type FileItem = {
   errorMessage?: string
 }
 
-const MAX_FILES = 10
 const MAX_SIZE_MB = 20
 const MAX_SIZE_BYTES = MAX_SIZE_MB * 1024 * 1024
-const ALLOWED_TYPES = [
-  'audio/mpeg',
-  'video/mp4',
-  'application/pdf',
-  'image/jpeg',
-  'image/png',
-  'image/gif',
-  'image/webp',
-]
 
 export default function NovoChamado() {
   const { user } = useAuth()
@@ -57,22 +113,28 @@ export default function NovoChamado() {
   const [descricao, setDescricao] = useState('')
 
   const [files, setFiles] = useState<FileItem[]>([])
-  const [isDragActive, setIsDragActive] = useState(false)
+  const [dragActiveId, setDragActiveId] = useState<FileCategory | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
 
-  const fileInputRef = useRef<HTMLInputElement>(null)
+  const processFiles = (newFiles: File[], categoryId: FileCategory) => {
+    const categoryInfo = ATTACHMENT_CATEGORIES.find((c) => c.id === categoryId)!
+    const currentFiles = files.filter((f) => f.category === categoryId)
 
-  const processFiles = (newFiles: File[]) => {
-    if (files.length + newFiles.length > MAX_FILES) {
-      toast.error(`Você pode enviar no máximo ${MAX_FILES} arquivos.`)
+    if (currentFiles.length + newFiles.length > categoryInfo.max) {
+      toast.error(
+        `Você pode enviar no máximo ${categoryInfo.max} arquivo(s) em ${categoryInfo.title}.`,
+      )
       return
     }
 
     const itemsToUpload: FileItem[] = []
 
     for (const file of newFiles) {
-      if (!ALLOWED_TYPES.includes(file.type)) {
-        toast.error(`Tipo de arquivo não permitido: ${file.name}`)
+      const isValidType = categoryInfo.allowedPrefixes.some((prefix) =>
+        file.type.startsWith(prefix),
+      )
+      if (!isValidType) {
+        toast.error(`Tipo de arquivo não permitido para esta categoria: ${file.name}`)
         continue
       }
       if (file.size > MAX_SIZE_BYTES) {
@@ -82,6 +144,7 @@ export default function NovoChamado() {
 
       const item: FileItem = {
         id: crypto.randomUUID(),
+        category: categoryId,
         file,
         status: 'pending',
         progress: 0,
@@ -158,32 +221,29 @@ export default function NovoChamado() {
     }
   }
 
-  const handleDrop = useCallback(
-    (e: React.DragEvent) => {
-      e.preventDefault()
-      setIsDragActive(false)
-      if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
-        processFiles(Array.from(e.dataTransfer.files))
-      }
-    },
-    [files],
-  )
-
-  const handleDragOver = useCallback((e: React.DragEvent) => {
+  const handleDrop = (e: React.DragEvent, categoryId: FileCategory) => {
     e.preventDefault()
-    setIsDragActive(true)
-  }, [])
-
-  const handleDragLeave = useCallback((e: React.DragEvent) => {
-    e.preventDefault()
-    setIsDragActive(false)
-  }, [])
-
-  const handleFileInput = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files.length > 0) {
-      processFiles(Array.from(e.target.files))
+    setDragActiveId(null)
+    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+      processFiles(Array.from(e.dataTransfer.files), categoryId)
     }
-    if (fileInputRef.current) fileInputRef.current.value = ''
+  }
+
+  const handleDragOver = (e: React.DragEvent, categoryId: FileCategory) => {
+    e.preventDefault()
+    setDragActiveId(categoryId)
+  }
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault()
+    setDragActiveId(null)
+  }
+
+  const handleFileInput = (e: React.ChangeEvent<HTMLInputElement>, categoryId: FileCategory) => {
+    if (e.target.files && e.target.files.length > 0) {
+      processFiles(Array.from(e.target.files), categoryId)
+    }
+    e.target.value = ''
   }
 
   const removeFile = (id: string) => {
@@ -217,7 +277,7 @@ export default function NovoChamado() {
     }
 
     if (!descricao.trim()) {
-      toast.error('Preencha todos os campos obrigatórios')
+      toast.error('A descrição é obrigatória')
       return
     }
 
@@ -229,6 +289,28 @@ export default function NovoChamado() {
     const hasIncomplete = files.some((f) => f.status !== 'success')
     if (hasIncomplete) {
       toast.error('Valide todos os anexos antes de enviar')
+      return
+    }
+
+    const missingRequired = ATTACHMENT_CATEGORIES.some(
+      (cat) => cat.required && files.filter((f) => f.category === cat.id).length === 0,
+    )
+    if (missingRequired) {
+      toast.error('Preencha todos os campos obrigatórios')
+      return
+    }
+
+    const wrongQuantity = ATTACHMENT_CATEGORIES.find((cat) => {
+      const count = files.filter((f) => f.category === cat.id).length
+      return count > 0 && count < cat.min
+    })
+
+    if (wrongQuantity) {
+      if (wrongQuantity.id === 'orcamento_confianca') {
+        toast.error('Mínimo 2 orçamentos obrigatório')
+      } else {
+        toast.error(`${wrongQuantity.title}: Mínimo de ${wrongQuantity.min} arquivo(s)`)
+      }
       return
     }
 
@@ -251,13 +333,17 @@ export default function NovoChamado() {
       if (chamadoError) throw chamadoError
 
       if (files.length > 0) {
-        const anexosData = files.map((f) => ({
-          chamado_id: chamado.id,
-          url_arquivo: f.url!,
-          nome_arquivo: f.file.name,
-          tipo_arquivo: getTipoArquivo(f.file.type),
-          tamanho_mb: Number((f.file.size / (1024 * 1024)).toFixed(2)),
-        }))
+        const anexosData = files.map((f) => {
+          const categoryTitle =
+            ATTACHMENT_CATEGORIES.find((c) => c.id === f.category)?.title || 'Anexo'
+          return {
+            chamado_id: chamado.id,
+            url_arquivo: f.url!,
+            nome_arquivo: `[${categoryTitle}] ${f.file.name}`,
+            tipo_arquivo: getTipoArquivo(f.file.type),
+            tamanho_mb: Number((f.file.size / (1024 * 1024)).toFixed(2)),
+          }
+        })
         const { error: anexosError } = await supabase.from('anexos_chamado').insert(anexosData)
         if (anexosError) throw anexosError
       }
@@ -268,11 +354,11 @@ export default function NovoChamado() {
         usuario_id: user.id,
       })
 
-      toast.success('Chamado criado com sucesso')
+      toast.success('Sinistro aberto com sucesso')
       navigate(`/dashboard/chamados/${chamado.id}`)
     } catch (error) {
       console.error(error)
-      toast.error('Erro ao criar chamado. Tente novamente')
+      toast.error('Erro ao abrir sinistro. Tente novamente')
     } finally {
       setIsSubmitting(false)
     }
@@ -282,23 +368,23 @@ export default function NovoChamado() {
     isSubmitting || files.some((f) => f.status !== 'success') || !titulo.trim() || !descricao.trim()
 
   return (
-    <div className="max-w-3xl mx-auto space-y-6 animate-fade-in-up p-4">
+    <div className="max-w-3xl mx-auto space-y-6 animate-fade-in-up p-4 mb-20">
       <div>
-        <h1 className="text-3xl font-bold tracking-tight">Criar Novo Chamado</h1>
+        <h1 className="text-3xl font-bold tracking-tight">Abrir Novo Chamado</h1>
         <p className="text-muted-foreground mt-2">
-          Preencha os dados abaixo para abrir um novo ticket de suporte.
+          Preencha os dados e forneça as documentações necessárias para a abertura do sinistro.
         </p>
       </div>
 
       <Card>
         <form onSubmit={handleSubmit}>
-          <CardContent className="space-y-6 pt-6">
+          <CardContent className="space-y-8 pt-6">
             <div className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="titulo">Título *</Label>
                 <Input
                   id="titulo"
-                  placeholder="Ex: Problema de acesso"
+                  placeholder="Ex: Avaria na lateral direita"
                   value={titulo}
                   onChange={(e) => setTitulo(e.target.value)}
                   required
@@ -309,7 +395,7 @@ export default function NovoChamado() {
                 <Label htmlFor="descricao">Descrição *</Label>
                 <Textarea
                   id="descricao"
-                  placeholder="Descreva detalhadamente o seu problema ou solicitação..."
+                  placeholder="Descreva detalhadamente a ocorrência..."
                   className="min-h-[120px]"
                   value={descricao}
                   onChange={(e) => setDescricao(e.target.value)}
@@ -319,98 +405,133 @@ export default function NovoChamado() {
             </div>
 
             <div className="space-y-4 pt-2">
-              <div className="flex justify-between items-center">
-                <Label>Anexos</Label>
-                <span className="text-xs text-muted-foreground">
-                  {files.length} de {MAX_FILES} arquivos
-                </span>
+              <div>
+                <Label className="text-base font-semibold">Anexos Necessários</Label>
+                <p className="text-sm text-muted-foreground">
+                  Forneça as documentações abaixo para a abertura do sinistro.
+                </p>
               </div>
 
-              <div
-                className={`border-2 border-dashed rounded-lg p-8 text-center transition-colors cursor-pointer flex flex-col items-center justify-center gap-2 ${isDragActive ? 'border-primary bg-primary/5' : 'border-slate-300 hover:border-primary/50 hover:bg-slate-50'}`}
-                onDrop={handleDrop}
-                onDragOver={handleDragOver}
-                onDragLeave={handleDragLeave}
-                onClick={() => fileInputRef.current?.click()}
-              >
-                <UploadCloud
-                  className={`h-10 w-10 ${isDragActive ? 'text-primary' : 'text-slate-400'}`}
-                />
-                <div className="text-sm font-medium mt-2">Clique ou arraste arquivos aqui</div>
-                <div className="text-xs text-muted-foreground">
-                  MP3, MP4, PDF, Imagens (Máx 20MB cada)
-                </div>
-                <input
-                  type="file"
-                  className="hidden"
-                  ref={fileInputRef}
-                  onChange={handleFileInput}
-                  multiple
-                  accept=".mp3,.mp4,.pdf,image/jpeg,image/png,image/gif,image/webp"
-                />
-              </div>
-
-              {files.length > 0 && (
-                <div className="space-y-3 mt-4">
-                  {files.map((f) => (
-                    <div
-                      key={f.id}
-                      className={`flex items-center gap-4 p-3 border rounded-md ${f.status === 'error' ? 'border-red-200 bg-red-50/50' : 'bg-white'}`}
-                    >
-                      <div className="bg-slate-100 p-2 rounded shrink-0">
-                        <FileIcon className="h-5 w-5 text-slate-500" />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex justify-between items-center mb-1">
-                          <p className="text-sm font-medium truncate pr-4">{f.file.name}</p>
-                          <span className="text-xs text-slate-500 shrink-0">
-                            {formatSize(f.file.size)}
-                          </span>
+              <div className="space-y-4">
+                {ATTACHMENT_CATEGORIES.map((cat) => {
+                  const catFiles = files.filter((f) => f.category === cat.id)
+                  return (
+                    <div key={cat.id} className="space-y-3 p-4 border rounded-lg bg-slate-50/50">
+                      <div className="flex justify-between items-start gap-4">
+                        <div>
+                          <Label className="text-sm font-medium flex items-center gap-2">
+                            {cat.title}
+                            {cat.required ? (
+                              <span className="text-red-600 text-[10px] font-medium bg-red-50 px-1.5 py-0.5 rounded uppercase tracking-wider">
+                                Obrigatório
+                              </span>
+                            ) : (
+                              <span className="text-slate-500 text-[10px] font-medium bg-slate-200 px-1.5 py-0.5 rounded uppercase tracking-wider">
+                                Opcional
+                              </span>
+                            )}
+                          </Label>
+                          <p className="text-xs text-muted-foreground mt-1">{cat.description}</p>
                         </div>
+                        <span className="text-xs text-muted-foreground whitespace-nowrap bg-white px-2 py-1 rounded-md border font-medium">
+                          {catFiles.length} / {cat.max}
+                        </span>
+                      </div>
 
-                        {f.status === 'uploading' && (
-                          <div className="space-y-1">
-                            <Progress value={f.progress} className="h-1.5" />
-                            <p className="text-xs text-slate-500">Enviando...</p>
+                      {catFiles.length < cat.max && (
+                        <div
+                          className={`border-2 border-dashed rounded-lg p-6 text-center transition-colors cursor-pointer flex flex-col items-center justify-center gap-2 ${dragActiveId === cat.id ? 'border-primary bg-primary/5' : 'border-slate-300 hover:border-primary/50 hover:bg-slate-50'}`}
+                          onDrop={(e) => handleDrop(e, cat.id)}
+                          onDragOver={(e) => handleDragOver(e, cat.id)}
+                          onDragLeave={handleDragLeave}
+                          onClick={() => document.getElementById(`file-upload-${cat.id}`)?.click()}
+                        >
+                          <UploadCloud
+                            className={`h-8 w-8 ${dragActiveId === cat.id ? 'text-primary' : 'text-slate-400'}`}
+                          />
+                          <div className="text-sm font-medium mt-1">
+                            Clique ou arraste {cat.max > 1 ? 'arquivos aqui' : 'um arquivo aqui'}
                           </div>
-                        )}
-
-                        {f.status === 'success' && (
-                          <div className="flex items-center gap-1.5 text-green-600 text-xs font-medium">
-                            <CheckCircle2 className="h-3.5 w-3.5" />
-                            Enviado
+                          <div className="text-xs text-muted-foreground">
+                            {cat.id === 'fotos_videos' ? 'Imagens ou Vídeos' : 'PDF ou Imagens'}{' '}
+                            (Máx 20MB cada)
                           </div>
-                        )}
+                          <input
+                            id={`file-upload-${cat.id}`}
+                            type="file"
+                            className="hidden"
+                            onChange={(e) => handleFileInput(e, cat.id)}
+                            multiple={cat.max > 1}
+                            accept={cat.accept}
+                          />
+                        </div>
+                      )}
 
-                        {f.status === 'error' && (
-                          <div className="flex flex-col gap-1">
-                            <div className="flex items-center gap-1.5 text-red-600 text-xs font-medium">
-                              <AlertCircle className="h-3.5 w-3.5" />
-                              {f.errorMessage}
-                            </div>
-                            {f.errorCount < 3 && (
+                      {catFiles.length > 0 && (
+                        <div className="space-y-2 mt-3">
+                          {catFiles.map((f) => (
+                            <div
+                              key={f.id}
+                              className={`flex items-center gap-3 p-2.5 border rounded-md shadow-sm ${f.status === 'error' ? 'border-red-200 bg-red-50/50' : 'bg-white'}`}
+                            >
+                              <div className="bg-slate-100 p-1.5 rounded shrink-0">
+                                <FileIcon className="h-4 w-4 text-slate-500" />
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <div className="flex justify-between items-center mb-0.5">
+                                  <p className="text-sm font-medium truncate pr-4">{f.file.name}</p>
+                                  <span className="text-[10px] text-slate-500 shrink-0">
+                                    {formatSize(f.file.size)}
+                                  </span>
+                                </div>
+
+                                {f.status === 'uploading' && (
+                                  <div className="space-y-1">
+                                    <Progress value={f.progress} className="h-1" />
+                                    <p className="text-[10px] text-slate-500">Enviando...</p>
+                                  </div>
+                                )}
+
+                                {f.status === 'success' && (
+                                  <div className="flex items-center gap-1 text-green-600 text-[10px] font-medium">
+                                    <CheckCircle2 className="h-3 w-3" />
+                                    Enviado
+                                  </div>
+                                )}
+
+                                {f.status === 'error' && (
+                                  <div className="flex flex-col gap-1">
+                                    <div className="flex items-center gap-1 text-red-600 text-[10px] font-medium">
+                                      <AlertCircle className="h-3 w-3" />
+                                      {f.errorMessage}
+                                    </div>
+                                    {f.errorCount < 3 && (
+                                      <button
+                                        type="button"
+                                        onClick={() => retryUpload(f)}
+                                        className="text-[10px] text-red-600 underline flex items-center gap-1 w-fit hover:text-red-700"
+                                      >
+                                        <RefreshCw className="h-2.5 w-2.5" /> Tentar novamente
+                                      </button>
+                                    )}
+                                  </div>
+                                )}
+                              </div>
                               <button
                                 type="button"
-                                onClick={() => retryUpload(f)}
-                                className="text-xs text-red-600 underline flex items-center gap-1 w-fit hover:text-red-700"
+                                onClick={() => removeFile(f.id)}
+                                className="shrink-0 p-1.5 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded transition-colors"
                               >
-                                <RefreshCw className="h-3 w-3" /> Tentar novamente
+                                <X className="h-3.5 w-3.5" />
                               </button>
-                            )}
-                          </div>
-                        )}
-                      </div>
-                      <button
-                        type="button"
-                        onClick={() => removeFile(f.id)}
-                        className="shrink-0 p-1.5 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded transition-colors"
-                      >
-                        <X className="h-4 w-4" />
-                      </button>
+                            </div>
+                          ))}
+                        </div>
+                      )}
                     </div>
-                  ))}
-                </div>
-              )}
+                  )
+                })}
+              </div>
             </div>
           </CardContent>
           <CardFooter className="flex justify-between border-t p-6 bg-slate-50/50 rounded-b-xl">
@@ -425,17 +546,17 @@ export default function NovoChamado() {
             <div className="flex items-center gap-3">
               {files.some((f) => f.status !== 'success') && files.length > 0 && (
                 <span className="text-sm text-amber-600 font-medium hidden sm:inline-block">
-                  Valide todos os anexos antes de enviar
+                  Aguarde o envio dos anexos
                 </span>
               )}
               <Button type="submit" disabled={isSubmitDisabled}>
                 {isSubmitting ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Criando...
+                    Abrindo...
                   </>
                 ) : (
-                  'Criar chamado'
+                  'Abrir Sinistro'
                 )}
               </Button>
             </div>

@@ -9,7 +9,7 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import { Button } from '@/components/ui/button'
-import { Eye, Download, Search, Wrench, Trash2 } from 'lucide-react'
+import { Eye, Download, Search, Wrench, CheckCircle } from 'lucide-react'
 import { format, parseISO } from 'date-fns'
 import { Input } from '@/components/ui/input'
 import { Card, CardContent } from '@/components/ui/card'
@@ -39,8 +39,8 @@ export default function OsManutencao() {
   const [documentos, setDocumentos] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
-  const [docToDelete, setDocToDelete] = useState<any>(null)
-  const [isDeleting, setIsDeleting] = useState(false)
+  const [docToRelease, setDocToRelease] = useState<any>(null)
+  const [isReleasing, setIsReleasing] = useState(false)
   const [viewDoc, setViewDoc] = useState<any>(null)
 
   const [isModalOpen, setIsModalOpen] = useState(false)
@@ -107,21 +107,21 @@ export default function OsManutencao() {
     window.open(downloadUrl, '_blank')
   }
 
-  const handleDelete = async () => {
-    if (!docToDelete) return
+  const handleRelease = async () => {
+    if (!docToRelease) return
     try {
-      setIsDeleting(true)
+      setIsReleasing(true)
       const { error } = await supabase.rpc('ocultar_documento_manutencao' as any, {
-        p_id: docToDelete.id,
+        p_id: docToRelease.id,
       })
       if (error) throw error
 
-      setDocumentos((docs) => docs.filter((d) => d.id !== docToDelete.id))
+      setDocumentos((docs) => docs.filter((d) => d.id !== docToRelease.id))
     } catch (error) {
       console.error('Erro ao ocultar documento:', error)
     } finally {
-      setIsDeleting(false)
-      setDocToDelete(null)
+      setIsReleasing(false)
+      setDocToRelease(null)
     }
   }
 
@@ -377,11 +377,11 @@ export default function OsManutencao() {
                               <Button
                                 variant="ghost"
                                 size="icon"
-                                className="h-8 w-8 text-slate-500 hover:text-red-600 hover:bg-red-50"
-                                onClick={() => setDocToDelete(doc)}
-                                title="Excluir da listagem"
+                                className="h-8 w-8 text-slate-500 hover:text-green-600 hover:bg-green-50"
+                                onClick={() => setDocToRelease(doc)}
+                                title="Liberar Veículo"
                               >
-                                <Trash2 className="h-4 w-4" />
+                                <CheckCircle className="h-4 w-4" />
                               </Button>
                             </div>
                           </TableCell>
@@ -582,28 +582,29 @@ export default function OsManutencao() {
       </Dialog>
 
       <AlertDialog
-        open={!!docToDelete}
-        onOpenChange={(open) => !open && !isDeleting && setDocToDelete(null)}
+        open={!!docToRelease}
+        onOpenChange={(open) => !open && !isReleasing && setDocToRelease(null)}
       >
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Excluir da listagem?</AlertDialogTitle>
+            <AlertDialogTitle>Liberar Veículo?</AlertDialogTitle>
             <AlertDialogDescription>
-              Esta ação irá ocultar a Ordem de Serviço da lista de manutenção. O documento original
-              será mantido no sistema e poderá ser acessado normalmente pelo dashboard.
+              Esta ação irá remover a Ordem de Serviço da lista de manutenção, marcando o veículo
+              como liberado. O documento original será mantido no sistema e poderá ser acessado
+              normalmente pelo dashboard.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel disabled={isDeleting}>Cancelar</AlertDialogCancel>
+            <AlertDialogCancel disabled={isReleasing}>Cancelar</AlertDialogCancel>
             <AlertDialogAction
               onClick={(e) => {
                 e.preventDefault()
-                handleDelete()
+                handleRelease()
               }}
-              disabled={isDeleting}
-              className="bg-red-600 hover:bg-red-700 focus:ring-red-600"
+              disabled={isReleasing}
+              className="bg-green-600 hover:bg-green-700 focus:ring-green-600 text-white"
             >
-              {isDeleting ? 'Excluindo...' : 'Sim, excluir'}
+              {isReleasing ? 'Liberando...' : 'Sim, liberar'}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

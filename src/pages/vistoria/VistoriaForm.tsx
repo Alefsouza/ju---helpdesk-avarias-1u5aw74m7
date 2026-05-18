@@ -37,6 +37,9 @@ const formSchema = z.object({
   linha: z.string().min(1, 'Campo obrigatório'),
   descricao_danos: z.string().min(1, 'Campo obrigatório'),
   registro_vistoriador: z.string().min(1, 'Campo obrigatório'),
+  nome_vistoriador: z.string().min(1, 'Campo obrigatório'),
+  registro_motorista: z.string().min(1, 'Campo obrigatório'),
+  nome_motorista: z.string().min(1, 'Campo obrigatório'),
 })
 
 type FormValues = z.infer<typeof formSchema>
@@ -60,6 +63,9 @@ export default function VistoriaForm() {
       linha: '',
       descricao_danos: '',
       registro_vistoriador: '',
+      nome_vistoriador: '',
+      registro_motorista: '',
+      nome_motorista: '',
     },
   })
 
@@ -120,6 +126,9 @@ export default function VistoriaForm() {
         fotos_urls: uploadedUrls,
         chamado_id: chamadoId || null,
         registro_responsavel: values.registro_vistoriador,
+        nome_responsavel: values.nome_vistoriador,
+        registro_motorista: values.registro_motorista,
+        nome_motorista: values.nome_motorista,
       } as any
 
       docData.garagem = values.garagem
@@ -270,19 +279,60 @@ export default function VistoriaForm() {
                 )}
               />
 
-              <FormField
-                control={form.control}
-                name="registro_vistoriador"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Registro do Vistoriador</FormLabel>
-                    <FormControl>
-                      <Input placeholder="Matrícula / Registro" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <FormField
+                  control={form.control}
+                  name="registro_vistoriador"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Registro do Vistoriador</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Matrícula / Registro" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="nome_vistoriador"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Nome do Vistoriador</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Nome completo" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="registro_motorista"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Registro do Motorista</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Matrícula / Registro" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="nome_motorista"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Nome do Motorista</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Nome completo" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
 
               <div className="space-y-4 pt-4 border-t">
                 <div>

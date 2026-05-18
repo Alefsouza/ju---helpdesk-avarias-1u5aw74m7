@@ -9,17 +9,29 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import { Button } from '@/components/ui/button'
-import { Eye, Download, Search, Wrench } from 'lucide-react'
+import { Eye, Download, Search, Wrench, Trash2 } from 'lucide-react'
 import { format, parseISO } from 'date-fns'
 import { Input } from '@/components/ui/input'
 import { Card, CardContent } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Badge } from '@/components/ui/badge'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog'
 
 export default function OsManutencao() {
   const [documentos, setDocumentos] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
+  const [docToDelete, setDocToDelete] = useState<any>(null)
+  const [isDeleting, setIsDeleting] = useState(false)
 
   useEffect(() => {
     fetchDocumentos()
@@ -53,6 +65,7 @@ export default function OsManutencao() {
         .in('tipo_documento', ['Vistoria', 'Espelho de Danos'])
         .not('numero_os', 'is', null)
         .neq('numero_os', '')
+        .neq('excluido_manutencao' as any, true)
         .order('criado_em', { ascending: false })
 
       if (error) throw error
@@ -76,6 +89,24 @@ export default function OsManutencao() {
     e.preventDefault()
     const downloadUrl = url + (url.includes('?') ? '&download=' : '?download=')
     window.open(downloadUrl, '_blank')
+  }
+
+  const handleDelete = async () => {
+    if (!docToDelete) return
+    try {
+      setIsDeleting(true)
+      const { error } = await supabase.rpc('ocultar_documento_manutencao' as any, {
+        p_id: docToDelete.id,
+      })
+      if (error) throw error
+
+      setDocumentos((docs) => docs.filter((d) => d.id !== docToDelete.id))
+    } catch (error) {
+      console.error('Erro ao ocultar documento:', error)
+    } finally {
+      setIsDeleting(false)
+      setDocToDelete(null)
+    }
   }
 
   return (
@@ -125,7 +156,7 @@ export default function OsManutencao() {
                       <TableHead className="w-[160px] font-semibold">Carro / Linha</TableHead>
                       <TableHead className="w-[200px] font-semibold">Vistoriador</TableHead>
                       <TableHead className="min-w-[300px] font-semibold">Descrição</TableHead>
-                      <TableHead className="w-[120px] text-right font-semibold">Ações</TableHead>
+                      <TableHead className="w-[160px] text-right font-semibold">Ações</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -148,7 +179,7 @@ export default function OsManutencao() {
                             <Skeleton className="h-5 w-full" />
                           </TableCell>
                           <TableCell>
-                            <Skeleton className="h-8 w-20 ml-auto" />
+                            <Skeleton className="h-8 w-24 ml-auto" />
                           </TableCell>
                         </TableRow>
                       ))
@@ -219,6 +250,15 @@ export default function OsManutencao() {
                               >
                                 <Download className="h-4 w-4" />
                               </Button>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-8 w-8 text-slate-500 hover:text-red-600 hover:bg-red-50"
+                                onClick={() => setDocToDelete(doc)}
+                                title="Excluir da listagem"
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
                             </div>
                           </TableCell>
                         </TableRow>
@@ -231,6 +271,34 @@ export default function OsManutencao() {
           </Card>
         </div>
       </main>
+
+      <AlertDialog
+        open={!!docToDelete}
+        onOpenChange={(open) => !open && !isDeleting && setDocToDelete(null)}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Excluir da listagem?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Esta ação irá ocultar a Ordem de Serviço da lista de manutenção. O documento original
+              será mantido no sistema e poderá ser acessado normalmente pelo dashboard.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isDeleting}>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={(e) => {
+                e.preventDefault()
+                handleDelete()
+              }}
+              disabled={isDeleting}
+              className="bg-red-600 hover:bg-red-700 focus:ring-red-600"
+            >
+              {isDeleting ? 'Excluindo...' : 'Sim, excluir'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   )
 }

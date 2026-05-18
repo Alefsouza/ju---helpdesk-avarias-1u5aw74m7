@@ -28,7 +28,6 @@ import {
 } from '@/components/ui/select'
 import { Eye, Download, Pencil, Search } from 'lucide-react'
 import { toast } from 'sonner'
-import { format } from 'date-fns'
 
 export default function EspelhosDanos() {
   const [documentos, setDocumentos] = useState<any[]>([])
@@ -194,7 +193,7 @@ export default function EspelhosDanos() {
                 filteredDocumentos.map((doc) => (
                   <TableRow key={doc.id}>
                     <TableCell>
-                      {doc.data ? format(new Date(doc.data), 'dd/MM/yyyy') : '-'}
+                      {doc.data ? doc.data.split('-').reverse().join('/') : '-'}
                     </TableCell>
                     <TableCell>{doc.garagem || '-'}</TableCell>
                     <TableCell>{doc.linha || '-'}</TableCell>
@@ -283,7 +282,7 @@ export default function EspelhosDanos() {
               <div className="flex flex-col">
                 <span className="font-bold text-[#333333]">Data / Horário</span>
                 <span className="text-[#333333]">
-                  {viewDoc?.data ? format(new Date(viewDoc.data), 'dd/MM/yyyy') : '-'}{' '}
+                  {viewDoc?.data ? viewDoc.data.split('-').reverse().join('/') : '-'}{' '}
                   {viewDoc?.horario || ''}
                 </span>
               </div>

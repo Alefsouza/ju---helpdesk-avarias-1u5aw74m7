@@ -130,7 +130,9 @@ export default function OsManutencao() {
         <div className="max-w-7xl mx-auto space-y-6">
           <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
             <div>
-              <h2 className="text-2xl font-bold text-slate-900">Listagem de Ordens de Serviço</h2>
+              <h2 className="text-2xl font-bold text-slate-900">
+                Listagem de Ordens de Serviço - Avarias
+              </h2>
               <p className="text-slate-500 mt-1">
                 Acompanhamento público das Ordens de Serviço preenchidas na vistoria.
               </p>

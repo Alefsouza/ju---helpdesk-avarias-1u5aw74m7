@@ -194,18 +194,32 @@ function AppSidebar() {
               )}
 
               {isSos && (
-                <SidebarMenuItem>
-                  <SidebarMenuButton
-                    asChild
-                    isActive={location.pathname === '/sos/pendentes'}
-                    className="data-[active=true]:bg-transparent data-[active=true]:text-[#c8e6c9] hover:bg-[#c8e6c9]/10 hover:text-[#c8e6c9] text-white transition-colors"
-                  >
-                    <Link to="/sos/pendentes">
-                      <LifeBuoy />
-                      <span>Chamados Pendentes</span>
-                    </Link>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
+                <>
+                  <SidebarMenuItem>
+                    <SidebarMenuButton
+                      asChild
+                      isActive={location.pathname === '/sos/pendentes'}
+                      className="data-[active=true]:bg-transparent data-[active=true]:text-[#c8e6c9] hover:bg-[#c8e6c9]/10 hover:text-[#c8e6c9] text-white transition-colors"
+                    >
+                      <Link to="/sos/pendentes">
+                        <LifeBuoy />
+                        <span>Chamados Pendentes</span>
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                  <SidebarMenuItem>
+                    <SidebarMenuButton
+                      asChild
+                      isActive={location.pathname === '/coc/sinistros'}
+                      className="data-[active=true]:bg-transparent data-[active=true]:text-[#c8e6c9] hover:bg-[#c8e6c9]/10 hover:text-[#c8e6c9] text-white transition-colors"
+                    >
+                      <Link to="/coc/sinistros">
+                        <FileText />
+                        <span>Sinistros</span>
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                </>
               )}
 
               {isVistoriador && (
@@ -465,7 +479,9 @@ export default function Layout() {
   // Redirect SOS from other areas
   if (user && profile?.tipo_usuario === 'sos') {
     const isSosRoute =
-      location.pathname.startsWith('/sos') || location.pathname === '/dashboard/perfil'
+      location.pathname.startsWith('/sos') ||
+      location.pathname === '/coc/sinistros' ||
+      location.pathname === '/dashboard/perfil'
     if (!isSosRoute) {
       return <Navigate to="/sos/pendentes" replace />
     }

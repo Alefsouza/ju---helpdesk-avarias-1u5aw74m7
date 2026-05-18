@@ -233,11 +233,9 @@ export default function SinistrosCoc() {
                 <TableHead className="whitespace-nowrap">Título</TableHead>
                 <TableHead className="whitespace-nowrap">Motorista</TableHead>
                 <TableHead className="whitespace-nowrap">Colaborador</TableHead>
-                <TableHead className="whitespace-nowrap">Cargo</TableHead>
                 <TableHead className="whitespace-nowrap">Linha</TableHead>
                 <TableHead className="whitespace-nowrap">Carro</TableHead>
                 <TableHead className="whitespace-nowrap">Local</TableHead>
-                <TableHead className="whitespace-nowrap">Avaria</TableHead>
                 <TableHead className="whitespace-nowrap">OS</TableHead>
                 <TableHead className="text-right whitespace-nowrap">Ações</TableHead>
               </TableRow>
@@ -245,13 +243,13 @@ export default function SinistrosCoc() {
             <TableBody>
               {loading ? (
                 <TableRow>
-                  <TableCell colSpan={11} className="text-center py-8 text-slate-500">
+                  <TableCell colSpan={9} className="text-center py-8 text-slate-500">
                     Carregando...
                   </TableCell>
                 </TableRow>
               ) : filteredSinistros.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={11} className="text-center py-8 text-slate-500">
+                  <TableCell colSpan={9} className="text-center py-8 text-slate-500">
                     Nenhum sinistro registrado
                   </TableCell>
                 </TableRow>
@@ -272,23 +270,10 @@ export default function SinistrosCoc() {
                       {s.nome_cobrador || '-'} <br />
                       <span className="text-xs text-slate-500">{s.registro_cobrador || ''}</span>
                     </TableCell>
-                    <TableCell className="whitespace-nowrap">-</TableCell>
                     <TableCell className="whitespace-nowrap">{s.linha || '-'}</TableCell>
                     <TableCell className="whitespace-nowrap">{s.carro || '-'}</TableCell>
                     <TableCell className="max-w-[150px] truncate" title={s.local_ocorrencia}>
                       {s.local_ocorrencia || '-'}
-                    </TableCell>
-                    <TableCell className="whitespace-nowrap">
-                      <Badge
-                        variant="outline"
-                        className={
-                          s.tipo_chamado === 'Avaria com vítima'
-                            ? 'bg-red-50 text-red-600 border-red-200'
-                            : 'bg-orange-50 text-orange-600 border-orange-200'
-                        }
-                      >
-                        {s.tipo_chamado || '-'}
-                      </Badge>
                     </TableCell>
                     <TableCell className="whitespace-nowrap">
                       {s.numero_os ? (

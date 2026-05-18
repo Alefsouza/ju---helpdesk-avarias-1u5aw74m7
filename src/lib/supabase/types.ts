@@ -518,6 +518,7 @@ export type Database = {
     }
     Functions: {
       is_admin: { Args: never; Returns: boolean }
+      is_coc: { Args: never; Returns: boolean }
       is_responsavel: { Args: never; Returns: boolean }
       is_sos: { Args: never; Returns: boolean }
       is_vistoriador: { Args: never; Returns: boolean }
@@ -880,9 +881,9 @@ export const Constants = {
 //   Policy "chamados_insert" (INSERT, PERMISSIVE) roles={authenticated}
 //     WITH CHECK: (usuario_id = auth.uid())
 //   Policy "chamados_select" (SELECT, PERMISSIVE) roles={authenticated}
-//     USING: ((usuario_id = auth.uid()) OR is_responsavel() OR is_admin() OR is_sos())
+//     USING: ((usuario_id = auth.uid()) OR is_responsavel() OR is_admin() OR is_sos() OR is_coc())
 //   Policy "chamados_update" (UPDATE, PERMISSIVE) roles={authenticated}
-//     USING: ((usuario_id = auth.uid()) OR (is_responsavel() AND ((responsavel_id = auth.uid()) OR (status = 'aberto'::text) OR (status = 'finalizado'::text))) OR is_admin() OR is_sos())
+//     USING: ((usuario_id = auth.uid()) OR (is_responsavel() AND ((responsavel_id = auth.uid()) OR (status = 'aberto'::text) OR (status = 'finalizado'::text))) OR is_admin() OR is_sos() OR is_coc())
 // Table: documentos
 //   Policy "documentos_delete" (DELETE, PERMISSIVE) roles={authenticated}
 //     USING: (is_admin() OR is_responsavel())
@@ -957,6 +958,19 @@ export const Constants = {
 //   BEGIN
 //     RETURN EXISTS (
 //       SELECT 1 FROM public.perfil_usuario WHERE id = auth.uid() AND tipo_usuario = 'admin'
+//     );
+//   END;
+//   $function$
+//
+// FUNCTION is_coc()
+//   CREATE OR REPLACE FUNCTION public.is_coc()
+//    RETURNS boolean
+//    LANGUAGE plpgsql
+//    SECURITY DEFINER
+//   AS $function$
+//   BEGIN
+//     RETURN EXISTS (
+//       SELECT 1 FROM public.perfil_usuario WHERE id = auth.uid() AND tipo_usuario = 'coc'
 //     );
 //   END;
 //   $function$

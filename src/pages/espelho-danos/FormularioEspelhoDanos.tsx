@@ -36,6 +36,7 @@ const formSchema = z.object({
   horario: z.string().min(1, 'Campo obrigatório'),
   ocorrencia: z.string().min(1, 'Selecione sim ou não'),
   linha: z.string().min(1, 'Campo obrigatório'),
+  numero_carro: z.string().min(1, 'Campo obrigatório'),
   descricao_danos: z.string().min(1, 'Campo obrigatório'),
   registro_vistoriador: z.string().min(1, 'Campo obrigatório'),
   nome_vistoriador: z.string().min(1, 'Campo obrigatório'),
@@ -88,6 +89,7 @@ export default function FormularioEspelhoDanos() {
       horario: '',
       ocorrencia: '',
       linha: '',
+      numero_carro: '',
       descricao_danos: '',
       registro_vistoriador: '',
       nome_vistoriador: '',
@@ -107,7 +109,7 @@ export default function FormularioEspelhoDanos() {
 
       const { error: espelhoError } = await supabase
         .from('formularios_espelho_danos')
-        .insert({ id: espelhoId, chamado_id: id, ...formValuesToSave })
+        .insert({ id: espelhoId, chamado_id: id, ...formValuesToSave } as any)
 
       if (espelhoError) throw new Error('Erro ao salvar os dados do formulário')
 
@@ -254,6 +256,7 @@ export default function FormularioEspelhoDanos() {
         renderField('Horário', values.horario)
         renderField('Ocorrência', values.ocorrencia)
         renderField('Linha', values.linha)
+        renderField('Número do Carro', values.numero_carro)
         renderField('Descrição dos Danos', values.descricao_danos)
 
         if (values.fotos_dano && values.fotos_dano.length > 0) {
@@ -381,6 +384,7 @@ export default function FormularioEspelhoDanos() {
         registro_motorista: values.registro_motorista,
         numero_os: values.numero_os,
         linha: values.linha,
+        numero_carro: values.numero_carro,
         data: values.data,
         horario: values.horario,
         garagem: values.garagem,
@@ -513,19 +517,34 @@ export default function FormularioEspelhoDanos() {
                   </FormItem>
                 )}
               />
-              <FormField
-                control={form.control}
-                name="linha"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Linha *</FormLabel>
-                    <FormControl>
-                      <Input placeholder="Informe o número da linha" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <FormField
+                  control={form.control}
+                  name="linha"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Linha *</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Informe o número da linha" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="numero_carro"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Número do Carro *</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Informe o número do carro" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
               <FormField
                 control={form.control}
                 name="descricao_danos"

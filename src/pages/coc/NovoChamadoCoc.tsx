@@ -221,9 +221,9 @@ export default function NovoChamadoCoc() {
                   name="carro"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Cargo (Carro)</FormLabel>
+                      <FormLabel>Carro</FormLabel>
                       <FormControl>
-                        <Input placeholder="Número do carro / cargo" {...field} />
+                        <Input placeholder="Número do carro" {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>

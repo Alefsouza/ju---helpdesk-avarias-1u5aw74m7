@@ -115,7 +115,7 @@ export type Database = {
       chamados: {
         Row: {
           atualizado_em: string
-          cargo: string | null
+          carro: string | null
           criado_em: string
           descricao: string
           id: string
@@ -136,7 +136,7 @@ export type Database = {
         }
         Insert: {
           atualizado_em?: string
-          cargo?: string | null
+          carro?: string | null
           criado_em?: string
           descricao: string
           id?: string
@@ -157,7 +157,7 @@ export type Database = {
         }
         Update: {
           atualizado_em?: string
-          cargo?: string | null
+          carro?: string | null
           criado_em?: string
           descricao?: string
           id?: string
@@ -719,7 +719,7 @@ export const Constants = {
 //   nome_motorista: text (nullable)
 //   registro_colaborador: text (nullable)
 //   nome_colaborador: text (nullable)
-//   cargo: text (nullable)
+//   carro: text (nullable)
 //   linha: text (nullable)
 //   local_ocorrencia: text (nullable)
 //   operacao: text (nullable)

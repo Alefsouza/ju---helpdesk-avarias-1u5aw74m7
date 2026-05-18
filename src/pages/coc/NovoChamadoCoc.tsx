@@ -34,7 +34,7 @@ const formSchema = z.object({
   nome_motorista: z.string().min(1, 'Obrigatório'),
   registro_colaborador: z.string().min(1, 'Obrigatório'),
   nome_colaborador: z.string().min(1, 'Obrigatório'),
-  cargo: z.string().min(1, 'Obrigatório'),
+  carro: z.string().min(1, 'Obrigatório'),
   linha: z.string().min(1, 'Obrigatório'),
   local_ocorrencia: z.string().min(1, 'Obrigatório'),
   operacao: z.enum(['RA', 'RN', 'OPN'], { required_error: 'Selecione uma operação' }),
@@ -55,7 +55,7 @@ export default function NovoChamadoCoc() {
       nome_motorista: '',
       registro_colaborador: '',
       nome_colaborador: '',
-      cargo: '',
+      carro: '',
       linha: '',
       local_ocorrencia: '',
       operacao: undefined,
@@ -84,7 +84,7 @@ export default function NovoChamadoCoc() {
           nome_motorista: values.nome_motorista,
           registro_colaborador: values.registro_colaborador,
           nome_colaborador: values.nome_colaborador,
-          cargo: values.cargo,
+          carro: values.carro,
           linha: values.linha,
           local_ocorrencia: values.local_ocorrencia,
           operacao: values.operacao,
@@ -209,12 +209,12 @@ export default function NovoChamadoCoc() {
 
                 <FormField
                   control={form.control}
-                  name="cargo"
+                  name="carro"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Cargo</FormLabel>
+                      <FormLabel>Carro</FormLabel>
                       <FormControl>
-                        <Input placeholder="Cargo do colaborador" {...field} />
+                        <Input placeholder="Número do carro" {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>

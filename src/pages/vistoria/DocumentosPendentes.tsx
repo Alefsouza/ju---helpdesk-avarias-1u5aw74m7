@@ -125,25 +125,50 @@ export default function DocumentosPendentes() {
 
     setIsSaving(true)
     try {
+      // 1. Gerar PDF via Edge Function
+      const { data: pdfData, error: pdfError } = await supabase.functions.invoke('gerar-pdf', {
+        body: {
+          id: selectedDoc.id,
+          garagem: selectedDoc.garagem,
+          linha: selectedDoc.linha,
+          data: formatDate(selectedDoc.data),
+          horario: selectedDoc.horario,
+          ocorrencia: selectedDoc.ocorrencia,
+          descricao_danos: selectedDoc.descricao_danos,
+          numero_os: numeroOS.trim(),
+          responsavel: selectedDoc.nome_responsavel || selectedDoc.registro_responsavel,
+        },
+      })
+
+      if (pdfError) throw pdfError
+      if (!pdfData || !pdfData.success) throw new Error(pdfData?.error || 'Erro ao gerar PDF')
+
+      const { url, nome_arquivo } = pdfData
+
+      // 2. Atualizar documento com número da OS e URL do PDF gerado
       const { error } = await supabase
         .from('documentos')
-        .update({ numero_os: numeroOS.trim() })
+        .update({
+          numero_os: numeroOS.trim(),
+          arquivo_url: url,
+          nome_arquivo: nome_arquivo || `Espelho_Danos_OS_${numeroOS.trim()}.pdf`,
+        })
         .eq('id', selectedDoc.id)
 
       if (error) throw error
 
       toast({
         title: 'Sucesso',
-        description: 'Número da OS salvo com sucesso. Documento concluído.',
+        description: 'Número da OS salvo e PDF gerado com sucesso. Documento concluído.',
       })
 
       setDocumentos((docs) => docs.filter((d) => d.id !== selectedDoc.id))
       handleCloseModal()
-    } catch (error) {
+    } catch (error: any) {
       console.error('Erro ao salvar OS:', error)
       toast({
         title: 'Erro',
-        description: 'Ocorreu um erro ao salvar o número da OS.',
+        description: error.message || 'Ocorreu um erro ao salvar o número da OS e gerar o PDF.',
         variant: 'destructive',
       })
     } finally {

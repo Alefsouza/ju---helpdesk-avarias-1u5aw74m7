@@ -80,6 +80,7 @@ export default function Documentos() {
           .from('documentos')
           .select('*')
           .in('tipo_documento', ['Espelho de Danos', 'Vistoria'])
+          .not('numero_os', 'is', null)
           .order('criado_em', { ascending: false })
 
         if (error) throw error
@@ -104,12 +105,22 @@ export default function Documentos() {
           table: 'documentos',
         },
         (payload) => {
-          if (payload.eventType === 'INSERT') {
+          if (payload.eventType === 'INSERT' || payload.eventType === 'UPDATE') {
             const newDoc = payload.new as Documento
             if (!['Espelho de Danos', 'Vistoria'].includes(newDoc.tipo_documento)) return
 
+            // Only add/keep if it has an OS
+            if (!newDoc.numero_os) {
+              if (payload.eventType === 'UPDATE') {
+                setDocumentos((prev) => prev.filter((d) => d.id !== newDoc.id))
+              }
+              return
+            }
+
             setDocumentos((prev) => {
-              if (prev.some((d) => d.id === newDoc.id)) return prev
+              if (prev.some((d) => d.id === newDoc.id)) {
+                return prev.map((d) => (d.id === newDoc.id ? newDoc : d))
+              }
               return [newDoc, ...prev]
             })
 
@@ -132,12 +143,6 @@ export default function Documentos() {
             }
           } else if (payload.eventType === 'DELETE') {
             setDocumentos((prev) => prev.filter((d) => d.id !== payload.old.id))
-          } else if (payload.eventType === 'UPDATE') {
-            setDocumentos((prev) =>
-              prev.map((d) =>
-                d.id === payload.new.id ? ({ ...d, ...payload.new } as Documento) : d,
-              ),
-            )
           }
         },
       )

@@ -1057,25 +1057,36 @@ export default function ChamadoDetalhes() {
 
   const handleReabrir = async () => {
     setCompleting(true)
-    const { error: updateError } = await supabase
-      .from('chamados')
-      .update({ status: 'aberto', atualizado_em: new Date().toISOString() })
-      .eq('id', id)
-    if (updateError) {
+    try {
+      const { data, error: updateError } = await supabase
+        .from('chamados')
+        .update({ status: 'aberto', atualizado_em: new Date().toISOString() })
+        .eq('id', id)
+        .select()
+        .single()
+
+      if (updateError) throw updateError
+      if (!data) throw new Error('Falha ao atualizar chamado no banco')
+
+      const { error: histError } = await supabase.from('historico_chamado').insert({
+        chamado_id: id as string,
+        acao: 'reaberto',
+        usuario_id: user?.id as string,
+      })
+
+      if (histError) throw histError
+
+      setChamado((prev: any) => (prev ? { ...prev, status: 'aberto' } : prev))
+      setConfirmReabrirOpen(false)
+      toast.success('Chamado reaberto com sucesso')
+
+      navigate(`/dashboard/chamados/${id}`)
+    } catch (e) {
+      console.error(e)
       toast.error('Erro ao reabrir chamado')
+    } finally {
       setCompleting(false)
-      return
     }
-
-    setChamado((prev: any) => (prev ? { ...prev, status: 'aberto' } : prev))
-
-    await supabase.from('historico_chamado').insert({
-      chamado_id: id as string,
-      acao: 'reaberto',
-      usuario_id: user?.id as string,
-    })
-    setCompleting(false)
-    toast.success('Chamado reaberto com sucesso')
   }
 
   const handleFinalizar = async () => {

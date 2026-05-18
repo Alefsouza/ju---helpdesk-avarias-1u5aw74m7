@@ -212,12 +212,15 @@ export default function MeusAtendimentos() {
     setCompletingId(chamadoId)
     setConfirmReabrirId(null)
     try {
-      const { error: updateError } = await supabase
+      const { data, error: updateError } = await supabase
         .from('chamados')
         .update({ status: 'aberto', atualizado_em: new Date().toISOString() })
         .eq('id', chamadoId)
+        .select()
+        .single()
 
       if (updateError) throw updateError
+      if (!data) throw new Error('Falha ao atualizar chamado no banco')
 
       const { error: histError } = await supabase
         .from('historico_chamado')
@@ -227,6 +230,8 @@ export default function MeusAtendimentos() {
 
       toast({ title: 'Chamado reaberto com sucesso!' })
       setChamados((prev) => prev.map((c) => (c.id === chamadoId ? { ...c, status: 'aberto' } : c)))
+
+      navigate(`/dashboard/chamados/${chamadoId}`)
     } catch (e) {
       console.error(e)
       toast({ title: 'Erro ao reabrir chamado', variant: 'destructive' })

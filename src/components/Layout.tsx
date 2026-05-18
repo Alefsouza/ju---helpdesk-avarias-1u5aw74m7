@@ -44,6 +44,7 @@ function AppSidebar() {
   const isResponsavel = tipo === 'responsavel'
   const isAdmin = tipo === 'admin'
   const isVistoriador = tipo === 'vistoriador'
+  const isCoc = tipo === 'coc'
 
   return (
     <Sidebar className="border-r-0">
@@ -160,6 +161,21 @@ function AppSidebar() {
                     </SidebarMenuButton>
                   </SidebarMenuItem>
                 </>
+              )}
+
+              {isCoc && (
+                <SidebarMenuItem>
+                  <SidebarMenuButton
+                    asChild
+                    isActive={location.pathname === '/coc/novo'}
+                    className="data-[active=true]:bg-transparent data-[active=true]:text-[#c8e6c9] hover:bg-[#c8e6c9]/10 hover:text-[#c8e6c9] text-white transition-colors"
+                  >
+                    <Link to="/coc/novo">
+                      <PlusCircle />
+                      <span>Abrir Chamada</span>
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
               )}
 
               {isVistoriador && (
@@ -387,6 +403,9 @@ export default function Layout() {
     if (profile?.tipo_usuario === 'vistoriador') {
       return <Navigate to="/vistoria/novo" replace />
     }
+    if (profile?.tipo_usuario === 'coc') {
+      return <Navigate to="/coc/novo" replace />
+    }
     return <Navigate to="/dashboard" replace />
   }
 
@@ -398,6 +417,15 @@ export default function Layout() {
       location.pathname === '/dashboard/perfil'
     if (!isVistoriadorRoute) {
       return <Navigate to="/vistoria/novo" replace />
+    }
+  }
+
+  // Redirect COC from other areas
+  if (user && profile?.tipo_usuario === 'coc') {
+    const isCocRoute =
+      location.pathname.startsWith('/coc') || location.pathname === '/dashboard/perfil'
+    if (!isCocRoute) {
+      return <Navigate to="/coc/novo" replace />
     }
   }
 

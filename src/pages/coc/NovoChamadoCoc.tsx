@@ -105,11 +105,17 @@ export default function NovoChamadoCoc() {
       const { data: publicUrlData } = supabase.storage.from('anexos').getPublicUrl(fileName)
 
       // 3. Save attachment
+      let mappedTipo = 'imagem'
+      if (file.type.includes('pdf') || file.name.toLowerCase().endsWith('.pdf')) mappedTipo = 'pdf'
+      else if (file.type.startsWith('image/')) mappedTipo = 'imagem'
+      else if (file.type.startsWith('video/')) mappedTipo = 'video'
+      else if (file.type.startsWith('audio/')) mappedTipo = 'audio'
+
       const { error: anexoError } = await supabase.from('anexos_chamado').insert({
         chamado_id: chamado.id,
         url_arquivo: publicUrlData.publicUrl,
         nome_arquivo: file.name,
-        tipo_arquivo: file.type,
+        tipo_arquivo: mappedTipo,
         tamanho_mb: Number((file.size / (1024 * 1024)).toFixed(2)),
       })
 

@@ -20,7 +20,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { useToast } from '@/hooks/use-toast'
 import { format } from 'date-fns'
-import { FileEdit } from 'lucide-react'
+import { FileEdit, Eye } from 'lucide-react'
 import { Skeleton } from '@/components/ui/skeleton'
 
 type Documento = {
@@ -28,7 +28,13 @@ type Documento = {
   garagem: string | null
   linha: string | null
   data: string | null
+  horario: string | null
+  ocorrencia: string | null
   descricao_danos: string | null
+  foto_url: string | null
+  fotos_urls: string[] | null
+  nome_responsavel: string | null
+  registro_responsavel: string | null
   criado_em: string
 }
 
@@ -36,7 +42,9 @@ export default function DocumentosPendentes() {
   const [documentos, setDocumentos] = useState<Documento[]>([])
   const [loading, setLoading] = useState(true)
   const [isModalOpen, setIsModalOpen] = useState(false)
+  const [isViewModalOpen, setIsViewModalOpen] = useState(false)
   const [selectedDoc, setSelectedDoc] = useState<Documento | null>(null)
+  const [selectedViewDoc, setSelectedViewDoc] = useState<Documento | null>(null)
   const [numeroOS, setNumeroOS] = useState('')
   const [isSaving, setIsSaving] = useState(false)
   const { toast } = useToast()
@@ -45,7 +53,9 @@ export default function DocumentosPendentes() {
     try {
       const { data, error } = await supabase
         .from('documentos')
-        .select('id, garagem, linha, data, descricao_danos, criado_em')
+        .select(
+          'id, garagem, linha, data, horario, ocorrencia, descricao_danos, foto_url, fotos_urls, nome_responsavel, registro_responsavel, criado_em',
+        )
         .eq('tipo_documento', 'Vistoria')
         .is('numero_os', null)
         .order('criado_em', { ascending: false })
@@ -96,6 +106,11 @@ export default function DocumentosPendentes() {
     setNumeroOS('')
   }
 
+  const handleOpenViewModal = (doc: Documento) => {
+    setSelectedViewDoc(doc)
+    setIsViewModalOpen(true)
+  }
+
   const handleSaveOS = async () => {
     if (!numeroOS.trim()) {
       toast({
@@ -122,7 +137,6 @@ export default function DocumentosPendentes() {
         description: 'Número da OS salvo com sucesso. Documento concluído.',
       })
 
-      // Update local state to remove immediately for better UX
       setDocumentos((docs) => docs.filter((d) => d.id !== selectedDoc.id))
       handleCloseModal()
     } catch (error) {
@@ -169,7 +183,7 @@ export default function DocumentosPendentes() {
               <TableHead>Linha</TableHead>
               <TableHead>Data</TableHead>
               <TableHead>Descrição dos Danos</TableHead>
-              <TableHead className="text-right w-[150px]">Ações</TableHead>
+              <TableHead className="text-right w-[280px]">Ações</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -197,15 +211,26 @@ export default function DocumentosPendentes() {
                     {truncateText(doc.descricao_danos)}
                   </TableCell>
                   <TableCell className="text-right">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => handleOpenModal(doc)}
-                      className="text-[#225f3d] hover:text-[#1a4a2f] hover:bg-[#c8e6c9]/20 border-[#225f3d]/20"
-                    >
-                      <FileEdit className="mr-2 h-4 w-4" />
-                      Preencher OS
-                    </Button>
+                    <div className="flex items-center justify-end gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleOpenViewModal(doc)}
+                        className="text-slate-600 hover:text-slate-900"
+                      >
+                        <Eye className="mr-2 h-4 w-4" />
+                        Visualizar
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleOpenModal(doc)}
+                        className="text-[#225f3d] hover:text-[#1a4a2f] hover:bg-[#c8e6c9]/20 border-[#225f3d]/20"
+                      >
+                        <FileEdit className="mr-2 h-4 w-4" />
+                        Preencher OS
+                      </Button>
+                    </div>
                   </TableCell>
                 </TableRow>
               ))
@@ -214,6 +239,7 @@ export default function DocumentosPendentes() {
         </Table>
       </div>
 
+      {/* Modal Preencher OS */}
       <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
         <DialogContent className="sm:max-w-[425px]">
           <DialogHeader>
@@ -268,6 +294,117 @@ export default function DocumentosPendentes() {
             >
               {isSaving ? 'Salvando...' : 'Salvar e Concluir'}
             </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Modal Visualizar Detalhes */}
+      <Dialog open={isViewModalOpen} onOpenChange={setIsViewModalOpen}>
+        <DialogContent className="sm:max-w-[600px] max-h-[85vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Detalhes da Vistoria</DialogTitle>
+          </DialogHeader>
+          {selectedViewDoc && (
+            <div className="space-y-6 py-4">
+              <div className="grid grid-cols-2 gap-4 text-sm">
+                <div>
+                  <p className="text-slate-500 font-medium mb-1">Garagem</p>
+                  <p className="text-slate-900">{selectedViewDoc.garagem || '-'}</p>
+                </div>
+                <div>
+                  <p className="text-slate-500 font-medium mb-1">Linha</p>
+                  <p className="text-slate-900">{selectedViewDoc.linha || '-'}</p>
+                </div>
+                <div>
+                  <p className="text-slate-500 font-medium mb-1">Data / Horário</p>
+                  <p className="text-slate-900">
+                    {formatDate(selectedViewDoc.data)}{' '}
+                    {selectedViewDoc.horario ? `às ${selectedViewDoc.horario}` : ''}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-slate-500 font-medium mb-1">Vistoriador</p>
+                  <p className="text-slate-900">
+                    {selectedViewDoc.nome_responsavel || '-'}
+                    {selectedViewDoc.registro_responsavel
+                      ? ` (${selectedViewDoc.registro_responsavel})`
+                      : ''}
+                  </p>
+                </div>
+              </div>
+
+              <div>
+                <p className="text-slate-500 font-medium mb-1 text-sm">Ocorrência</p>
+                <div className="bg-slate-50 p-3 rounded-md border text-sm text-slate-900 whitespace-pre-wrap">
+                  {selectedViewDoc.ocorrencia || '-'}
+                </div>
+              </div>
+
+              <div>
+                <p className="text-slate-500 font-medium mb-1 text-sm">Descrição dos Danos</p>
+                <div className="bg-slate-50 p-3 rounded-md border text-sm text-slate-900 whitespace-pre-wrap">
+                  {selectedViewDoc.descricao_danos || '-'}
+                </div>
+              </div>
+
+              <div>
+                <p className="text-slate-500 font-medium mb-3 text-sm">Fotos Anexadas</p>
+                {(() => {
+                  const fotos = []
+                  if (selectedViewDoc.foto_url) fotos.push(selectedViewDoc.foto_url)
+                  if (Array.isArray(selectedViewDoc.fotos_urls)) {
+                    fotos.push(...selectedViewDoc.fotos_urls)
+                  }
+
+                  if (fotos.length === 0) {
+                    return (
+                      <p className="text-sm text-slate-500 italic">
+                        Nenhuma foto foi anexada nesta vistoria.
+                      </p>
+                    )
+                  }
+
+                  return (
+                    <div className="grid grid-cols-2 gap-4">
+                      {fotos.map((url, idx) => (
+                        <a
+                          key={idx}
+                          href={url}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="block relative aspect-video bg-slate-100 rounded-md overflow-hidden border group"
+                        >
+                          <img
+                            src={url}
+                            alt={`Foto ${idx + 1}`}
+                            className="object-cover w-full h-full transition-transform duration-300 group-hover:scale-105"
+                          />
+                          <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors flex items-center justify-center">
+                            <Eye className="text-white opacity-0 group-hover:opacity-100 transition-opacity" />
+                          </div>
+                        </a>
+                      ))}
+                    </div>
+                  )
+                })()}
+              </div>
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsViewModalOpen(false)}>
+              Fechar
+            </Button>
+            {selectedViewDoc && (
+              <Button
+                onClick={() => {
+                  setIsViewModalOpen(false)
+                  handleOpenModal(selectedViewDoc)
+                }}
+                className="bg-[#225f3d] hover:bg-[#1a4a2f] text-white"
+              >
+                Preencher OS
+              </Button>
+            )}
           </DialogFooter>
         </DialogContent>
       </Dialog>

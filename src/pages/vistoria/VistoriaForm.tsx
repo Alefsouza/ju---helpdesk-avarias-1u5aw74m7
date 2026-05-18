@@ -42,6 +42,7 @@ const formSchema = z.object({
   horario: z.string().min(1, 'Campo obrigatório'),
   ocorrencia: z.enum(['Sim', 'Não'], { required_error: 'Campo obrigatório' }),
   linha: z.string().min(1, 'Campo obrigatório'),
+  numero_carro: z.string().min(1, 'Campo obrigatório'),
   descricao_danos: z.string().min(1, 'Campo obrigatório'),
   registro_vistoriador: z.string().min(1, 'Campo obrigatório'),
   nome_vistoriador: z.string().min(1, 'Campo obrigatório'),
@@ -68,6 +69,7 @@ export default function VistoriaForm() {
       horario: new Date().toTimeString().substring(0, 5),
       ocorrencia: 'Não',
       linha: '',
+      numero_carro: '',
       descricao_danos: '',
       registro_vistoriador: '',
       nome_vistoriador: '',
@@ -143,6 +145,7 @@ export default function VistoriaForm() {
       docData.horario = values.horario
       docData.ocorrencia = values.ocorrencia
       docData.linha = values.linha
+      docData.numero_carro = values.numero_carro
       docData.descricao_danos = values.descricao_danos
 
       const { error: dbError } = await supabase.from('documentos').insert(docData)
@@ -212,6 +215,19 @@ export default function VistoriaForm() {
                       <FormLabel>Linha</FormLabel>
                       <FormControl>
                         <Input placeholder="Número ou nome da linha" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="numero_carro"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Número do Carro</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Ex: 8123" {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>

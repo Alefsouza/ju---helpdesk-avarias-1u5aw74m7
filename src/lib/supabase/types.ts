@@ -166,6 +166,7 @@ export type Database = {
           id: string
           linha: string | null
           nome_arquivo: string
+          nome_motorista: string | null
           nome_responsavel: string | null
           numero_os: string | null
           ocorrencia: string | null
@@ -187,6 +188,7 @@ export type Database = {
           id?: string
           linha?: string | null
           nome_arquivo: string
+          nome_motorista?: string | null
           nome_responsavel?: string | null
           numero_os?: string | null
           ocorrencia?: string | null
@@ -208,6 +210,7 @@ export type Database = {
           id?: string
           linha?: string | null
           nome_arquivo?: string
+          nome_motorista?: string | null
           nome_responsavel?: string | null
           numero_os?: string | null
           ocorrencia?: string | null
@@ -691,6 +694,7 @@ export const Constants = {
 //   ocorrencia: text (nullable)
 //   linha: text (nullable)
 //   descricao_danos: text (nullable)
+//   nome_motorista: text (nullable)
 // Table: formularios_espelho_danos
 //   id: uuid (not null, default: gen_random_uuid())
 //   chamado_id: uuid (not null)

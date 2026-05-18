@@ -27,6 +27,13 @@ import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import logoColorido from '@/assets/whatsapp-image-2023-08-10-at-16.17.31-0b937.jpeg'
 
 const formSchema = z.object({
@@ -182,9 +189,17 @@ export default function VistoriaForm() {
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Garagem</FormLabel>
-                      <FormControl>
-                        <Input placeholder="Ex: Garagem Central" {...field} />
-                      </FormControl>
+                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Selecione a garagem" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="Cursino">Cursino</SelectItem>
+                          <SelectItem value="Sapopemba">Sapopemba</SelectItem>
+                        </SelectContent>
+                      </Select>
                       <FormMessage />
                     </FormItem>
                   )}

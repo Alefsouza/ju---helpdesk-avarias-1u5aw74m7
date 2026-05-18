@@ -75,14 +75,19 @@ export default function NovoChamadoCoc() {
 
     setIsSubmitting(true)
     try {
+      const statusChamado = values.tipo_chamado ? 'aberto' : 'Pendente'
+      const tituloChamado = values.tipo_chamado
+        ? `${values.titulo} - ${values.carro}`
+        : values.titulo
+
       // 1. Create ticket
       const { data: chamado, error: chamadoError } = await supabase
         .from('chamados')
         .insert({
           usuario_id: user.id,
-          titulo: values.titulo,
+          titulo: tituloChamado,
           descricao: values.descricao,
-          status: 'Pendente',
+          status: statusChamado,
           registro_motorista: values.registro_motorista,
           nome_motorista: values.nome_motorista,
           registro_cobrador: values.registro_cobrador,

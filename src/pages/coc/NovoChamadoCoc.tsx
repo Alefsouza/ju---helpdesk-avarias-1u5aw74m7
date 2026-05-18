@@ -16,6 +16,7 @@ import {
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { Button } from '@/components/ui/button'
+import { Checkbox } from '@/components/ui/checkbox'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import {
   Select,
@@ -38,9 +39,7 @@ const formSchema = z.object({
   linha: z.string().min(1, 'Obrigatório'),
   local_ocorrencia: z.string().min(1, 'Obrigatório'),
   operacao: z.enum(['RA', 'RN', 'OPN'], { required_error: 'Selecione uma operação' }),
-  tipo_chamado: z.enum(['Avaria sem vítima', 'Avaria com vítima'], {
-    required_error: 'Selecione o tipo de avaria',
-  }),
+  tipo_chamado: z.boolean().optional().default(false),
 })
 
 export default function NovoChamadoCoc() {
@@ -62,7 +61,7 @@ export default function NovoChamadoCoc() {
       linha: '',
       local_ocorrencia: '',
       operacao: undefined,
-      tipo_chamado: undefined,
+      tipo_chamado: false,
     },
   })
 
@@ -92,7 +91,7 @@ export default function NovoChamadoCoc() {
           linha: values.linha,
           local_ocorrencia: values.local_ocorrencia,
           operacao: values.operacao,
-          tipo_chamado: values.tipo_chamado,
+          tipo_chamado: values.tipo_chamado ? 'Avaria sem vítima' : null,
         })
         .select()
         .single()
@@ -285,20 +284,13 @@ export default function NovoChamadoCoc() {
                   control={form.control}
                   name="tipo_chamado"
                   render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Tipo de Avaria</FormLabel>
-                      <Select onValueChange={field.onChange} value={field.value}>
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Selecione..." />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          <SelectItem value="Avaria sem vítima">Avaria sem vítima</SelectItem>
-                          <SelectItem value="Avaria com vítima">Avaria com vítima</SelectItem>
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
+                    <FormItem className="flex flex-row items-center space-x-3 space-y-0 rounded-md border p-4 shadow-sm h-10 mt-8">
+                      <FormControl>
+                        <Checkbox checked={field.value} onCheckedChange={field.onChange} />
+                      </FormControl>
+                      <div className="space-y-1 leading-none">
+                        <FormLabel>Avaria sem vítima</FormLabel>
+                      </div>
                     </FormItem>
                   )}
                 />

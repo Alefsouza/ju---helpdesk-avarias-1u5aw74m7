@@ -128,7 +128,7 @@ export default function NovoChamadoCoc() {
     <div className="max-w-3xl mx-auto py-6">
       <Card>
         <CardHeader className="border-b bg-slate-50/50">
-          <CardTitle className="text-2xl text-[#225f3d]">Abrir Chamada</CardTitle>
+          <CardTitle className="text-2xl text-[#225f3d]">Abrir Chamado</CardTitle>
           <CardDescription>
             Preencha os dados abaixo para registrar uma nova chamada.
           </CardDescription>

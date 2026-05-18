@@ -172,7 +172,7 @@ function AppSidebar() {
                   >
                     <Link to="/coc/novo">
                       <PlusCircle />
-                      <span>Abrir Chamada</span>
+                      <span>Abrir Chamado</span>
                     </Link>
                   </SidebarMenuButton>
                 </SidebarMenuItem>

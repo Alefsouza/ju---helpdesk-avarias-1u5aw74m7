@@ -74,7 +74,7 @@ export default function Index() {
     <Card className="border-slate-200 shadow-sm">
       <CardHeader className="space-y-4">
         <div className="flex justify-center mb-2">
-          <h1 className="text-2xl font-bold text-[#2D6246] tracking-tight">Avarias</h1>
+          <h1 className="text-2xl font-bold text-[#2D6246] tracking-tight">Abertura de Sinistro</h1>
         </div>
         <CardDescription className="text-center">
           Insira seu e-mail e senha para acessar sua conta

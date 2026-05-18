@@ -12,7 +12,7 @@ export function useGestaoEquipe() {
     const { data } = await supabase
       .from('perfil_usuario')
       .select('*')
-      .in('tipo_usuario', ['responsavel', 'admin'])
+      .in('tipo_usuario', ['responsavel', 'admin', 'vistoriador'])
       .order('criado_em', { ascending: false })
     if (data) setUsers(data)
     setLoading(false)

@@ -459,6 +459,7 @@ export type Database = {
     Functions: {
       is_admin: { Args: never; Returns: boolean }
       is_responsavel: { Args: never; Returns: boolean }
+      is_vistoriador: { Args: never; Returns: boolean }
       registrar_boletim_ido: {
         Args: {
           p_arquivo_url: string
@@ -765,7 +766,7 @@ export const Constants = {
 // Table: perfil_usuario
 //   FOREIGN KEY perfil_usuario_id_fkey: FOREIGN KEY (id) REFERENCES auth.users(id) ON DELETE CASCADE
 //   PRIMARY KEY perfil_usuario_pkey: PRIMARY KEY (id)
-//   CHECK perfil_usuario_tipo_usuario_check: CHECK ((tipo_usuario = ANY (ARRAY['basico'::text, 'responsavel'::text, 'admin'::text])))
+//   CHECK perfil_usuario_tipo_usuario_check: CHECK ((tipo_usuario = ANY (ARRAY['basico'::text, 'responsavel'::text, 'admin'::text, 'vistoriador'::text])))
 // Table: respostas_chamado
 //   FOREIGN KEY respostas_chamado_chamado_id_fkey: FOREIGN KEY (chamado_id) REFERENCES chamados(id) ON DELETE CASCADE
 //   PRIMARY KEY respostas_chamado_pkey: PRIMARY KEY (id)
@@ -883,6 +884,19 @@ export const Constants = {
 //   BEGIN
 //     RETURN EXISTS (
 //       SELECT 1 FROM public.perfil_usuario WHERE id = auth.uid() AND tipo_usuario = 'responsavel'
+//     );
+//   END;
+//   $function$
+//
+// FUNCTION is_vistoriador()
+//   CREATE OR REPLACE FUNCTION public.is_vistoriador()
+//    RETURNS boolean
+//    LANGUAGE plpgsql
+//    SECURITY DEFINER
+//   AS $function$
+//   BEGIN
+//     RETURN EXISTS (
+//       SELECT 1 FROM public.perfil_usuario WHERE id = auth.uid() AND tipo_usuario = 'vistoriador'
 //     );
 //   END;
 //   $function$

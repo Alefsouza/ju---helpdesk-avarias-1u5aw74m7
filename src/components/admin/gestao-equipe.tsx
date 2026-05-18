@@ -79,10 +79,16 @@ export function GestaoEquipe() {
                           className={
                             u.tipo_usuario === 'admin'
                               ? 'border-purple-200 text-purple-700 bg-purple-50'
-                              : 'border-blue-200 text-blue-700 bg-blue-50'
+                              : u.tipo_usuario === 'vistoriador'
+                                ? 'border-orange-200 text-orange-700 bg-orange-50'
+                                : 'border-blue-200 text-blue-700 bg-blue-50'
                           }
                         >
-                          {u.tipo_usuario === 'admin' ? 'Admin' : 'Responsável'}
+                          {u.tipo_usuario === 'admin'
+                            ? 'Admin'
+                            : u.tipo_usuario === 'vistoriador'
+                              ? 'Vistoriador'
+                              : 'Responsável'}
                         </Badge>
                       </TableCell>
                       <TableCell>
@@ -155,8 +161,21 @@ export function GestaoEquipe() {
                   </CardHeader>
                   <CardContent>
                     <div className="flex gap-2">
-                      <Badge variant="outline">
-                        {u.tipo_usuario === 'admin' ? 'Admin' : 'Responsável'}
+                      <Badge
+                        variant="outline"
+                        className={
+                          u.tipo_usuario === 'admin'
+                            ? 'border-purple-200 text-purple-700 bg-purple-50'
+                            : u.tipo_usuario === 'vistoriador'
+                              ? 'border-orange-200 text-orange-700 bg-orange-50'
+                              : 'border-blue-200 text-blue-700 bg-blue-50'
+                        }
+                      >
+                        {u.tipo_usuario === 'admin'
+                          ? 'Admin'
+                          : u.tipo_usuario === 'vistoriador'
+                            ? 'Vistoriador'
+                            : 'Responsável'}
                       </Badge>
                       <Badge
                         variant={u.ativo ? 'default' : 'secondary'}

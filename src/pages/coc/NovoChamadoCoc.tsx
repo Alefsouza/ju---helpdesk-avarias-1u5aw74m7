@@ -91,7 +91,7 @@ export default function NovoChamadoCoc() {
           linha: values.linha,
           local_ocorrencia: values.local_ocorrencia,
           operacao: values.operacao,
-          tipo_chamado: values.tipo_chamado ? 'Avaria sem vítima' : null,
+          tipo_chamado: values.tipo_chamado ? 'Contém vítimas, mas não tem avarias' : null,
         })
         .select()
         .single()
@@ -289,7 +289,7 @@ export default function NovoChamadoCoc() {
                         <Checkbox checked={field.value} onCheckedChange={field.onChange} />
                       </FormControl>
                       <div className="space-y-1 leading-none">
-                        <FormLabel>Avaria sem vítima</FormLabel>
+                        <FormLabel>Contém vítimas, mas não tem avarias</FormLabel>
                       </div>
                     </FormItem>
                   )}

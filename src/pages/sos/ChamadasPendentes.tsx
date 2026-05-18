@@ -238,7 +238,7 @@ export default function ChamadasPendentesSos() {
       <Dialog open={viewModalOpen} onOpenChange={setViewModalOpen}>
         <DialogContent className="sm:max-w-[700px] max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>Detalhes da Chamada</DialogTitle>
+            <DialogTitle>Detalhes do Chamado</DialogTitle>
             <DialogDescription>
               Visualizando todos os dados informados pela equipe COC.
             </DialogDescription>

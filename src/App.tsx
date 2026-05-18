@@ -48,7 +48,7 @@ const App = () => (
             <Route path="/dashboard/relatorios" element={<Relatorios />} />
             <Route path="/dashboard/documentos" element={<Documentos />} />
             <Route path="/dashboard/perfil" element={<Perfil />} />
-            <Route path="/vistoria" element={<VistoriaForm />} />
+            <Route path="/vistoria/novo" element={<VistoriaForm />} />
             <Route path="/vistoria/pendentes" element={<DocumentosPendentes />} />
           </Route>
           <Route path="/espelho-danos-fixo/sucesso" element={<SucessoEspelhoDanosFixo />} />

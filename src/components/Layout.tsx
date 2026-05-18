@@ -167,10 +167,10 @@ function AppSidebar() {
                   <SidebarMenuItem>
                     <SidebarMenuButton
                       asChild
-                      isActive={location.pathname === '/vistoria'}
+                      isActive={location.pathname === '/vistoria/novo'}
                       className="data-[active=true]:bg-transparent data-[active=true]:text-[#c8e6c9] hover:bg-[#c8e6c9]/10 hover:text-[#c8e6c9] text-white transition-colors"
                     >
-                      <Link to="/vistoria">
+                      <Link to="/vistoria/novo">
                         <PlusCircle />
                         <span>Nova Vistoria</span>
                       </Link>
@@ -373,7 +373,7 @@ export default function Layout() {
   // Redirect authenticated users from auth routes
   if (user && isAuthRoute) {
     if (profile?.tipo_usuario === 'vistoriador') {
-      return <Navigate to="/vistoria" replace />
+      return <Navigate to="/vistoria/novo" replace />
     }
     return <Navigate to="/dashboard" replace />
   }
@@ -383,7 +383,7 @@ export default function Layout() {
     const isVistoriadorRoute =
       location.pathname.startsWith('/vistoria') || location.pathname === '/dashboard/perfil'
     if (!isVistoriadorRoute) {
-      return <Navigate to="/vistoria" replace />
+      return <Navigate to="/vistoria/novo" replace />
     }
   }
 

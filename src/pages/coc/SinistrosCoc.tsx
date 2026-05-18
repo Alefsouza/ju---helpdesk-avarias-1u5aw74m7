@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo } from 'react'
 import { supabase } from '@/lib/supabase/client'
 import { format, parseISO } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
-import { Eye, PlusCircle } from 'lucide-react'
+import { Eye, PlusCircle, Search } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import {
@@ -37,9 +37,7 @@ export default function SinistrosCoc() {
   const [loading, setLoading] = useState(true)
 
   const [monthFilter, setMonthFilter] = useState('all')
-  const [carroFilter, setCarroFilter] = useState('all')
-  const [avariaFilter, setAvariaFilter] = useState('all')
-  const [statusFilter, setStatusFilter] = useState('all')
+  const [searchQuery, setSearchQuery] = useState('')
 
   const [viewModalOpen, setViewModalOpen] = useState(false)
   const [osModalOpen, setOsModalOpen] = useState(false)
@@ -94,11 +92,6 @@ export default function SinistrosCoc() {
     }
   }, [])
 
-  const uniqueCars = useMemo(() => {
-    const cars = new Set(sinistros.map((s) => s.carro).filter(Boolean))
-    return Array.from(cars).sort()
-  }, [sinistros])
-
   const uniqueMonths = useMemo(() => {
     const months = new Set(sinistros.map((s) => format(parseISO(s.criado_em), 'yyyy-MM')))
     return Array.from(months).sort().reverse()
@@ -111,15 +104,25 @@ export default function SinistrosCoc() {
 
   const filteredSinistros = useMemo(() => {
     return sinistros.filter((s) => {
-      if (monthFilter !== 'all' && format(parseISO(s.criado_em), 'yyyy-MM') !== monthFilter)
+      if (monthFilter !== 'all' && format(parseISO(s.criado_em), 'yyyy-MM') !== monthFilter) {
         return false
-      if (carroFilter !== 'all' && s.carro !== carroFilter) return false
-      if (avariaFilter !== 'all' && s.tipo_chamado !== avariaFilter) return false
-      if (statusFilter === 'com-os' && !s.numero_os) return false
-      if (statusFilter === 'sem-os' && !!s.numero_os) return false
+      }
+
+      if (searchQuery.trim() !== '') {
+        const query = searchQuery.toLowerCase()
+        const matchCarro = s.carro?.toLowerCase().includes(query)
+        const matchTitulo = s.titulo?.toLowerCase().includes(query)
+        const matchMotorista = s.nome_motorista?.toLowerCase().includes(query)
+        const matchOs = s.numero_os?.toLowerCase().includes(query)
+
+        if (!matchCarro && !matchTitulo && !matchMotorista && !matchOs) {
+          return false
+        }
+      }
+
       return true
     })
-  }, [sinistros, monthFilter, carroFilter, avariaFilter, statusFilter])
+  }, [sinistros, monthFilter, searchQuery])
 
   const handleSaveOS = async () => {
     if (!osNumber.trim()) {
@@ -163,8 +166,8 @@ export default function SinistrosCoc() {
         <h1 className="text-2xl font-bold text-slate-800">Sinistros</h1>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 bg-white p-4 rounded-lg shadow-sm border border-slate-200">
-        <div className="space-y-2">
+      <div className="flex flex-col sm:flex-row gap-4 bg-white p-4 rounded-lg shadow-sm border border-slate-200">
+        <div className="space-y-2 w-full sm:w-64 shrink-0">
           <Label>Data (Mês)</Label>
           <Select value={monthFilter} onValueChange={setMonthFilter}>
             <SelectTrigger>
@@ -180,47 +183,17 @@ export default function SinistrosCoc() {
             </SelectContent>
           </Select>
         </div>
-        <div className="space-y-2">
-          <Label>Carro</Label>
-          <Select value={carroFilter} onValueChange={setCarroFilter}>
-            <SelectTrigger>
-              <SelectValue placeholder="Todos" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Todos</SelectItem>
-              {uniqueCars.map((c: any) => (
-                <SelectItem key={c} value={c}>
-                  {c}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-        <div className="space-y-2">
-          <Label>Tipo de Avaria</Label>
-          <Select value={avariaFilter} onValueChange={setAvariaFilter}>
-            <SelectTrigger>
-              <SelectValue placeholder="Todas" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Todas</SelectItem>
-              <SelectItem value="Avaria sem vítima">Avaria sem vítima</SelectItem>
-              <SelectItem value="Avaria com vítima">Avaria com vítima</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-        <div className="space-y-2">
-          <Label>Status</Label>
-          <Select value={statusFilter} onValueChange={setStatusFilter}>
-            <SelectTrigger>
-              <SelectValue placeholder="Todos" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Todos</SelectItem>
-              <SelectItem value="com-os">Com OS</SelectItem>
-              <SelectItem value="sem-os">Sem OS</SelectItem>
-            </SelectContent>
-          </Select>
+        <div className="space-y-2 flex-1">
+          <Label>Pesquisar</Label>
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+            <Input
+              placeholder="Pesquisar por carro, título, motorista ou OS..."
+              className="pl-9"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+            />
+          </div>
         </div>
       </div>
 
@@ -250,7 +223,7 @@ export default function SinistrosCoc() {
               ) : filteredSinistros.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={9} className="text-center py-8 text-slate-500">
-                    Nenhum sinistro registrado
+                    Nenhum sinistro encontrado
                   </TableCell>
                 </TableRow>
               ) : (

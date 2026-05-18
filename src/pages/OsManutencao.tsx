@@ -157,7 +157,7 @@ export default function OsManutencao() {
                     <TableRow>
                       <TableHead className="w-[120px] font-semibold">OS</TableHead>
                       <TableHead className="w-[160px] font-semibold">Data e Hora</TableHead>
-                      <TableHead className="w-[160px] font-semibold">Carro / Linha</TableHead>
+                      <TableHead className="w-[160px] font-semibold">Carro</TableHead>
                       <TableHead className="w-[200px] font-semibold">Vistoriador</TableHead>
                       <TableHead className="min-w-[300px] font-semibold">Descrição</TableHead>
                       <TableHead className="w-[160px] text-right font-semibold">Ações</TableHead>

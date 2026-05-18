@@ -45,6 +45,7 @@ function AppSidebar() {
   const isAdmin = tipo === 'admin'
   const isVistoriador = tipo === 'vistoriador'
   const isCoc = tipo === 'coc'
+  const isSos = tipo === 'sos'
 
   return (
     <Sidebar className="border-r-0">
@@ -173,6 +174,21 @@ function AppSidebar() {
                     <Link to="/coc/novo">
                       <PlusCircle />
                       <span>Abrir Chamado</span>
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              )}
+
+              {isSos && (
+                <SidebarMenuItem>
+                  <SidebarMenuButton
+                    asChild
+                    isActive={location.pathname === '/sos/pendentes'}
+                    className="data-[active=true]:bg-transparent data-[active=true]:text-[#c8e6c9] hover:bg-[#c8e6c9]/10 hover:text-[#c8e6c9] text-white transition-colors"
+                  >
+                    <Link to="/sos/pendentes">
+                      <LifeBuoy />
+                      <span>Chamadas Pendentes</span>
                     </Link>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
@@ -406,6 +422,9 @@ export default function Layout() {
     if (profile?.tipo_usuario === 'coc') {
       return <Navigate to="/coc/novo" replace />
     }
+    if (profile?.tipo_usuario === 'sos') {
+      return <Navigate to="/sos/pendentes" replace />
+    }
     return <Navigate to="/dashboard" replace />
   }
 
@@ -426,6 +445,15 @@ export default function Layout() {
       location.pathname.startsWith('/coc') || location.pathname === '/dashboard/perfil'
     if (!isCocRoute) {
       return <Navigate to="/coc/novo" replace />
+    }
+  }
+
+  // Redirect SOS from other areas
+  if (user && profile?.tipo_usuario === 'sos') {
+    const isSosRoute =
+      location.pathname.startsWith('/sos') || location.pathname === '/dashboard/perfil'
+    if (!isSosRoute) {
+      return <Navigate to="/sos/pendentes" replace />
     }
   }
 

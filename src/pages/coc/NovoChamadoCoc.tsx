@@ -38,6 +38,9 @@ const formSchema = z.object({
   linha: z.string().min(1, 'Obrigatório'),
   local_ocorrencia: z.string().min(1, 'Obrigatório'),
   operacao: z.enum(['RA', 'RN', 'OPN'], { required_error: 'Selecione uma operação' }),
+  tipo_chamado: z.enum(['Avaria sem vítima', 'Avaria com vítima'], {
+    required_error: 'Selecione o tipo de avaria',
+  }),
 })
 
 export default function NovoChamadoCoc() {
@@ -59,6 +62,7 @@ export default function NovoChamadoCoc() {
       linha: '',
       local_ocorrencia: '',
       operacao: undefined,
+      tipo_chamado: undefined,
     },
   })
 
@@ -88,6 +92,7 @@ export default function NovoChamadoCoc() {
           linha: values.linha,
           local_ocorrencia: values.local_ocorrencia,
           operacao: values.operacao,
+          tipo_chamado: values.tipo_chamado,
         })
         .select()
         .single()
@@ -105,11 +110,7 @@ export default function NovoChamadoCoc() {
       const { data: publicUrlData } = supabase.storage.from('anexos').getPublicUrl(fileName)
 
       // 3. Save attachment
-      let mappedTipo = 'imagem'
-      if (file.type.includes('pdf') || file.name.toLowerCase().endsWith('.pdf')) mappedTipo = 'pdf'
-      else if (file.type.startsWith('image/')) mappedTipo = 'imagem'
-      else if (file.type.startsWith('video/')) mappedTipo = 'video'
-      else if (file.type.startsWith('audio/')) mappedTipo = 'audio'
+      const mappedTipo = file.type || 'application/octet-stream'
 
       const { error: anexoError } = await supabase.from('anexos_chamado').insert({
         chamado_id: chamado.id,
@@ -121,7 +122,9 @@ export default function NovoChamadoCoc() {
 
       if (anexoError) throw anexoError
 
-      navigate('/coc/sucesso')
+      toast.success('Chamada enviada com sucesso!')
+      form.reset()
+      setFile(null)
     } catch (error) {
       console.error(error)
       toast.error('Erro ao enviar chamada. Tente novamente.')
@@ -218,9 +221,9 @@ export default function NovoChamadoCoc() {
                   name="carro"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Carro</FormLabel>
+                      <FormLabel>Cargo (Carro)</FormLabel>
                       <FormControl>
-                        <Input placeholder="Número do carro" {...field} />
+                        <Input placeholder="Número do carro / cargo" {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -271,6 +274,28 @@ export default function NovoChamadoCoc() {
                           <SelectItem value="RA">RA</SelectItem>
                           <SelectItem value="RN">RN</SelectItem>
                           <SelectItem value="OPN">OPN</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="tipo_chamado"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Tipo de Avaria</FormLabel>
+                      <Select onValueChange={field.onChange} value={field.value}>
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Selecione..." />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="Avaria sem vítima">Avaria sem vítima</SelectItem>
+                          <SelectItem value="Avaria com vítima">Avaria com vítima</SelectItem>
                         </SelectContent>
                       </Select>
                       <FormMessage />

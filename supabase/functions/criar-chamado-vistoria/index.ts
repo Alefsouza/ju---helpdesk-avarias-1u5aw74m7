@@ -42,7 +42,7 @@ Deno.serve(async (req: Request) => {
     }
 
     // 1. Create the ticket
-    const titulo = `Avaria na linha ${documento.linha || 'N/A'} - OS ${documento.numero_os}`
+    const titulo = `Avaria no carro ${documento.numero_carro || 'N/A'} - OS ${documento.numero_os}`
     const descricao = documento.descricao_danos || 'Sem descrição'
 
     const { data: novoChamado, error: chamadoError } = await supabaseAdmin

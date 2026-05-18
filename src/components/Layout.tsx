@@ -188,6 +188,18 @@ function AppSidebar() {
                       </Link>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
+                  <SidebarMenuItem>
+                    <SidebarMenuButton
+                      asChild
+                      isActive={location.pathname === '/espelhos-danos'}
+                      className="data-[active=true]:bg-transparent data-[active=true]:text-[#c8e6c9] hover:bg-[#c8e6c9]/10 hover:text-[#c8e6c9] text-white transition-colors"
+                    >
+                      <Link to="/espelhos-danos">
+                        <FileText />
+                        <span>Espelhos de Danos</span>
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
                 </>
               )}
 
@@ -381,7 +393,9 @@ export default function Layout() {
   // Redirect Vistoriador from other areas
   if (user && profile?.tipo_usuario === 'vistoriador') {
     const isVistoriadorRoute =
-      location.pathname.startsWith('/vistoria') || location.pathname === '/dashboard/perfil'
+      location.pathname.startsWith('/vistoria') ||
+      location.pathname === '/espelhos-danos' ||
+      location.pathname === '/dashboard/perfil'
     if (!isVistoriadorRoute) {
       return <Navigate to="/vistoria/novo" replace />
     }

@@ -43,6 +43,7 @@ function AppSidebar() {
   const isBasico = tipo === 'basico'
   const isResponsavel = tipo === 'responsavel'
   const isAdmin = tipo === 'admin'
+  const isVistoriador = tipo === 'vistoriador'
 
   return (
     <Sidebar className="border-r-0">
@@ -155,6 +156,35 @@ function AppSidebar() {
                       <Link to="/dashboard/relatorios">
                         <FileBarChart />
                         <span>Relatórios</span>
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                </>
+              )}
+
+              {isVistoriador && (
+                <>
+                  <SidebarMenuItem>
+                    <SidebarMenuButton
+                      asChild
+                      isActive={location.pathname === '/vistoria'}
+                      className="data-[active=true]:bg-transparent data-[active=true]:text-[#c8e6c9] hover:bg-[#c8e6c9]/10 hover:text-[#c8e6c9] text-white transition-colors"
+                    >
+                      <Link to="/vistoria">
+                        <PlusCircle />
+                        <span>Nova Vistoria</span>
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                  <SidebarMenuItem>
+                    <SidebarMenuButton
+                      asChild
+                      isActive={location.pathname === '/vistoria/pendentes'}
+                      className="data-[active=true]:bg-transparent data-[active=true]:text-[#c8e6c9] hover:bg-[#c8e6c9]/10 hover:text-[#c8e6c9] text-white transition-colors"
+                    >
+                      <Link to="/vistoria/pendentes">
+                        <FileText />
+                        <span>Docs Pendentes</span>
                       </Link>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
@@ -342,7 +372,19 @@ export default function Layout() {
 
   // Redirect authenticated users from auth routes
   if (user && isAuthRoute) {
+    if (profile?.tipo_usuario === 'vistoriador') {
+      return <Navigate to="/vistoria" replace />
+    }
     return <Navigate to="/dashboard" replace />
+  }
+
+  // Redirect Vistoriador from other areas
+  if (user && profile?.tipo_usuario === 'vistoriador') {
+    const isVistoriadorRoute =
+      location.pathname.startsWith('/vistoria') || location.pathname === '/dashboard/perfil'
+    if (!isVistoriadorRoute) {
+      return <Navigate to="/vistoria" replace />
+    }
   }
 
   // Auth Layout

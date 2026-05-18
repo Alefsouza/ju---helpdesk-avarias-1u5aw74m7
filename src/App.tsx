@@ -14,6 +14,8 @@ import Relatorios from './pages/dashboard/Relatorios'
 import Documentos from './pages/dashboard/Documentos'
 import Perfil from './pages/dashboard/Perfil'
 import ChamadoDetalhes from './pages/dashboard/ChamadoDetalhes'
+import VistoriaForm from './pages/vistoria/VistoriaForm'
+import DocumentosPendentes from './pages/vistoria/DocumentosPendentes'
 import FormularioIdo from './pages/ido/FormularioIdo'
 import SucessoIdo from './pages/ido/Sucesso'
 import FormularioIdoFixo from './pages/ido/FormularioIdoFixo'
@@ -46,6 +48,8 @@ const App = () => (
             <Route path="/dashboard/relatorios" element={<Relatorios />} />
             <Route path="/dashboard/documentos" element={<Documentos />} />
             <Route path="/dashboard/perfil" element={<Perfil />} />
+            <Route path="/vistoria" element={<VistoriaForm />} />
+            <Route path="/vistoria/pendentes" element={<DocumentosPendentes />} />
           </Route>
           <Route path="/espelho-danos-fixo/sucesso" element={<SucessoEspelhoDanosFixo />} />
           <Route path="/espelho-danos-fixo" element={<FormularioEspelhoDanosFixo />} />

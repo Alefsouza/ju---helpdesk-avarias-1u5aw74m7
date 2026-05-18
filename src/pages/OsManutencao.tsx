@@ -82,7 +82,6 @@ export default function OsManutencao() {
   const filteredDocs = documentos.filter(
     (doc) =>
       doc.numero_os?.toLowerCase().includes(search.toLowerCase()) ||
-      doc.linha?.toLowerCase().includes(search.toLowerCase()) ||
       doc.numero_carro?.toLowerCase().includes(search.toLowerCase()) ||
       doc.nome_responsavel?.toLowerCase().includes(search.toLowerCase()) ||
       doc.descricao_danos?.toLowerCase().includes(search.toLowerCase()),
@@ -158,7 +157,6 @@ export default function OsManutencao() {
                     <TableRow>
                       <TableHead className="w-[120px] font-semibold">OS</TableHead>
                       <TableHead className="w-[160px] font-semibold">Data e Hora</TableHead>
-                      <TableHead className="w-[120px] font-semibold">Linha</TableHead>
                       <TableHead className="w-[120px] font-semibold">Carro</TableHead>
                       <TableHead className="w-[200px] font-semibold">Vistoriador</TableHead>
                       <TableHead className="min-w-[300px] font-semibold">Descrição</TableHead>
@@ -179,9 +177,6 @@ export default function OsManutencao() {
                             <Skeleton className="h-5 w-20" />
                           </TableCell>
                           <TableCell>
-                            <Skeleton className="h-5 w-20" />
-                          </TableCell>
-                          <TableCell>
                             <Skeleton className="h-5 w-32" />
                           </TableCell>
                           <TableCell>
@@ -194,7 +189,7 @@ export default function OsManutencao() {
                       ))
                     ) : filteredDocs.length === 0 ? (
                       <TableRow>
-                        <TableCell colSpan={7} className="h-48 text-center text-slate-500">
+                        <TableCell colSpan={6} className="h-48 text-center text-slate-500">
                           <div className="flex flex-col items-center justify-center gap-2">
                             <Wrench className="h-8 w-8 text-slate-300" />
                             <p>Nenhuma OS registrada no momento</p>
@@ -216,11 +211,6 @@ export default function OsManutencao() {
                               </span>
                               <span className="text-sm text-slate-500">{doc.horario || '-'}</span>
                             </div>
-                          </TableCell>
-                          <TableCell>
-                            <span className="font-medium text-slate-700">
-                              {doc.linha || doc.garagem || '-'}
-                            </span>
                           </TableCell>
                           <TableCell>
                             <span className="font-medium text-slate-700">

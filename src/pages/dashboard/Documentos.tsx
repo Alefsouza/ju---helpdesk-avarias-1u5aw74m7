@@ -131,7 +131,8 @@ export default function Documentos() {
 
             const { search, tipoFiltro } = filtrosRef.current
             const matchSearch =
-              newDoc.garagem?.toLowerCase().includes(search.toLowerCase()) ||
+              newDoc.nome_responsavel?.toLowerCase().includes(search.toLowerCase()) ||
+              newDoc.registro_responsavel?.toLowerCase().includes(search.toLowerCase()) ||
               newDoc.linha?.toLowerCase().includes(search.toLowerCase()) ||
               newDoc.numero_os?.toLowerCase().includes(search.toLowerCase()) ||
               newDoc.tipo_documento.toLowerCase().includes(search.toLowerCase())
@@ -167,7 +168,8 @@ export default function Documentos() {
       .filter((doc) => {
         const searchTerm = search.toLowerCase()
         const matchSearch =
-          doc.garagem?.toLowerCase().includes(searchTerm) ||
+          doc.nome_responsavel?.toLowerCase().includes(searchTerm) ||
+          doc.registro_responsavel?.toLowerCase().includes(searchTerm) ||
           doc.linha?.toLowerCase().includes(searchTerm) ||
           doc.numero_os?.toLowerCase().includes(searchTerm) ||
           doc.tipo_documento.toLowerCase().includes(searchTerm)
@@ -284,7 +286,7 @@ export default function Documentos() {
           <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
             <Input
-              placeholder="Pesquisar por garagem, linha, OS..."
+              placeholder="Pesquisar por colaborador, registro, linha, OS..."
               className="pl-9"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
@@ -358,20 +360,26 @@ export default function Documentos() {
 
                       <div className="bg-slate-50 p-3 rounded-md text-sm space-y-2 border border-slate-100">
                         <div className="flex justify-between gap-4">
-                          <span className="text-slate-500 shrink-0">Garagem:</span>
+                          <span className="text-slate-500 shrink-0">Colaborador:</span>
                           <span className="font-medium text-slate-700 text-right truncate">
-                            {doc.garagem || '-'}
+                            {doc.nome_responsavel || '-'}
                           </span>
                         </div>
                         <div className="flex justify-between gap-4">
-                          <span className="text-slate-500 shrink-0">Linha:</span>
-                          <span className="text-slate-700 truncate">{doc.linha || '-'}</span>
+                          <span className="text-slate-500 shrink-0">Registro:</span>
+                          <span className="text-slate-700 truncate text-right">
+                            {doc.registro_responsavel || '-'}
+                          </span>
                         </div>
                         <div className="flex justify-between gap-4">
                           <span className="text-slate-500 shrink-0">OS:</span>
                           <span className="text-slate-700 truncate font-medium">
                             {doc.numero_os || '-'}
                           </span>
+                        </div>
+                        <div className="flex justify-between gap-4">
+                          <span className="text-slate-500 shrink-0">Linha:</span>
+                          <span className="text-slate-700 truncate">{doc.linha || '-'}</span>
                         </div>
                       </div>
 
@@ -432,10 +440,11 @@ export default function Documentos() {
                   <TableHeader>
                     <TableRow className="bg-slate-50/50 hover:bg-slate-50/50">
                       <TableHead>Tipo</TableHead>
-                      <TableHead>Garagem</TableHead>
+                      <TableHead>Colaborador</TableHead>
+                      <TableHead>Registro</TableHead>
+                      <TableHead>OS</TableHead>
                       <TableHead>Linha</TableHead>
                       <TableHead>Data</TableHead>
-                      <TableHead>OS</TableHead>
                       <TableHead className="text-right">Ações</TableHead>
                     </TableRow>
                   </TableHeader>
@@ -453,16 +462,19 @@ export default function Documentos() {
                           </Badge>
                         </TableCell>
                         <TableCell className="text-slate-600 truncate max-w-[150px]">
-                          {doc.garagem || '-'}
+                          {doc.nome_responsavel || '-'}
+                        </TableCell>
+                        <TableCell className="text-slate-600 truncate max-w-[100px]">
+                          {doc.registro_responsavel || '-'}
+                        </TableCell>
+                        <TableCell className="text-slate-600 truncate max-w-[100px] font-medium">
+                          {doc.numero_os || '-'}
                         </TableCell>
                         <TableCell className="text-slate-600 truncate max-w-[150px]">
                           {doc.linha || '-'}
                         </TableCell>
                         <TableCell className="text-slate-500 whitespace-nowrap">
                           {formatData(doc)}
-                        </TableCell>
-                        <TableCell className="text-slate-600 truncate max-w-[100px] font-medium">
-                          {doc.numero_os || '-'}
                         </TableCell>
                         <TableCell className="text-right whitespace-nowrap">
                           <div className="flex justify-end gap-2 items-center">
@@ -573,16 +585,24 @@ export default function Documentos() {
                     </p>
                   </div>
                   <div className="space-y-1">
-                    <span className="text-sm text-slate-500">Garagem</span>
-                    <p className="font-medium text-slate-900">{docToView.garagem || '-'}</p>
+                    <span className="text-sm text-slate-500">Colaborador</span>
+                    <p className="font-medium text-slate-900">
+                      {docToView.nome_responsavel || '-'}
+                    </p>
                   </div>
                   <div className="space-y-1">
-                    <span className="text-sm text-slate-500">Linha</span>
-                    <p className="font-medium text-slate-900">{docToView.linha || '-'}</p>
+                    <span className="text-sm text-slate-500">Registro</span>
+                    <p className="font-medium text-slate-900">
+                      {docToView.registro_responsavel || '-'}
+                    </p>
                   </div>
                   <div className="space-y-1">
                     <span className="text-sm text-slate-500">OS</span>
                     <p className="font-medium text-slate-900">{docToView.numero_os || '-'}</p>
+                  </div>
+                  <div className="space-y-1">
+                    <span className="text-sm text-slate-500">Linha</span>
+                    <p className="font-medium text-slate-900">{docToView.linha || '-'}</p>
                   </div>
                   <div className="space-y-1">
                     <span className="text-sm text-slate-500">Data</span>

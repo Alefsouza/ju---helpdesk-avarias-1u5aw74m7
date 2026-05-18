@@ -205,7 +205,7 @@ export default function SinistrosCoc() {
                 <TableHead className="whitespace-nowrap">Data</TableHead>
                 <TableHead className="whitespace-nowrap">Título</TableHead>
                 <TableHead className="whitespace-nowrap">Motorista</TableHead>
-                <TableHead className="whitespace-nowrap">Colaborador</TableHead>
+                <TableHead className="whitespace-nowrap">Cobrador</TableHead>
                 <TableHead className="whitespace-nowrap">Linha</TableHead>
                 <TableHead className="whitespace-nowrap">Carro</TableHead>
                 <TableHead className="whitespace-nowrap">Local</TableHead>

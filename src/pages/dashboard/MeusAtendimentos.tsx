@@ -14,7 +14,7 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import { Skeleton } from '@/components/ui/skeleton'
-import { Search, Inbox, AlertCircle, ArrowRight, Check, ArrowUpDown } from 'lucide-react'
+import { Search, Inbox, AlertCircle, ArrowRight, Check, ArrowUpDown, RotateCcw } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import {
   AlertDialog,
@@ -50,9 +50,28 @@ export default function MeusAtendimentos() {
   const [debouncedSearch, setDebouncedSearch] = useState('')
   const [completingId, setCompletingId] = useState<string | null>(null)
   const [confirmFinalizarId, setConfirmFinalizarId] = useState<string | null>(null)
+  const [confirmReabrirId, setConfirmReabrirId] = useState<string | null>(null)
+  const [currentUserProfile, setCurrentUserProfile] = useState<any>(null)
   const [sortConfig, setSortConfig] = useState<{ key: string; direction: 'asc' | 'desc' } | null>(
     null,
   )
+
+  useEffect(() => {
+    if (user) {
+      supabase
+        .from('perfil_usuario')
+        .select('*')
+        .eq('id', user.id)
+        .single()
+        .then(({ data }) => {
+          setCurrentUserProfile(data)
+        })
+    }
+  }, [user])
+
+  const isSupport =
+    currentUserProfile?.tipo_usuario === 'responsavel' ||
+    currentUserProfile?.tipo_usuario === 'admin'
 
   const defaultWidths: Record<string, number> = {
     pia: 120,
@@ -188,6 +207,33 @@ export default function MeusAtendimentos() {
       supabase.removeChannel(channel)
     }
   }, [user, filterStatus])
+
+  const handleReabrir = async (chamadoId: string) => {
+    setCompletingId(chamadoId)
+    setConfirmReabrirId(null)
+    try {
+      const { error: updateError } = await supabase
+        .from('chamados')
+        .update({ status: 'aberto', atualizado_em: new Date().toISOString() })
+        .eq('id', chamadoId)
+
+      if (updateError) throw updateError
+
+      const { error: histError } = await supabase
+        .from('historico_chamado')
+        .insert({ chamado_id: chamadoId, usuario_id: user?.id, acao: 'reaberto' })
+
+      if (histError) throw histError
+
+      toast({ title: 'Chamado reaberto com sucesso!' })
+      setChamados((prev) => prev.map((c) => (c.id === chamadoId ? { ...c, status: 'aberto' } : c)))
+    } catch (e) {
+      console.error(e)
+      toast({ title: 'Erro ao reabrir chamado', variant: 'destructive' })
+    } finally {
+      setCompletingId(null)
+    }
+  }
 
   const handleFinalizar = async (chamadoId: string) => {
     setCompletingId(chamadoId)
@@ -550,6 +596,21 @@ export default function MeusAtendimentos() {
                             <Check className="h-4 w-4" />
                           </Button>
                         )}
+                        {c.status === 'finalizado' && isSupport && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="px-2"
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              setConfirmReabrirId(c.id)
+                            }}
+                            disabled={completingId === c.id}
+                            title="Reabrir Chamado"
+                          >
+                            <RotateCcw className="h-4 w-4" />
+                          </Button>
+                        )}
                       </div>
                     </TableCell>
                   </TableRow>
@@ -621,6 +682,20 @@ export default function MeusAtendimentos() {
                         <Check className="h-4 w-4" />
                       </Button>
                     )}
+                    {c.status === 'finalizado' && isSupport && (
+                      <Button
+                        variant="outline"
+                        className="flex-1"
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          setConfirmReabrirId(c.id)
+                        }}
+                        disabled={completingId === c.id}
+                        title="Reabrir Chamado"
+                      >
+                        <RotateCcw className="h-4 w-4" />
+                      </Button>
+                    )}
                   </div>
                 </CardContent>
               </Card>
@@ -628,6 +703,29 @@ export default function MeusAtendimentos() {
           </div>
         </>
       )}
+
+      <AlertDialog
+        open={!!confirmReabrirId}
+        onOpenChange={(open) => !open && setConfirmReabrirId(null)}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Deseja reabrir este chamado?</AlertDialogTitle>
+            <AlertDialogDescription>
+              O chamado voltará para a fila de atendimento.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => confirmReabrirId && handleReabrir(confirmReabrirId)}
+              className="bg-blue-600 hover:bg-blue-700 text-white"
+            >
+              Confirmar
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       <AlertDialog
         open={!!confirmFinalizarId}

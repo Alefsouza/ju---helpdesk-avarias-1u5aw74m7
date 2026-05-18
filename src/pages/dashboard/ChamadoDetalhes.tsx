@@ -22,6 +22,16 @@ import {
 } from '@/components/ui/select'
 import { Label } from '@/components/ui/label'
 import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog'
+import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
@@ -50,6 +60,7 @@ import {
   Share2,
   MoreVertical,
   Eye,
+  RotateCcw,
 } from 'lucide-react'
 import { supabase } from '@/lib/supabase/client'
 import { useAuth } from '@/hooks/use-auth'
@@ -156,6 +167,7 @@ export default function ChamadoDetalhes() {
   const [isDragActive, setIsDragActive] = useState(false)
 
   const [transferModalOpen, setTransferModalOpen] = useState(false)
+  const [confirmReabrirOpen, setConfirmReabrirOpen] = useState(false)
   const [availableResponsaveis, setAvailableResponsaveis] = useState<Perfil[]>([])
   const [selectedResponsavel, setSelectedResponsavel] = useState<string>('')
   const [transferObservacao, setTransferObservacao] = useState('')
@@ -1043,6 +1055,27 @@ export default function ChamadoDetalhes() {
     }
   }
 
+  const handleReabrir = async () => {
+    setCompleting(true)
+    const { error: updateError } = await supabase
+      .from('chamados')
+      .update({ status: 'aberto', atualizado_em: new Date().toISOString() })
+      .eq('id', id)
+    if (updateError) {
+      toast.error('Erro ao reabrir chamado')
+      setCompleting(false)
+      return
+    }
+    await supabase.from('historico_chamado').insert({
+      chamado_id: id as string,
+      acao: 'reaberto',
+      usuario_id: user?.id as string,
+    })
+    setCompleting(false)
+    toast.success('Chamado reaberto com sucesso')
+    navigate('/dashboard/meus-atendimentos')
+  }
+
   const handleFinalizar = async () => {
     if (!window.confirm('Tem certeza que deseja finalizar este chamado?')) return
     setCompleting(true)
@@ -1111,6 +1144,8 @@ export default function ChamadoDetalhes() {
         return `Deletado por ${userNome}`
       case 'transferido':
         return `Transferido por ${userNome}`
+      case 'reaberto':
+        return `Reaberto por ${userNome}`
       default:
         return `Ação ${acao} por ${userNome}`
     }
@@ -1213,6 +1248,17 @@ export default function ChamadoDetalhes() {
             >
               <CheckCircle2 className="mr-2 h-4 w-4" />
               {completing ? 'Finalizando...' : 'Finalizar Chamado'}
+            </Button>
+          )}
+          {chamado.status === 'finalizado' && isSupport && (
+            <Button
+              variant="outline"
+              className="text-blue-600 border-blue-200 hover:bg-blue-50 w-full sm:w-auto"
+              onClick={() => setConfirmReabrirOpen(true)}
+              disabled={completing || transferLoading}
+            >
+              <RotateCcw className="mr-2 h-4 w-4" />
+              Reabrir Chamado
             </Button>
           )}
         </div>
@@ -1900,6 +1946,25 @@ export default function ChamadoDetalhes() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      <AlertDialog open={confirmReabrirOpen} onOpenChange={setConfirmReabrirOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Deseja reabrir este chamado?</AlertDialogTitle>
+            <AlertDialogDescription>
+              O chamado voltará para a fila de atendimento.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleReabrir}
+              className="bg-blue-600 hover:bg-blue-700 text-white"
+            >
+              Confirmar
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   )
 }

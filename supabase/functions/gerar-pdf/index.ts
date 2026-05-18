@@ -29,6 +29,7 @@ Deno.serve(async (req: Request) => {
       id,
       garagem,
       linha,
+      numero_carro,
       data,
       horario,
       ocorrencia,
@@ -75,7 +76,7 @@ Deno.serve(async (req: Request) => {
     drawText(`Numero da OS: ${numero_os || '-'}`, true, 14)
     y -= 10
     drawText(`Garagem: ${garagem || '-'}`)
-    drawText(`Linha: ${linha || '-'}`)
+    drawText(`Linha: ${linha || '-'} / Carro: ${numero_carro || '-'}`)
     drawText(`Data/Horario: ${data || '-'} ${horario || '-'}`)
     drawText(`Vistoriador: ${nome_vistoriador || '-'} (Registro: ${registro_vistoriador || '-'})`)
     drawText(`Motorista: ${nome_motorista || '-'} (Registro: ${registro_motorista || '-'})`)

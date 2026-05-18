@@ -410,8 +410,10 @@ export default function Documentos() {
                           </span>
                         </div>
                         <div className="flex justify-between gap-4">
-                          <span className="text-slate-500 shrink-0">Linha:</span>
-                          <span className="text-slate-700 truncate">{doc.linha || '-'}</span>
+                          <span className="text-slate-500 shrink-0">Linha/Carro:</span>
+                          <span className="text-slate-700 truncate">
+                            {doc.linha || '-'} / {doc.numero_carro || '-'}
+                          </span>
                         </div>
                       </div>
 
@@ -476,6 +478,7 @@ export default function Documentos() {
                       <TableHead>Registro</TableHead>
                       <TableHead>OS</TableHead>
                       <TableHead>Linha</TableHead>
+                      <TableHead>Carro</TableHead>
                       <TableHead>Data</TableHead>
                       <TableHead className="text-right">Ações</TableHead>
                     </TableRow>
@@ -504,6 +507,9 @@ export default function Documentos() {
                         </TableCell>
                         <TableCell className="text-slate-600 truncate max-w-[150px]">
                           {doc.linha || '-'}
+                        </TableCell>
+                        <TableCell className="text-slate-600 truncate max-w-[100px]">
+                          {doc.numero_carro || '-'}
                         </TableCell>
                         <TableCell className="text-slate-500 whitespace-nowrap">
                           {formatData(doc)}
@@ -635,6 +641,10 @@ export default function Documentos() {
                   <div className="space-y-1">
                     <span className="text-sm text-slate-500">Linha</span>
                     <p className="font-medium text-slate-900">{docToView.linha || '-'}</p>
+                  </div>
+                  <div className="space-y-1">
+                    <span className="text-sm text-slate-500">Carro</span>
+                    <p className="font-medium text-slate-900">{docToView.numero_carro || '-'}</p>
                   </div>
                   <div className="space-y-1">
                     <span className="text-sm text-slate-500">Data</span>

@@ -27,6 +27,7 @@ type Documento = {
   id: string
   garagem: string | null
   linha: string | null
+  numero_carro: string | null
   data: string | null
   horario: string | null
   ocorrencia: string | null
@@ -56,7 +57,7 @@ export default function DocumentosPendentes() {
       const { data, error } = await supabase
         .from('documentos')
         .select(
-          'id, garagem, linha, data, horario, ocorrencia, descricao_danos, foto_url, fotos_urls, nome_responsavel, registro_responsavel, nome_motorista, registro_motorista, criado_em',
+          'id, garagem, linha, numero_carro, data, horario, ocorrencia, descricao_danos, foto_url, fotos_urls, nome_responsavel, registro_responsavel, nome_motorista, registro_motorista, criado_em',
         )
         .eq('tipo_documento', 'Vistoria')
         .is('numero_os', null)
@@ -133,6 +134,7 @@ export default function DocumentosPendentes() {
           id: selectedDoc.id,
           garagem: selectedDoc.garagem,
           linha: selectedDoc.linha,
+          numero_carro: selectedDoc.numero_carro,
           data: formatDate(selectedDoc.data),
           horario: selectedDoc.horario,
           ocorrencia: selectedDoc.ocorrencia,
@@ -233,6 +235,7 @@ export default function DocumentosPendentes() {
             <TableRow className="bg-slate-50">
               <TableHead>Garagem</TableHead>
               <TableHead>Linha</TableHead>
+              <TableHead>Carro</TableHead>
               <TableHead>Data</TableHead>
               <TableHead>Descrição dos Danos</TableHead>
               <TableHead className="text-right w-[280px]">Ações</TableHead>
@@ -241,7 +244,7 @@ export default function DocumentosPendentes() {
           <TableBody>
             {loading ? (
               <TableRow>
-                <TableCell colSpan={5} className="h-24">
+                <TableCell colSpan={6} className="h-24">
                   <div className="flex justify-center items-center h-full">
                     <Skeleton className="w-full max-w-[200px] h-8" />
                   </div>
@@ -249,7 +252,7 @@ export default function DocumentosPendentes() {
               </TableRow>
             ) : documentos.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={5} className="h-32 text-center text-slate-500">
+                <TableCell colSpan={6} className="h-32 text-center text-slate-500">
                   Nenhum documento de Vistoria pendente de OS encontrado no momento.
                 </TableCell>
               </TableRow>
@@ -258,6 +261,7 @@ export default function DocumentosPendentes() {
                 <TableRow key={doc.id}>
                   <TableCell className="font-medium">{doc.garagem || '-'}</TableCell>
                   <TableCell>{doc.linha || '-'}</TableCell>
+                  <TableCell>{doc.numero_carro || '-'}</TableCell>
                   <TableCell>{formatDate(doc.data)}</TableCell>
                   <TableCell className="max-w-[300px] truncate" title={doc.descricao_danos || ''}>
                     {truncateText(doc.descricao_danos)}
@@ -327,6 +331,9 @@ export default function DocumentosPendentes() {
                   <strong>Linha:</strong> {selectedDoc.linha || '-'}
                 </p>
                 <p>
+                  <strong>Carro:</strong> {selectedDoc.numero_carro || '-'}
+                </p>
+                <p>
                   <strong>Data:</strong> {formatDate(selectedDoc.data)}
                 </p>
                 <p className="line-clamp-2" title={selectedDoc.descricao_danos || ''}>
@@ -366,6 +373,10 @@ export default function DocumentosPendentes() {
                 <div>
                   <p className="text-slate-500 font-medium mb-1">Linha</p>
                   <p className="text-slate-900">{selectedViewDoc.linha || '-'}</p>
+                </div>
+                <div>
+                  <p className="text-slate-500 font-medium mb-1">Carro</p>
+                  <p className="text-slate-900">{selectedViewDoc.numero_carro || '-'}</p>
                 </div>
                 <div>
                   <p className="text-slate-500 font-medium mb-1">Data / Horário</p>

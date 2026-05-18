@@ -162,9 +162,10 @@ export default function DocumentosPendentes() {
         })
         .eq('id', selectedDoc.id)
         .select()
-        .single()
+        .maybeSingle()
 
       if (error) throw error
+      if (!updatedDoc) throw new Error('Documento não encontrado ou sem permissão para atualizar.')
 
       toast({
         title: 'Sucesso',

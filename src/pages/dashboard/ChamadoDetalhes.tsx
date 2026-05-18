@@ -1231,6 +1231,14 @@ export default function ChamadoDetalhes() {
               >
                 {statusLabels[chamado.status]}
               </Badge>
+              {chamado.tipo_chamado && (
+                <Badge
+                  variant="outline"
+                  className="px-2.5 py-0.5 uppercase text-[10px] font-bold tracking-wider bg-purple-100 text-purple-800 border-purple-200"
+                >
+                  {chamado.tipo_chamado}
+                </Badge>
+              )}
               {chamado.prioridade && prioridadeLabels[chamado.prioridade] && (
                 <Badge
                   variant="outline"
@@ -1240,14 +1248,6 @@ export default function ChamadoDetalhes() {
                   )}
                 >
                   {prioridadeLabels[chamado.prioridade]}
-                </Badge>
-              )}
-              {chamado.tipo_chamado && (
-                <Badge
-                  variant="outline"
-                  className="px-2.5 py-0.5 uppercase text-[10px] font-bold tracking-wider bg-purple-100 text-purple-800 border-purple-200"
-                >
-                  {chamado.tipo_chamado}
                 </Badge>
               )}
             </div>
@@ -1293,6 +1293,30 @@ export default function ChamadoDetalhes() {
                       <div className="flex items-center gap-1.5 shrink-0 sm:w-32">
                         <AlertCircle className="h-4 w-4 text-orange-700" />
                         <h3 className="text-sm font-semibold text-orange-800 uppercase tracking-wider">
+                          Tipo de Chamado
+                        </h3>
+                      </div>
+                      <div className="w-full">
+                        <Select
+                          value={tipoChamado || undefined}
+                          onValueChange={handleSalvarTipoChamado}
+                          disabled={savingTipoChamado || chamado.status === 'finalizado'}
+                        >
+                          <SelectTrigger className="bg-white border-orange-200 focus:ring-orange-400 h-9 text-sm">
+                            <SelectValue placeholder="Selecione o tipo" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="Interno">Interno</SelectItem>
+                            <SelectItem value="Externo">Externo</SelectItem>
+                            <SelectItem value="Vítima">Vítima</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+                    <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+                      <div className="flex items-center gap-1.5 shrink-0 sm:w-32">
+                        <AlertCircle className="h-4 w-4 text-orange-700" />
+                        <h3 className="text-sm font-semibold text-orange-800 uppercase tracking-wider">
                           Prioridade
                         </h3>
                       </div>
@@ -1310,30 +1334,6 @@ export default function ChamadoDetalhes() {
                             <SelectItem value="media">Média</SelectItem>
                             <SelectItem value="alta">Alta</SelectItem>
                             <SelectItem value="urgente">Urgente</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-                    </div>
-                    <div className="flex flex-col sm:flex-row sm:items-center gap-3">
-                      <div className="flex items-center gap-1.5 shrink-0 sm:w-32">
-                        <AlertCircle className="h-4 w-4 text-orange-700" />
-                        <h3 className="text-sm font-semibold text-orange-800 uppercase tracking-wider">
-                          Tipo de Chamado
-                        </h3>
-                      </div>
-                      <div className="w-full">
-                        <Select
-                          value={tipoChamado || undefined}
-                          onValueChange={handleSalvarTipoChamado}
-                          disabled={savingTipoChamado || chamado.status === 'finalizado'}
-                        >
-                          <SelectTrigger className="bg-white border-orange-200 focus:ring-orange-400 h-9 text-sm">
-                            <SelectValue placeholder="Selecione o tipo" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="Interno">Interno</SelectItem>
-                            <SelectItem value="Externo">Externo</SelectItem>
-                            <SelectItem value="Vítima">Vítima</SelectItem>
                           </SelectContent>
                         </Select>
                       </div>

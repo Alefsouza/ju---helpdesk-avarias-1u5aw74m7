@@ -122,6 +122,7 @@ export type Database = {
           prioridade: string | null
           responsavel_id: string | null
           status: string
+          tipo_chamado: string | null
           titulo: string
           usuario_id: string
         }
@@ -134,6 +135,7 @@ export type Database = {
           prioridade?: string | null
           responsavel_id?: string | null
           status?: string
+          tipo_chamado?: string | null
           titulo: string
           usuario_id: string
         }
@@ -146,6 +148,7 @@ export type Database = {
           prioridade?: string | null
           responsavel_id?: string | null
           status?: string
+          tipo_chamado?: string | null
           titulo?: string
           usuario_id?: string
         }
@@ -681,6 +684,7 @@ export const Constants = {
 //   criado_em: timestamp with time zone (not null, default: now())
 //   atualizado_em: timestamp with time zone (not null, default: now())
 //   pia: text (nullable)
+//   tipo_chamado: text (nullable)
 // Table: documentos
 //   id: uuid (not null, default: gen_random_uuid())
 //   tipo_documento: text (not null)

@@ -27,78 +27,106 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 
 export default function CarrosLiberadosPlantao() {
-  const [chamados, setChamados] = useState<any[]>([])
+  const [documentos, setDocumentos] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState('todos')
 
   useEffect(() => {
-    fetchChamados()
+    fetchDocumentos()
 
-    const subscription = supabase
-      .channel('public:chamados_plantao')
+    const subscriptionDocs = supabase
+      .channel('public:documentos_plantao')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'documentos',
+        },
+        () => {
+          fetchDocumentos()
+        },
+      )
+      .subscribe()
+
+    const subscriptionChamados = supabase
+      .channel('public:chamados_operacao')
       .on(
         'postgres_changes',
         {
           event: '*',
           schema: 'public',
           table: 'chamados',
-          filter: 'tipo_chamado=eq.OS de Manutenção',
         },
         () => {
-          fetchChamados()
+          fetchDocumentos()
         },
       )
       .subscribe()
 
     return () => {
-      subscription.unsubscribe()
+      subscriptionDocs.unsubscribe()
+      subscriptionChamados.unsubscribe()
     }
   }, [])
 
-  const fetchChamados = async () => {
+  const fetchDocumentos = async () => {
     try {
       const { data, error } = await supabase
-        .from('chamados')
-        .select('*')
-        .eq('tipo_chamado', 'OS de Manutenção')
-        .neq('status', 'operacao')
+        .from('documentos')
+        .select('*, chamados(id, status)')
+        .in('tipo_documento', ['Vistoria', 'Espelho de Danos'])
+        .not('numero_os', 'is', null)
+        .neq('numero_os', '')
 
       if (error) throw error
-      setChamados(data || [])
+
+      const validDocs = (data || []).filter((d) => {
+        if (d.chamados && Array.isArray(d.chamados)) {
+          return !d.chamados.some((c: any) => c.status === 'operacao')
+        }
+        if (d.chamados && !Array.isArray(d.chamados)) {
+          return (d.chamados as any).status !== 'operacao'
+        }
+        return true
+      })
+
+      setDocumentos(validDocs)
     } catch (error) {
-      console.error('Error fetching chamados:', error)
+      console.error('Error fetching documentos:', error)
       toast.error('Erro ao carregar os dados em tempo real')
     } finally {
       setLoading(false)
     }
   }
 
-  const handleEnviarOperacao = async (id: string) => {
+  const handleEnviarOperacao = async (docId: string, chamadoId: string | null) => {
     try {
-      const { error } = await supabase
-        .from('chamados')
-        .update({ status: 'operacao', atualizado_em: new Date().toISOString() })
-        .eq('id', id)
-
-      if (error) throw error
+      if (chamadoId) {
+        const { error } = await supabase
+          .from('chamados')
+          .update({ status: 'operacao', atualizado_em: new Date().toISOString() })
+          .eq('id', chamadoId)
+        if (error) throw error
+      }
       toast.success('Carro enviado para operação com sucesso')
-      setChamados((prev) => prev.filter((c) => c.id !== id))
+      setDocumentos((prev) => prev.filter((d) => d.id !== docId))
     } catch (error) {
       console.error('Error:', error)
       toast.error('Erro ao enviar para operação')
     }
   }
 
-  const filtered = chamados
-    .filter((c) => {
+  const filtered = documentos
+    .filter((d) => {
       const term = search.toLowerCase()
       const matchSearch =
-        (c.numero_os?.toLowerCase() || '').includes(term) ||
-        (c.carro?.toLowerCase() || '').includes(term) ||
-        (c.linha?.toLowerCase() || '').includes(term)
+        (d.numero_os?.toLowerCase() || '').includes(term) ||
+        (d.numero_carro?.toLowerCase() || '').includes(term) ||
+        (d.linha?.toLowerCase() || '').includes(term)
 
-      const isLiberado = c.status === 'finalizado'
+      const isLiberado = d.excluido_manutencao === true
       const matchStatus =
         statusFilter === 'todos' ||
         (statusFilter === 'liberado' && isLiberado) ||
@@ -107,13 +135,13 @@ export default function CarrosLiberadosPlantao() {
       return matchSearch && matchStatus
     })
     .sort((a, b) => {
-      const aLiberado = a.status === 'finalizado'
-      const bLiberado = b.status === 'finalizado'
+      const aLiberado = a.excluido_manutencao === true
+      const bLiberado = b.excluido_manutencao === true
       if (aLiberado && !bLiberado) return -1
       if (!aLiberado && bLiberado) return 1
 
-      const dateA = new Date(aLiberado ? a.atualizado_em : a.criado_em).getTime()
-      const dateB = new Date(bLiberado ? b.atualizado_em : b.criado_em).getTime()
+      const dateA = new Date(a.atualizado_em || a.criado_em).getTime()
+      const dateB = new Date(b.atualizado_em || b.criado_em).getTime()
       return dateB - dateA
     })
 
@@ -187,30 +215,31 @@ export default function CarrosLiberadosPlantao() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {filtered.map((chamado) => {
-                      const isLiberado = chamado.status === 'finalizado'
-                      const dateObj = new Date(
-                        isLiberado ? chamado.atualizado_em : chamado.criado_em,
-                      )
+                    {filtered.map((d) => {
+                      const isLiberado = d.excluido_manutencao === true
+                      const dateObj = new Date(d.atualizado_em || d.criado_em)
                       const formattedDate = format(dateObj, "dd/MM/yyyy 'às' HH:mm", {
                         locale: ptBR,
                       })
 
+                      const chamadoId = d.chamados
+                        ? Array.isArray(d.chamados)
+                          ? d.chamados[0]?.id
+                          : d.chamados.id
+                        : null
+
                       return (
-                        <TableRow
-                          key={chamado.id}
-                          className="hover:bg-gray-50/50 transition-colors"
-                        >
-                          <TableCell className="font-medium">#{chamado.numero_os}</TableCell>
+                        <TableRow key={d.id} className="hover:bg-gray-50/50 transition-colors">
+                          <TableCell className="font-medium">#{d.numero_os}</TableCell>
                           <TableCell className="text-gray-600 whitespace-nowrap">
                             {formattedDate}
                           </TableCell>
                           <TableCell>
                             <span className="inline-flex items-center justify-center bg-gray-100 px-2.5 py-0.5 rounded-full text-sm font-medium text-gray-800">
-                              {chamado.carro || '-'}
+                              {d.numero_carro || '-'}
                             </span>
                           </TableCell>
-                          <TableCell className="text-gray-600">{chamado.linha || '-'}</TableCell>
+                          <TableCell className="text-gray-600">{d.linha || '-'}</TableCell>
                           <TableCell>
                             <Badge
                               variant="outline"
@@ -231,7 +260,7 @@ export default function CarrosLiberadosPlantao() {
                                   <TooltipTrigger asChild>
                                     <Button
                                       size="icon"
-                                      onClick={() => handleEnviarOperacao(chamado.id)}
+                                      onClick={() => handleEnviarOperacao(d.id, chamadoId)}
                                       className="h-8 w-8 rounded-full bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm transition-all"
                                     >
                                       <Check className="h-4 w-4" />

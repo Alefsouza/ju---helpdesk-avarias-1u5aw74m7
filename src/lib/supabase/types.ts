@@ -831,7 +831,7 @@ export const Constants = {
 //   PRIMARY KEY chamados_pkey: PRIMARY KEY (id)
 //   CHECK chamados_prioridade_check: CHECK (((prioridade IS NULL) OR (prioridade = ANY (ARRAY['baixa'::text, 'media'::text, 'alta'::text, 'urgente'::text]))))
 //   FOREIGN KEY chamados_responsavel_id_fkey: FOREIGN KEY (responsavel_id) REFERENCES auth.users(id) ON DELETE SET NULL
-//   CHECK chamados_status_check: CHECK ((status = ANY (ARRAY['aberto'::text, 'em_atendimento'::text, 'finalizado'::text, 'Pendente'::text, 'pendente'::text])))
+//   CHECK chamados_status_check: CHECK ((status = ANY (ARRAY['aberto'::text, 'em_atendimento'::text, 'finalizado'::text, 'Pendente'::text, 'pendente'::text, 'operacao'::text])))
 //   FOREIGN KEY chamados_usuario_id_fkey: FOREIGN KEY (usuario_id) REFERENCES auth.users(id) ON DELETE CASCADE
 // Table: documentos
 //   FOREIGN KEY documentos_chamado_id_fkey: FOREIGN KEY (chamado_id) REFERENCES chamados(id) ON DELETE SET NULL
@@ -882,8 +882,13 @@ export const Constants = {
 //     WITH CHECK: (usuario_id = auth.uid())
 //   Policy "chamados_select" (SELECT, PERMISSIVE) roles={authenticated}
 //     USING: ((usuario_id = auth.uid()) OR is_responsavel() OR is_admin() OR is_sos() OR is_coc())
+//   Policy "chamados_select_public_manutencao" (SELECT, PERMISSIVE) roles={public}
+//     USING: (tipo_chamado = 'OS de Manutenção'::text)
 //   Policy "chamados_update" (UPDATE, PERMISSIVE) roles={authenticated}
 //     USING: ((usuario_id = auth.uid()) OR (is_responsavel() AND ((responsavel_id = auth.uid()) OR (status = 'aberto'::text) OR (status = 'finalizado'::text))) OR is_admin() OR is_sos() OR is_coc())
+//   Policy "chamados_update_public_manutencao" (UPDATE, PERMISSIVE) roles={public}
+//     USING: (tipo_chamado = 'OS de Manutenção'::text)
+//     WITH CHECK: (tipo_chamado = 'OS de Manutenção'::text)
 // Table: documentos
 //   Policy "documentos_delete" (DELETE, PERMISSIVE) roles={authenticated}
 //     USING: (is_admin() OR is_responsavel())

@@ -24,6 +24,7 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import { Skeleton } from '@/components/ui/skeleton'
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 
 export default function CarrosLiberadosPlantao() {
   const [chamados, setChamados] = useState<any[]>([])
@@ -225,15 +226,22 @@ export default function CarrosLiberadosPlantao() {
                           </TableCell>
                           <TableCell className="text-right">
                             {isLiberado ? (
-                              <Button
-                                size="sm"
-                                onClick={() => handleEnviarOperacao(chamado.id)}
-                                className="bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm transition-all flex items-center gap-1.5 ml-auto"
-                              >
-                                <Check className="h-4 w-4" />
-                                <span className="hidden sm:inline">Enviar p/ Operação</span>
-                                <span className="sm:hidden">Enviar</span>
-                              </Button>
+                              <div className="flex justify-end pr-2">
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <Button
+                                      size="icon"
+                                      onClick={() => handleEnviarOperacao(chamado.id)}
+                                      className="h-8 w-8 rounded-full bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm transition-all"
+                                    >
+                                      <Check className="h-4 w-4" />
+                                    </Button>
+                                  </TooltipTrigger>
+                                  <TooltipContent>
+                                    <p>Enviar carro p/ operação</p>
+                                  </TooltipContent>
+                                </Tooltip>
+                              </div>
                             ) : (
                               <span className="text-rose-600 text-sm font-medium pr-2">
                                 Manutenção

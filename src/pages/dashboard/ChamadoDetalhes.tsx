@@ -668,7 +668,39 @@ export default function ChamadoDetalhes() {
 
         if (error) throw error
 
-        setDocFormData(data || { chamado_id: id })
+        let formData = data
+        if (!formData) {
+          const { data: docData, error: docError } = await supabase
+            .from('documentos')
+            .select('*')
+            .eq('chamado_id', id)
+            .in('tipo_documento', ['Espelho de Danos', 'Vistoria'])
+            .order('criado_em', { ascending: false })
+            .limit(1)
+            .maybeSingle()
+
+          if (docError) throw docError
+
+          if (docData) {
+            formData = {
+              chamado_id: id,
+              numero_os: docData.numero_os || '',
+              garagem: docData.garagem || '',
+              numero_carro: docData.numero_carro || '',
+              linha: docData.linha || '',
+              descricao_danos: docData.descricao_danos || '',
+              data: docData.data || '',
+              horario: docData.horario || '',
+              ocorrencia: docData.ocorrencia || '',
+              registro_vistoriador: docData.registro_responsavel || '',
+              nome_vistoriador: docData.nome_responsavel || '',
+              registro_motorista: docData.registro_motorista || '',
+              nome_motorista: docData.nome_motorista || '',
+            }
+          }
+        }
+
+        setDocFormData(formData || { chamado_id: id })
         setEditingDoc({ anexo, tipo })
       } else {
         const { data, error } = await supabase
@@ -751,6 +783,13 @@ export default function ChamadoDetalhes() {
           })
           .eq('id', editingDoc.anexo.id)
 
+        await supabase.from('historico_chamado').insert({
+          chamado_id: id as string,
+          acao: 'respondido',
+          usuario_id: user?.id as string,
+          detalhes: 'Espelho de Danos atualizado pelo usuário',
+        })
+
         toast.success('Documento atualizado com sucesso!')
       } else {
         const {
@@ -794,6 +833,13 @@ export default function ChamadoDetalhes() {
             nome_arquivo: pdfData.nome_arquivo || editingDoc.anexo.nome_arquivo,
           })
           .eq('id', editingDoc.anexo.id)
+
+        await supabase.from('historico_chamado').insert({
+          chamado_id: id as string,
+          acao: 'respondido',
+          usuario_id: user?.id as string,
+          detalhes: 'Boletim de Ocorrência (IDO) atualizado pelo usuário',
+        })
 
         toast.success('Documento IDO atualizado com sucesso!')
       }

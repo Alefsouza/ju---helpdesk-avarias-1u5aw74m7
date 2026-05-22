@@ -118,6 +118,7 @@ export function GestaoEquipeModal({ open, setOpen, user, onSuccess }: any) {
                 <SelectItem value="vistoriador">Vistoriador (Apenas Vistorias)</SelectItem>
                 <SelectItem value="coc">COC (Abertura de Chamadas)</SelectItem>
                 <SelectItem value="sos">SOS (Chamadas Pendentes)</SelectItem>
+                <SelectItem value="juridico">Jurídico</SelectItem>
               </SelectContent>
             </Select>
           </div>

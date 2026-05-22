@@ -16,7 +16,6 @@ import {
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { Button } from '@/components/ui/button'
-import { Checkbox } from '@/components/ui/checkbox'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import {
   Select,
@@ -29,7 +28,6 @@ import { toast } from 'sonner'
 import { Loader2, UploadCloud } from 'lucide-react'
 
 const formSchema = z.object({
-  titulo: z.string().min(3, 'O título é obrigatório'),
   descricao: z.string().min(5, 'A descrição é obrigatória'),
   registro_motorista: z.string().min(1, 'Obrigatório'),
   nome_motorista: z.string().min(1, 'Obrigatório'),
@@ -39,7 +37,9 @@ const formSchema = z.object({
   linha: z.string().min(1, 'Obrigatório'),
   local_ocorrencia: z.string().min(1, 'Obrigatório'),
   operacao: z.enum(['RA', 'RN', 'OPN'], { required_error: 'Selecione uma operação' }),
-  tipo_chamado: z.boolean().optional().default(false),
+  avarias: z.enum(['Vítima com avarias', 'Vítima sem avarias'], {
+    required_error: 'Selecione uma opção',
+  }),
 })
 
 export default function NovoChamadoCoc() {
@@ -51,7 +51,6 @@ export default function NovoChamadoCoc() {
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      titulo: '',
       descricao: '',
       registro_motorista: '',
       nome_motorista: '',
@@ -61,7 +60,7 @@ export default function NovoChamadoCoc() {
       linha: '',
       local_ocorrencia: '',
       operacao: undefined,
-      tipo_chamado: false,
+      avarias: undefined,
     },
   })
 
@@ -75,10 +74,7 @@ export default function NovoChamadoCoc() {
 
     setIsSubmitting(true)
     try {
-      const statusChamado = values.tipo_chamado ? 'aberto' : 'Pendente'
-      const tituloChamado = values.tipo_chamado
-        ? `${values.titulo} - ${values.carro}`
-        : values.titulo
+      const tituloChamado = `${values.avarias} - Carro: ${values.carro}`
 
       // 1. Create ticket
       const { data: chamado, error: chamadoError } = await supabase
@@ -87,7 +83,7 @@ export default function NovoChamadoCoc() {
           usuario_id: user.id,
           titulo: tituloChamado,
           descricao: values.descricao,
-          status: statusChamado,
+          status: 'aberto',
           registro_motorista: values.registro_motorista,
           nome_motorista: values.nome_motorista,
           registro_cobrador: values.registro_cobrador,
@@ -96,7 +92,7 @@ export default function NovoChamadoCoc() {
           linha: values.linha,
           local_ocorrencia: values.local_ocorrencia,
           operacao: values.operacao,
-          tipo_chamado: values.tipo_chamado ? 'Contém vítimas, mas não tem avarias' : null,
+          tipo_chamado: values.avarias,
         })
         .select()
         .single()
@@ -150,20 +146,6 @@ export default function NovoChamadoCoc() {
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <FormField
-                  control={form.control}
-                  name="titulo"
-                  render={({ field }) => (
-                    <FormItem className="col-span-1 md:col-span-2">
-                      <FormLabel>Título</FormLabel>
-                      <FormControl>
-                        <Input placeholder="Resumo do ocorrido" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
                 <FormField
                   control={form.control}
                   name="registro_motorista"
@@ -287,15 +269,22 @@ export default function NovoChamadoCoc() {
 
                 <FormField
                   control={form.control}
-                  name="tipo_chamado"
+                  name="avarias"
                   render={({ field }) => (
-                    <FormItem className="flex flex-row items-center space-x-3 space-y-0 rounded-md border p-4 shadow-sm h-10 mt-8">
-                      <FormControl>
-                        <Checkbox checked={field.value} onCheckedChange={field.onChange} />
-                      </FormControl>
-                      <div className="space-y-1 leading-none">
-                        <FormLabel>Contém vítimas, mas não tem avarias</FormLabel>
-                      </div>
+                    <FormItem>
+                      <FormLabel>Avarias?</FormLabel>
+                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Selecione..." />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="Vítima com avarias">Vítima com avarias</SelectItem>
+                          <SelectItem value="Vítima sem avarias">Vítima sem avarias</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
                     </FormItem>
                   )}
                 />

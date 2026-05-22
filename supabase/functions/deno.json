@@ -3,6 +3,7 @@
     "manage-users": 2,
     "transferir-chamado": 1,
     "gerar-pdf": 3,
-    "criar-chamado-vistoria": 2
+    "criar-chamado-vistoria": 2,
+    "processar-documento-uazapi": 1
   }
 }

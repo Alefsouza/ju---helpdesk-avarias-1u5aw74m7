@@ -1455,9 +1455,9 @@ export default function ChamadoDetalhes() {
   const isResponsible = chamado.responsavel_id === user?.id
   const isSolicitante = chamado.usuario_id === user?.id
 
-  const canReply = isSolicitante || isResponsible
-  const canFinalize = isSolicitante || isResponsible
-  const canTransfer = isResponsible && chamado.status !== 'finalizado'
+  const canReply = isSolicitante || isResponsible || isSupport
+  const canFinalize = isSupport && chamado.status !== 'finalizado'
+  const canTransfer = isSupport && chamado.status !== 'finalizado'
   const canEditRA = isSupport
   const canUnify = isSupport && chamado.status !== 'finalizado'
 
@@ -1512,7 +1512,7 @@ export default function ChamadoDetalhes() {
               Transferir Chamado
             </Button>
           )}
-          {chamado.status !== 'finalizado' && canFinalize && (
+          {canFinalize && (
             <Button
               variant="outline"
               className="text-green-600 border-green-200 hover:bg-green-50 w-full sm:w-auto"

@@ -61,9 +61,17 @@ export function UnificarChamadoModal({
         .limit(20)
 
       if (debouncedSearch) {
-        query = query.or(
-          `titulo.ilike.%${debouncedSearch}%,pia.ilike.%${debouncedSearch}%,id.eq.${debouncedSearch}`,
-        )
+        const isUUID =
+          /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/.test(
+            debouncedSearch,
+          )
+        if (isUUID) {
+          query = query.or(
+            `titulo.ilike.%${debouncedSearch}%,pia.ilike.%${debouncedSearch}%,id.eq.${debouncedSearch}`,
+          )
+        } else {
+          query = query.or(`titulo.ilike.%${debouncedSearch}%,pia.ilike.%${debouncedSearch}%`)
+        }
       }
 
       const { data, error } = await query

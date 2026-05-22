@@ -504,6 +504,10 @@ export default function ChamadoDetalhes() {
             )
           } else if (payload.eventType === 'DELETE') {
             setAnexosInternos((prev) => prev.filter((a) => a.id !== payload.old.id))
+          } else if (payload.eventType === 'UPDATE') {
+            setAnexosInternos((prev) =>
+              prev.map((a) => (a.id === payload.new.id ? (payload.new as AnexoInterno) : a)),
+            )
           }
         },
       )
@@ -654,34 +658,49 @@ export default function ChamadoDetalhes() {
     setEditingDocLoading(true)
     try {
       if (tipo === 'Espelho') {
-        const { data, error } = await supabase
+        let { data, error } = await supabase
           .from('formularios_espelho_danos')
           .select('*')
           .eq('chamado_id', id)
           .maybeSingle()
 
-        if (data) {
-          setDocFormData(data)
-          setEditingDoc({ anexo, tipo })
-        } else {
-          toast.error('Formulário não encontrado para este chamado.')
+        if (!data) {
+          const { data: newData, error: insertError } = await supabase
+            .from('formularios_espelho_danos')
+            .insert({ chamado_id: id as string })
+            .select('*')
+            .single()
+
+          if (insertError) throw insertError
+          data = newData
         }
+
+        setDocFormData(data || {})
+        setEditingDoc({ anexo, tipo })
       } else {
-        const { data, error } = await supabase
+        let { data, error } = await supabase
           .from('formularios_ido')
           .select('*')
           .eq('chamado_id', id)
           .maybeSingle()
 
-        if (data) {
-          setDocFormData(data)
-          setEditingDoc({ anexo, tipo })
-        } else {
-          toast.error('Formulário IDO não encontrado para este chamado.')
+        if (!data) {
+          const { data: newData, error: insertError } = await supabase
+            .from('formularios_ido')
+            .insert({ chamado_id: id as string })
+            .select('*')
+            .single()
+
+          if (insertError) throw insertError
+          data = newData
         }
+
+        setDocFormData(data || {})
+        setEditingDoc({ anexo, tipo })
       }
     } catch (e) {
-      toast.error('Erro ao buscar dados do formulário.')
+      console.error(e)
+      toast.error('Erro ao buscar ou criar dados do formulário.')
     } finally {
       setEditingDocLoading(false)
     }
@@ -727,9 +746,14 @@ export default function ChamadoDetalhes() {
 
         if (pdfError || !pdfData?.success) throw new Error('Erro ao gerar novo PDF')
 
+        const newUrl = `${pdfData.url}?t=${Date.now()}`
+
         await supabase
           .from('anexos_chamado_interno')
-          .update({ arquivo_url: pdfData.url })
+          .update({
+            arquivo_url: newUrl,
+            nome_arquivo: pdfData.nome_arquivo || editingDoc.anexo.nome_arquivo,
+          })
           .eq('id', editingDoc.anexo.id)
 
         toast.success('Documento atualizado com sucesso!')
@@ -759,9 +783,14 @@ export default function ChamadoDetalhes() {
 
         if (pdfError || !pdfData?.success) throw new Error('Erro ao gerar novo PDF IDO')
 
+        const newUrl = `${pdfData.url}?t=${Date.now()}`
+
         await supabase
           .from('anexos_chamado_interno')
-          .update({ arquivo_url: pdfData.url })
+          .update({
+            arquivo_url: newUrl,
+            nome_arquivo: pdfData.nome_arquivo || editingDoc.anexo.nome_arquivo,
+          })
           .eq('id', editingDoc.anexo.id)
 
         toast.success('Documento IDO atualizado com sucesso!')

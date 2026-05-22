@@ -30,6 +30,7 @@ export function GestaoEquipeModal({ open, setOpen, user, onSuccess }: any) {
     whatsapp: '',
     endereco: '',
     departamento: '',
+    garagem: '',
   })
   const [isSaving, setIsSaving] = useState(false)
 
@@ -43,6 +44,7 @@ export function GestaoEquipeModal({ open, setOpen, user, onSuccess }: any) {
         whatsapp: user.whatsapp || '',
         endereco: user.endereco || '',
         departamento: user.departamento || '',
+        garagem: user.garagem || '',
       })
     } else {
       setFormData({
@@ -53,6 +55,7 @@ export function GestaoEquipeModal({ open, setOpen, user, onSuccess }: any) {
         whatsapp: '',
         endereco: '',
         departamento: '',
+        garagem: '',
       })
     }
   }, [user, open])
@@ -70,6 +73,7 @@ export function GestaoEquipeModal({ open, setOpen, user, onSuccess }: any) {
           whatsapp: formData.whatsapp,
           endereco: formData.endereco,
           departamento: formData.departamento,
+          garagem: formData.garagem,
         })
         if (error || data?.error) throw error || new Error(data?.error)
         toast.success('Usuário atualizado com sucesso')
@@ -137,13 +141,30 @@ export function GestaoEquipeModal({ open, setOpen, user, onSuccess }: any) {
               placeholder="Rua, Número, Bairro"
             />
           </div>
-          <div className="space-y-2">
-            <Label>Departamento</Label>
-            <Input
-              value={formData.departamento}
-              onChange={(e) => setFormData({ ...formData, departamento: e.target.value })}
-              placeholder="Ex: RH, Manutenção, Diretoria"
-            />
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label>Departamento</Label>
+              <Input
+                value={formData.departamento}
+                onChange={(e) => setFormData({ ...formData, departamento: e.target.value })}
+                placeholder="Ex: RH"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Garagem</Label>
+              <Select
+                value={formData.garagem || undefined}
+                onValueChange={(v) => setFormData({ ...formData, garagem: v })}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Cursino">Cursino</SelectItem>
+                  <SelectItem value="Sapopemba">Sapopemba</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
           </div>
           <div className="space-y-2">
             <Label>Tipo de Acesso *</Label>

@@ -38,7 +38,6 @@ const formSchema = z.object({
   whatsapp: z.string().optional(),
   endereco: z.string().optional(),
   departamento: z.string().optional(),
-  garagem: z.string().optional(),
 })
 
 type FormValues = z.infer<typeof formSchema>
@@ -64,7 +63,6 @@ export function NovoUsuarioModal({
       whatsapp: '',
       endereco: '',
       departamento: '',
-      garagem: '',
     },
   })
 
@@ -155,42 +153,19 @@ export function NovoUsuarioModal({
                 </FormItem>
               )}
             />
-            <div className="grid grid-cols-2 gap-4">
-              <FormField
-                control={form.control}
-                name="departamento"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Departamento</FormLabel>
-                    <FormControl>
-                      <Input placeholder="Ex: TI" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="garagem"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Garagem</FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value || undefined}>
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Selecione" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        <SelectItem value="Cursino">Cursino</SelectItem>
-                        <SelectItem value="Sapopemba">Sapopemba</SelectItem>
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
+            <FormField
+              control={form.control}
+              name="departamento"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Departamento</FormLabel>
+                  <FormControl>
+                    <Input placeholder="Ex: TI" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
             <FormField
               control={form.control}
               name="whatsapp"

@@ -14,7 +14,17 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import { Skeleton } from '@/components/ui/skeleton'
-import { Search, Inbox, AlertCircle, ArrowRight, Check, ArrowUpDown, RotateCcw } from 'lucide-react'
+import {
+  Search,
+  Inbox,
+  AlertCircle,
+  ArrowRight,
+  Check,
+  ArrowUpDown,
+  RotateCcw,
+  Link as LinkIcon,
+} from 'lucide-react'
+import { UnificarChamadoModal } from '@/components/UnificarChamadoModal'
 import { Badge } from '@/components/ui/badge'
 import {
   AlertDialog,
@@ -44,6 +54,11 @@ export default function MeusAtendimentos() {
   const filterStatus = searchParams.get('status') || 'em_atendimento'
 
   const [chamados, setChamados] = useState<any[]>([])
+  const [unificarChamado, setUnificarChamado] = useState<{
+    id: string
+    titulo: string
+    pia?: string
+  } | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(false)
   const [searchTerm, setSearchTerm] = useState('')
@@ -71,7 +86,8 @@ export default function MeusAtendimentos() {
 
   const isSupport =
     currentUserProfile?.tipo_usuario === 'responsavel' ||
-    currentUserProfile?.tipo_usuario === 'admin'
+    currentUserProfile?.tipo_usuario === 'admin' ||
+    currentUserProfile?.tipo_usuario === 'juridico'
 
   const defaultWidths: Record<string, number> = {
     pia: 120,
@@ -630,6 +646,21 @@ export default function MeusAtendimentos() {
                             <RotateCcw className="h-4 w-4" />
                           </Button>
                         )}
+                        {c.status !== 'finalizado' && isSupport && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="px-2"
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              setUnificarChamado({ id: c.id, titulo: c.titulo, pia: c.pia })
+                            }}
+                            disabled={completingId === c.id}
+                            title="Unificar Chamado"
+                          >
+                            <LinkIcon className="h-4 w-4" />
+                          </Button>
+                        )}
                       </div>
                     </TableCell>
                   </TableRow>
@@ -721,6 +752,20 @@ export default function MeusAtendimentos() {
                         <RotateCcw className="h-4 w-4" />
                       </Button>
                     )}
+                    {c.status !== 'finalizado' && isSupport && (
+                      <Button
+                        variant="outline"
+                        className="flex-1"
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          setUnificarChamado({ id: c.id, titulo: c.titulo, pia: c.pia })
+                        }}
+                        disabled={completingId === c.id}
+                        title="Unificar Chamado"
+                      >
+                        <LinkIcon className="h-4 w-4" />
+                      </Button>
+                    )}
                   </div>
                 </CardContent>
               </Card>
@@ -728,6 +773,17 @@ export default function MeusAtendimentos() {
           </div>
         </>
       )}
+
+      <UnificarChamadoModal
+        isOpen={!!unificarChamado}
+        onClose={() => setUnificarChamado(null)}
+        sourceChamado={unificarChamado}
+        onSuccess={(destinoId) => {
+          setUnificarChamado(null)
+          fetchChamados()
+          navigate(`/dashboard/chamados/${destinoId}`)
+        }}
+      />
 
       <AlertDialog
         open={!!confirmReabrirId}

@@ -449,6 +449,7 @@ export type Database = {
           ativo: boolean
           atualizado_em: string
           criado_em: string
+          departamento: string | null
           email: string
           endereco: string | null
           foto_url: string | null
@@ -461,6 +462,7 @@ export type Database = {
           ativo?: boolean
           atualizado_em?: string
           criado_em?: string
+          departamento?: string | null
           email: string
           endereco?: string | null
           foto_url?: string | null
@@ -473,6 +475,7 @@ export type Database = {
           ativo?: boolean
           atualizado_em?: string
           criado_em?: string
+          departamento?: string | null
           email?: string
           endereco?: string | null
           foto_url?: string | null
@@ -817,6 +820,7 @@ export const Constants = {
 //   criado_em: timestamp with time zone (not null, default: now())
 //   atualizado_em: timestamp with time zone (not null, default: now())
 //   foto_url: text (nullable)
+//   departamento: text (nullable)
 // Table: respostas_chamado
 //   id: uuid (not null, default: gen_random_uuid())
 //   chamado_id: uuid (not null)

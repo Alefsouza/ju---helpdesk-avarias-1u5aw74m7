@@ -69,6 +69,7 @@ import { format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
+import { UnificarChamadoModal } from '@/components/UnificarChamadoModal'
 
 type Chamado = any
 type Perfil = any
@@ -168,6 +169,7 @@ export default function ChamadoDetalhes() {
   const [isDragActive, setIsDragActive] = useState(false)
 
   const [transferModalOpen, setTransferModalOpen] = useState(false)
+  const [unificarModalOpen, setUnificarModalOpen] = useState(false)
   const [confirmReabrirOpen, setConfirmReabrirOpen] = useState(false)
   const [availableResponsaveis, setAvailableResponsaveis] = useState<Perfil[]>([])
   const [selectedResponsavel, setSelectedResponsavel] = useState<string>('')
@@ -1448,7 +1450,8 @@ export default function ChamadoDetalhes() {
 
   const isSupport =
     currentUserProfile?.tipo_usuario === 'responsavel' ||
-    currentUserProfile?.tipo_usuario === 'admin'
+    currentUserProfile?.tipo_usuario === 'admin' ||
+    currentUserProfile?.tipo_usuario === 'juridico'
   const isResponsible = chamado.responsavel_id === user?.id
   const isSolicitante = chamado.usuario_id === user?.id
 
@@ -1456,6 +1459,7 @@ export default function ChamadoDetalhes() {
   const canFinalize = isSolicitante || isResponsible
   const canTransfer = isResponsible && chamado.status !== 'finalizado'
   const canEditRA = isSupport
+  const canUnify = isSupport && chamado.status !== 'finalizado'
 
   const getAcaoText = (acao: string, userNome: string) => {
     switch (acao) {
@@ -1486,6 +1490,17 @@ export default function ChamadoDetalhes() {
           Voltar
         </Button>
         <div className="flex flex-col sm:flex-row items-center gap-2 w-full sm:w-auto">
+          {canUnify && (
+            <Button
+              variant="outline"
+              className="w-full sm:w-auto"
+              onClick={() => setUnificarModalOpen(true)}
+              disabled={completing || transferLoading}
+            >
+              <LinkIcon className="mr-2 h-4 w-4" />
+              Unificar Chamado
+            </Button>
+          )}
           {canTransfer && (
             <Button
               variant="outline"
@@ -2624,6 +2639,18 @@ export default function ChamadoDetalhes() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      <UnificarChamadoModal
+        isOpen={unificarModalOpen}
+        onClose={() => setUnificarModalOpen(false)}
+        sourceChamado={
+          chamado ? { id: chamado.id, titulo: chamado.titulo, pia: chamado.pia } : null
+        }
+        onSuccess={(destinoId) => {
+          setUnificarModalOpen(false)
+          navigate(`/dashboard/chamados/${destinoId}`)
+        }}
+      />
+
       <AlertDialog open={confirmReabrirOpen} onOpenChange={setConfirmReabrirOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>

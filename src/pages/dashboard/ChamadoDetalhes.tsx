@@ -61,6 +61,7 @@ import {
   MoreVertical,
   Eye,
   RotateCcw,
+  Pencil,
 } from 'lucide-react'
 import { supabase } from '@/lib/supabase/client'
 import { useAuth } from '@/hooks/use-auth'
@@ -175,6 +176,14 @@ export default function ChamadoDetalhes() {
   const [uploadingInternal, setUploadingInternal] = useState(false)
   const [viewingInternalId, setViewingInternalId] = useState<string | null>(null)
   const [viewingAnexoId, setViewingAnexoId] = useState<string | null>(null)
+
+  const [editingDoc, setEditingDoc] = useState<{
+    anexo: AnexoInterno
+    tipo: 'IDO' | 'Espelho'
+  } | null>(null)
+  const [editingDocLoading, setEditingDocLoading] = useState(false)
+  const [docFormData, setDocFormData] = useState<any>({})
+  const [savingDoc, setSavingDoc] = useState(false)
 
   const fileInputRef = useRef<HTMLInputElement>(null)
   const internalFileInputRef = useRef<HTMLInputElement>(null)
@@ -639,6 +648,133 @@ export default function ChamadoDetalhes() {
 
   const retryUpload = (item: FileItem) => {
     uploadFile(item)
+  }
+
+  const handleEditInternalDoc = async (anexo: AnexoInterno, tipo: 'IDO' | 'Espelho') => {
+    setEditingDocLoading(true)
+    try {
+      if (tipo === 'Espelho') {
+        const { data, error } = await supabase
+          .from('formularios_espelho_danos')
+          .select('*')
+          .eq('chamado_id', id)
+          .maybeSingle()
+
+        if (data) {
+          setDocFormData(data)
+          setEditingDoc({ anexo, tipo })
+        } else {
+          toast.error('Formulário não encontrado para este chamado.')
+        }
+      } else {
+        const { data, error } = await supabase
+          .from('formularios_ido')
+          .select('*')
+          .eq('chamado_id', id)
+          .maybeSingle()
+
+        if (data) {
+          setDocFormData(data)
+          setEditingDoc({ anexo, tipo })
+        } else {
+          toast.error('Formulário IDO não encontrado para este chamado.')
+        }
+      }
+    } catch (e) {
+      toast.error('Erro ao buscar dados do formulário.')
+    } finally {
+      setEditingDocLoading(false)
+    }
+  }
+
+  const handleSaveDocEdit = async () => {
+    if (!editingDoc) return
+    setSavingDoc(true)
+
+    try {
+      if (editingDoc.tipo === 'Espelho') {
+        const { id: formId, chamado_id, criado_em, atualizado_em, ...updateData } = docFormData
+        const { error: updateError } = await supabase
+          .from('formularios_espelho_danos')
+          .update(updateData)
+          .eq('chamado_id', id as string)
+
+        if (updateError) throw updateError
+
+        const { data: docData } = await supabase
+          .from('documentos')
+          .select('fotos_urls, foto_url')
+          .eq('chamado_id', id as string)
+          .in('tipo_documento', ['Espelho de Danos', 'Vistoria'])
+          .maybeSingle()
+
+        let fotos: string[] = []
+        if (docData) {
+          if (docData.foto_url) fotos.push(docData.foto_url)
+          if (docData.fotos_urls && Array.isArray(docData.fotos_urls)) {
+            fotos.push(...docData.fotos_urls)
+          }
+        }
+
+        const { data: pdfData, error: pdfError } = await supabase.functions.invoke('gerar-pdf', {
+          body: {
+            tipo_documento: 'espelho_danos',
+            id: id,
+            ...updateData,
+            fotos,
+          },
+        })
+
+        if (pdfError || !pdfData?.success) throw new Error('Erro ao gerar novo PDF')
+
+        await supabase
+          .from('anexos_chamado_interno')
+          .update({ arquivo_url: pdfData.url })
+          .eq('id', editingDoc.anexo.id)
+
+        toast.success('Documento atualizado com sucesso!')
+      } else {
+        const {
+          id: formId,
+          chamado_id,
+          criado_em,
+          atualizado_em,
+          assinatura_base64,
+          ...updateData
+        } = docFormData
+        const { error: updateError } = await supabase
+          .from('formularios_ido')
+          .update(updateData)
+          .eq('chamado_id', id as string)
+
+        if (updateError) throw updateError
+
+        const { data: pdfData, error: pdfError } = await supabase.functions.invoke('gerar-pdf', {
+          body: {
+            tipo_documento: 'IDO',
+            id: id,
+            ...updateData,
+          },
+        })
+
+        if (pdfError || !pdfData?.success) throw new Error('Erro ao gerar novo PDF IDO')
+
+        await supabase
+          .from('anexos_chamado_interno')
+          .update({ arquivo_url: pdfData.url })
+          .eq('id', editingDoc.anexo.id)
+
+        toast.success('Documento IDO atualizado com sucesso!')
+      }
+
+      fetchChamadoData()
+      setEditingDoc(null)
+    } catch (e: any) {
+      console.error(e)
+      toast.error(e.message || 'Erro ao salvar alterações.')
+    } finally {
+      setSavingDoc(false)
+    }
   }
 
   const handleInternalFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -1609,6 +1745,34 @@ export default function ChamadoDetalhes() {
                       </div>
                     </div>
                     <div className="flex items-center gap-2 shrink-0 ml-4">
+                      {isSupport &&
+                        (anexo.nome_arquivo.toLowerCase().includes('ido') ||
+                          anexo.nome_arquivo.toLowerCase().includes('boletim')) && (
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            className="h-8 w-8 text-slate-500 hover:text-blue-600"
+                            onClick={() => handleEditInternalDoc(anexo, 'IDO')}
+                            disabled={editingDocLoading}
+                            title="Editar IDO"
+                          >
+                            <Pencil className="h-4 w-4" />
+                          </Button>
+                        )}
+                      {isSupport &&
+                        (anexo.nome_arquivo.toLowerCase().includes('espelho') ||
+                          anexo.nome_arquivo.toLowerCase().includes('danos')) && (
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            className="h-8 w-8 text-slate-500 hover:text-blue-600"
+                            onClick={() => handleEditInternalDoc(anexo, 'Espelho')}
+                            disabled={editingDocLoading}
+                            title="Editar Espelho de Danos"
+                          >
+                            <Pencil className="h-4 w-4" />
+                          </Button>
+                        )}
                       <Button
                         size="icon"
                         variant="ghost"
@@ -2056,6 +2220,329 @@ export default function ChamadoDetalhes() {
             <Button onClick={handleTransferir} disabled={!selectedResponsavel || transferLoading}>
               {transferLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               {transferLoading ? 'Transferindo chamado...' : 'Transferir'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      <Dialog open={!!editingDoc} onOpenChange={(open) => !open && setEditingDoc(null)}>
+        <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>
+              Editar{' '}
+              {editingDoc?.tipo === 'IDO' ? 'Boletim de Ocorrência (IDO)' : 'Espelho de Danos'}
+            </DialogTitle>
+          </DialogHeader>
+          <div className="py-4 space-y-4">
+            {editingDoc?.tipo === 'IDO' && (
+              <div className="grid gap-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label>Protocolo IDO</Label>
+                    <Input
+                      value={docFormData.protocolo_ido || ''}
+                      onChange={(e) =>
+                        setDocFormData({ ...docFormData, protocolo_ido: e.target.value })
+                      }
+                      disabled={savingDoc}
+                    />
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label>Colaborador Nome</Label>
+                    <Input
+                      value={docFormData.colaborador_nome || ''}
+                      onChange={(e) =>
+                        setDocFormData({ ...docFormData, colaborador_nome: e.target.value })
+                      }
+                      disabled={savingDoc}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Colaborador Registro</Label>
+                    <Input
+                      value={docFormData.colaborador_registro || ''}
+                      onChange={(e) =>
+                        setDocFormData({ ...docFormData, colaborador_registro: e.target.value })
+                      }
+                      disabled={savingDoc}
+                    />
+                  </div>
+                </div>
+
+                <div className="pt-4 border-t">
+                  <h4 className="font-semibold text-sm mb-3">Testemunha 1</h4>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label>Nome</Label>
+                      <Input
+                        value={docFormData.testemunha_1_nome || ''}
+                        onChange={(e) =>
+                          setDocFormData({ ...docFormData, testemunha_1_nome: e.target.value })
+                        }
+                        disabled={savingDoc}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Telefone</Label>
+                      <Input
+                        value={docFormData.testemunha_1_telefone || ''}
+                        onChange={(e) =>
+                          setDocFormData({ ...docFormData, testemunha_1_telefone: e.target.value })
+                        }
+                        disabled={savingDoc}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>SG</Label>
+                      <Input
+                        value={docFormData.testemunha_1_sg || ''}
+                        onChange={(e) =>
+                          setDocFormData({ ...docFormData, testemunha_1_sg: e.target.value })
+                        }
+                        disabled={savingDoc}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Endereço</Label>
+                      <Input
+                        value={docFormData.testemunha_1_endereco || ''}
+                        onChange={(e) =>
+                          setDocFormData({ ...docFormData, testemunha_1_endereco: e.target.value })
+                        }
+                        disabled={savingDoc}
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                <div className="pt-4 border-t">
+                  <h4 className="font-semibold text-sm mb-3">Testemunha 2</h4>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label>Nome</Label>
+                      <Input
+                        value={docFormData.testemunha_2_nome || ''}
+                        onChange={(e) =>
+                          setDocFormData({ ...docFormData, testemunha_2_nome: e.target.value })
+                        }
+                        disabled={savingDoc}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Telefone</Label>
+                      <Input
+                        value={docFormData.testemunha_2_telefone || ''}
+                        onChange={(e) =>
+                          setDocFormData({ ...docFormData, testemunha_2_telefone: e.target.value })
+                        }
+                        disabled={savingDoc}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>SG</Label>
+                      <Input
+                        value={docFormData.testemunha_2_sg || ''}
+                        onChange={(e) =>
+                          setDocFormData({ ...docFormData, testemunha_2_sg: e.target.value })
+                        }
+                        disabled={savingDoc}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Endereço</Label>
+                      <Input
+                        value={docFormData.testemunha_2_endereco || ''}
+                        onChange={(e) =>
+                          setDocFormData({ ...docFormData, testemunha_2_endereco: e.target.value })
+                        }
+                        disabled={savingDoc}
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                <div className="pt-4 border-t">
+                  <h4 className="font-semibold text-sm mb-3">Testemunha 3</h4>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label>Nome</Label>
+                      <Input
+                        value={docFormData.testemunha_3_nome || ''}
+                        onChange={(e) =>
+                          setDocFormData({ ...docFormData, testemunha_3_nome: e.target.value })
+                        }
+                        disabled={savingDoc}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Telefone</Label>
+                      <Input
+                        value={docFormData.testemunha_3_telefone || ''}
+                        onChange={(e) =>
+                          setDocFormData({ ...docFormData, testemunha_3_telefone: e.target.value })
+                        }
+                        disabled={savingDoc}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>SG</Label>
+                      <Input
+                        value={docFormData.testemunha_3_sg || ''}
+                        onChange={(e) =>
+                          setDocFormData({ ...docFormData, testemunha_3_sg: e.target.value })
+                        }
+                        disabled={savingDoc}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Endereço</Label>
+                      <Input
+                        value={docFormData.testemunha_3_endereco || ''}
+                        onChange={(e) =>
+                          setDocFormData({ ...docFormData, testemunha_3_endereco: e.target.value })
+                        }
+                        disabled={savingDoc}
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {editingDoc?.tipo === 'Espelho' && (
+              <div className="grid gap-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label>Número OS</Label>
+                    <Input
+                      value={docFormData.numero_os || ''}
+                      onChange={(e) =>
+                        setDocFormData({ ...docFormData, numero_os: e.target.value })
+                      }
+                      disabled={savingDoc}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Garagem</Label>
+                    <Input
+                      value={docFormData.garagem || ''}
+                      onChange={(e) => setDocFormData({ ...docFormData, garagem: e.target.value })}
+                      disabled={savingDoc}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Data</Label>
+                    <Input
+                      type="date"
+                      value={docFormData.data || ''}
+                      onChange={(e) => setDocFormData({ ...docFormData, data: e.target.value })}
+                      disabled={savingDoc}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Horário</Label>
+                    <Input
+                      type="time"
+                      value={docFormData.horario || ''}
+                      onChange={(e) => setDocFormData({ ...docFormData, horario: e.target.value })}
+                      disabled={savingDoc}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Ocorrência</Label>
+                    <Input
+                      value={docFormData.ocorrencia || ''}
+                      onChange={(e) =>
+                        setDocFormData({ ...docFormData, ocorrencia: e.target.value })
+                      }
+                      disabled={savingDoc}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Linha</Label>
+                    <Input
+                      value={docFormData.linha || ''}
+                      onChange={(e) => setDocFormData({ ...docFormData, linha: e.target.value })}
+                      disabled={savingDoc}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Número Carro</Label>
+                    <Input
+                      value={docFormData.numero_carro || ''}
+                      onChange={(e) =>
+                        setDocFormData({ ...docFormData, numero_carro: e.target.value })
+                      }
+                      disabled={savingDoc}
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Descrição dos Danos</Label>
+                  <Textarea
+                    value={docFormData.descricao_danos || ''}
+                    onChange={(e) =>
+                      setDocFormData({ ...docFormData, descricao_danos: e.target.value })
+                    }
+                    disabled={savingDoc}
+                    className="min-h-[100px]"
+                  />
+                </div>
+
+                <div className="grid grid-cols-2 gap-4 border-t pt-4">
+                  <div className="space-y-2">
+                    <Label>Nome Vistoriador</Label>
+                    <Input
+                      value={docFormData.nome_vistoriador || ''}
+                      onChange={(e) =>
+                        setDocFormData({ ...docFormData, nome_vistoriador: e.target.value })
+                      }
+                      disabled={savingDoc}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Registro Vistoriador</Label>
+                    <Input
+                      value={docFormData.registro_vistoriador || ''}
+                      onChange={(e) =>
+                        setDocFormData({ ...docFormData, registro_vistoriador: e.target.value })
+                      }
+                      disabled={savingDoc}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Nome Motorista</Label>
+                    <Input
+                      value={docFormData.nome_motorista || ''}
+                      onChange={(e) =>
+                        setDocFormData({ ...docFormData, nome_motorista: e.target.value })
+                      }
+                      disabled={savingDoc}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Registro Motorista</Label>
+                    <Input
+                      value={docFormData.registro_motorista || ''}
+                      onChange={(e) =>
+                        setDocFormData({ ...docFormData, registro_motorista: e.target.value })
+                      }
+                      disabled={savingDoc}
+                    />
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditingDoc(null)} disabled={savingDoc}>
+              Cancelar
+            </Button>
+            <Button onClick={handleSaveDocEdit} disabled={savingDoc}>
+              {savingDoc && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              {savingDoc ? 'Salvando...' : 'Salvar'}
             </Button>
           </DialogFooter>
         </DialogContent>

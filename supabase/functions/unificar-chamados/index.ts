@@ -78,42 +78,8 @@ Deno.serve(async (req: Request) => {
     if (destinoError || !destino) throw new Error('Chamado de destino não encontrado')
 
     // Data Integrity Protection: Safeguard specific fields
-    // We merge secondary fields IF they are missing on destination, but we strictly DO NOT UPDATE the protected fields.
-    const updateDestino: Record<string, any> = {}
-    const fieldsToMerge = [
-      'carro',
-      'linha',
-      'local_ocorrencia',
-      'nome_cobrador',
-      'nome_motorista',
-      'numero_os',
-      'operacao',
-      'registro_cobrador',
-      'registro_motorista',
-    ]
-
-    for (const field of fieldsToMerge) {
-      if (!destino[field] && origem[field]) {
-        updateDestino[field] = origem[field]
-      }
-    }
-
-    // EXPLICIT PROTECTION LOGIC
-    // Ensure we do not overwrite the destination's primary context.
-    delete updateDestino['pia']
-    delete updateDestino['titulo']
-    delete updateDestino['tipo_chamado']
-    delete updateDestino['prioridade']
-
-    if (Object.keys(updateDestino).length > 0) {
-      await supabaseAdmin
-        .from('chamados')
-        .update({
-          ...updateDestino,
-          atualizado_em: new Date().toISOString(),
-        })
-        .eq('id', destino_id)
-    }
+    // Ensure we do not overwrite the destination's primary context (pia, titulo, tipo_chamado, prioridade)
+    // Only moving explicitly requested related tables.
 
     // Start data migration:
     // Update respostas_chamado
@@ -125,30 +91,6 @@ Deno.serve(async (req: Request) => {
     // Update anexos_chamado
     await supabaseAdmin
       .from('anexos_chamado')
-      .update({ chamado_id: destino_id })
-      .eq('chamado_id', origem_id)
-
-    // Update anexos_chamado_interno
-    await supabaseAdmin
-      .from('anexos_chamado_interno')
-      .update({ chamado_id: destino_id })
-      .eq('chamado_id', origem_id)
-
-    // Update documentos
-    await supabaseAdmin
-      .from('documentos')
-      .update({ chamado_id: destino_id })
-      .eq('chamado_id', origem_id)
-
-    // Update formularios_espelho_danos
-    await supabaseAdmin
-      .from('formularios_espelho_danos')
-      .update({ chamado_id: destino_id })
-      .eq('chamado_id', origem_id)
-
-    // Update formularios_ido
-    await supabaseAdmin
-      .from('formularios_ido')
       .update({ chamado_id: destino_id })
       .eq('chamado_id', origem_id)
 

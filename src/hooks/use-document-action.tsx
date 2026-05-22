@@ -21,7 +21,8 @@ export function useDocumentAction() {
         if (parts.length === 2) {
           const pathParts = parts[1].split('/')
           const bucketName = pathParts[0]
-          const filePath = pathParts.slice(1).join('/')
+          const filePathWithQuery = pathParts.slice(1).join('/')
+          const filePath = filePathWithQuery.split('?')[0]
 
           const { data, error } = await supabase.storage
             .from(bucketName)

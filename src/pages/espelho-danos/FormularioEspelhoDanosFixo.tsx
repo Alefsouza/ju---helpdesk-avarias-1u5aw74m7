@@ -101,6 +101,19 @@ export default function FormularioEspelhoDanosFixo() {
       const dataStr = format(now, 'yyyy-MM-dd')
       const horarioStr = format(now, 'HH:mm')
       const espelhoId = crypto.randomUUID()
+
+      const { fotos_dano, ...formValuesToSave } = values
+
+      const { error: espelhoError } = await supabase.from('formularios_espelho_danos').insert({
+        id: espelhoId,
+        chamado_id: null,
+        data: dataStr,
+        horario: horarioStr,
+        ...formValuesToSave,
+      } as any)
+
+      if (espelhoError) throw new Error('Erro ao salvar os dados do formulário')
+
       const fotosUrls: string[] = []
 
       if (values.fotos_dano && values.fotos_dano.length > 0) {
@@ -330,13 +343,13 @@ export default function FormularioEspelhoDanosFixo() {
         throw new Error('Erro ao gerar documento. Tente novamente')
       }
 
-      const fileName = `ESPELHO_DE_DANOS_${Date.now()}.pdf`
+      const fileName = `ESPELHO_DE_DANOS_${espelhoId}.pdf`
 
       const { error: uploadError } = await supabase.storage
         .from('documentos')
         .upload(fileName, pdfBlob, {
           contentType: 'application/pdf',
-          upsert: false,
+          upsert: true,
         })
 
       if (uploadError) throw new Error('Erro ao salvar documento. Tente novamente')
@@ -361,6 +374,7 @@ export default function FormularioEspelhoDanosFixo() {
         chamado_id: null,
         foto_url: fotosUrls.length > 0 ? fotosUrls[0] : null,
         fotos_urls: fotosUrls,
+        formulario_id: espelhoId,
       } as any)
 
       if (docError) {

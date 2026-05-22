@@ -195,7 +195,9 @@ Deno.serve(async (req: Request) => {
         }
       }
 
-      fileName = `espelho_danos_${id}_${Date.now()}.pdf`
+      fileName = body.espelho_id
+        ? `ESPELHO_DE_DANOS_${body.espelho_id}.pdf`
+        : `espelho_danos_${id}_${Date.now()}.pdf`
     }
 
     const pdfBytes = await pdfDoc.save()
@@ -213,7 +215,7 @@ Deno.serve(async (req: Request) => {
       .from(bucket)
       .upload(filePath, pdfBytes, {
         contentType: 'application/pdf',
-        upsert: false,
+        upsert: true,
       })
 
     if (uploadError) {

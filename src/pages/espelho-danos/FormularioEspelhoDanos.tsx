@@ -388,6 +388,7 @@ export default function FormularioEspelhoDanos() {
         chamado_id: id,
         foto_url: fotosUrls.length > 0 ? fotosUrls[0] : null,
         fotos_urls: fotosUrls,
+        formulario_id: espelhoId,
       } as any)
 
       if (docError) {

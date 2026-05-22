@@ -660,17 +660,36 @@ export default function ChamadoDetalhes() {
     setEditingDocLoading(true)
     try {
       if (tipo === 'Espelho') {
-        const { data, error } = await supabase
-          .from('formularios_espelho_danos')
-          .select('*')
-          .eq('chamado_id', id)
-          .order('criado_em', { ascending: false })
-          .limit(1)
-          .maybeSingle()
+        let espelhoId = null
+        const match = anexo.nome_arquivo.match(/ESPELHO_DE_DANOS_([a-f0-9-]+)\.pdf/i)
+        if (match) espelhoId = match[1]
 
-        if (error) throw error
+        let formData = null
 
-        let formData = data
+        if (espelhoId) {
+          const { data, error } = await supabase
+            .from('formularios_espelho_danos')
+            .select('*')
+            .eq('id', espelhoId)
+            .single()
+
+          if (!error && data) {
+            formData = data
+          }
+        }
+
+        if (!formData) {
+          const { data, error } = await supabase
+            .from('formularios_espelho_danos')
+            .select('*')
+            .eq('chamado_id', id)
+            .order('criado_em', { ascending: false })
+            .limit(1)
+            .maybeSingle()
+
+          if (!error && data) formData = data
+        }
+
         if (!formData) {
           const { data: docData, error: docError } = await supabase
             .from('documentos')
@@ -770,6 +789,7 @@ export default function ChamadoDetalhes() {
             id: id,
             ...updateData,
             fotos,
+            espelho_id: formId || undefined,
           },
         })
 
@@ -784,6 +804,40 @@ export default function ChamadoDetalhes() {
             nome_arquivo: pdfData.nome_arquivo || editingDoc.anexo.nome_arquivo,
           })
           .eq('id', editingDoc.anexo.id)
+
+        // Also update the related record in documentos table
+        let matchDoc = null
+        if (formId) {
+          const { data: docById } = await supabase
+            .from('documentos')
+            .select('id')
+            .eq('formulario_id', formId)
+            .maybeSingle()
+          if (docById) matchDoc = docById
+        }
+
+        if (!matchDoc) {
+          // Fallback to name or url matching
+          const oldFileName = editingDoc.anexo.nome_arquivo
+          const { data: docByName } = await supabase
+            .from('documentos')
+            .select('id')
+            .eq('chamado_id', id as string)
+            .eq('nome_arquivo', oldFileName)
+            .maybeSingle()
+          if (docByName) matchDoc = docByName
+        }
+
+        if (matchDoc) {
+          await supabase
+            .from('documentos')
+            .update({
+              arquivo_url: newUrl,
+              nome_arquivo: pdfData.nome_arquivo || editingDoc.anexo.nome_arquivo,
+              atualizado_em: new Date().toISOString(),
+            })
+            .eq('id', matchDoc.id)
+        }
 
         await supabase.from('historico_chamado').insert({
           chamado_id: id as string,
@@ -917,7 +971,8 @@ export default function ChamadoDetalhes() {
     if (!window.confirm('Tem certeza que deseja deletar este anexo interno?')) return
 
     try {
-      const urlParts = url.split('/')
+      const urlWithoutQuery = url.split('?')[0]
+      const urlParts = urlWithoutQuery.split('/')
       const fileName = urlParts[urlParts.length - 1]
       const fileIdFolder = urlParts[urlParts.length - 2]
       const path = `${fileIdFolder}/${fileName}`
@@ -938,7 +993,8 @@ export default function ChamadoDetalhes() {
     try {
       setViewingInternalId(anexo.id)
       const urlParts = anexo.arquivo_url.split('/anexos_chamados_interno/')
-      const path = urlParts.length > 1 ? urlParts[1] : null
+      const pathWithQuery = urlParts.length > 1 ? urlParts[1] : null
+      const path = pathWithQuery ? pathWithQuery.split('?')[0] : null
 
       let blob: Blob
 
@@ -971,7 +1027,8 @@ export default function ChamadoDetalhes() {
   const handleDownloadInternal = async (anexo: AnexoInterno) => {
     try {
       const urlParts = anexo.arquivo_url.split('/anexos_chamados_interno/')
-      const path = urlParts.length > 1 ? urlParts[1] : null
+      const pathWithQuery = urlParts.length > 1 ? urlParts[1] : null
+      const path = pathWithQuery ? pathWithQuery.split('?')[0] : null
 
       let blob: Blob
 
@@ -1012,7 +1069,8 @@ export default function ChamadoDetalhes() {
       splitStr = '/anexos/'
     }
     const urlParts = url.split(splitStr)
-    const path = urlParts.length > 1 ? urlParts[1] : null
+    const pathWithQuery = urlParts.length > 1 ? urlParts[1] : null
+    const path = pathWithQuery ? pathWithQuery.split('?')[0] : null
     return { bucket, path }
   }
 

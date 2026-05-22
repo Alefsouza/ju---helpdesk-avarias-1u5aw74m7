@@ -1421,9 +1421,7 @@ export default function ChamadoDetalhes() {
                             <SelectValue placeholder="Selecione uma prioridade" />
                           </SelectTrigger>
                           <SelectContent>
-                            <SelectItem value="baixa">Baixa</SelectItem>
                             <SelectItem value="media">Média</SelectItem>
-                            <SelectItem value="alta">Alta</SelectItem>
                             <SelectItem value="urgente">Urgente</SelectItem>
                           </SelectContent>
                         </Select>

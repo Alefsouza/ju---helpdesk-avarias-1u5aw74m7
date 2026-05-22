@@ -34,6 +34,8 @@ const getBadgeStyles = (tipo: string) => {
       return 'border-red-200 text-red-700 bg-red-50'
     case 'juridico':
       return 'border-teal-200 text-teal-700 bg-teal-50'
+    case 'basico':
+      return 'border-gray-200 text-gray-700 bg-gray-50'
     default:
       return 'border-blue-200 text-blue-700 bg-blue-50'
   }
@@ -51,6 +53,8 @@ const getRoleLabel = (tipo: string) => {
       return 'SOS'
     case 'juridico':
       return 'Jurídico'
+    case 'basico':
+      return 'Básico'
     default:
       return 'Responsável'
   }
@@ -75,8 +79,8 @@ export function GestaoEquipe() {
     <Card>
       <CardHeader className="flex flex-row items-center justify-between">
         <div>
-          <CardTitle>Gestão de Responsáveis</CardTitle>
-          <CardDescription>Gerencie a equipe de suporte e administradores.</CardDescription>
+          <CardTitle>Gestão de Usuários</CardTitle>
+          <CardDescription>Gerencie os usuários e suas permissões de acesso.</CardDescription>
         </div>
         <Button onClick={openNewModal}>
           <Plus className="h-4 w-4 mr-2" /> Novo

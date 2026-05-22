@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { supabase } from '@/lib/supabase/client'
 import { toast } from 'sonner'
-import { deleteAdminUser } from '@/services/manage-users'
+import { deleteAdminUser, updateAdminUser } from '@/services/manage-users'
 
 export function useGestaoEquipe() {
   const [users, setUsers] = useState<any[]>([])
@@ -12,7 +12,6 @@ export function useGestaoEquipe() {
     const { data } = await supabase
       .from('perfil_usuario')
       .select('*')
-      .in('tipo_usuario', ['responsavel', 'admin', 'vistoriador', 'coc', 'sos', 'juridico'])
       .order('criado_em', { ascending: false })
     if (data) setUsers(data)
     setLoading(false)
@@ -24,14 +23,13 @@ export function useGestaoEquipe() {
 
   const toggleActive = async (u: any) => {
     const newStatus = !u.ativo
-    const { error } = await supabase
-      .from('perfil_usuario')
-      .update({ ativo: newStatus })
-      .eq('id', u.id)
-    if (error) toast.error('Erro ao alterar status')
-    else {
+    try {
+      const { data, error } = await updateAdminUser(u.id, { ativo: newStatus })
+      if (error || data?.error) throw error || new Error(data?.error)
       toast.success(`Usuário ${newStatus ? 'ativado' : 'desativado'} com sucesso`)
       loadUsers()
+    } catch (err: any) {
+      toast.error(err.message || 'Erro ao alterar status')
     }
   }
 

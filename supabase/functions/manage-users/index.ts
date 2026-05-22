@@ -42,7 +42,7 @@ Deno.serve(async (req: Request) => {
     const { action } = body
 
     if (action === 'create') {
-      const { email, nome_completo, tipo_usuario } = body
+      const { email, nome_completo, tipo_usuario, ativo, whatsapp, endereco } = body
 
       const { data: newUser, error: createError } = await supabaseAdmin.auth.admin.createUser({
         email,
@@ -53,15 +53,42 @@ Deno.serve(async (req: Request) => {
 
       if (createError) throw createError
 
+      const updateData: any = { tipo_usuario, nome_completo }
+      if (ativo !== undefined) updateData.ativo = ativo
+      if (whatsapp !== undefined) updateData.whatsapp = whatsapp
+      if (endereco !== undefined) updateData.endereco = endereco
+
       // Update profile created by the database trigger
       const { error: updateError } = await supabaseAdmin
         .from('perfil_usuario')
-        .update({ tipo_usuario, nome_completo })
+        .update(updateData)
         .eq('id', newUser.user.id)
 
       if (updateError) throw updateError
 
       return new Response(JSON.stringify({ user: newUser.user }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      })
+    }
+
+    if (action === 'update') {
+      const { userId, nome_completo, tipo_usuario, ativo, whatsapp, endereco } = body
+
+      const updateData: any = {}
+      if (nome_completo !== undefined) updateData.nome_completo = nome_completo
+      if (tipo_usuario !== undefined) updateData.tipo_usuario = tipo_usuario
+      if (ativo !== undefined) updateData.ativo = ativo
+      if (whatsapp !== undefined) updateData.whatsapp = whatsapp
+      if (endereco !== undefined) updateData.endereco = endereco
+
+      const { error: updateError } = await supabaseAdmin
+        .from('perfil_usuario')
+        .update(updateData)
+        .eq('id', userId)
+
+      if (updateError) throw updateError
+
+      return new Response(JSON.stringify({ success: true }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       })
     }

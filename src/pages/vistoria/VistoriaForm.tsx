@@ -38,8 +38,6 @@ import logoColorido from '@/assets/whatsapp-image-2023-08-10-at-16.17.31-0b937.j
 
 const formSchema = z.object({
   garagem: z.string().min(1, 'Campo obrigatório'),
-  data: z.string().min(1, 'Campo obrigatório'),
-  horario: z.string().min(1, 'Campo obrigatório'),
   ocorrencia: z.enum(['Sim', 'Não'], { required_error: 'Campo obrigatório' }),
   linha: z.string().min(1, 'Campo obrigatório'),
   numero_carro: z.string().min(1, 'Campo obrigatório'),
@@ -65,8 +63,6 @@ export default function VistoriaForm() {
     resolver: zodResolver(formSchema),
     defaultValues: {
       garagem: '',
-      data: new Date().toISOString().split('T')[0],
-      horario: new Date().toTimeString().substring(0, 5),
       ocorrencia: 'Não',
       linha: '',
       numero_carro: '',
@@ -127,10 +123,24 @@ export default function VistoriaForm() {
         uploadedUrls.push(publicUrl)
       }
 
+      const now = new Date()
+      const currentDate =
+        now.getFullYear() +
+        '-' +
+        String(now.getMonth() + 1).padStart(2, '0') +
+        '-' +
+        String(now.getDate()).padStart(2, '0')
+      const currentTime =
+        String(now.getHours()).padStart(2, '0') +
+        ':' +
+        String(now.getMinutes()).padStart(2, '0') +
+        ':' +
+        String(now.getSeconds()).padStart(2, '0')
+
       // Bypass TypeScript checking for newly added columns in migration
       const docData = {
         tipo_documento: 'Vistoria',
-        nome_arquivo: `Vistoria - ${values.data} - ${values.horario}`,
+        nome_arquivo: `Vistoria - ${currentDate} - ${currentTime}`,
         arquivo_url: '', // Initially empty, will be filled with PDF url when OS is linked
         fotos_urls: uploadedUrls,
         chamado_id: chamadoId || null,
@@ -141,8 +151,8 @@ export default function VistoriaForm() {
       } as any
 
       docData.garagem = values.garagem
-      docData.data = values.data
-      docData.horario = values.horario
+      docData.data = currentDate
+      docData.horario = currentTime
       docData.ocorrencia = values.ocorrencia
       docData.linha = values.linha
       docData.numero_carro = values.numero_carro
@@ -228,32 +238,6 @@ export default function VistoriaForm() {
                       <FormLabel>Número do Carro</FormLabel>
                       <FormControl>
                         <Input placeholder="Ex: 8123" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="data"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Data</FormLabel>
-                      <FormControl>
-                        <Input type="date" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="horario"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Horário</FormLabel>
-                      <FormControl>
-                        <Input type="time" {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>

@@ -204,6 +204,7 @@ export type Database = {
           ocorrencia: string | null
           registro_motorista: string | null
           registro_responsavel: string | null
+          status_liberacao: string | null
           tipo_documento: string
         }
         Insert: {
@@ -228,6 +229,7 @@ export type Database = {
           ocorrencia?: string | null
           registro_motorista?: string | null
           registro_responsavel?: string | null
+          status_liberacao?: string | null
           tipo_documento: string
         }
         Update: {
@@ -252,6 +254,7 @@ export type Database = {
           ocorrencia?: string | null
           registro_motorista?: string | null
           registro_responsavel?: string | null
+          status_liberacao?: string | null
           tipo_documento?: string
         }
         Relationships: [
@@ -522,6 +525,10 @@ export type Database = {
       is_responsavel: { Args: never; Returns: boolean }
       is_sos: { Args: never; Returns: boolean }
       is_vistoriador: { Args: never; Returns: boolean }
+      liberar_veiculo_manutencao: {
+        Args: { p_id: string; p_status: string }
+        Returns: undefined
+      }
       ocultar_documento_manutencao: {
         Args: { p_id: string }
         Returns: undefined
@@ -752,6 +759,7 @@ export const Constants = {
 //   nome_motorista: text (nullable)
 //   excluido_manutencao: boolean (not null, default: false)
 //   numero_carro: text (nullable)
+//   status_liberacao: text (nullable)
 // Table: formularios_espelho_danos
 //   id: uuid (not null, default: gen_random_uuid())
 //   chamado_id: uuid (not null)
@@ -1016,6 +1024,20 @@ export const Constants = {
 //     RETURN EXISTS (
 //       SELECT 1 FROM public.perfil_usuario WHERE id = auth.uid() AND tipo_usuario = 'vistoriador'
 //     );
+//   END;
+//   $function$
+//
+// FUNCTION liberar_veiculo_manutencao(uuid, text)
+//   CREATE OR REPLACE FUNCTION public.liberar_veiculo_manutencao(p_id uuid, p_status text)
+//    RETURNS void
+//    LANGUAGE plpgsql
+//    SECURITY DEFINER
+//   AS $function$
+//   BEGIN
+//     UPDATE public.documentos
+//     SET excluido_manutencao = TRUE,
+//         status_liberacao = p_status
+//     WHERE id = p_id;
 //   END;
 //   $function$
 //

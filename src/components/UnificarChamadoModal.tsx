@@ -19,13 +19,13 @@ import { Badge } from '@/components/ui/badge'
 export function UnificarChamadoModal({
   isOpen,
   onClose,
-  sourceChamado,
+  targetChamado,
   onSuccess,
 }: {
   isOpen: boolean
   onClose: () => void
-  sourceChamado: { id: string; titulo: string; pia?: string } | null
-  onSuccess: (destinoId: string) => void
+  targetChamado: { id: string; titulo: string; pia?: string } | null
+  onSuccess: () => void
 }) {
   const [searchTerm, setSearchTerm] = useState('')
   const [debouncedSearch, setDebouncedSearch] = useState('')
@@ -49,13 +49,13 @@ export function UnificarChamadoModal({
 
   useEffect(() => {
     const fetchChamados = async () => {
-      if (!isOpen || !sourceChamado) return
+      if (!isOpen || !targetChamado) return
       setLoading(true)
 
       let query = supabase
         .from('chamados')
         .select('id, titulo, status, pia, prioridade, criado_em')
-        .neq('id', sourceChamado.id)
+        .neq('id', targetChamado.id)
         .in('status', ['aberto', 'em_atendimento'])
         .order('criado_em', { ascending: false })
         .limit(20)
@@ -83,17 +83,17 @@ export function UnificarChamadoModal({
     }
 
     fetchChamados()
-  }, [debouncedSearch, isOpen, sourceChamado])
+  }, [debouncedSearch, isOpen, targetChamado])
 
   const handleUnificar = async () => {
-    if (!sourceChamado || !selectedId) return
+    if (!targetChamado || !selectedId) return
 
     setSubmitting(true)
     try {
       const { data, error } = await supabase.functions.invoke('unificar-chamados', {
         body: {
-          origem_id: sourceChamado.id,
-          destino_id: selectedId,
+          origem_id: selectedId,
+          destino_id: targetChamado.id,
         },
       })
 
@@ -102,7 +102,7 @@ export function UnificarChamadoModal({
       }
 
       toast.success('Chamado unificado com sucesso!')
-      onSuccess(selectedId)
+      onSuccess()
     } catch (err: any) {
       console.error(err)
       toast.error(err.message || 'Erro ao unificar chamados. Verifique as permissões.')
@@ -119,22 +119,24 @@ export function UnificarChamadoModal({
         <DialogHeader>
           <DialogTitle>Unificar Chamado</DialogTitle>
           <DialogDescription>
-            Selecione o chamado de destino. Todas as mensagens, anexos e histórico deste chamado
-            serão movidos para o destino, e este chamado será finalizado.
+            Selecione o chamado de origem. Todas as mensagens, anexos e histórico do chamado
+            selecionado serão movidos para o chamado atual, e o chamado selecionado será finalizado.
           </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-4 py-4">
           <div className="bg-slate-50 p-3 rounded-lg border text-sm">
-            <span className="font-semibold text-slate-700 block mb-1">Chamado de Origem:</span>
-            <div className="font-medium">{sourceChamado?.titulo}</div>
-            <div className="text-slate-500 text-xs mt-1">ID: {sourceChamado?.id}</div>
+            <span className="font-semibold text-slate-700 block mb-1">
+              Chamado Atual (Destino):
+            </span>
+            <div className="font-medium">{targetChamado?.titulo}</div>
+            <div className="text-slate-500 text-xs mt-1">ID: {targetChamado?.id}</div>
           </div>
 
           <div className="relative">
             <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-slate-500" />
             <Input
-              placeholder="Buscar chamado de destino por título, R.A. ou ID..."
+              placeholder="Buscar chamado de origem por título, R.A. ou ID..."
               className="pl-9"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
@@ -149,7 +151,7 @@ export function UnificarChamadoModal({
                 </div>
               ) : chamados.length === 0 ? (
                 <div className="text-center p-8 text-slate-500 text-sm">
-                  Nenhum chamado de destino encontrado.
+                  Nenhum chamado de origem encontrado.
                 </div>
               ) : (
                 <div className="p-2 space-y-1">
@@ -189,8 +191,9 @@ export function UnificarChamadoModal({
             <div className="bg-amber-50 border border-amber-200 text-amber-800 text-sm p-3 rounded-md flex gap-2">
               <LinkIcon className="h-5 w-5 shrink-0 mt-0.5 text-amber-600" />
               <div>
-                <strong>Atenção:</strong> Os dados serão movidos para o chamado{' '}
-                <strong>{selectedTicket.titulo}</strong>. Esta ação não poderá ser desfeita.
+                <strong>Atenção:</strong> Os dados do chamado{' '}
+                <strong>{selectedTicket.titulo}</strong> serão movidos para o chamado atual. O
+                chamado selecionado será finalizado.
               </div>
             </div>
           )}

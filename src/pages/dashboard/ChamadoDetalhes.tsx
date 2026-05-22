@@ -2642,12 +2642,12 @@ export default function ChamadoDetalhes() {
       <UnificarChamadoModal
         isOpen={unificarModalOpen}
         onClose={() => setUnificarModalOpen(false)}
-        sourceChamado={
+        targetChamado={
           chamado ? { id: chamado.id, titulo: chamado.titulo, pia: chamado.pia } : null
         }
-        onSuccess={(destinoId) => {
+        onSuccess={() => {
           setUnificarModalOpen(false)
-          navigate(`/dashboard/chamados/${destinoId}`)
+          fetchChamadoData()
         }}
       />
 

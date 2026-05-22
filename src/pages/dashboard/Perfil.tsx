@@ -15,6 +15,13 @@ import {
   FormMessage,
 } from '@/components/ui/form'
 import { Input } from '@/components/ui/input'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import { useToast } from '@/hooks/use-toast'
 import { Skeleton } from '@/components/ui/skeleton'
 import {
@@ -39,6 +46,7 @@ const formSchema = z.object({
   nome_completo: z.string().min(1, 'Nome completo é obrigatório'),
   whatsapp: z.string().optional(),
   endereco: z.string().optional(),
+  garagem: z.string().optional(),
 })
 
 type FormValues = z.infer<typeof formSchema>
@@ -82,6 +90,7 @@ export default function Perfil() {
       nome_completo: '',
       whatsapp: '',
       endereco: '',
+      garagem: '',
     },
   })
 
@@ -149,7 +158,7 @@ export default function Perfil() {
       try {
         const { data, error } = await supabase
           .from('perfil_usuario')
-          .select('nome_completo, whatsapp, endereco, email, foto_url')
+          .select('nome_completo, whatsapp, endereco, email, foto_url, garagem')
           .eq('id', user.id)
           .single()
 
@@ -162,6 +171,7 @@ export default function Perfil() {
             nome_completo: data.nome_completo || '',
             whatsapp: data.whatsapp || '',
             endereco: data.endereco || '',
+            garagem: data.garagem || '',
           })
         }
       } catch (error) {
@@ -293,6 +303,7 @@ export default function Perfil() {
           nome_completo: values.nome_completo,
           whatsapp: values.whatsapp || null,
           endereco: values.endereco || null,
+          garagem: values.garagem || null,
           atualizado_em: new Date().toISOString(),
         })
         .eq('id', user.id)
@@ -460,6 +471,28 @@ export default function Perfil() {
                     <FormControl>
                       <Input placeholder="Seu endereço completo" {...field} />
                     </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="garagem"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Garagem</FormLabel>
+                    <Select onValueChange={field.onChange} value={field.value || undefined}>
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Selecione sua garagem" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="Cursino">Cursino</SelectItem>
+                        <SelectItem value="Sapopemba">Sapopemba</SelectItem>
+                      </SelectContent>
+                    </Select>
                     <FormMessage />
                   </FormItem>
                 )}

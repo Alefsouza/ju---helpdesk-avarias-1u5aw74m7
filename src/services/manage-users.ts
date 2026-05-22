@@ -9,6 +9,7 @@ export const updateAdminUser = async (
     whatsapp?: string
     endereco?: string
     departamento?: string
+    garagem?: string
   },
 ) => {
   return await supabase.functions.invoke('manage-users', {
@@ -24,6 +25,7 @@ export const createAdminUser = async (data: {
   whatsapp?: string
   endereco?: string
   departamento?: string
+  garagem?: string
 }) => {
   return await supabase.functions.invoke('manage-users', {
     body: { action: 'create', ...data },

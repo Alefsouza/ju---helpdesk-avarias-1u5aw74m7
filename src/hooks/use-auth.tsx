@@ -8,6 +8,7 @@ export type UserProfile = {
   nome_completo: string
   tipo_usuario: 'basico' | 'responsavel' | 'admin' | 'vistoriador' | 'coc' | 'sos'
   foto_url?: string | null
+  garagem?: string | null
 }
 
 type AuthContextType = {

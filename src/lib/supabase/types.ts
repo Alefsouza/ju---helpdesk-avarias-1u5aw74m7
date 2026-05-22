@@ -463,6 +463,7 @@ export type Database = {
           email: string
           endereco: string | null
           foto_url: string | null
+          garagem: string | null
           id: string
           nome_completo: string
           tipo_usuario: string
@@ -476,6 +477,7 @@ export type Database = {
           email: string
           endereco?: string | null
           foto_url?: string | null
+          garagem?: string | null
           id: string
           nome_completo: string
           tipo_usuario?: string
@@ -489,6 +491,7 @@ export type Database = {
           email?: string
           endereco?: string | null
           foto_url?: string | null
+          garagem?: string | null
           id?: string
           nome_completo?: string
           tipo_usuario?: string
@@ -832,6 +835,7 @@ export const Constants = {
 //   atualizado_em: timestamp with time zone (not null, default: now())
 //   foto_url: text (nullable)
 //   departamento: text (nullable)
+//   garagem: text (nullable)
 // Table: respostas_chamado
 //   id: uuid (not null, default: gen_random_uuid())
 //   chamado_id: uuid (not null)

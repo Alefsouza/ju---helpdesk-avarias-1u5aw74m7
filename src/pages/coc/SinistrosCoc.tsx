@@ -271,7 +271,7 @@ export default function SinistrosCoc() {
                   </div>
                 </TableHead>
                 <TableHead className="p-0 border-r border-slate-200/50 hover:bg-slate-50 transition-colors">
-                  <div className="resize-x overflow-hidden w-[120px] min-w-[80px] h-12 px-4 flex items-center">
+                  <div className="resize-x overflow-hidden w-[200px] min-w-[180px] h-12 px-4 flex items-center">
                     Data
                   </div>
                 </TableHead>
@@ -331,7 +331,7 @@ export default function SinistrosCoc() {
                   <TableRow key={s.id}>
                     <TableCell className="whitespace-nowrap">{s.operacao || '-'}</TableCell>
                     <TableCell className="whitespace-nowrap">
-                      {format(parseISO(s.criado_em), 'dd/MM/yyyy')}
+                      {format(parseISO(s.criado_em), "dd/MM/yyyy 'às' HH:mm:ss")}
                     </TableCell>
                     <TableCell className="max-w-[400px] truncate" title={s.titulo}>
                       {s.titulo}

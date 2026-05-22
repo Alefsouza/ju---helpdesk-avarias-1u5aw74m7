@@ -206,8 +206,8 @@ Deno.serve(async (req: Request) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
     )
 
-    const bucket = tipo_documento === 'IDO' ? 'anexos_chamados_interno' : 'vistorias'
-    const filePath = tipo_documento === 'IDO' ? `${id}/${fileName}` : fileName
+    const bucket = 'anexos_chamados_interno'
+    const filePath = `${id}/${fileName}`
 
     const { error: uploadError } = await supabaseAdmin.storage
       .from(bucket)

@@ -773,7 +773,7 @@ export default function ChamadoDetalhes() {
 
         if (pdfError || !pdfData?.success) throw new Error('Erro ao gerar novo PDF')
 
-        const newUrl = `${pdfData.url}?t=${Date.now()}`
+        const newUrl = `${pdfData.url}?v=${Date.now()}`
 
         await supabase
           .from('anexos_chamado_interno')
@@ -787,7 +787,7 @@ export default function ChamadoDetalhes() {
           chamado_id: id as string,
           acao: 'respondido',
           usuario_id: user?.id as string,
-          detalhes: 'Espelho de Danos atualizado pelo usuário',
+          detalhes: 'Espelho de Danos preenchido e anexado com sucesso',
         })
 
         toast.success('Documento atualizado com sucesso!')
@@ -824,7 +824,7 @@ export default function ChamadoDetalhes() {
 
         if (pdfError || !pdfData?.success) throw new Error('Erro ao gerar novo PDF IDO')
 
-        const newUrl = `${pdfData.url}?t=${Date.now()}`
+        const newUrl = `${pdfData.url}?v=${Date.now()}`
 
         await supabase
           .from('anexos_chamado_interno')

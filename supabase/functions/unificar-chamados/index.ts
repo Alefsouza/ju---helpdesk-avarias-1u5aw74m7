@@ -62,7 +62,7 @@ Deno.serve(async (req: Request) => {
     // Get source ticket
     const { data: origem, error: origemError } = await supabaseAdmin
       .from('chamados')
-      .select('id, titulo, descricao')
+      .select('*')
       .eq('id', origem_id)
       .single()
 
@@ -71,11 +71,49 @@ Deno.serve(async (req: Request) => {
     // Get destination ticket
     const { data: destino, error: destinoError } = await supabaseAdmin
       .from('chamados')
-      .select('id, titulo')
+      .select('*')
       .eq('id', destino_id)
       .single()
 
     if (destinoError || !destino) throw new Error('Chamado de destino não encontrado')
+
+    // Data Integrity Protection: Safeguard specific fields
+    // We merge secondary fields IF they are missing on destination, but we strictly DO NOT UPDATE the protected fields.
+    const updateDestino: Record<string, any> = {}
+    const fieldsToMerge = [
+      'carro',
+      'linha',
+      'local_ocorrencia',
+      'nome_cobrador',
+      'nome_motorista',
+      'numero_os',
+      'operacao',
+      'registro_cobrador',
+      'registro_motorista',
+    ]
+
+    for (const field of fieldsToMerge) {
+      if (!destino[field] && origem[field]) {
+        updateDestino[field] = origem[field]
+      }
+    }
+
+    // EXPLICIT PROTECTION LOGIC
+    // Ensure we do not overwrite the destination's primary context.
+    delete updateDestino['pia']
+    delete updateDestino['titulo']
+    delete updateDestino['tipo_chamado']
+    delete updateDestino['prioridade']
+
+    if (Object.keys(updateDestino).length > 0) {
+      await supabaseAdmin
+        .from('chamados')
+        .update({
+          ...updateDestino,
+          atualizado_em: new Date().toISOString(),
+        })
+        .eq('id', destino_id)
+    }
 
     // Start data migration:
     // Update respostas_chamado

@@ -101,7 +101,7 @@ export function UnificarChamadoModal({
         throw new Error(data?.error || error?.message || 'Erro ao unificar chamados')
       }
 
-      toast.success('Chamado unificado com sucesso!')
+      toast.success('Conteúdo do chamado secundário foi incorporado com sucesso!')
       onSuccess()
     } catch (err: any) {
       console.error(err)

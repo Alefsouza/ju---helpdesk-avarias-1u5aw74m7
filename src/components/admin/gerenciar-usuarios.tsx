@@ -15,8 +15,6 @@ import { Input } from '@/components/ui/input'
 import { supabase } from '@/lib/supabase/client'
 import { AlterarSenhaModal } from './alterar-senha-modal'
 import { NovoUsuarioModal } from './novo-usuario-modal'
-import { EditarUsuarioModal } from './editar-usuario-modal'
-import { Edit } from 'lucide-react'
 import { format } from 'date-fns'
 
 export function GerenciarUsuarios() {
@@ -25,7 +23,6 @@ export function GerenciarUsuarios() {
   const [error, setError] = useState(false)
   const [modalOpen, setModalOpen] = useState(false)
   const [novoModalOpen, setNovoModalOpen] = useState(false)
-  const [editModalOpen, setEditModalOpen] = useState(false)
   const [selectedUser, setSelectedUser] = useState<any>(null)
 
   const [searchTerm, setSearchTerm] = useState('')
@@ -153,16 +150,6 @@ export function GerenciarUsuarios() {
                     <TableCell>{format(new Date(u.criado_em), 'dd/MM/yyyy')}</TableCell>
                     <TableCell className="text-right">
                       <div className="flex justify-end gap-2">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => {
-                            setSelectedUser(u)
-                            setEditModalOpen(true)
-                          }}
-                        >
-                          <Edit className="h-4 w-4 mr-2" /> Editar
-                        </Button>
                         <Button variant="outline" size="sm" onClick={() => openPasswordModal(u)}>
                           <Key className="h-4 w-4 mr-2" /> Alterar Senha
                         </Button>
@@ -180,12 +167,6 @@ export function GerenciarUsuarios() {
       <NovoUsuarioModal
         open={novoModalOpen}
         setOpen={setNovoModalOpen}
-        onSuccess={() => loadUsers(debouncedSearch)}
-      />
-      <EditarUsuarioModal
-        open={editModalOpen}
-        setOpen={setEditModalOpen}
-        user={selectedUser}
         onSuccess={() => loadUsers(debouncedSearch)}
       />
     </Card>

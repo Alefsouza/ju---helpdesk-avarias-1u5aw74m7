@@ -1683,9 +1683,15 @@ export default function ChamadoDetalhes() {
                             <SelectValue placeholder="Selecione o tipo" />
                           </SelectTrigger>
                           <SelectContent>
-                            <SelectItem value="Interno">Interno</SelectItem>
-                            <SelectItem value="Externo">Externo</SelectItem>
-                            <SelectItem value="Vítima">Vítima</SelectItem>
+                            <SelectItem value="Acidente Interno">Acidente Interno</SelectItem>
+                            <SelectItem value="Atropelamento">Atropelamento</SelectItem>
+                            <SelectItem value="Avaria">Avaria</SelectItem>
+                            <SelectItem value="Colisão com vítima">Colisão com vítima</SelectItem>
+                            <SelectItem value="Colisão sem vítima">Colisão sem vítima</SelectItem>
+                            <SelectItem value="Queda do usuário">Queda do usuário</SelectItem>
+                            <SelectItem value="Vandalismo sem vítima">
+                              Vandalismo sem vítima
+                            </SelectItem>
                           </SelectContent>
                         </Select>
                       </div>

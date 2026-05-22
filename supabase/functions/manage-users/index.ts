@@ -48,7 +48,7 @@ Deno.serve(async (req: Request) => {
     const { action } = body
 
     if (action === 'create') {
-      const { email, nome_completo, tipo_usuario, ativo, whatsapp, endereco } = body
+      const { email, nome_completo, tipo_usuario, ativo, whatsapp, endereco, departamento } = body
 
       const { data: newUser, error: createError } = await supabaseAdmin.auth.admin.createUser({
         email,
@@ -63,6 +63,7 @@ Deno.serve(async (req: Request) => {
       if (ativo !== undefined) updateData.ativo = ativo
       if (whatsapp !== undefined) updateData.whatsapp = whatsapp
       if (endereco !== undefined) updateData.endereco = endereco
+      if (departamento !== undefined) updateData.departamento = departamento
 
       // Update profile created by the database trigger
       const { error: updateError } = await supabaseAdmin
@@ -78,7 +79,7 @@ Deno.serve(async (req: Request) => {
     }
 
     if (action === 'update') {
-      const { userId, nome_completo, tipo_usuario, ativo, whatsapp, endereco } = body
+      const { userId, nome_completo, tipo_usuario, ativo, whatsapp, endereco, departamento } = body
 
       const updateData: any = {}
       if (nome_completo !== undefined) updateData.nome_completo = nome_completo
@@ -86,6 +87,7 @@ Deno.serve(async (req: Request) => {
       if (ativo !== undefined) updateData.ativo = ativo
       if (whatsapp !== undefined) updateData.whatsapp = whatsapp
       if (endereco !== undefined) updateData.endereco = endereco
+      if (departamento !== undefined) updateData.departamento = departamento
 
       const { error: updateError } = await supabaseAdmin
         .from('perfil_usuario')

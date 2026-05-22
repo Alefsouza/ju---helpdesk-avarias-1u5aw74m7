@@ -29,6 +29,7 @@ export function GestaoEquipeModal({ open, setOpen, user, onSuccess }: any) {
     ativo: true,
     whatsapp: '',
     endereco: '',
+    departamento: '',
   })
   const [isSaving, setIsSaving] = useState(false)
 
@@ -41,6 +42,7 @@ export function GestaoEquipeModal({ open, setOpen, user, onSuccess }: any) {
         ativo: user.ativo !== false,
         whatsapp: user.whatsapp || '',
         endereco: user.endereco || '',
+        departamento: user.departamento || '',
       })
     } else {
       setFormData({
@@ -50,6 +52,7 @@ export function GestaoEquipeModal({ open, setOpen, user, onSuccess }: any) {
         ativo: true,
         whatsapp: '',
         endereco: '',
+        departamento: '',
       })
     }
   }, [user, open])
@@ -66,6 +69,7 @@ export function GestaoEquipeModal({ open, setOpen, user, onSuccess }: any) {
           ativo: formData.ativo,
           whatsapp: formData.whatsapp,
           endereco: formData.endereco,
+          departamento: formData.departamento,
         })
         if (error || data?.error) throw error || new Error(data?.error)
         toast.success('Usuário atualizado com sucesso')
@@ -131,6 +135,14 @@ export function GestaoEquipeModal({ open, setOpen, user, onSuccess }: any) {
               value={formData.endereco}
               onChange={(e) => setFormData({ ...formData, endereco: e.target.value })}
               placeholder="Rua, Número, Bairro"
+            />
+          </div>
+          <div className="space-y-2">
+            <Label>Departamento</Label>
+            <Input
+              value={formData.departamento}
+              onChange={(e) => setFormData({ ...formData, departamento: e.target.value })}
+              placeholder="Ex: RH, Manutenção, Diretoria"
             />
           </div>
           <div className="space-y-2">

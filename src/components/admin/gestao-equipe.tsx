@@ -101,6 +101,7 @@ export function GestaoEquipe() {
                   <TableRow>
                     <TableHead>Nome</TableHead>
                     <TableHead>E-mail</TableHead>
+                    <TableHead>Departamento</TableHead>
                     <TableHead>Tipo</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead className="text-right">Ações</TableHead>
@@ -111,6 +112,7 @@ export function GestaoEquipe() {
                     <TableRow key={u.id}>
                       <TableCell className="font-medium">{u.nome_completo}</TableCell>
                       <TableCell>{u.email}</TableCell>
+                      <TableCell>{u.departamento || '-'}</TableCell>
                       <TableCell>
                         <Badge variant="outline" className={getBadgeStyles(u.tipo_usuario)}>
                           {getRoleLabel(u.tipo_usuario)}
@@ -182,7 +184,9 @@ export function GestaoEquipe() {
                         </DropdownMenuContent>
                       </DropdownMenu>
                     </div>
-                    <CardDescription>{u.email}</CardDescription>
+                    <CardDescription>
+                      {u.email} {u.departamento && ` • ${u.departamento}`}
+                    </CardDescription>
                   </CardHeader>
                   <CardContent>
                     <div className="flex gap-2">

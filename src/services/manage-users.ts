@@ -8,6 +8,7 @@ export const updateAdminUser = async (
     ativo?: boolean
     whatsapp?: string
     endereco?: string
+    departamento?: string
   },
 ) => {
   return await supabase.functions.invoke('manage-users', {
@@ -22,6 +23,7 @@ export const createAdminUser = async (data: {
   ativo?: boolean
   whatsapp?: string
   endereco?: string
+  departamento?: string
 }) => {
   return await supabase.functions.invoke('manage-users', {
     body: { action: 'create', ...data },

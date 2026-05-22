@@ -658,49 +658,31 @@ export default function ChamadoDetalhes() {
     setEditingDocLoading(true)
     try {
       if (tipo === 'Espelho') {
-        let { data, error } = await supabase
+        const { data, error } = await supabase
           .from('formularios_espelho_danos')
           .select('*')
           .eq('chamado_id', id)
           .maybeSingle()
 
-        if (!data) {
-          const { data: newData, error: insertError } = await supabase
-            .from('formularios_espelho_danos')
-            .insert({ chamado_id: id as string })
-            .select('*')
-            .single()
+        if (error) throw error
 
-          if (insertError) throw insertError
-          data = newData
-        }
-
-        setDocFormData(data || {})
+        setDocFormData(data || { chamado_id: id })
         setEditingDoc({ anexo, tipo })
       } else {
-        let { data, error } = await supabase
+        const { data, error } = await supabase
           .from('formularios_ido')
           .select('*')
           .eq('chamado_id', id)
           .maybeSingle()
 
-        if (!data) {
-          const { data: newData, error: insertError } = await supabase
-            .from('formularios_ido')
-            .insert({ chamado_id: id as string })
-            .select('*')
-            .single()
+        if (error) throw error
 
-          if (insertError) throw insertError
-          data = newData
-        }
-
-        setDocFormData(data || {})
+        setDocFormData(data || { chamado_id: id })
         setEditingDoc({ anexo, tipo })
       }
     } catch (e) {
       console.error(e)
-      toast.error('Erro ao buscar ou criar dados do formulário.')
+      toast.error('Erro ao buscar dados do formulário.')
     } finally {
       setEditingDocLoading(false)
     }
@@ -713,12 +695,19 @@ export default function ChamadoDetalhes() {
     try {
       if (editingDoc.tipo === 'Espelho') {
         const { id: formId, chamado_id, criado_em, atualizado_em, ...updateData } = docFormData
-        const { error: updateError } = await supabase
-          .from('formularios_espelho_danos')
-          .update(updateData)
-          .eq('chamado_id', id as string)
 
-        if (updateError) throw updateError
+        if (formId) {
+          const { error: updateError } = await supabase
+            .from('formularios_espelho_danos')
+            .update(updateData)
+            .eq('id', formId)
+          if (updateError) throw updateError
+        } else {
+          const { error: insertError } = await supabase
+            .from('formularios_espelho_danos')
+            .insert({ chamado_id: id as string, ...updateData })
+          if (insertError) throw insertError
+        }
 
         const { data: docData } = await supabase
           .from('documentos')
@@ -766,12 +755,19 @@ export default function ChamadoDetalhes() {
           assinatura_base64,
           ...updateData
         } = docFormData
-        const { error: updateError } = await supabase
-          .from('formularios_ido')
-          .update(updateData)
-          .eq('chamado_id', id as string)
 
-        if (updateError) throw updateError
+        if (formId) {
+          const { error: updateError } = await supabase
+            .from('formularios_ido')
+            .update(updateData)
+            .eq('id', formId)
+          if (updateError) throw updateError
+        } else {
+          const { error: insertError } = await supabase
+            .from('formularios_ido')
+            .insert({ chamado_id: id as string, ...updateData })
+          if (insertError) throw insertError
+        }
 
         const { data: pdfData, error: pdfError } = await supabase.functions.invoke('gerar-pdf', {
           body: {

@@ -32,8 +32,6 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 const formSchema = z.object({
   numero_os: z.string().min(1, 'Campo obrigatório'),
   garagem: z.string().min(1, 'Selecione uma garagem'),
-  data: z.string().min(1, 'Campo obrigatório'),
-  horario: z.string().min(1, 'Campo obrigatório'),
   ocorrencia: z.string().min(1, 'Selecione sim ou não'),
   linha: z.string().min(1, 'Campo obrigatório'),
   numero_carro: z.string().min(1, 'Campo obrigatório'),
@@ -85,8 +83,6 @@ export default function FormularioEspelhoDanos() {
     defaultValues: {
       numero_os: '',
       garagem: '',
-      data: '',
-      horario: '',
       ocorrencia: '',
       linha: '',
       numero_carro: '',
@@ -103,13 +99,22 @@ export default function FormularioEspelhoDanos() {
     if (!id) return
     setLoading(true)
     try {
+      const now = new Date()
+      const dataStr = format(now, 'yyyy-MM-dd')
+      const horarioStr = format(now, 'HH:mm')
       const espelhoId = crypto.randomUUID()
 
       const { fotos_dano, ...formValuesToSave } = values
 
       const { error: espelhoError } = await supabase
         .from('formularios_espelho_danos')
-        .insert({ id: espelhoId, chamado_id: id, ...formValuesToSave } as any)
+        .insert({
+          id: espelhoId,
+          chamado_id: id,
+          data: dataStr,
+          horario: horarioStr,
+          ...formValuesToSave,
+        } as any)
 
       if (espelhoError) throw new Error('Erro ao salvar os dados do formulário')
 
@@ -240,20 +245,12 @@ export default function FormularioEspelhoDanos() {
           currentY = currentLineY - 4.2 + 11
         }
 
-        let dataFormatada = 'Data é obrigatória'
-        if (values.data) {
-          const parts = values.data.split('-')
-          if (parts.length === 3) {
-            dataFormatada = `${parts[2]}/${parts[1]}/${parts[0]}`
-          } else {
-            dataFormatada = 'Data inválida'
-          }
-        }
+        const dataFormatada = format(now, 'dd/MM/yyyy')
 
         renderField('Número de OS', values.numero_os)
         renderField('Garagem', values.garagem)
         renderField('Data', dataFormatada)
-        renderField('Horário', values.horario)
+        renderField('Horário', horarioStr)
         renderField('Ocorrência', values.ocorrencia)
         renderField('Linha', values.linha)
         renderField('Número do Carro', values.numero_carro)
@@ -385,8 +382,8 @@ export default function FormularioEspelhoDanos() {
         numero_os: values.numero_os,
         linha: values.linha,
         numero_carro: values.numero_carro,
-        data: values.data,
-        horario: values.horario,
+        data: dataStr,
+        horario: horarioStr,
         garagem: values.garagem,
         ocorrencia: values.ocorrencia,
         descricao_danos: values.descricao_danos,
@@ -459,34 +456,6 @@ export default function FormularioEspelhoDanos() {
                   </FormItem>
                 )}
               />
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <FormField
-                  control={form.control}
-                  name="data"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Data *</FormLabel>
-                      <FormControl>
-                        <Input type="date" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="horario"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Horário *</FormLabel>
-                      <FormControl>
-                        <Input type="time" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
               <FormField
                 control={form.control}
                 name="ocorrencia"

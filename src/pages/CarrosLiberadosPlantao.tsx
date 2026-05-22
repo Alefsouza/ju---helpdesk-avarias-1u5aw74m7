@@ -129,7 +129,11 @@ export default function CarrosLiberadosPlantao() {
       const isLiberado = d.excluido_manutencao === true
       const matchStatus =
         statusFilter === 'todos' ||
-        (statusFilter === 'liberado' && isLiberado) ||
+        (statusFilter === 'liberado' &&
+          isLiberado &&
+          d.status_liberacao !== 'Liberado com Pendência') ||
+        (statusFilter === 'liberado_pendencia' &&
+          d.status_liberacao === 'Liberado com Pendência') ||
         (statusFilter === 'manutencao' && !isLiberado)
 
       return matchSearch && matchStatus
@@ -180,6 +184,7 @@ export default function CarrosLiberadosPlantao() {
                   <SelectContent>
                     <SelectItem value="todos">Todos os Status</SelectItem>
                     <SelectItem value="liberado">Liberados</SelectItem>
+                    <SelectItem value="liberado_pendencia">Liberados com Pendência</SelectItem>
                     <SelectItem value="manutencao">Em Manutenção</SelectItem>
                   </SelectContent>
                 </Select>
@@ -246,11 +251,13 @@ export default function CarrosLiberadosPlantao() {
                               className={`rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-wider border
                                 ${
                                   isLiberado
-                                    ? 'bg-emerald-100 text-emerald-800 border-emerald-200'
+                                    ? d.status_liberacao === 'Liberado com Pendência'
+                                      ? 'bg-amber-100 text-amber-800 border-amber-200'
+                                      : 'bg-emerald-100 text-emerald-800 border-emerald-200'
                                     : 'bg-rose-100 text-rose-800 border-rose-200'
                                 }`}
                             >
-                              {isLiberado ? 'Liberado' : 'Manutenção'}
+                              {isLiberado ? d.status_liberacao || 'Liberado' : 'Manutenção'}
                             </Badge>
                           </TableCell>
                           <TableCell className="text-right">

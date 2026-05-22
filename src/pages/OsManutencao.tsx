@@ -16,20 +16,11 @@ import { Card, CardContent } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Badge } from '@/components/ui/badge'
 import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from '@/components/ui/alert-dialog'
-import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogDescription,
   DialogFooter,
 } from '@/components/ui/dialog'
 import { Label } from '@/components/ui/label'
@@ -107,18 +98,29 @@ export default function OsManutencao() {
     window.open(downloadUrl, '_blank')
   }
 
-  const handleRelease = async () => {
+  const handleRelease = async (status: string) => {
     if (!docToRelease) return
     try {
       setIsReleasing(true)
-      const { error } = await supabase.rpc('ocultar_documento_manutencao' as any, {
+      const { error } = await supabase.rpc('liberar_veiculo_manutencao' as any, {
         p_id: docToRelease.id,
+        p_status: status,
       })
       if (error) throw error
 
+      toast({
+        title: 'Sucesso',
+        description: `Veículo marcado como: ${status}`,
+      })
+
       setDocumentos((docs) => docs.filter((d) => d.id !== docToRelease.id))
-    } catch (error) {
+    } catch (error: any) {
       console.error('Erro ao ocultar documento:', error)
+      toast({
+        title: 'Erro',
+        description: error.message || 'Erro ao liberar o veículo.',
+        variant: 'destructive',
+      })
     } finally {
       setIsReleasing(false)
       setDocToRelease(null)
@@ -581,34 +583,46 @@ export default function OsManutencao() {
         </DialogContent>
       </Dialog>
 
-      <AlertDialog
+      <Dialog
         open={!!docToRelease}
         onOpenChange={(open) => !open && !isReleasing && setDocToRelease(null)}
       >
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Liberar Veículo?</AlertDialogTitle>
-            <AlertDialogDescription>
-              Esta ação irá remover a Ordem de Serviço da lista de manutenção, marcando o veículo
-              como liberado. O documento original será mantido no sistema e poderá ser acessado
-              normalmente pelo dashboard.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel disabled={isReleasing}>Cancelar</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={(e) => {
-                e.preventDefault()
-                handleRelease()
-              }}
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Liberar Veículo</DialogTitle>
+            <DialogDescription className="text-slate-500 mt-2">
+              Esta ação irá remover a Ordem de Serviço da lista de manutenção. Selecione a condição
+              de liberação:
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex flex-col gap-3 py-4">
+            <Button
+              onClick={() => handleRelease('Liberado')}
               disabled={isReleasing}
-              className="bg-green-600 hover:bg-green-700 focus:ring-green-600 text-white"
+              className="w-full bg-emerald-600 hover:bg-emerald-700 text-white py-6 text-base"
             >
-              {isReleasing ? 'Liberando...' : 'Sim, liberar'}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+              {isReleasing ? 'Processando...' : 'Liberado (Sem Pendências)'}
+            </Button>
+            <Button
+              onClick={() => handleRelease('Liberado com Pendência')}
+              disabled={isReleasing}
+              className="w-full bg-amber-500 hover:bg-amber-600 text-white py-6 text-base"
+            >
+              {isReleasing ? 'Processando...' : 'Liberado com Pendência'}
+            </Button>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setDocToRelease(null)}
+              disabled={isReleasing}
+              className="w-full"
+            >
+              Cancelar
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

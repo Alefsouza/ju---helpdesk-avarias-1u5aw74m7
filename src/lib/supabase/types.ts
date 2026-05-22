@@ -190,6 +190,7 @@ export type Database = {
           data: string | null
           descricao_danos: string | null
           excluido_manutencao: boolean
+          formulario_id: string | null
           foto_url: string | null
           fotos_urls: Json | null
           garagem: string | null
@@ -215,6 +216,7 @@ export type Database = {
           data?: string | null
           descricao_danos?: string | null
           excluido_manutencao?: boolean
+          formulario_id?: string | null
           foto_url?: string | null
           fotos_urls?: Json | null
           garagem?: string | null
@@ -240,6 +242,7 @@ export type Database = {
           data?: string | null
           descricao_danos?: string | null
           excluido_manutencao?: boolean
+          formulario_id?: string | null
           foto_url?: string | null
           fotos_urls?: Json | null
           garagem?: string | null
@@ -265,12 +268,19 @@ export type Database = {
             referencedRelation: 'chamados'
             referencedColumns: ['id']
           },
+          {
+            foreignKeyName: 'documentos_formulario_id_fkey'
+            columns: ['formulario_id']
+            isOneToOne: false
+            referencedRelation: 'formularios_espelho_danos'
+            referencedColumns: ['id']
+          },
         ]
       }
       formularios_espelho_danos: {
         Row: {
           atualizado_em: string
-          chamado_id: string
+          chamado_id: string | null
           criado_em: string
           data: string | null
           descricao_danos: string | null
@@ -288,7 +298,7 @@ export type Database = {
         }
         Insert: {
           atualizado_em?: string
-          chamado_id: string
+          chamado_id?: string | null
           criado_em?: string
           data?: string | null
           descricao_danos?: string | null
@@ -306,7 +316,7 @@ export type Database = {
         }
         Update: {
           atualizado_em?: string
-          chamado_id?: string
+          chamado_id?: string | null
           criado_em?: string
           data?: string | null
           descricao_danos?: string | null
@@ -764,9 +774,10 @@ export const Constants = {
 //   excluido_manutencao: boolean (not null, default: false)
 //   numero_carro: text (nullable)
 //   status_liberacao: text (nullable)
+//   formulario_id: uuid (nullable)
 // Table: formularios_espelho_danos
 //   id: uuid (not null, default: gen_random_uuid())
-//   chamado_id: uuid (not null)
+//   chamado_id: uuid (nullable)
 //   numero_os: text (nullable)
 //   garagem: text (nullable)
 //   data: date (nullable)
@@ -848,6 +859,7 @@ export const Constants = {
 //   FOREIGN KEY chamados_usuario_id_fkey: FOREIGN KEY (usuario_id) REFERENCES auth.users(id) ON DELETE CASCADE
 // Table: documentos
 //   FOREIGN KEY documentos_chamado_id_fkey: FOREIGN KEY (chamado_id) REFERENCES chamados(id) ON DELETE SET NULL
+//   FOREIGN KEY documentos_formulario_id_fkey: FOREIGN KEY (formulario_id) REFERENCES formularios_espelho_danos(id) ON DELETE SET NULL
 //   PRIMARY KEY documentos_pkey: PRIMARY KEY (id)
 //   CHECK documentos_tipo_documento_check: CHECK ((tipo_documento = ANY (ARRAY['IDO'::text, 'Espelho de Danos'::text, 'Vistoria'::text])))
 // Table: formularios_espelho_danos
@@ -1233,6 +1245,7 @@ export const Constants = {
 // --- INDEXES ---
 // Table: documentos
 //   CREATE INDEX documentos_chamado_id_idx ON public.documentos USING btree (chamado_id)
+//   CREATE INDEX documentos_formulario_id_idx ON public.documentos USING btree (formulario_id)
 //   CREATE INDEX documentos_registro_responsavel_idx ON public.documentos USING btree (registro_responsavel)
 //   CREATE INDEX documentos_tipo_documento_idx ON public.documentos USING btree (tipo_documento)
 // Table: formularios_espelho_danos

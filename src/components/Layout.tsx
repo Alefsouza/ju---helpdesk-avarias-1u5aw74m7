@@ -314,14 +314,14 @@ function AppSidebar() {
               />
             ) : (
               <span className="w-8 h-8 rounded-full bg-primary/10 text-primary flex items-center justify-center font-bold uppercase shrink-0">
-                {user?.email?.[0]}
+                {(profile?.nome_completo || user?.email)?.[0]}
               </span>
             )}
             <div
               className="text-sm truncate font-medium flex-1 bg-transparent border-[transparent] shadow-[0px_0px_6px_0px_transparent] text-[#ffffff]"
-              title={user?.email || ''}
+              title={profile?.nome_completo || user?.email || ''}
             >
-              {user?.email}
+              {profile?.nome_completo || user?.email}
             </div>
           </div>
           <Button
@@ -545,10 +545,10 @@ export default function Layout() {
               />
             ) : (
               <span className="w-8 h-8 rounded-full bg-primary/10 text-primary flex items-center justify-center font-bold uppercase">
-                {user?.email?.[0]}
+                {(profile?.nome_completo || user?.email)?.[0]}
               </span>
             )}
-            {user?.email}
+            {profile?.nome_completo || user?.email}
           </div>
         </header>
         <main className="flex-1 p-4 sm:p-6 lg:p-8 overflow-auto animate-fade-in">

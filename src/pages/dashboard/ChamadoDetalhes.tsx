@@ -662,6 +662,8 @@ export default function ChamadoDetalhes() {
           .from('formularios_espelho_danos')
           .select('*')
           .eq('chamado_id', id)
+          .order('criado_em', { ascending: false })
+          .limit(1)
           .maybeSingle()
 
         if (error) throw error
@@ -673,6 +675,8 @@ export default function ChamadoDetalhes() {
           .from('formularios_ido')
           .select('*')
           .eq('chamado_id', id)
+          .order('criado_em', { ascending: false })
+          .limit(1)
           .maybeSingle()
 
         if (error) throw error
@@ -714,6 +718,8 @@ export default function ChamadoDetalhes() {
           .select('fotos_urls, foto_url')
           .eq('chamado_id', id as string)
           .in('tipo_documento', ['Espelho de Danos', 'Vistoria'])
+          .order('criado_em', { ascending: false })
+          .limit(1)
           .maybeSingle()
 
         let fotos: string[] = []

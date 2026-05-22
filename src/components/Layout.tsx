@@ -46,6 +46,7 @@ function AppSidebar() {
   const isVistoriador = tipo === 'vistoriador'
   const isCoc = tipo === 'coc'
   const isSos = tipo === 'sos'
+  const isJuridico = tipo === 'juridico'
 
   return (
     <Sidebar className="border-r-0">
@@ -94,20 +95,22 @@ function AppSidebar() {
                 </>
               )}
 
-              {isResponsavel && (
+              {(isResponsavel || isJuridico) && (
                 <>
-                  <SidebarMenuItem>
-                    <SidebarMenuButton
-                      asChild
-                      isActive={location.pathname === '/dashboard/chamados-abertos'}
-                      className="data-[active=true]:bg-transparent data-[active=true]:text-[#c8e6c9] hover:bg-[#c8e6c9]/10 hover:text-[#c8e6c9] text-white transition-colors"
-                    >
-                      <Link to="/dashboard/chamados-abertos">
-                        <LifeBuoy />
-                        <span>Fila de Atendimento</span>
-                      </Link>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
+                  {isResponsavel && (
+                    <SidebarMenuItem>
+                      <SidebarMenuButton
+                        asChild
+                        isActive={location.pathname === '/dashboard/chamados-abertos'}
+                        className="data-[active=true]:bg-transparent data-[active=true]:text-[#c8e6c9] hover:bg-[#c8e6c9]/10 hover:text-[#c8e6c9] text-white transition-colors"
+                      >
+                        <Link to="/dashboard/chamados-abertos">
+                          <LifeBuoy />
+                          <span>Fila de Atendimento</span>
+                        </Link>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  )}
                   <SidebarMenuItem>
                     <SidebarMenuButton
                       asChild
@@ -279,7 +282,7 @@ function AppSidebar() {
           </SidebarGroupContent>
         </SidebarGroup>
 
-        {isResponsavel && (
+        {(isResponsavel || isJuridico) && (
           <SidebarGroup className="mt-auto">
             <SidebarGroupContent>
               <SidebarMenu>
@@ -382,7 +385,11 @@ function useRealtimeNotifications(userId: string | undefined, profile: any) {
               shouldNotify = true
             }
           } else {
-            if (profile?.tipo_usuario === 'responsavel' || profile?.tipo_usuario === 'admin') {
+            if (
+              profile?.tipo_usuario === 'responsavel' ||
+              profile?.tipo_usuario === 'admin' ||
+              profile?.tipo_usuario === 'juridico'
+            ) {
               shouldNotify = true
             }
           }
@@ -485,6 +492,15 @@ export default function Layout() {
     if (!isSosRoute) {
       return <Navigate to="/sos/pendentes" replace />
     }
+  }
+
+  // Redirect Juridico from Fila de Atendimento
+  if (
+    user &&
+    profile?.tipo_usuario === 'juridico' &&
+    location.pathname === '/dashboard/chamados-abertos'
+  ) {
+    return <Navigate to="/dashboard/meus-atendimentos" replace />
   }
 
   // Auth Layout

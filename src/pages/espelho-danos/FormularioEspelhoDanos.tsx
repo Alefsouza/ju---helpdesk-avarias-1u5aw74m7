@@ -106,15 +106,13 @@ export default function FormularioEspelhoDanos() {
 
       const { fotos_dano, ...formValuesToSave } = values
 
-      const { error: espelhoError } = await supabase
-        .from('formularios_espelho_danos')
-        .insert({
-          id: espelhoId,
-          chamado_id: id,
-          data: dataStr,
-          horario: horarioStr,
-          ...formValuesToSave,
-        } as any)
+      const { error: espelhoError } = await supabase.from('formularios_espelho_danos').insert({
+        id: espelhoId,
+        chamado_id: id,
+        data: dataStr,
+        horario: horarioStr,
+        ...formValuesToSave,
+      } as any)
 
       if (espelhoError) throw new Error('Erro ao salvar os dados do formulário')
 

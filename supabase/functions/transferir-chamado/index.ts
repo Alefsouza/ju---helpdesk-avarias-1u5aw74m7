@@ -47,8 +47,12 @@ Deno.serve(async (req: Request) => {
       .eq('id', user.id)
       .single()
 
-    if (profile?.tipo_usuario !== 'admin' && profile?.tipo_usuario !== 'responsavel') {
-      throw new Error('Forbidden: Only admin or responsavel can perform this action')
+    if (
+      profile?.tipo_usuario !== 'admin' &&
+      profile?.tipo_usuario !== 'responsavel' &&
+      profile?.tipo_usuario !== 'juridico'
+    ) {
+      throw new Error('Forbidden: Only admin, responsavel, or juridico can perform this action')
     }
 
     // Get current ticket
@@ -62,8 +66,8 @@ Deno.serve(async (req: Request) => {
       throw new Error('Chamado not found')
     }
 
-    // Check if the responsavel has permission to transfer this specific ticket
-    if (profile.tipo_usuario === 'responsavel') {
+    // Check if the responsavel/juridico has permission to transfer this specific ticket
+    if (profile.tipo_usuario === 'responsavel' || profile.tipo_usuario === 'juridico') {
       if (chamado.responsavel_id !== user.id && chamado.status !== 'aberto') {
         throw new Error('Forbidden: You are not the responsible for this ticket')
       }

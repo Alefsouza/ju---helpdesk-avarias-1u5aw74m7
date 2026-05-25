@@ -34,6 +34,8 @@ const getBadgeStyles = (tipo: string) => {
       return 'border-red-200 text-red-700 bg-red-50'
     case 'juridico':
       return 'border-teal-200 text-teal-700 bg-teal-50'
+    case 'sinistro':
+      return 'border-indigo-200 text-indigo-700 bg-indigo-50'
     case 'basico':
       return 'border-gray-200 text-gray-700 bg-gray-50'
     default:
@@ -53,6 +55,8 @@ const getRoleLabel = (tipo: string) => {
       return 'SOS'
     case 'juridico':
       return 'Jurídico'
+    case 'sinistro':
+      return 'Sinistro'
     case 'basico':
       return 'Básico'
     default:

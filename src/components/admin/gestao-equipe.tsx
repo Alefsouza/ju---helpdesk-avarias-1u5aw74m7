@@ -106,6 +106,7 @@ export function GestaoEquipe() {
                     <TableHead>Nome</TableHead>
                     <TableHead>E-mail</TableHead>
                     <TableHead>Departamento</TableHead>
+                    <TableHead>Garagem</TableHead>
                     <TableHead>Tipo</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead className="text-right">Ações</TableHead>
@@ -117,6 +118,7 @@ export function GestaoEquipe() {
                       <TableCell className="font-medium">{u.nome_completo}</TableCell>
                       <TableCell>{u.email}</TableCell>
                       <TableCell>{u.departamento || '-'}</TableCell>
+                      <TableCell>{u.garagem || '-'}</TableCell>
                       <TableCell>
                         <Badge variant="outline" className={getBadgeStyles(u.tipo_usuario)}>
                           {getRoleLabel(u.tipo_usuario)}
@@ -189,7 +191,8 @@ export function GestaoEquipe() {
                       </DropdownMenu>
                     </div>
                     <CardDescription>
-                      {u.email} {u.departamento && ` • ${u.departamento}`}
+                      {u.email} {u.departamento && ` • ${u.departamento}`}{' '}
+                      {u.garagem && ` • ${u.garagem}`}
                     </CardDescription>
                   </CardHeader>
                   <CardContent>

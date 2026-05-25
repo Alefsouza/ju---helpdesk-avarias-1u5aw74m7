@@ -920,12 +920,12 @@ export const Constants = {
 //   Policy "chamados_insert" (INSERT, PERMISSIVE) roles={authenticated}
 //     WITH CHECK: (usuario_id = auth.uid())
 //   Policy "chamados_select" (SELECT, PERMISSIVE) roles={authenticated}
-//     USING: ((usuario_id = auth.uid()) OR is_responsavel() OR is_sinistro() OR is_admin() OR is_sos() OR is_coc() OR is_juridico())
+//     USING: ((usuario_id = auth.uid()) OR (responsavel_id = auth.uid()) OR is_admin() OR is_responsavel() OR is_sos() OR is_coc() OR is_juridico() OR (is_sinistro() AND ((( SELECT perfil_usuario.garagem    FROM perfil_usuario   WHERE (perfil_usuario.id = auth.uid())) IS NOT NULL) AND (( SELECT perfil_usuario.garagem    FROM perfil_usuario   WHERE (perfil_usuario.id = auth.uid())) = ( SELECT perfil_usuario.garagem    FROM perfil_usuario   WHERE (perfil_usuario.id = chamados.usuario_id))))))
 //   Policy "chamados_select_public_manutencao" (SELECT, PERMISSIVE) roles={public}
 //     USING: (tipo_chamado = 'OS de Manutenção'::text)
 //   Policy "chamados_update" (UPDATE, PERMISSIVE) roles={authenticated}
-//     USING: ((usuario_id = auth.uid()) OR ((is_responsavel() OR is_sinistro() OR is_juridico()) AND ((responsavel_id = auth.uid()) OR (status = 'aberto'::text) OR (status = 'finalizado'::text))) OR is_admin() OR is_sos() OR is_coc())
-//     WITH CHECK: ((usuario_id = auth.uid()) OR ((is_responsavel() OR is_sinistro() OR is_juridico()) AND ((responsavel_id = auth.uid()) OR (status = 'aberto'::text) OR (status = 'finalizado'::text))) OR is_admin() OR is_sos() OR is_coc())
+//     USING: ((usuario_id = auth.uid()) OR (responsavel_id = auth.uid()) OR is_admin() OR is_sos() OR is_coc() OR (((status = 'aberto'::text) OR (status = 'finalizado'::text)) AND (is_responsavel() OR is_juridico() OR (is_sinistro() AND (( SELECT perfil_usuario.garagem    FROM perfil_usuario   WHERE (perfil_usuario.id = auth.uid())) = ( SELECT perfil_usuario.garagem    FROM perfil_usuario   WHERE (perfil_usuario.id = chamados.usuario_id)))))))
+//     WITH CHECK: ((usuario_id = auth.uid()) OR (responsavel_id = auth.uid()) OR is_admin() OR is_sos() OR is_coc() OR (((status = 'aberto'::text) OR (status = 'finalizado'::text)) AND (is_responsavel() OR is_juridico() OR (is_sinistro() AND (( SELECT perfil_usuario.garagem    FROM perfil_usuario   WHERE (perfil_usuario.id = auth.uid())) = ( SELECT perfil_usuario.garagem    FROM perfil_usuario   WHERE (perfil_usuario.id = chamados.usuario_id)))))))
 //   Policy "chamados_update_public_manutencao" (UPDATE, PERMISSIVE) roles={public}
 //     USING: (tipo_chamado = 'OS de Manutenção'::text)
 //     WITH CHECK: (tipo_chamado = 'OS de Manutenção'::text)

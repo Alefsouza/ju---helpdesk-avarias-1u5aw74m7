@@ -39,6 +39,7 @@ const formSchema = z.object({
   whatsapp: z.string().optional(),
   endereco: z.string().optional(),
   departamento: z.string().optional(),
+  garagem: z.string().optional().nullable(),
   ativo: z.boolean().default(true),
 })
 
@@ -68,6 +69,7 @@ export function GestaoEquipeModal({
       whatsapp: '',
       endereco: '',
       departamento: '',
+      garagem: '',
       ativo: true,
     },
   })
@@ -82,6 +84,7 @@ export function GestaoEquipeModal({
           whatsapp: user.whatsapp || '',
           endereco: user.endereco || '',
           departamento: user.departamento || '',
+          garagem: user.garagem || '',
           ativo: user.ativo !== false,
         })
       } else {
@@ -92,6 +95,7 @@ export function GestaoEquipeModal({
           whatsapp: '',
           endereco: '',
           departamento: '',
+          garagem: '',
           ativo: true,
         })
       }
@@ -108,6 +112,7 @@ export function GestaoEquipeModal({
           whatsapp: values.whatsapp,
           endereco: values.endereco,
           departamento: values.departamento,
+          garagem: values.garagem === 'nenhuma' ? null : values.garagem || null,
           ativo: values.ativo,
         })
         if (error) throw error
@@ -121,6 +126,7 @@ export function GestaoEquipeModal({
           whatsapp: values.whatsapp,
           endereco: values.endereco,
           departamento: values.departamento,
+          garagem: values.garagem === 'nenhuma' ? null : values.garagem || null,
           ativo: values.ativo,
         })
         if (error) throw error
@@ -220,6 +226,28 @@ export function GestaoEquipeModal({
                   <FormControl>
                     <Input placeholder="Ex: TI" {...field} />
                   </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="garagem"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Garagem</FormLabel>
+                  <Select onValueChange={field.onChange} value={field.value || undefined}>
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Selecione a garagem" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      <SelectItem value="nenhuma">Nenhuma</SelectItem>
+                      <SelectItem value="Cursino">Cursino</SelectItem>
+                      <SelectItem value="Sapopemba">Sapopemba</SelectItem>
+                    </SelectContent>
+                  </Select>
                   <FormMessage />
                 </FormItem>
               )}

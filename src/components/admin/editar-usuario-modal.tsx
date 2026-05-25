@@ -38,6 +38,7 @@ const formSchema = z.object({
   whatsapp: z.string().optional(),
   endereco: z.string().optional(),
   departamento: z.string().optional(),
+  garagem: z.string().optional().nullable(),
   ativo: z.boolean().default(true),
 })
 
@@ -65,6 +66,7 @@ export function EditarUsuarioModal({
       whatsapp: '',
       endereco: '',
       departamento: '',
+      garagem: '',
       ativo: true,
     },
   })
@@ -77,6 +79,7 @@ export function EditarUsuarioModal({
         whatsapp: user.whatsapp || '',
         endereco: user.endereco || '',
         departamento: user.departamento || '',
+        garagem: user.garagem || '',
         ativo: user.ativo !== false,
       })
     }
@@ -86,7 +89,11 @@ export function EditarUsuarioModal({
     if (!user) return
     setLoading(true)
     try {
-      const { error } = await updateAdminUser(user.id, values)
+      const payload = {
+        ...values,
+        garagem: values.garagem === 'nenhuma' ? null : values.garagem || null,
+      }
+      const { error } = await updateAdminUser(user.id, payload)
       if (error) throw error
 
       toast({ title: 'Sucesso', description: 'Usuário atualizado com sucesso.' })
@@ -166,6 +173,28 @@ export function EditarUsuarioModal({
                   <FormControl>
                     <Input placeholder="Ex: TI" {...field} />
                   </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="garagem"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Garagem</FormLabel>
+                  <Select onValueChange={field.onChange} value={field.value || undefined}>
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Selecione a garagem" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      <SelectItem value="nenhuma">Nenhuma</SelectItem>
+                      <SelectItem value="Cursino">Cursino</SelectItem>
+                      <SelectItem value="Sapopemba">Sapopemba</SelectItem>
+                    </SelectContent>
+                  </Select>
                   <FormMessage />
                 </FormItem>
               )}

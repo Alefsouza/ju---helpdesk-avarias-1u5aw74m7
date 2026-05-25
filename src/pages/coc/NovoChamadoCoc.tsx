@@ -74,26 +74,46 @@ export default function NovoChamadoCoc() {
 
     setIsSubmitting(true)
     try {
+      // Lookup garage in frota_veiculos
+      const { data: veiculo } = await supabase
+        .from('frota_veiculos' as any)
+        .select('garagem')
+        .eq('prefixo', values.carro)
+        .maybeSingle()
+
+      const garagemEncontrada = veiculo?.garagem || null
+      const statusChamado = garagemEncontrada ? 'aberto' : 'pendente'
+
+      if (!garagemEncontrada) {
+        toast.warning('Veículo não encontrado na frota. Chamado criado como Pendente.')
+      }
+
       const tituloChamado = `${values.avarias} - Carro: ${values.carro}`
+
+      const insertData: any = {
+        usuario_id: user.id,
+        titulo: tituloChamado,
+        descricao: values.descricao,
+        status: statusChamado,
+        registro_motorista: values.registro_motorista,
+        nome_motorista: values.nome_motorista,
+        registro_cobrador: values.registro_cobrador,
+        nome_cobrador: values.nome_cobrador,
+        carro: values.carro,
+        linha: values.linha,
+        local_ocorrencia: values.local_ocorrencia,
+        operacao: values.operacao,
+        tipo_chamado: values.avarias,
+      }
+
+      if (garagemEncontrada) {
+        insertData.garagem = garagemEncontrada
+      }
 
       // 1. Create ticket
       const { data: chamado, error: chamadoError } = await supabase
         .from('chamados')
-        .insert({
-          usuario_id: user.id,
-          titulo: tituloChamado,
-          descricao: values.descricao,
-          status: 'aberto',
-          registro_motorista: values.registro_motorista,
-          nome_motorista: values.nome_motorista,
-          registro_cobrador: values.registro_cobrador,
-          nome_cobrador: values.nome_cobrador,
-          carro: values.carro,
-          linha: values.linha,
-          local_ocorrencia: values.local_ocorrencia,
-          operacao: values.operacao,
-          tipo_chamado: values.avarias,
-        })
+        .insert(insertData)
         .select()
         .single()
 

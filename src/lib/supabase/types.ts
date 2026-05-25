@@ -960,6 +960,8 @@ export const Constants = {
 //   Policy "admin_auditoria_select" (SELECT, PERMISSIVE) roles={authenticated}
 //     USING: is_admin()
 // Table: chamados
+//   Policy "chamados_delete" (DELETE, PERMISSIVE) roles={authenticated}
+//     USING: ((usuario_id = auth.uid()) OR is_admin())
 //   Policy "chamados_insert" (INSERT, PERMISSIVE) roles={authenticated}
 //     WITH CHECK: (usuario_id = auth.uid())
 //   Policy "chamados_select" (SELECT, PERMISSIVE) roles={authenticated}

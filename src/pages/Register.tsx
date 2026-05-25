@@ -89,7 +89,7 @@ export default function Register() {
             variant="outline"
             className="mt-4 w-full transition-transform active:scale-[0.98]"
           >
-            <Link to="/?confirmed=true">Ir para o Login (Demo Simulação)</Link>
+            <Link to="/?confirmed=true">Ir para o Login</Link>
           </Button>
         </CardContent>
       </Card>

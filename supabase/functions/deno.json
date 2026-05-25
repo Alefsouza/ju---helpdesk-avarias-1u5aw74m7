@@ -6,6 +6,7 @@
     "criar-chamado-vistoria": 2,
     "processar-documento-uazapi": 1,
     "unificar-chamados": 4,
-    "verificar-inatividade-chamados": 1
+    "verificar-inatividade-chamados": 1,
+    "importar-frota-xlsx": 1
   }
 }

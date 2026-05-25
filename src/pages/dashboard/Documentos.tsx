@@ -64,7 +64,8 @@ export default function Documentos() {
   const [docToView, setDocToView] = useState<Documento | null>(null)
   const { handleDocumentAction, loadingAction } = useDocumentAction()
 
-  const isResponsavel = profile?.tipo_usuario === 'responsavel'
+  const isResponsavel =
+    profile?.tipo_usuario === 'responsavel' || profile?.tipo_usuario === 'sinistro'
 
   const filtrosRef = useRef({ search, tipoFiltro })
   useEffect(() => {

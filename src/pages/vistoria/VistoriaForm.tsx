@@ -5,7 +5,8 @@ import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { supabase } from '@/lib/supabase/client'
 import { toast } from 'sonner'
-import { Camera, X, Loader2, ImagePlus } from 'lucide-react'
+import { Camera, X, Loader2, ImagePlus, AlertCircle } from 'lucide-react'
+import { useAuth } from '@/hooks/use-auth'
 
 import {
   Card,
@@ -37,7 +38,6 @@ import {
 import logoColorido from '@/assets/whatsapp-image-2023-08-10-at-16.17.31-0b937.jpeg'
 
 const formSchema = z.object({
-  garagem: z.string().min(1, 'Campo obrigatório'),
   ocorrencia: z.enum(['Sim', 'Não'], { required_error: 'Campo obrigatório' }),
   linha: z.string().min(1, 'Campo obrigatório'),
   numero_carro: z.string().min(1, 'Campo obrigatório'),
@@ -58,11 +58,11 @@ export default function VistoriaForm() {
   const [photos, setPhotos] = useState<File[]>([])
   const [isSubmitting, setIsSubmitting] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const { profile } = useAuth()
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      garagem: '',
       ocorrencia: 'Não',
       linha: '',
       numero_carro: '',
@@ -150,7 +150,7 @@ export default function VistoriaForm() {
         nome_motorista: values.nome_motorista,
       } as any
 
-      docData.garagem = values.garagem
+      docData.garagem = profile?.garagem || ''
       docData.data = currentDate
       docData.horario = currentTime
       docData.ocorrencia = values.ocorrencia
@@ -182,6 +182,19 @@ export default function VistoriaForm() {
         />
       </div>
 
+      {!profile?.garagem ? (
+        <div className="mb-6 rounded-lg border border-yellow-200 bg-yellow-50 p-4 text-yellow-800">
+          <div className="flex items-center gap-3">
+            <AlertCircle className="h-5 w-5 text-yellow-600" />
+            <h3 className="font-semibold text-yellow-800">Atenção: Garagem não definida</h3>
+          </div>
+          <p className="mt-2 text-sm">
+            Você não possui uma garagem vinculada ao seu perfil. É necessário que um administrador
+            defina sua garagem antes que você possa preencher o formulário de vistoria.
+          </p>
+        </div>
+      ) : null}
+
       <Card className="border-t-4 border-t-[#225f3d] shadow-md">
         <CardHeader className="text-center pb-8 border-b">
           <CardTitle className="text-3xl font-bold text-slate-800">
@@ -196,27 +209,6 @@ export default function VistoriaForm() {
           <form onSubmit={form.handleSubmit(onSubmit)}>
             <CardContent className="space-y-6 pt-8">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <FormField
-                  control={form.control}
-                  name="garagem"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Garagem</FormLabel>
-                      <Select onValueChange={field.onChange} defaultValue={field.value}>
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Selecione a garagem" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          <SelectItem value="Cursino">Cursino</SelectItem>
-                          <SelectItem value="Sapopemba">Sapopemba</SelectItem>
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
                 <FormField
                   control={form.control}
                   name="linha"
@@ -416,7 +408,7 @@ export default function VistoriaForm() {
               <Button
                 type="submit"
                 className="bg-[#225f3d] hover:bg-[#1a472d] text-white px-8"
-                disabled={isSubmitting}
+                disabled={isSubmitting || !profile?.garagem}
               >
                 {isSubmitting ? (
                   <>

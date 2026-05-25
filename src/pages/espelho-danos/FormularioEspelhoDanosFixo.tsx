@@ -1,13 +1,14 @@
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import * as z from 'zod'
-import { Camera, X } from 'lucide-react'
+import { Camera, X, AlertCircle } from 'lucide-react'
 import { supabase } from '@/lib/supabase/client'
 import { useToast } from '@/hooks/use-toast'
 import { jsPDF } from 'jspdf'
 import { format } from 'date-fns'
+import { useAuth } from '@/hooks/use-auth'
 import {
   Form,
   FormControl,
@@ -76,6 +77,7 @@ export default function FormularioEspelhoDanosFixo() {
   const { toast } = useToast()
   const [loading, setLoading] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const { profile, user } = useAuth()
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
@@ -93,6 +95,12 @@ export default function FormularioEspelhoDanosFixo() {
       fotos_dano: [],
     },
   })
+
+  useEffect(() => {
+    if (profile?.garagem) {
+      form.setValue('garagem', profile.garagem)
+    }
+  }, [profile, form])
 
   async function onSubmit(values: FormValues) {
     setLoading(true)
@@ -397,8 +405,23 @@ export default function FormularioEspelhoDanosFixo() {
     }
   }
 
+  const isVistoriadorWithoutGaragem = user && profile && !profile.garagem
+
   return (
-    <div className="min-h-screen bg-gray-50 py-12 px-4 flex justify-center">
+    <div className="min-h-screen bg-gray-50 py-12 px-4 flex flex-col items-center">
+      {isVistoriadorWithoutGaragem && (
+        <div className="w-full max-w-2xl mb-6 rounded-lg border border-yellow-200 bg-yellow-50 p-4 text-yellow-800">
+          <div className="flex items-center gap-3">
+            <AlertCircle className="h-5 w-5 text-yellow-600" />
+            <h3 className="font-semibold text-yellow-800">Atenção: Garagem não definida</h3>
+          </div>
+          <p className="mt-2 text-sm">
+            Você não possui uma garagem vinculada ao seu perfil. É necessário que um administrador
+            defina sua garagem antes que você possa preencher o formulário.
+          </p>
+        </div>
+      )}
+
       <Card className="w-full max-w-2xl">
         <CardHeader className="text-center">
           <CardTitle>Espelho de Danos</CardTitle>
@@ -420,27 +443,33 @@ export default function FormularioEspelhoDanosFixo() {
                   </FormItem>
                 )}
               />
-              <FormField
-                control={form.control}
-                name="garagem"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Garagem *</FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value}>
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Selecione uma garagem" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        <SelectItem value="Cursino">Cursino</SelectItem>
-                        <SelectItem value="Sapopemba">Sapopemba</SelectItem>
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+              {!profile?.garagem && (
+                <FormField
+                  control={form.control}
+                  name="garagem"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Garagem *</FormLabel>
+                      <Select
+                        onValueChange={field.onChange}
+                        value={field.value}
+                        defaultValue={field.value}
+                      >
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Selecione uma garagem" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="Cursino">Cursino</SelectItem>
+                          <SelectItem value="Sapopemba">Sapopemba</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              )}
               <FormField
                 control={form.control}
                 name="ocorrencia"
@@ -633,7 +662,11 @@ export default function FormularioEspelhoDanosFixo() {
                   )}
                 />
               </div>
-              <Button type="submit" className="w-full" disabled={loading}>
+              <Button
+                type="submit"
+                className="w-full"
+                disabled={loading || !!isVistoriadorWithoutGaragem}
+              >
                 {loading ? 'Enviando...' : 'Enviar formulário'}
               </Button>
             </form>

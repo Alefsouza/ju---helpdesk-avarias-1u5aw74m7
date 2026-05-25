@@ -5,6 +5,7 @@
     "gerar-pdf": 6,
     "criar-chamado-vistoria": 2,
     "processar-documento-uazapi": 1,
-    "unificar-chamados": 3
+    "unificar-chamados": 3,
+    "verificar-inatividade-chamados": 1
   }
 }

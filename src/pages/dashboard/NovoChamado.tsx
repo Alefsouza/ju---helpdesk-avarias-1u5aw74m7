@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '@/lib/supabase/client'
 import { useAuth } from '@/hooks/use-auth'
@@ -131,6 +131,9 @@ export default function NovoChamado() {
   const [tipoChamado, setTipoChamado] = useState<'Colisão' | 'Lesão Corporal' | ''>('')
   const [titulo, setTitulo] = useState('')
   const [descricao, setDescricao] = useState('')
+  const [placaOnibus, setPlacaOnibus] = useState('')
+  const [identifiedGaragem, setIdentifiedGaragem] = useState<string | null>(null)
+  const [isSearchingPlaca, setIsSearchingPlaca] = useState(false)
 
   const [files, setFiles] = useState<FileItem[]>([])
   const [dragActiveId, setDragActiveId] = useState<FileCategory | null>(null)
@@ -295,6 +298,45 @@ export default function NovoChamado() {
     return 'pdf'
   }
 
+  useEffect(() => {
+    if (!placaOnibus || placaOnibus.length < 3) {
+      setIdentifiedGaragem(null)
+      return
+    }
+
+    const searchTimer = setTimeout(async () => {
+      setIsSearchingPlaca(true)
+      try {
+        const { data, error } = await supabase
+          .from('frota_veiculos')
+          .select('garagem')
+          .or(`prefixo.ilike.%${placaOnibus}%,placa.ilike.%${placaOnibus}%`)
+          .limit(1)
+          .maybeSingle()
+
+        if (error) throw error
+
+        if (data) {
+          setIdentifiedGaragem(data.garagem)
+        } else {
+          setIdentifiedGaragem('NOT_FOUND')
+        }
+      } catch (err) {
+        console.error('Error searching frota:', err)
+        setIdentifiedGaragem('NOT_FOUND')
+      } finally {
+        setIsSearchingPlaca(false)
+      }
+    }, 500)
+
+    return () => clearTimeout(searchTimer)
+  }, [placaOnibus])
+
+  const handlePlacaChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value.replace(/[^a-zA-Z0-9]/g, '').toUpperCase()
+    setPlacaOnibus(value)
+  }
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!user) return
@@ -316,6 +358,11 @@ export default function NovoChamado() {
 
     if (descricao.length < 20) {
       toast.error('A descrição deve ter no mínimo 20 caracteres')
+      return
+    }
+
+    if (!placaOnibus.trim()) {
+      toast.error('A identificação do ônibus é obrigatória')
       return
     }
 
@@ -361,6 +408,8 @@ export default function NovoChamado() {
           usuario_id: user.id,
           responsavel_id: null,
           status: 'aberto',
+          garagem: identifiedGaragem !== 'NOT_FOUND' ? identifiedGaragem : null,
+          carro: placaOnibus,
           criado_em: new Date().toISOString(),
         } as any)
         .select()
@@ -425,7 +474,8 @@ export default function NovoChamado() {
     !tipoChamado ||
     files.some((f) => f.status !== 'success') ||
     !titulo.trim() ||
-    !descricao.trim()
+    !descricao.trim() ||
+    !placaOnibus.trim()
 
   return (
     <div className="max-w-3xl mx-auto space-y-6 animate-fade-in-up p-4 mb-20">
@@ -449,6 +499,8 @@ export default function NovoChamado() {
                     setFiles([])
                     setTitulo('')
                     setDescricao('')
+                    setPlacaOnibus('')
+                    setIdentifiedGaragem(null)
                   }}
                 >
                   <SelectTrigger id="tipoChamado" className="bg-white">
@@ -465,6 +517,35 @@ export default function NovoChamado() {
             {tipoChamado && (
               <div className="space-y-8 animate-fade-in">
                 <div className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="placaOnibus">Placa do nosso ônibus *</Label>
+                    <Input
+                      id="placaOnibus"
+                      placeholder="Ex: ABC1234 ou 55123"
+                      value={placaOnibus}
+                      onChange={handlePlacaChange}
+                      required
+                    />
+                    {isSearchingPlaca && (
+                      <p className="text-sm text-muted-foreground flex items-center gap-2 mt-1">
+                        <Loader2 className="h-3 w-3 animate-spin" /> Buscando veículo...
+                      </p>
+                    )}
+                    {!isSearchingPlaca && identifiedGaragem === 'NOT_FOUND' && (
+                      <p className="text-sm text-red-500 font-medium flex items-center gap-1 mt-1">
+                        <AlertCircle className="h-3 w-3" /> Veículo não localizado na base de frota
+                      </p>
+                    )}
+                    {!isSearchingPlaca &&
+                      identifiedGaragem &&
+                      identifiedGaragem !== 'NOT_FOUND' && (
+                        <p className="text-sm text-green-600 font-medium flex items-center gap-1 mt-1">
+                          <CheckCircle2 className="h-3 w-3" /> Garagem Identificada:{' '}
+                          {identifiedGaragem}
+                        </p>
+                      )}
+                  </div>
+
                   <div className="space-y-2">
                     <Label htmlFor="titulo">Título *</Label>
                     <Input

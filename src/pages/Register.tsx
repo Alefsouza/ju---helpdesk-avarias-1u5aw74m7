@@ -64,9 +64,14 @@ export default function Register() {
           signUpError.message?.toLowerCase().includes('rate limit')
 
         if (isRateLimit) {
-          setError(
-            'Limite de envio de e-mails excedido. Por favor, aguarde alguns minutos antes de tentar realizar o cadastro novamente.',
-          )
+          const rateLimitMessage =
+            'Limite de envio de e-mails atingido. Por favor, aguarde alguns instantes antes de tentar novamente.'
+          setError(rateLimitMessage)
+          toast({
+            variant: 'destructive',
+            title: 'Limite excedido',
+            description: rateLimitMessage,
+          })
         } else {
           setError(signUpError.message || 'Erro ao realizar cadastro')
         }
@@ -80,9 +85,26 @@ export default function Register() {
       }
     } catch (err: any) {
       console.error('Erro no cadastro:', err)
-      setError(
-        'Ocorreu um erro inesperado ao realizar o cadastro. Por favor, tente novamente mais tarde.',
-      )
+
+      const isRateLimit =
+        err?.status === 429 ||
+        err?.code === 'over_email_send_rate_limit' ||
+        err?.message?.toLowerCase().includes('rate limit')
+
+      if (isRateLimit) {
+        const rateLimitMessage =
+          'Limite de envio de e-mails atingido. Por favor, aguarde alguns instantes antes de tentar novamente.'
+        setError(rateLimitMessage)
+        toast({
+          variant: 'destructive',
+          title: 'Limite excedido',
+          description: rateLimitMessage,
+        })
+      } else {
+        setError(
+          'Ocorreu um erro inesperado ao realizar o cadastro. Por favor, tente novamente mais tarde.',
+        )
+      }
     } finally {
       setIsLoading(false)
     }

@@ -148,6 +148,7 @@ export default function ChamadoDetalhes() {
   const { user } = useAuth()
 
   const [chamado, setChamado] = useState<Chamado | null>(null)
+  const [descricaoDisplay, setDescricaoDisplay] = useState('')
   const [solicitante, setSolicitante] = useState<Perfil | null>(null)
   const [anexos, setAnexos] = useState<Anexo[]>([])
   const [timeline, setTimeline] = useState<TimelineItem[]>([])
@@ -527,6 +528,44 @@ export default function ChamadoDetalhes() {
       messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
     }
   }, [timeline])
+
+  useEffect(() => {
+    async function resolveDescricao() {
+      if (!chamado?.descricao) {
+        setDescricaoDisplay('')
+        return
+      }
+
+      let resolvedDesc = chamado.descricao
+      const unificadoRegex =
+        /\[SISTEMA\]: Este chamado foi unificado com o chamado destino #([a-f0-9-]+)(?:\.)?/i
+      const match = resolvedDesc.match(unificadoRegex)
+
+      if (match && match[1]) {
+        const destinoId = match[1]
+        const { data: destinoData } = await supabase
+          .from('chamados')
+          .select('titulo')
+          .eq('id', destinoId)
+          .maybeSingle()
+
+        if (destinoData) {
+          resolvedDesc = resolvedDesc.replace(
+            match[0],
+            `[SISTEMA]: Este chamado foi unificado com o chamado destino "${destinoData.titulo}"`,
+          )
+        } else {
+          resolvedDesc = resolvedDesc.replace(
+            match[0],
+            `[SISTEMA]: Este chamado foi unificado com o chamado destino (Chamado não encontrado)`,
+          )
+        }
+      }
+      setDescricaoDisplay(resolvedDesc)
+    }
+
+    resolveDescricao()
+  }, [chamado?.descricao])
 
   const uploadFile = async (item: FileItem) => {
     setFiles((prev) =>
@@ -1687,7 +1726,7 @@ export default function ChamadoDetalhes() {
             Descrição
           </h3>
           <div className="text-slate-700 whitespace-pre-wrap leading-relaxed text-sm bg-slate-50 p-4 rounded-lg border">
-            {chamado.descricao}
+            {descricaoDisplay || chamado.descricao}
           </div>
         </div>
 

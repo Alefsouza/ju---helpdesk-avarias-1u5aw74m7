@@ -238,6 +238,9 @@ export function DashboardTable({
                       Responsável
                     </TableHead>
                     <TableHead className="hidden lg:table-cell text-[#225f3d] font-semibold text-[14px]">
+                      STATUS INTERNO
+                    </TableHead>
+                    <TableHead className="hidden lg:table-cell text-[#225f3d] font-semibold text-[14px]">
                       Criado em
                     </TableHead>
                     <TableHead className="text-right text-[#225f3d] font-semibold text-[14px]">
@@ -269,7 +272,10 @@ export function DashboardTable({
                         )}
                       </TableCell>
                       <TableCell className="text-sm text-[#212121]">
-                        {c.responsavel?.nome_completo || '-'}
+                        {c.responsavel?.nome_completo || 'Não atribuído'}
+                      </TableCell>
+                      <TableCell className="hidden lg:table-cell text-sm text-[#212121] truncate max-w-[150px]">
+                        {c.status_interno || '-'}
                       </TableCell>
                       <TableCell className="hidden lg:table-cell text-sm text-[#212121]">
                         {format(new Date(c.criado_em), 'dd/MM/yyyy HH:mm')}
@@ -314,9 +320,19 @@ export function DashboardTable({
                         </Badge>
                       )}
                     </div>
-                    <div className="flex justify-between items-center text-sm text-slate-600">
-                      <span>{c.responsavel?.nome_completo || 'Sem responsável'}</span>
-                      <span>{format(new Date(c.criado_em), 'dd/MM/yy')}</span>
+                    <div className="flex flex-col gap-1 text-sm text-slate-600">
+                      <div className="flex justify-between items-center">
+                        <span className="truncate mr-2 font-medium">
+                          {c.responsavel?.nome_completo || 'Não atribuído'}
+                        </span>
+                        <span className="shrink-0">
+                          {format(new Date(c.criado_em), 'dd/MM/yy')}
+                        </span>
+                      </div>
+                      <div className="text-xs">
+                        <span className="font-semibold text-slate-700">STATUS INTERNO:</span>{' '}
+                        {c.status_interno || '-'}
+                      </div>
                     </div>
                     <Button asChild variant="outline" className="w-full mt-2">
                       <Link to={`/dashboard/chamados/${c.id}`}>Ver detalhes</Link>

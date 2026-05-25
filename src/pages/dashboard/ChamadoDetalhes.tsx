@@ -1222,6 +1222,7 @@ export default function ChamadoDetalhes() {
       return
     }
 
+    setChamado((prev: any) => (prev ? { ...prev, responsavel_id: selectedResponsavel } : prev))
     toast.success(`Chamado transferido com sucesso para ${novoResponsavel?.nome_completo}`)
     setTransferLoading(false)
     setTransferModalOpen(false)
@@ -1530,7 +1531,7 @@ export default function ChamadoDetalhes() {
 
   const canReply = isSolicitante || isResponsible || isSupport
   const canFinalize = isSupport && chamado.status !== 'finalizado'
-  const canTransfer = isSupport && chamado.status !== 'finalizado'
+  const canTransfer = isSupport && isResponsible && chamado.status !== 'finalizado'
   const canEditRA = isSupport
   const canUnify = isSupport && chamado.status !== 'finalizado'
 

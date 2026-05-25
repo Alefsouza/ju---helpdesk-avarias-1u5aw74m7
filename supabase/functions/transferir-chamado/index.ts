@@ -69,15 +69,9 @@ Deno.serve(async (req: Request) => {
       throw new Error('Chamado not found')
     }
 
-    // Check if the responsavel/sinistro/juridico has permission to transfer this specific ticket
-    if (
-      profile.tipo_usuario === 'responsavel' ||
-      profile.tipo_usuario === 'sinistro' ||
-      profile.tipo_usuario === 'juridico'
-    ) {
-      if (chamado.responsavel_id !== user.id && chamado.status !== 'aberto') {
-        throw new Error('Forbidden: You are not the responsible for this ticket')
-      }
+    // Check if the caller is the specific person responsible for the ticket
+    if (chamado.responsavel_id !== user.id) {
+      throw new Error('Forbidden: You are not the responsible for this ticket')
     }
 
     // Get new responsavel details

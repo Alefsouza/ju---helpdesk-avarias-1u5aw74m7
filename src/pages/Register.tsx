@@ -65,7 +65,7 @@ export default function Register() {
 
         if (isRateLimit) {
           const rateLimitMessage =
-            'Limite de envio de e-mails atingido. Por favor, aguarde alguns instantes antes de tentar novamente.'
+            'Limite de e-mails atingido. Por favor, aguarde alguns instantes antes de tentar novamente.'
           setError(rateLimitMessage)
           toast({
             variant: 'destructive',
@@ -93,7 +93,7 @@ export default function Register() {
 
       if (isRateLimit) {
         const rateLimitMessage =
-          'Limite de envio de e-mails atingido. Por favor, aguarde alguns instantes antes de tentar novamente.'
+          'Limite de e-mails atingido. Por favor, aguarde alguns instantes antes de tentar novamente.'
         setError(rateLimitMessage)
         toast({
           variant: 'destructive',

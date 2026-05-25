@@ -546,6 +546,10 @@ export type Database = {
         Args: { p_id: string; p_status: string }
         Returns: undefined
       }
+      marcar_chamados_pendentes_por_inatividade: {
+        Args: never
+        Returns: undefined
+      }
       ocultar_documento_manutencao: {
         Args: { p_id: string }
         Returns: undefined
@@ -873,7 +877,7 @@ export const Constants = {
 //   FOREIGN KEY formularios_ido_chamado_id_fkey: FOREIGN KEY (chamado_id) REFERENCES chamados(id) ON DELETE CASCADE
 //   PRIMARY KEY formularios_ido_pkey: PRIMARY KEY (id)
 // Table: historico_chamado
-//   CHECK historico_chamado_acao_check: CHECK ((acao = ANY (ARRAY['criado'::text, 'atribuido'::text, 'respondido'::text, 'finalizado'::text, 'deletado'::text, 'transferido'::text, 'reaberto'::text])))
+//   CHECK historico_chamado_acao_check: CHECK ((acao = ANY (ARRAY['criado'::text, 'atribuido'::text, 'respondido'::text, 'finalizado'::text, 'deletado'::text, 'transferido'::text, 'reaberto'::text, 'pendente'::text])))
 //   FOREIGN KEY historico_chamado_chamado_id_fkey: FOREIGN KEY (chamado_id) REFERENCES chamados(id) ON DELETE CASCADE
 //   PRIMARY KEY historico_chamado_pkey: PRIMARY KEY (id)
 //   FOREIGN KEY historico_chamado_usuario_id_fkey: FOREIGN KEY (usuario_id) REFERENCES auth.users(id) ON DELETE CASCADE
@@ -1072,6 +1076,68 @@ export const Constants = {
 //     SET excluido_manutencao = TRUE,
 //         status_liberacao = p_status
 //     WHERE id = p_id;
+//   END;
+//   $function$
+//
+// FUNCTION marcar_chamados_pendentes_por_inatividade()
+//   CREATE OR REPLACE FUNCTION public.marcar_chamados_pendentes_por_inatividade()
+//    RETURNS void
+//    LANGUAGE plpgsql
+//    SECURITY DEFINER
+//   AS $function$
+//   DECLARE
+//     v_chamado_id uuid;
+//     v_admin_id uuid;
+//     v_count integer := 0;
+//   BEGIN
+//     -- Pega o ID de um administrador para registrar a alteração no histórico
+//     SELECT id INTO v_admin_id
+//     FROM public.perfil_usuario
+//     WHERE tipo_usuario = 'admin'
+//     ORDER BY criado_em ASC
+//     LIMIT 1;
+//
+//     -- Se não encontrar um admin, pega qualquer usuário responsável (fallback de segurança)
+//     IF v_admin_id IS NULL THEN
+//       SELECT id INTO v_admin_id
+//       FROM public.perfil_usuario
+//       WHERE tipo_usuario = 'responsavel'
+//       ORDER BY criado_em ASC
+//       LIMIT 1;
+//     END IF;
+//
+//     FOR v_chamado_id IN
+//       SELECT c.id
+//       FROM public.chamados c
+//       WHERE c.status NOT IN ('finalizado', 'Pendente', 'pendente', 'deletado')
+//         AND c.atualizado_em < NOW() - INTERVAL '30 days'
+//         AND NOT EXISTS (
+//           SELECT 1 FROM public.respostas_chamado r WHERE r.chamado_id = c.id AND r.criado_em >= NOW() - INTERVAL '30 days'
+//         )
+//         AND NOT EXISTS (
+//           SELECT 1 FROM public.anexos_chamado a WHERE a.chamado_id = c.id AND a.criado_em >= NOW() - INTERVAL '30 days'
+//         )
+//         AND NOT EXISTS (
+//           SELECT 1 FROM public.anexos_chamado_interno ai WHERE ai.chamado_id = c.id AND ai.criado_em >= NOW() - INTERVAL '30 days'
+//         )
+//     LOOP
+//       -- Atualiza o status do chamado
+//       UPDATE public.chamados
+//       SET
+//         status = 'pendente',
+//         atualizado_em = NOW()
+//       WHERE id = v_chamado_id;
+//
+//       -- Insere o registro de histórico, se tivermos um usuário válido
+//       IF v_admin_id IS NOT NULL THEN
+//         INSERT INTO public.historico_chamado (chamado_id, acao, usuario_id, detalhes)
+//         VALUES (v_chamado_id, 'pendente', v_admin_id, 'Chamado movido para Pendente, pois não houve interação por mais de 30 dias.');
+//       END IF;
+//
+//       v_count := v_count + 1;
+//     END LOOP;
+//
+//     RAISE NOTICE 'Chamados inativos movidos para pendente: %', v_count;
 //   END;
 //   $function$
 //

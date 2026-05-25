@@ -228,7 +228,9 @@ export default function ChamadoDetalhes() {
     let internalAttachments: AnexoInterno[] = []
     if (
       currUser &&
-      (currUser.tipo_usuario === 'responsavel' || currUser.tipo_usuario === 'admin')
+      (currUser.tipo_usuario === 'responsavel' ||
+        currUser.tipo_usuario === 'sinistro' ||
+        currUser.tipo_usuario === 'admin')
     ) {
       const { data: anexosInt } = await supabase
         .from('anexos_chamado_interno')
@@ -1170,7 +1172,7 @@ export default function ChamadoDetalhes() {
     const { data, error } = await supabase
       .from('perfil_usuario')
       .select('id, nome_completo, email')
-      .eq('tipo_usuario', 'responsavel')
+      .in('tipo_usuario', ['responsavel', 'sinistro'])
       .neq('id', user.id)
       .order('nome_completo', { ascending: true })
 
@@ -1269,6 +1271,7 @@ export default function ChamadoDetalhes() {
 
     const isSupportUser =
       currentUserProfile?.tipo_usuario === 'responsavel' ||
+      currentUserProfile?.tipo_usuario === 'sinistro' ||
       currentUserProfile?.tipo_usuario === 'admin'
 
     if (!isSupportUser && chamado?.status === 'em_atendimento') {
@@ -1293,6 +1296,7 @@ export default function ChamadoDetalhes() {
   const handleSalvarPrioridade = async (novaPrioridade: string) => {
     const isSupportUser =
       currentUserProfile?.tipo_usuario === 'responsavel' ||
+      currentUserProfile?.tipo_usuario === 'sinistro' ||
       currentUserProfile?.tipo_usuario === 'admin'
 
     if (!isSupportUser) return
@@ -1317,6 +1321,7 @@ export default function ChamadoDetalhes() {
   const handleSalvarTipoChamado = async (novoTipo: string) => {
     const isSupportUser =
       currentUserProfile?.tipo_usuario === 'responsavel' ||
+      currentUserProfile?.tipo_usuario === 'sinistro' ||
       currentUserProfile?.tipo_usuario === 'admin'
 
     if (!isSupportUser) return
@@ -1341,6 +1346,7 @@ export default function ChamadoDetalhes() {
   const handleSalvarPia = async () => {
     const isSupportUser =
       currentUserProfile?.tipo_usuario === 'responsavel' ||
+      currentUserProfile?.tipo_usuario === 'sinistro' ||
       currentUserProfile?.tipo_usuario === 'admin'
 
     if (!isSupportUser) return
@@ -1508,6 +1514,7 @@ export default function ChamadoDetalhes() {
 
   const isSupport =
     currentUserProfile?.tipo_usuario === 'responsavel' ||
+    currentUserProfile?.tipo_usuario === 'sinistro' ||
     currentUserProfile?.tipo_usuario === 'admin' ||
     currentUserProfile?.tipo_usuario === 'juridico'
   const isResponsible = chamado.responsavel_id === user?.id

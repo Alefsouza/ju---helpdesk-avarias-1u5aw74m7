@@ -147,6 +147,7 @@ export function NovoUsuarioModal({
                       <SelectItem value="coc">COC</SelectItem>
                       <SelectItem value="sos">SOS</SelectItem>
                       <SelectItem value="juridico">Jurídico</SelectItem>
+                      <SelectItem value="sinistro">Sinistro</SelectItem>
                     </SelectContent>
                   </Select>
                   <FormMessage />

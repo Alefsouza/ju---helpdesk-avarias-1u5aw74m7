@@ -6,7 +6,15 @@ export type UserProfile = {
   id: string
   email: string
   nome_completo: string
-  tipo_usuario: 'basico' | 'responsavel' | 'admin' | 'vistoriador' | 'coc' | 'sos'
+  tipo_usuario:
+    | 'basico'
+    | 'responsavel'
+    | 'admin'
+    | 'vistoriador'
+    | 'coc'
+    | 'sos'
+    | 'juridico'
+    | 'sinistro'
   foto_url?: string | null
   garagem?: string | null
 }

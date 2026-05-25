@@ -54,9 +54,12 @@ Deno.serve(async (req: Request) => {
     if (
       profile?.tipo_usuario !== 'admin' &&
       profile?.tipo_usuario !== 'responsavel' &&
+      profile?.tipo_usuario !== 'sinistro' &&
       profile?.tipo_usuario !== 'juridico'
     ) {
-      throw new Error('Forbidden: Only admin, responsavel, or juridico can perform this action')
+      throw new Error(
+        'Forbidden: Only admin, responsavel, sinistro, or juridico can perform this action',
+      )
     }
 
     // Get source ticket

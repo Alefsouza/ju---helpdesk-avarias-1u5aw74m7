@@ -2,7 +2,7 @@ CREATE OR REPLACE FUNCTION public.buscar_veiculo_por_placa(p_placa text)
  RETURNS jsonb
  LANGUAGE plpgsql
  SECURITY DEFINER
-AS $function$
+AS $$
 DECLARE
   v_result jsonb;
 BEGIN
@@ -13,4 +13,4 @@ BEGIN
   
   RETURN v_result;
 END;
-$function$
+$$;

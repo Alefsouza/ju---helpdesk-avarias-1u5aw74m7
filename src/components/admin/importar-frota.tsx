@@ -12,50 +12,31 @@ export function ImportarFrota() {
     const file = event.target.files?.[0]
     if (!file) return
 
+    if (!file.name.toLowerCase().endsWith('.xlsx')) {
+      toast.error('Por favor, selecione um arquivo no formato Excel (.xlsx).')
+      return
+    }
+
     setIsUploading(true)
     try {
-      const text = await file.text()
-      const lines = text.split(/\r?\n/).filter((line) => line.trim())
-      if (lines.length < 2) {
-        throw new Error('O arquivo está vazio ou não possui dados suficientes.')
-      }
-
-      const separator = lines[0].includes(';') ? ';' : ','
-      const headers = lines[0]
-        .split(separator)
-        .map((h) => h.trim().toLowerCase().replace(/["']/g, ''))
-
-      const prefixoIdx = headers.findIndex((h) => h.includes('prefixo') || h.includes('carro'))
-      const placaIdx = headers.findIndex((h) => h.includes('placa'))
-      const garagemIdx = headers.findIndex((h) => h.includes('garagem'))
-
-      if (prefixoIdx === -1 || garagemIdx === -1) {
-        throw new Error('O arquivo precisa ter as colunas "Prefixo" e "Garagem".')
-      }
-
-      const veiculos = []
-      for (let i = 1; i < lines.length; i++) {
-        const row = lines[i].split(separator).map((cell) => cell.trim().replace(/^["']|["']$/g, ''))
-        const prefixo = row[prefixoIdx]
-        if (prefixo) {
-          veiculos.push({
-            prefixo: prefixo,
-            placa: placaIdx !== -1 ? row[placaIdx] : null,
-            garagem: row[garagemIdx] || 'Desconhecida',
-          })
+      const base64 = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader()
+        reader.onload = (e) => {
+          const result = e.target?.result as string
+          resolve(result.split(',')[1])
         }
-      }
+        reader.onerror = () => reject(new Error('Erro ao ler o arquivo'))
+        reader.readAsDataURL(file)
+      })
 
-      // Upsert in batches of 500
-      for (let i = 0; i < veiculos.length; i += 500) {
-        const chunk = veiculos.slice(i, i + 500)
-        const { error } = await supabase
-          .from('frota_veiculos' as any)
-          .upsert(chunk, { onConflict: 'prefixo' })
-        if (error) throw error
-      }
+      const { data, error } = await supabase.functions.invoke('importar-frota-xlsx', {
+        body: { fileBase64: base64 },
+      })
 
-      toast.success(`Upload concluído! ${veiculos.length} veículos processados.`)
+      if (error) throw error
+      if (data?.error) throw new Error(data.error)
+
+      toast.success(`Upload concluído! ${data.count} veículos processados.`)
     } catch (error: any) {
       console.error(error)
       toast.error(error.message || 'Erro ao processar arquivo. Verifique o formato.')
@@ -72,7 +53,7 @@ export function ImportarFrota() {
       <CardHeader>
         <CardTitle>Importar Frota</CardTitle>
         <CardDescription>
-          Faça o upload de um arquivo CSV contendo os dados da frota de veículos.
+          Faça o upload de uma planilha Excel (XLSX) contendo os dados da frota de veículos.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -82,10 +63,9 @@ export function ImportarFrota() {
             <p className="font-medium mb-1">Instruções para o arquivo:</p>
             <ul className="list-disc pl-5 space-y-1">
               <li>
-                O arquivo deve ser formato <strong>.csv</strong> (separado por vírgulas ou ponto e
-                vírgula). Se usar Excel, clique em "Salvar Como" e escolha "CSV (separado por
-                vírgulas)".
+                O arquivo deve ser no formato <strong>.xlsx</strong> (Excel).
               </li>
+              <li>A primeira planilha (aba) do arquivo será processada.</li>
               <li>A primeira linha deve conter os cabeçalhos das colunas.</li>
               <li>
                 Colunas obrigatórias: <strong>Prefixo</strong> (ou Carro) e <strong>Garagem</strong>
@@ -114,9 +94,9 @@ export function ImportarFrota() {
                   <FileUp className="w-10 h-10 mb-3 text-slate-400 group-hover:text-blue-500" />
                   <p className="mb-2 text-sm text-slate-600">
                     <span className="font-semibold text-blue-600">Clique para fazer upload</span> ou
-                    arraste o arquivo CSV
+                    arraste a planilha Excel
                   </p>
-                  <p className="text-xs text-slate-500">Tamanho máximo: 10MB</p>
+                  <p className="text-xs text-slate-500">Tamanho máximo: 10MB (Formato: .xlsx)</p>
                 </>
               )}
             </div>
@@ -124,7 +104,7 @@ export function ImportarFrota() {
               ref={fileInputRef}
               type="file"
               className="hidden"
-              accept=".csv"
+              accept=".xlsx, application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
               onChange={handleFileUpload}
               disabled={isUploading}
             />

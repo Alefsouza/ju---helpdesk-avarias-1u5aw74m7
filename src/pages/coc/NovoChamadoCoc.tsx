@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '@/hooks/use-auth'
 import { supabase } from '@/lib/supabase/client'
@@ -64,6 +64,35 @@ export default function NovoChamadoCoc() {
     },
   })
 
+  const carro = form.watch('carro')
+  const [garagemIdentificada, setGaragemIdentificada] = useState<string | null>(null)
+  const [isVerificandoCarro, setIsVerificandoCarro] = useState(false)
+
+  useEffect(() => {
+    async function verificarCarro() {
+      if (!carro || carro.trim().length < 2) {
+        setGaragemIdentificada(null)
+        return
+      }
+      setIsVerificandoCarro(true)
+      try {
+        const { data } = await supabase
+          .from('frota_veiculos' as any)
+          .select('garagem')
+          .eq('prefixo', carro.trim())
+          .maybeSingle()
+
+        setGaragemIdentificada(data?.garagem || null)
+      } catch (err) {
+        console.error(err)
+      } finally {
+        setIsVerificandoCarro(false)
+      }
+    }
+    const timer = setTimeout(verificarCarro, 500)
+    return () => clearTimeout(timer)
+  }, [carro])
+
   async function onSubmit(values: z.infer<typeof formSchema>) {
     if (!user) return
 
@@ -78,10 +107,10 @@ export default function NovoChamadoCoc() {
       const { data: veiculo } = await supabase
         .from('frota_veiculos' as any)
         .select('garagem')
-        .eq('prefixo', values.carro)
+        .eq('prefixo', values.carro.trim())
         .maybeSingle()
 
-      const garagemEncontrada = veiculo?.garagem || null
+      const garagemEncontrada = veiculo?.garagem || garagemIdentificada || null
       const statusChamado = garagemEncontrada ? 'aberto' : 'pendente'
 
       if (!garagemEncontrada) {
@@ -231,6 +260,21 @@ export default function NovoChamadoCoc() {
                       <FormControl>
                         <Input placeholder="Número do carro" {...field} />
                       </FormControl>
+                      {isVerificandoCarro ? (
+                        <p className="text-xs text-slate-500 flex items-center gap-1 mt-1">
+                          <Loader2 className="w-3 h-3 animate-spin" /> Verificando frota...
+                        </p>
+                      ) : carro && carro.trim().length >= 2 ? (
+                        garagemIdentificada ? (
+                          <p className="text-xs text-green-600 font-medium mt-1">
+                            Garagem identificada: {garagemIdentificada}
+                          </p>
+                        ) : (
+                          <p className="text-xs text-amber-600 font-medium mt-1">
+                            Carro não encontrado. Chamado ficará como Pendente.
+                          </p>
+                        )
+                      ) : null}
                       <FormMessage />
                     </FormItem>
                   )}

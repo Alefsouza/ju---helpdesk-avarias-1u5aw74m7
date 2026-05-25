@@ -118,6 +118,7 @@ export type Database = {
           carro: string | null
           criado_em: string
           descricao: string
+          garagem: string | null
           id: string
           linha: string | null
           local_ocorrencia: string | null
@@ -141,6 +142,7 @@ export type Database = {
           carro?: string | null
           criado_em?: string
           descricao: string
+          garagem?: string | null
           id?: string
           linha?: string | null
           local_ocorrencia?: string | null
@@ -164,6 +166,7 @@ export type Database = {
           carro?: string | null
           criado_em?: string
           descricao?: string
+          garagem?: string | null
           id?: string
           linha?: string | null
           local_ocorrencia?: string | null
@@ -421,6 +424,33 @@ export type Database = {
             referencedColumns: ['id']
           },
         ]
+      }
+      frota_veiculos: {
+        Row: {
+          atualizado_em: string
+          criado_em: string
+          garagem: string
+          id: string
+          placa: string | null
+          prefixo: string
+        }
+        Insert: {
+          atualizado_em?: string
+          criado_em?: string
+          garagem: string
+          id?: string
+          placa?: string | null
+          prefixo: string
+        }
+        Update: {
+          atualizado_em?: string
+          criado_em?: string
+          garagem?: string
+          id?: string
+          placa?: string | null
+          prefixo?: string
+        }
+        Relationships: []
       }
       historico_chamado: {
         Row: {
@@ -762,6 +792,7 @@ export const Constants = {
 //   operacao: text (nullable)
 //   numero_os: text (nullable)
 //   status_interno: text (nullable)
+//   garagem: text (nullable)
 // Table: documentos
 //   id: uuid (not null, default: gen_random_uuid())
 //   tipo_documento: text (not null)
@@ -825,6 +856,13 @@ export const Constants = {
 //   assinatura_base64: text (nullable)
 //   criado_em: timestamp with time zone (not null, default: now())
 //   atualizado_em: timestamp with time zone (not null, default: now())
+// Table: frota_veiculos
+//   id: uuid (not null, default: gen_random_uuid())
+//   prefixo: text (not null)
+//   placa: text (nullable)
+//   garagem: text (not null)
+//   criado_em: timestamp with time zone (not null, default: now())
+//   atualizado_em: timestamp with time zone (not null, default: now())
 // Table: historico_chamado
 //   id: uuid (not null, default: gen_random_uuid())
 //   chamado_id: uuid (not null)
@@ -881,6 +919,9 @@ export const Constants = {
 // Table: formularios_ido
 //   FOREIGN KEY formularios_ido_chamado_id_fkey: FOREIGN KEY (chamado_id) REFERENCES chamados(id) ON DELETE CASCADE
 //   PRIMARY KEY formularios_ido_pkey: PRIMARY KEY (id)
+// Table: frota_veiculos
+//   PRIMARY KEY frota_veiculos_pkey: PRIMARY KEY (id)
+//   UNIQUE frota_veiculos_prefixo_key: UNIQUE (prefixo)
 // Table: historico_chamado
 //   CHECK historico_chamado_acao_check: CHECK ((acao = ANY (ARRAY['criado'::text, 'atribuido'::text, 'respondido'::text, 'finalizado'::text, 'deletado'::text, 'transferido'::text, 'reaberto'::text, 'pendente'::text])))
 //   FOREIGN KEY historico_chamado_chamado_id_fkey: FOREIGN KEY (chamado_id) REFERENCES chamados(id) ON DELETE CASCADE
@@ -920,12 +961,12 @@ export const Constants = {
 //   Policy "chamados_insert" (INSERT, PERMISSIVE) roles={authenticated}
 //     WITH CHECK: (usuario_id = auth.uid())
 //   Policy "chamados_select" (SELECT, PERMISSIVE) roles={authenticated}
-//     USING: ((usuario_id = auth.uid()) OR (responsavel_id = auth.uid()) OR is_admin() OR is_responsavel() OR is_sos() OR is_coc() OR is_juridico() OR (is_sinistro() AND ((( SELECT perfil_usuario.garagem    FROM perfil_usuario   WHERE (perfil_usuario.id = auth.uid())) IS NOT NULL) AND (( SELECT perfil_usuario.garagem    FROM perfil_usuario   WHERE (perfil_usuario.id = auth.uid())) = ( SELECT perfil_usuario.garagem    FROM perfil_usuario   WHERE (perfil_usuario.id = chamados.usuario_id))))))
+//     USING: ((usuario_id = auth.uid()) OR (responsavel_id = auth.uid()) OR is_admin() OR is_responsavel() OR is_sos() OR is_coc() OR is_juridico() OR (is_sinistro() AND ((( SELECT perfil_usuario.garagem    FROM perfil_usuario   WHERE (perfil_usuario.id = auth.uid())) IS NOT NULL) AND (( SELECT perfil_usuario.garagem    FROM perfil_usuario   WHERE (perfil_usuario.id = auth.uid())) = COALESCE(garagem, ( SELECT perfil_usuario.garagem    FROM perfil_usuario   WHERE (perfil_usuario.id = chamados.usuario_id)))))))
 //   Policy "chamados_select_public_manutencao" (SELECT, PERMISSIVE) roles={public}
 //     USING: (tipo_chamado = 'OS de Manutenção'::text)
 //   Policy "chamados_update" (UPDATE, PERMISSIVE) roles={authenticated}
-//     USING: ((usuario_id = auth.uid()) OR (responsavel_id = auth.uid()) OR is_admin() OR is_sos() OR is_coc() OR (((status = 'aberto'::text) OR (status = 'finalizado'::text)) AND (is_responsavel() OR is_juridico() OR (is_sinistro() AND (( SELECT perfil_usuario.garagem    FROM perfil_usuario   WHERE (perfil_usuario.id = auth.uid())) = ( SELECT perfil_usuario.garagem    FROM perfil_usuario   WHERE (perfil_usuario.id = chamados.usuario_id)))))))
-//     WITH CHECK: ((usuario_id = auth.uid()) OR (responsavel_id = auth.uid()) OR is_admin() OR is_sos() OR is_coc() OR (((status = 'aberto'::text) OR (status = 'finalizado'::text)) AND (is_responsavel() OR is_juridico() OR (is_sinistro() AND (( SELECT perfil_usuario.garagem    FROM perfil_usuario   WHERE (perfil_usuario.id = auth.uid())) = ( SELECT perfil_usuario.garagem    FROM perfil_usuario   WHERE (perfil_usuario.id = chamados.usuario_id)))))))
+//     USING: ((usuario_id = auth.uid()) OR (responsavel_id = auth.uid()) OR is_admin() OR is_sos() OR is_coc() OR (((status = 'aberto'::text) OR (status = 'finalizado'::text)) AND (is_responsavel() OR is_juridico() OR (is_sinistro() AND (( SELECT perfil_usuario.garagem    FROM perfil_usuario   WHERE (perfil_usuario.id = auth.uid())) = COALESCE(garagem, ( SELECT perfil_usuario.garagem    FROM perfil_usuario   WHERE (perfil_usuario.id = chamados.usuario_id))))))))
+//     WITH CHECK: ((usuario_id = auth.uid()) OR (responsavel_id = auth.uid()) OR is_admin() OR is_sos() OR is_coc() OR (((status = 'aberto'::text) OR (status = 'finalizado'::text)) AND (is_responsavel() OR is_juridico() OR (is_sinistro() AND (( SELECT perfil_usuario.garagem    FROM perfil_usuario   WHERE (perfil_usuario.id = auth.uid())) = COALESCE(garagem, ( SELECT perfil_usuario.garagem    FROM perfil_usuario   WHERE (perfil_usuario.id = chamados.usuario_id))))))))
 //   Policy "chamados_update_public_manutencao" (UPDATE, PERMISSIVE) roles={public}
 //     USING: (tipo_chamado = 'OS de Manutenção'::text)
 //     WITH CHECK: (tipo_chamado = 'OS de Manutenção'::text)
@@ -957,6 +998,16 @@ export const Constants = {
 //   Policy "formularios_ido_update" (UPDATE, PERMISSIVE) roles={authenticated}
 //     USING: ((chamado_id IN ( SELECT chamados.id    FROM chamados   WHERE (chamados.responsavel_id = auth.uid()))) OR is_admin() OR is_responsavel() OR is_sinistro() OR is_juridico())
 //     WITH CHECK: ((chamado_id IN ( SELECT chamados.id    FROM chamados   WHERE (chamados.responsavel_id = auth.uid()))) OR is_admin() OR is_responsavel() OR is_sinistro() OR is_juridico())
+// Table: frota_veiculos
+//   Policy "frota_delete" (DELETE, PERMISSIVE) roles={authenticated}
+//     USING: (is_admin() OR ((auth.jwt() ->> 'email'::text) = 'ti@viasudeste.com'::text))
+//   Policy "frota_insert" (INSERT, PERMISSIVE) roles={authenticated}
+//     WITH CHECK: (is_admin() OR ((auth.jwt() ->> 'email'::text) = 'ti@viasudeste.com'::text))
+//   Policy "frota_select" (SELECT, PERMISSIVE) roles={authenticated}
+//     USING: true
+//   Policy "frota_update" (UPDATE, PERMISSIVE) roles={authenticated}
+//     USING: (is_admin() OR ((auth.jwt() ->> 'email'::text) = 'ti@viasudeste.com'::text))
+//     WITH CHECK: (is_admin() OR ((auth.jwt() ->> 'email'::text) = 'ti@viasudeste.com'::text))
 // Table: historico_chamado
 //   Policy "Permitir INSERT para responsáveis e admin" (INSERT, PERMISSIVE) roles={authenticated}
 //     WITH CHECK: (auth.uid() IS NOT NULL)
@@ -1367,3 +1418,5 @@ export const Constants = {
 //   CREATE INDEX formularios_espelho_danos_chamado_id_idx ON public.formularios_espelho_danos USING btree (chamado_id)
 // Table: formularios_ido
 //   CREATE INDEX formularios_ido_chamado_id_idx ON public.formularios_ido USING btree (chamado_id)
+// Table: frota_veiculos
+//   CREATE UNIQUE INDEX frota_veiculos_prefixo_key ON public.frota_veiculos USING btree (prefixo)

@@ -1419,4 +1419,5 @@ export const Constants = {
 // Table: formularios_ido
 //   CREATE INDEX formularios_ido_chamado_id_idx ON public.formularios_ido USING btree (chamado_id)
 // Table: frota_veiculos
+//   CREATE INDEX frota_veiculos_placa_idx ON public.frota_veiculos USING btree (placa)
 //   CREATE UNIQUE INDEX frota_veiculos_prefixo_key ON public.frota_veiculos USING btree (prefixo)

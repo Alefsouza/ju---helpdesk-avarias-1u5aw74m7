@@ -299,7 +299,7 @@ export default function NovoChamado() {
   }
 
   useEffect(() => {
-    if (!placaOnibus || placaOnibus.length < 3) {
+    if (!placaOnibus || placaOnibus.length !== 8) {
       setIdentifiedGaragem(null)
       return
     }
@@ -307,10 +307,11 @@ export default function NovoChamado() {
     const searchTimer = setTimeout(async () => {
       setIsSearchingPlaca(true)
       try {
+        const cleanSearch = placaOnibus.replace(/\s/g, '')
         const { data, error } = await supabase
           .from('frota_veiculos')
           .select('garagem')
-          .or(`prefixo.ilike.%${placaOnibus}%,placa.ilike.%${placaOnibus}%`)
+          .or(`prefixo.ilike.%${cleanSearch}%,placa.ilike.%${cleanSearch}%`)
           .limit(1)
           .maybeSingle()
 
@@ -333,7 +334,10 @@ export default function NovoChamado() {
   }, [placaOnibus])
 
   const handlePlacaChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = e.target.value.replace(/[^a-zA-Z0-9]/g, '').toUpperCase()
+    let value = e.target.value.replace(/[^a-zA-Z0-9]/g, '').toUpperCase()
+    if (value.length > 3) {
+      value = value.substring(0, 3) + ' ' + value.substring(3, 7)
+    }
     setPlacaOnibus(value)
   }
 
@@ -361,8 +365,8 @@ export default function NovoChamado() {
       return
     }
 
-    if (!placaOnibus.trim()) {
-      toast.error('A identificação do ônibus é obrigatória')
+    if (placaOnibus.length !== 8) {
+      toast.error('A placa do ônibus deve conter 7 caracteres alfanuméricos')
       return
     }
 
@@ -475,7 +479,7 @@ export default function NovoChamado() {
     files.some((f) => f.status !== 'success') ||
     !titulo.trim() ||
     !descricao.trim() ||
-    !placaOnibus.trim()
+    placaOnibus.length !== 8
 
   return (
     <div className="max-w-3xl mx-auto space-y-6 animate-fade-in-up p-4 mb-20">
@@ -521,9 +525,10 @@ export default function NovoChamado() {
                     <Label htmlFor="placaOnibus">Placa do nosso ônibus *</Label>
                     <Input
                       id="placaOnibus"
-                      placeholder="Ex: ABC1234 ou 55123"
+                      placeholder="Ex: ABC 1234"
                       value={placaOnibus}
                       onChange={handlePlacaChange}
+                      maxLength={8}
                       required
                     />
                     {isSearchingPlaca && (
@@ -540,7 +545,7 @@ export default function NovoChamado() {
                       identifiedGaragem &&
                       identifiedGaragem !== 'NOT_FOUND' && (
                         <p className="text-sm text-green-600 font-medium flex items-center gap-1 mt-1">
-                          <CheckCircle2 className="h-3 w-3" /> Garagem Identificada:{' '}
+                          <CheckCircle2 className="h-3 w-3" /> Veículo identificado: Garagem{' '}
                           {identifiedGaragem}
                         </p>
                       )}

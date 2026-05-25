@@ -200,12 +200,6 @@ export default function MeusChamados() {
       } = await supabase.auth.getUser()
       if (!user) throw new Error('Autenticação necessária')
 
-      await supabase.from('historico_chamado').insert({
-        chamado_id: deleteId,
-        acao: 'deletado',
-        usuario_id: user.id,
-      })
-
       const { error: delError } = await supabase.from('chamados').delete().eq('id', deleteId)
       if (delError) throw delError
 
@@ -218,7 +212,7 @@ export default function MeusChamados() {
     } catch (err: any) {
       toast({
         title: 'Erro',
-        description: 'Não foi possível excluir o chamado.',
+        description: 'Erro ao excluir chamado. Tente novamente.',
         variant: 'destructive',
       })
     } finally {
@@ -377,18 +371,9 @@ export default function MeusChamados() {
                       <Button
                         variant="ghost"
                         size="icon"
-                        disabled={c.status !== 'aberto'}
                         onClick={() => setDeleteId(c.id)}
-                        className={
-                          c.status === 'aberto'
-                            ? 'text-red-500 hover:text-red-700 hover:bg-red-50'
-                            : ''
-                        }
-                        title={
-                          c.status !== 'aberto'
-                            ? 'Apenas chamados abertos podem ser excluídos'
-                            : 'Excluir chamado'
-                        }
+                        className="text-red-500 hover:text-red-700 hover:bg-red-50"
+                        title="Excluir chamado"
                       >
                         <Trash2 className="h-4 w-4" />
                       </Button>
@@ -440,11 +425,8 @@ export default function MeusChamados() {
                     <Button
                       variant="outline"
                       size="sm"
-                      disabled={c.status !== 'aberto'}
                       onClick={() => setDeleteId(c.id)}
-                      className={
-                        c.status === 'aberto' ? 'text-red-600 border-red-200 hover:bg-red-50' : ''
-                      }
+                      className="text-red-600 border-red-200 hover:bg-red-50"
                     >
                       <Trash2 className="h-4 w-4 mr-2" />
                       Excluir
@@ -462,10 +444,7 @@ export default function MeusChamados() {
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Tem certeza que deseja excluir este chamado?</AlertDialogTitle>
-            <AlertDialogDescription>
-              Esta ação não pode ser desfeita. O chamado e todos os dados associados a ele serão
-              apagados permanentemente.
-            </AlertDialogDescription>
+            <AlertDialogDescription>Esta ação não pode ser desfeita.</AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancelar</AlertDialogCancel>

@@ -38,6 +38,7 @@ export function DashboardTable({
   const [dateRange, setDateRange] = useState<{ from?: Date; to?: Date } | undefined>()
   const [status, setStatus] = useState('all')
   const [prioridade, setPrioridade] = useState('all')
+  const [statusInterno, setStatusInterno] = useState('all')
   const [resp, setResp] = useState('all')
 
   useEffect(() => {
@@ -55,6 +56,7 @@ export function DashboardTable({
         return false
       if (status !== 'all' && c.status !== status) return false
       if (prioridade !== 'all' && c.prioridade !== prioridade) return false
+      if (statusInterno !== 'all' && c.status_interno !== statusInterno) return false
       if (resp !== 'all') {
         if (resp === 'unassigned' && c.responsavel) return false
         if (resp !== 'unassigned' && c.responsavel?.id !== resp) return false
@@ -70,7 +72,15 @@ export function DashboardTable({
       }
       return true
     })
-  }, [chamados, debouncedSearch, status, prioridade, resp, period, dateRange])
+  }, [chamados, debouncedSearch, status, prioridade, statusInterno, resp, period, dateRange])
+
+  const uniqueStatusInterno = useMemo(() => {
+    const statuses = new Set<string>()
+    chamados.forEach((c) => {
+      if (c.status_interno) statuses.add(c.status_interno)
+    })
+    return Array.from(statuses).sort()
+  }, [chamados])
 
   const statusColor: Record<string, string> = {
     aberto: 'bg-blue-100 text-blue-800 hover:bg-blue-100',
@@ -101,6 +111,7 @@ export function DashboardTable({
     setSearch('')
     setStatus('all')
     setPrioridade('all')
+    setStatusInterno('all')
     setResp('all')
     setPeriod('all')
     setDateRange(undefined)
@@ -109,7 +120,7 @@ export function DashboardTable({
   return (
     <Card className="flex-1 shadow-sm border-[#f0f0f0] transition-all duration-200 hover:shadow-subtle">
       <CardContent className="p-4 sm:p-6 space-y-6">
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
           <div className="relative">
             <Search className="absolute left-3 top-3 h-4 w-4 text-slate-400" />
             <Input
@@ -186,10 +197,21 @@ export function DashboardTable({
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">Todas as Prioridades</SelectItem>
-              <SelectItem value="baixa">Baixa</SelectItem>
               <SelectItem value="media">Média</SelectItem>
-              <SelectItem value="alta">Alta</SelectItem>
               <SelectItem value="urgente">Urgente</SelectItem>
+            </SelectContent>
+          </Select>
+          <Select value={statusInterno} onValueChange={setStatusInterno}>
+            <SelectTrigger className="bg-[#f0f0f0] border-[#f0f0f0] text-[#212121]">
+              <SelectValue placeholder="Status Interno" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todos Status Interno</SelectItem>
+              {uniqueStatusInterno.map((s) => (
+                <SelectItem key={s} value={s}>
+                  {s}
+                </SelectItem>
+              ))}
             </SelectContent>
           </Select>
           <Select value={resp} onValueChange={setResp}>

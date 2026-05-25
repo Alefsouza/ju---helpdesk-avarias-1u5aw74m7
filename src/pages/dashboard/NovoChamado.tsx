@@ -307,18 +307,19 @@ export default function NovoChamado() {
     const searchTimer = setTimeout(async () => {
       setIsSearchingPlaca(true)
       try {
-        const cleanSearch = placaOnibus.replace(/\s/g, '')
-        const { data, error } = await supabase
-          .from('frota_veiculos')
-          .select('garagem')
-          .or(`prefixo.ilike.%${cleanSearch}%,placa.ilike.%${cleanSearch}%`)
-          .limit(1)
-          .maybeSingle()
+        const cleanSearch = placaOnibus.replace(/[^a-zA-Z0-9]/g, '')
+
+        const { data, error } = await supabase.rpc(
+          'buscar_garagem_por_placa' as any,
+          {
+            p_placa: cleanSearch,
+          } as any,
+        )
 
         if (error) throw error
 
         if (data) {
-          setIdentifiedGaragem(data.garagem)
+          setIdentifiedGaragem(data as string)
         } else {
           setIdentifiedGaragem('NOT_FOUND')
         }
@@ -538,7 +539,7 @@ export default function NovoChamado() {
                     )}
                     {!isSearchingPlaca && identifiedGaragem === 'NOT_FOUND' && (
                       <p className="text-sm text-red-500 font-medium flex items-center gap-1 mt-1">
-                        <AlertCircle className="h-3 w-3" /> Veículo não localizado na base de frota
+                        <AlertCircle className="h-3 w-3" /> Veículo não encontrado na base da frota
                       </p>
                     )}
                     {!isSearchingPlaca &&

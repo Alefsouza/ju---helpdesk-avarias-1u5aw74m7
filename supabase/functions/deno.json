@@ -1,7 +1,7 @@
 {
   "_versions": {
     "manage-users": 5,
-    "transferir-chamado": 3,
+    "transferir-chamado": 4,
     "gerar-pdf": 6,
     "criar-chamado-vistoria": 2,
     "processar-documento-uazapi": 1,

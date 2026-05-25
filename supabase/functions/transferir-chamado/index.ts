@@ -83,7 +83,7 @@ Deno.serve(async (req: Request) => {
     // Get new responsavel details
     const { data: novoResponsavel, error: novoRespError } = await supabaseAdmin
       .from('perfil_usuario')
-      .select('nome_completo')
+      .select('nome_completo, departamento')
       .eq('id', novo_responsavel_id)
       .single()
 
@@ -96,6 +96,7 @@ Deno.serve(async (req: Request) => {
       .from('chamados')
       .update({
         responsavel_id: novo_responsavel_id,
+        status_interno: novoResponsavel.departamento || null,
         atualizado_em: new Date().toISOString(),
       })
       .eq('id', chamado_id)

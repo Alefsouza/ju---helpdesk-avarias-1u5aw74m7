@@ -1437,6 +1437,7 @@ export default function ChamadoDetalhes() {
         .update({
           status: 'aberto',
           responsavel_id: user?.id,
+          status_interno: currentUserProfile?.departamento || null,
           atualizado_em: new Date().toISOString(),
         })
         .eq('id', id)
@@ -1455,7 +1456,14 @@ export default function ChamadoDetalhes() {
       if (histError) throw histError
 
       setChamado((prev: any) =>
-        prev ? { ...prev, status: 'aberto', responsavel_id: user?.id } : prev,
+        prev
+          ? {
+              ...prev,
+              status: 'aberto',
+              responsavel_id: user?.id,
+              status_interno: currentUserProfile?.departamento || null,
+            }
+          : prev,
       )
       setConfirmReabrirOpen(false)
       toast.success('Chamado reaberto com sucesso')
@@ -1635,6 +1643,21 @@ export default function ChamadoDetalhes() {
                 </Badge>
               )}
             </div>
+            {currentUserProfile?.tipo_usuario &&
+              currentUserProfile.tipo_usuario !== 'basico' &&
+              chamado.status_interno && (
+                <div className="flex items-center gap-2 mb-2">
+                  <span className="text-[10px] font-bold text-slate-500 tracking-wider">
+                    STATUS INTERNO:
+                  </span>
+                  <Badge
+                    variant="outline"
+                    className="px-2.5 py-0.5 uppercase text-[10px] font-bold tracking-wider bg-blue-100 text-blue-800 border-blue-200"
+                  >
+                    {chamado.status_interno}
+                  </Badge>
+                </div>
+              )}
             <h1 className="text-2xl font-bold text-slate-900">{chamado.titulo}</h1>
           </div>
           <div className="text-sm text-slate-500 flex flex-col sm:items-end gap-1 bg-slate-50 p-3 rounded-lg border">

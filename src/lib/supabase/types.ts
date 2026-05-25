@@ -906,6 +906,7 @@ export const Constants = {
 //     USING: (is_responsavel() OR is_sinistro() OR is_admin() OR is_sos() OR is_juridico())
 //   Policy "anexos_internos_update" (UPDATE, PERMISSIVE) roles={authenticated}
 //     USING: ((usuario_id = auth.uid()) AND (is_responsavel() OR is_sinistro() OR is_admin() OR is_juridico()))
+//     WITH CHECK: ((usuario_id = auth.uid()) AND (is_responsavel() OR is_sinistro() OR is_admin() OR is_juridico()))
 // Table: auditoria_admin
 //   Policy "admin_auditoria_insert" (INSERT, PERMISSIVE) roles={authenticated}
 //     WITH CHECK: is_admin()
@@ -920,6 +921,7 @@ export const Constants = {
 //     USING: (tipo_chamado = 'OS de Manutenção'::text)
 //   Policy "chamados_update" (UPDATE, PERMISSIVE) roles={authenticated}
 //     USING: ((usuario_id = auth.uid()) OR ((is_responsavel() OR is_sinistro() OR is_juridico()) AND ((responsavel_id = auth.uid()) OR (status = 'aberto'::text) OR (status = 'finalizado'::text))) OR is_admin() OR is_sos() OR is_coc())
+//     WITH CHECK: ((usuario_id = auth.uid()) OR ((is_responsavel() OR is_sinistro() OR is_juridico()) AND ((responsavel_id = auth.uid()) OR (status = 'aberto'::text) OR (status = 'finalizado'::text))) OR is_admin() OR is_sos() OR is_coc())
 //   Policy "chamados_update_public_manutencao" (UPDATE, PERMISSIVE) roles={public}
 //     USING: (tipo_chamado = 'OS de Manutenção'::text)
 //     WITH CHECK: (tipo_chamado = 'OS de Manutenção'::text)
@@ -955,7 +957,7 @@ export const Constants = {
 //   Policy "Permitir INSERT para responsáveis e admin" (INSERT, PERMISSIVE) roles={authenticated}
 //     WITH CHECK: (auth.uid() IS NOT NULL)
 //   Policy "Permitir SELECT para admin e responsáveis" (SELECT, PERMISSIVE) roles={authenticated}
-//     USING: ((( SELECT perfil_usuario.tipo_usuario    FROM perfil_usuario   WHERE (perfil_usuario.id = auth.uid())) = 'admin'::text) OR (( SELECT perfil_usuario.tipo_usuario    FROM perfil_usuario   WHERE (perfil_usuario.id = auth.uid())) = 'responsavel'::text) OR (( SELECT perfil_usuario.tipo_usuario    FROM perfil_usuario   WHERE (perfil_usuario.id = auth.uid())) = 'sinistro'::text) OR (( SELECT perfil_usuario.tipo_usuario    FROM perfil_usuario   WHERE (perfil_usuario.id = auth.uid())) = 'juridico'::text) OR (chamado_id IN ( SELECT chamados.id    FROM chamados   WHERE (chamados.usuario_id = auth.uid()))))
+//     USING: ((( SELECT perfil_usuario.tipo_usuario    FROM perfil_usuario   WHERE (perfil_usuario.id = auth.uid())) = ANY (ARRAY['admin'::text, 'responsavel'::text, 'sinistro'::text, 'juridico'::text])) OR (chamado_id IN ( SELECT chamados.id    FROM chamados   WHERE (chamados.usuario_id = auth.uid()))))
 // Table: perfil_usuario
 //   Policy "perfil_select" (SELECT, PERMISSIVE) roles={authenticated}
 //     USING: true

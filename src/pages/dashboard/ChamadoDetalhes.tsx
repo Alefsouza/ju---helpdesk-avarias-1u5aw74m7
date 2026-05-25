@@ -1172,7 +1172,7 @@ export default function ChamadoDetalhes() {
     const { data, error } = await supabase
       .from('perfil_usuario')
       .select('id, nome_completo, email')
-      .in('tipo_usuario', ['responsavel', 'sinistro'])
+      .neq('tipo_usuario', 'basico')
       .neq('id', user.id)
       .order('nome_completo', { ascending: true })
 

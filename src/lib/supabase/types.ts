@@ -131,6 +131,7 @@ export type Database = {
           registro_motorista: string | null
           responsavel_id: string | null
           status: string
+          status_interno: string | null
           tipo_chamado: string | null
           titulo: string
           usuario_id: string
@@ -153,6 +154,7 @@ export type Database = {
           registro_motorista?: string | null
           responsavel_id?: string | null
           status?: string
+          status_interno?: string | null
           tipo_chamado?: string | null
           titulo: string
           usuario_id: string
@@ -175,6 +177,7 @@ export type Database = {
           registro_motorista?: string | null
           responsavel_id?: string | null
           status?: string
+          status_interno?: string | null
           tipo_chamado?: string | null
           titulo?: string
           usuario_id?: string
@@ -758,6 +761,7 @@ export const Constants = {
 //   local_ocorrencia: text (nullable)
 //   operacao: text (nullable)
 //   numero_os: text (nullable)
+//   status_interno: text (nullable)
 // Table: documentos
 //   id: uuid (not null, default: gen_random_uuid())
 //   tipo_documento: text (not null)
@@ -1312,6 +1316,29 @@ export const Constants = {
 //   END;
 //   $function$
 //
+// FUNCTION sync_chamado_status_interno()
+//   CREATE OR REPLACE FUNCTION public.sync_chamado_status_interno()
+//    RETURNS trigger
+//    LANGUAGE plpgsql
+//    SECURITY DEFINER
+//   AS $function$
+//   DECLARE
+//     v_departamento TEXT;
+//   BEGIN
+//     IF NEW.responsavel_id IS NOT NULL THEN
+//       SELECT departamento INTO v_departamento
+//       FROM public.perfil_usuario
+//       WHERE id = NEW.responsavel_id;
+//
+//       NEW.status_interno := v_departamento;
+//     ELSE
+//       NEW.status_interno := NULL;
+//     END IF;
+//
+//     RETURN NEW;
+//   END;
+//   $function$
+//
 // FUNCTION update_documentos_atualizado_em()
 //   CREATE OR REPLACE FUNCTION public.update_documentos_atualizado_em()
 //    RETURNS trigger
@@ -1325,6 +1352,8 @@ export const Constants = {
 //
 
 // --- TRIGGERS ---
+// Table: chamados
+//   trigger_sync_chamado_status_interno: CREATE TRIGGER trigger_sync_chamado_status_interno BEFORE INSERT OR UPDATE OF responsavel_id ON public.chamados FOR EACH ROW EXECUTE FUNCTION sync_chamado_status_interno()
 // Table: documentos
 //   update_documentos_atualizado_em_trigger: CREATE TRIGGER update_documentos_atualizado_em_trigger BEFORE UPDATE ON public.documentos FOR EACH ROW EXECUTE FUNCTION update_documentos_atualizado_em()
 

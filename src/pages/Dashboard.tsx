@@ -13,6 +13,8 @@ export default function Dashboard() {
         navigate('/dashboard/admin', { replace: true })
       } else if (profile.tipo_usuario === 'responsavel') {
         navigate('/dashboard/chamados-abertos', { replace: true })
+      } else if (profile.tipo_usuario === 'sinistro') {
+        navigate('/dashboard/meus-chamados', { replace: true })
       } else {
         navigate('/dashboard/meus-chamados', { replace: true })
       }

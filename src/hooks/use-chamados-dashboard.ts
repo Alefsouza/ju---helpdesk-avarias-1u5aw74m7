@@ -15,7 +15,7 @@ export function useChamadosDashboard() {
         supabase
           .from('perfil_usuario')
           .select('id, nome_completo')
-          .in('tipo_usuario', ['responsavel', 'admin']),
+          .in('tipo_usuario', ['responsavel', 'sinistro', 'admin']),
         supabase.from('respostas_chamado').select('id, chamado_id, criado_em'),
         supabase.from('historico_chamado').select('id, chamado_id, acao, criado_em'),
       ])

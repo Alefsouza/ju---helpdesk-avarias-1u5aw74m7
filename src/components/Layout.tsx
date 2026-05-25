@@ -41,7 +41,7 @@ function AppSidebar() {
 
   const tipo = profile?.tipo_usuario
   const isBasico = tipo === 'basico'
-  const isResponsavel = tipo === 'responsavel'
+  const isResponsavel = tipo === 'responsavel' || tipo === 'sinistro'
   const isAdmin = tipo === 'admin'
   const isVistoriador = tipo === 'vistoriador'
   const isCoc = tipo === 'coc'
@@ -387,6 +387,7 @@ function useRealtimeNotifications(userId: string | undefined, profile: any) {
           } else {
             if (
               profile?.tipo_usuario === 'responsavel' ||
+              profile?.tipo_usuario === 'sinistro' ||
               profile?.tipo_usuario === 'admin' ||
               profile?.tipo_usuario === 'juridico'
             ) {

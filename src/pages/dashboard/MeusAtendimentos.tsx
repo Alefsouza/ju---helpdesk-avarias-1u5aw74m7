@@ -86,6 +86,7 @@ export default function MeusAtendimentos() {
 
   const isSupport =
     currentUserProfile?.tipo_usuario === 'responsavel' ||
+    currentUserProfile?.tipo_usuario === 'sinistro' ||
     currentUserProfile?.tipo_usuario === 'admin' ||
     currentUserProfile?.tipo_usuario === 'juridico'
 

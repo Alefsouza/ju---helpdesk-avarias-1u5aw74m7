@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Link, useSearchParams } from 'react-router-dom'
+import { Link, useSearchParams, useNavigate } from 'react-router-dom'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import * as z from 'zod'
@@ -26,6 +26,7 @@ const formSchema = z.object({
 
 export default function Index() {
   const [searchParams] = useSearchParams()
+  const navigate = useNavigate()
   const { toast } = useToast()
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -52,21 +53,37 @@ export default function Index() {
     setIsLoading(true)
     setError(null)
 
-    const { error: signInError } = await supabase.auth.signInWithPassword({
+    const { data, error: signInError } = await supabase.auth.signInWithPassword({
       email: values.email,
       password: values.password,
     })
 
-    setIsLoading(false)
-
     if (signInError) {
+      setIsLoading(false)
       setError(signInError.message || 'E-mail ou senha incorretos')
     } else {
       toast({
         title: 'Login realizado com sucesso',
         className: 'bg-green-600 text-white border-none',
       })
-      // Redirect happens automatically via Layout observation of Auth State
+
+      if (data.user) {
+        try {
+          const { data: profile } = await supabase
+            .from('perfil_usuario')
+            .select('tipo_usuario')
+            .eq('id', data.user.id)
+            .single()
+
+          if (profile?.tipo_usuario === 'juridico') {
+            navigate('/dashboard/meus-atendimentos', { replace: true })
+          }
+        } catch (err) {
+          console.error('Erro ao buscar perfil para redirecionamento:', err)
+        }
+      }
+      setIsLoading(false)
+      // Redirect happens automatically via Layout observation of Auth State for other roles
     }
   }
 

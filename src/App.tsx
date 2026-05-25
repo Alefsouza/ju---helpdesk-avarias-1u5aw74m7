@@ -1,4 +1,5 @@
-import { BrowserRouter, Routes, Route } from 'react-router-dom'
+import { BrowserRouter, Routes, Route, useNavigate } from 'react-router-dom'
+import { useEffect } from 'react'
 import { Toaster } from '@/components/ui/toaster'
 import { Toaster as Sonner } from '@/components/ui/sonner'
 import { TooltipProvider } from '@/components/ui/tooltip'
@@ -32,7 +33,24 @@ import OsManutencao from './pages/OsManutencao'
 import CarrosLiberadosPlantao from './pages/CarrosLiberadosPlantao'
 import NotFound from './pages/NotFound'
 import Layout from './components/Layout'
-import { AuthProvider } from './hooks/use-auth'
+import { AuthProvider, useAuth } from './hooks/use-auth'
+
+const DashboardRoute = () => {
+  const { profile, loading } = useAuth()
+  const navigate = useNavigate()
+
+  useEffect(() => {
+    if (!loading && profile?.tipo_usuario === 'juridico') {
+      navigate('/dashboard/meus-atendimentos', { replace: true })
+    }
+  }, [profile, loading, navigate])
+
+  if (loading || profile?.tipo_usuario === 'juridico') {
+    return null
+  }
+
+  return <Dashboard />
+}
 
 const App = () => (
   <AuthProvider>
@@ -44,7 +62,7 @@ const App = () => (
           <Route element={<Layout />}>
             <Route path="/" element={<Index />} />
             <Route path="/cadastro" element={<Register />} />
-            <Route path="/dashboard" element={<Dashboard />} />
+            <Route path="/dashboard" element={<DashboardRoute />} />
             <Route path="/dashboard/meus-chamados" element={<MeusChamados />} />
             <Route path="/dashboard/novo-chamado" element={<NovoChamado />} />
             <Route path="/dashboard/chamados-abertos" element={<ChamadosAbertos />} />

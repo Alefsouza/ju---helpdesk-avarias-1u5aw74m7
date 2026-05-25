@@ -14,7 +14,7 @@ export default function Dashboard() {
       } else if (profile.tipo_usuario === 'responsavel') {
         navigate('/dashboard/chamados-abertos', { replace: true })
       } else if (profile.tipo_usuario === 'sinistro') {
-        navigate('/dashboard/meus-chamados', { replace: true })
+        navigate('/dashboard/chamados-abertos', { replace: true })
       } else {
         navigate('/dashboard/meus-chamados', { replace: true })
       }

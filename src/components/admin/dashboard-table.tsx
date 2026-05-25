@@ -260,7 +260,7 @@ export function DashboardTable({
                       Responsável
                     </TableHead>
                     <TableHead className="hidden lg:table-cell text-[#225f3d] font-semibold text-[14px]">
-                      STATUS INTERNO
+                      Status Interno
                     </TableHead>
                     <TableHead className="hidden lg:table-cell text-[#225f3d] font-semibold text-[14px]">
                       Criado em

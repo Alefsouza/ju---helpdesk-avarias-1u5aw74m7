@@ -569,6 +569,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      buscar_garagem_por_placa: { Args: { p_placa: string }; Returns: string }
       is_admin: { Args: never; Returns: boolean }
       is_coc: { Args: never; Returns: boolean }
       is_juridico: { Args: never; Returns: boolean }
@@ -1026,6 +1027,24 @@ export const Constants = {
 //     USING: ((usuario_id = auth.uid()) OR (chamado_id IN ( SELECT chamados.id    FROM chamados)))
 
 // --- DATABASE FUNCTIONS ---
+// FUNCTION buscar_garagem_por_placa(text)
+//   CREATE OR REPLACE FUNCTION public.buscar_garagem_por_placa(p_placa text)
+//    RETURNS text
+//    LANGUAGE plpgsql
+//    SECURITY DEFINER
+//   AS $function$
+//   DECLARE
+//     v_garagem text;
+//   BEGIN
+//     SELECT garagem INTO v_garagem
+//     FROM public.frota_veiculos
+//     WHERE regexp_replace(placa, '[^a-zA-Z0-9]', '', 'g') ILIKE '%' || p_placa || '%'
+//     LIMIT 1;
+//
+//     RETURN v_garagem;
+//   END;
+//   $function$
+//
 // FUNCTION handle_new_user()
 //   CREATE OR REPLACE FUNCTION public.handle_new_user()
 //    RETURNS trigger

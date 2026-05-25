@@ -125,7 +125,7 @@ const MAX_SIZE_MB = 20
 const MAX_SIZE_BYTES = MAX_SIZE_MB * 1024 * 1024
 
 export default function NovoChamado() {
-  const { user } = useAuth()
+  const { user, profile } = useAuth()
   const navigate = useNavigate()
 
   const [tipoChamado, setTipoChamado] = useState<'Colisão' | 'Lesão Corporal' | ''>('')
@@ -133,6 +133,7 @@ export default function NovoChamado() {
   const [descricao, setDescricao] = useState('')
   const [placaOnibus, setPlacaOnibus] = useState('')
   const [identifiedGaragem, setIdentifiedGaragem] = useState<string | null>(null)
+  const [identifiedPrefixo, setIdentifiedPrefixo] = useState<string | null>(null)
   const [isSearchingPlaca, setIsSearchingPlaca] = useState(false)
 
   const [files, setFiles] = useState<FileItem[]>([])
@@ -301,6 +302,7 @@ export default function NovoChamado() {
   useEffect(() => {
     if (!placaOnibus || placaOnibus.length !== 8) {
       setIdentifiedGaragem(null)
+      setIdentifiedPrefixo(null)
       return
     }
 
@@ -310,7 +312,7 @@ export default function NovoChamado() {
         const cleanSearch = placaOnibus.replace(/[^a-zA-Z0-9]/g, '')
 
         const { data, error } = await supabase.rpc(
-          'buscar_garagem_por_placa' as any,
+          'buscar_veiculo_por_placa' as any,
           {
             p_placa: cleanSearch,
           } as any,
@@ -318,14 +320,19 @@ export default function NovoChamado() {
 
         if (error) throw error
 
-        if (data) {
-          setIdentifiedGaragem(data as string)
+        const result = data as { garagem: string; prefixo: string } | null
+
+        if (result && result.garagem) {
+          setIdentifiedGaragem(result.garagem)
+          setIdentifiedPrefixo(result.prefixo)
         } else {
           setIdentifiedGaragem('NOT_FOUND')
+          setIdentifiedPrefixo(null)
         }
       } catch (err) {
         console.error('Error searching frota:', err)
         setIdentifiedGaragem('NOT_FOUND')
+        setIdentifiedPrefixo(null)
       } finally {
         setIsSearchingPlaca(false)
       }
@@ -403,10 +410,19 @@ export default function NovoChamado() {
 
     setIsSubmitting(true)
     try {
+      let finalTitulo = titulo
+      if (
+        profile?.tipo_usuario === 'basico' &&
+        identifiedPrefixo &&
+        identifiedGaragem !== 'NOT_FOUND'
+      ) {
+        finalTitulo = `${titulo} - Carro: ${identifiedPrefixo}`
+      }
+
       const { data: chamado, error: chamadoError } = await supabase
         .from('chamados')
         .insert({
-          titulo,
+          titulo: finalTitulo,
           descricao,
           tipo_chamado: tipoChamado,
           prioridade: null,
@@ -506,6 +522,7 @@ export default function NovoChamado() {
                     setDescricao('')
                     setPlacaOnibus('')
                     setIdentifiedGaragem(null)
+                    setIdentifiedPrefixo(null)
                   }}
                 >
                   <SelectTrigger id="tipoChamado" className="bg-white">
@@ -548,6 +565,7 @@ export default function NovoChamado() {
                         <p className="text-sm text-green-600 font-medium flex items-center gap-1 mt-1">
                           <CheckCircle2 className="h-3 w-3" /> Veículo identificado: Garagem{' '}
                           {identifiedGaragem}
+                          {identifiedPrefixo && ` - Carro: ${identifiedPrefixo}`}
                         </p>
                       )}
                   </div>

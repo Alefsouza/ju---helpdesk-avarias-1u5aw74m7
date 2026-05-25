@@ -46,27 +46,45 @@ export default function Register() {
     setIsLoading(true)
     setError(null)
 
-    const { error: signUpError } = await supabase.auth.signUp({
-      email: values.email,
-      password: values.password,
-      options: {
-        data: {
-          full_name: values.nome_completo,
+    try {
+      const { error: signUpError } = await supabase.auth.signUp({
+        email: values.email,
+        password: values.password,
+        options: {
+          data: {
+            full_name: values.nome_completo,
+          },
         },
-      },
-    })
-
-    setIsLoading(false)
-
-    if (signUpError) {
-      setError(signUpError.message || 'Erro ao realizar cadastro')
-    } else {
-      setIsSuccess(true)
-      toast({
-        title: 'Cadastro realizado!',
-        description: 'Verifique seu e-mail para confirmar a conta.',
-        className: 'bg-green-600 text-white border-none',
       })
+
+      if (signUpError) {
+        const isRateLimit =
+          signUpError.status === 429 ||
+          (signUpError as any).code === 'over_email_send_rate_limit' ||
+          signUpError.message?.toLowerCase().includes('rate limit')
+
+        if (isRateLimit) {
+          setError(
+            'Limite de envio de e-mails excedido. Por favor, aguarde alguns minutos antes de tentar realizar o cadastro novamente.',
+          )
+        } else {
+          setError(signUpError.message || 'Erro ao realizar cadastro')
+        }
+      } else {
+        setIsSuccess(true)
+        toast({
+          title: 'Cadastro realizado!',
+          description: 'Verifique seu e-mail para confirmar a conta.',
+          className: 'bg-green-600 text-white border-none',
+        })
+      }
+    } catch (err: any) {
+      console.error('Erro no cadastro:', err)
+      setError(
+        'Ocorreu um erro inesperado ao realizar o cadastro. Por favor, tente novamente mais tarde.',
+      )
+    } finally {
+      setIsLoading(false)
     }
   }
 

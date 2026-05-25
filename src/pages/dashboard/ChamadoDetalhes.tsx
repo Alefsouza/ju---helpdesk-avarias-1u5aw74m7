@@ -1756,6 +1756,7 @@ export default function ChamadoDetalhes() {
                             <SelectItem value="Acidente Interno">Acidente Interno</SelectItem>
                             <SelectItem value="Atropelamento">Atropelamento</SelectItem>
                             <SelectItem value="Avaria">Avaria</SelectItem>
+                            <SelectItem value="Colisão">Colisão</SelectItem>
                             <SelectItem value="Colisão com vítima">Colisão com vítima</SelectItem>
                             <SelectItem value="Colisão sem vítima">Colisão sem vítima</SelectItem>
                             <SelectItem value="Lesão Corporal">Lesão Corporal</SelectItem>

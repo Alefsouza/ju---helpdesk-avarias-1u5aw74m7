@@ -128,7 +128,7 @@ export default function NovoChamado() {
   const { user } = useAuth()
   const navigate = useNavigate()
 
-  const [tipoChamado, setTipoChamado] = useState<'Avaria' | 'Lesão Corporal' | ''>('')
+  const [tipoChamado, setTipoChamado] = useState<'Colisão' | 'Lesão Corporal' | ''>('')
   const [titulo, setTitulo] = useState('')
   const [descricao, setDescricao] = useState('')
 
@@ -325,7 +325,7 @@ export default function NovoChamado() {
       return
     }
 
-    if (tipoChamado === 'Avaria') {
+    if (tipoChamado === 'Colisão') {
       const missingRequired = ATTACHMENT_CATEGORIES.some(
         (cat) => cat.required && files.filter((f) => f.category === cat.id).length === 0,
       )
@@ -444,7 +444,7 @@ export default function NovoChamado() {
                 <Label htmlFor="tipoChamado">Tipo de Ocorrência *</Label>
                 <Select
                   value={tipoChamado}
-                  onValueChange={(val: 'Avaria' | 'Lesão Corporal') => {
+                  onValueChange={(val: 'Colisão' | 'Lesão Corporal') => {
                     setTipoChamado(val)
                     setFiles([])
                     setTitulo('')
@@ -455,7 +455,7 @@ export default function NovoChamado() {
                     <SelectValue placeholder="Selecione o tipo de chamado" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="Avaria">Avaria (Danos ao veículo)</SelectItem>
+                    <SelectItem value="Colisão">Colisão (Danos ao veículo)</SelectItem>
                     <SelectItem value="Lesão Corporal">Lesão Corporal (Física)</SelectItem>
                   </SelectContent>
                 </Select>
@@ -470,8 +470,8 @@ export default function NovoChamado() {
                     <Input
                       id="titulo"
                       placeholder={
-                        tipoChamado === 'Avaria'
-                          ? 'Ex: Avaria na lateral direita'
+                        tipoChamado === 'Colisão'
+                          ? 'Ex: Colisão na lateral direita'
                           : 'Ex: Queda de passageiro no interior do veículo'
                       }
                       value={titulo}

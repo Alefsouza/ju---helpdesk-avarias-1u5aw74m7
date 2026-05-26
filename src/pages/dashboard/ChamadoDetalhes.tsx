@@ -187,6 +187,8 @@ export default function ChamadoDetalhes() {
   const [editingDocLoading, setEditingDocLoading] = useState(false)
   const [docFormData, setDocFormData] = useState<any>({})
   const [savingDoc, setSavingDoc] = useState(false)
+  const [duplicateAlertOpen, setDuplicateAlertOpen] = useState(false)
+  const [duplicateSubmitAction, setDuplicateSubmitAction] = useState<(() => void) | null>(null)
 
   const fileInputRef = useRef<HTMLInputElement>(null)
   const internalFileInputRef = useRef<HTMLInputElement>(null)
@@ -786,13 +788,33 @@ export default function ChamadoDetalhes() {
     }
   }
 
-  const handleSaveDocEdit = async () => {
+  const handleSaveDocEdit = async (ignoreDuplicate = false) => {
     if (!editingDoc) return
     setSavingDoc(true)
 
     try {
       if (editingDoc.tipo === 'Espelho') {
         const { id: formId, chamado_id, criado_em, atualizado_em, ...updateData } = docFormData
+
+        if (!ignoreDuplicate && updateData.numero_carro) {
+          const { data: duplicates } = await supabase
+            .from('documentos')
+            .select('id, chamado_id, formulario_id')
+            .eq('numero_carro', updateData.numero_carro)
+            .eq('excluido_manutencao', false)
+            .in('tipo_documento', ['Espelho de Danos', 'Vistoria'])
+
+          const isDuplicate = duplicates?.some(
+            (d) => d.chamado_id !== id && d.formulario_id !== formId,
+          )
+
+          if (isDuplicate) {
+            setDuplicateSubmitAction(() => () => handleSaveDocEdit(true))
+            setDuplicateAlertOpen(true)
+            setSavingDoc(false)
+            return
+          }
+        }
 
         if (formId) {
           const { error: updateError } = await supabase
@@ -2768,7 +2790,7 @@ export default function ChamadoDetalhes() {
             <Button variant="outline" onClick={() => setEditingDoc(null)} disabled={savingDoc}>
               Cancelar
             </Button>
-            <Button onClick={handleSaveDocEdit} disabled={savingDoc}>
+            <Button onClick={() => handleSaveDocEdit(false)} disabled={savingDoc}>
               {savingDoc && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               {savingDoc ? 'Salvando...' : 'Salvar'}
             </Button>
@@ -2802,6 +2824,31 @@ export default function ChamadoDetalhes() {
               className="bg-blue-600 hover:bg-blue-700 text-white"
             >
               Confirmar
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={duplicateAlertOpen} onOpenChange={setDuplicateAlertOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Atenção</AlertDialogTitle>
+            <AlertDialogDescription>
+              Já existe um espelho de danos para esse carro, por favor verificar.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setDuplicateSubmitAction(null)}>
+              Fechar
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                if (duplicateSubmitAction) duplicateSubmitAction()
+                setDuplicateSubmitAction(null)
+              }}
+              className="bg-amber-600 hover:bg-amber-700 text-white"
+            >
+              Prosseguir mesmo assim
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

@@ -29,6 +29,16 @@ import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
 import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog'
+import {
   Select,
   SelectContent,
   SelectItem,
@@ -57,6 +67,8 @@ export default function VistoriaForm() {
 
   const [photos, setPhotos] = useState<File[]>([])
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [duplicateAlertOpen, setDuplicateAlertOpen] = useState(false)
+  const [duplicateSubmitAction, setDuplicateSubmitAction] = useState<(() => void) | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const { profile } = useAuth()
 
@@ -93,7 +105,7 @@ export default function VistoriaForm() {
     setPhotos((prev) => prev.filter((_, i) => i !== index))
   }
 
-  const onSubmit = async (values: FormValues) => {
+  const onSubmit = async (values: FormValues, ignoreDuplicate = false) => {
     if (photos.length === 0) {
       toast.error('Adicione ao menos uma foto do dano.')
       return
@@ -102,6 +114,22 @@ export default function VistoriaForm() {
     setIsSubmitting(true)
 
     try {
+      if (!ignoreDuplicate && values.numero_carro) {
+        const { data: duplicates } = await supabase
+          .from('documentos')
+          .select('id')
+          .eq('numero_carro', values.numero_carro)
+          .eq('excluido_manutencao', false)
+          .in('tipo_documento', ['Espelho de Danos', 'Vistoria'])
+
+        if (duplicates && duplicates.length > 0) {
+          setDuplicateSubmitAction(() => () => onSubmit(values, true))
+          setDuplicateAlertOpen(true)
+          setIsSubmitting(false)
+          return
+        }
+      }
+
       const uploadedUrls: string[] = []
 
       // Upload photos sequentially to ensure stability
@@ -206,7 +234,7 @@ export default function VistoriaForm() {
         </CardHeader>
 
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)}>
+          <form onSubmit={form.handleSubmit((v) => onSubmit(v, false))}>
             <CardContent className="space-y-6 pt-8">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <FormField
@@ -423,6 +451,31 @@ export default function VistoriaForm() {
           </form>
         </Form>
       </Card>
+
+      <AlertDialog open={duplicateAlertOpen} onOpenChange={setDuplicateAlertOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Atenção</AlertDialogTitle>
+            <AlertDialogDescription>
+              Já existe um espelho de danos para esse carro, por favor verificar.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setDuplicateSubmitAction(null)}>
+              Fechar
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                if (duplicateSubmitAction) duplicateSubmitAction()
+                setDuplicateSubmitAction(null)
+              }}
+              className="bg-amber-600 hover:bg-amber-700 text-white"
+            >
+              Prosseguir mesmo assim
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   )
 }

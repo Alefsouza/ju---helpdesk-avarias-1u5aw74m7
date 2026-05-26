@@ -38,6 +38,8 @@ export default function OsManutencao() {
   const [selectedDoc, setSelectedDoc] = useState<any>(null)
   const [numeroOS, setNumeroOS] = useState('')
   const [isSaving, setIsSaving] = useState(false)
+  const [duplicateAlertOpen, setDuplicateAlertOpen] = useState(false)
+  const [duplicateSubmitAction, setDuplicateSubmitAction] = useState<(() => void) | null>(null)
   const { toast } = useToast()
 
   useEffect(() => {
@@ -159,7 +161,7 @@ export default function OsManutencao() {
     return text.length > maxLength ? text.substring(0, maxLength) + '...' : text
   }
 
-  const handleSaveOS = async () => {
+  const handleSaveOS = async (ignoreDuplicate = false) => {
     if (!numeroOS.trim()) {
       toast({
         title: 'Atenção',
@@ -173,6 +175,22 @@ export default function OsManutencao() {
 
     setIsSaving(true)
     try {
+      if (!ignoreDuplicate && selectedDoc.numero_carro) {
+        const { data: duplicates } = await supabase
+          .from('documentos')
+          .select('id')
+          .eq('numero_carro', selectedDoc.numero_carro)
+          .eq('excluido_manutencao', false)
+          .in('tipo_documento', ['Espelho de Danos', 'Vistoria'])
+          .neq('id', selectedDoc.id)
+
+        if (duplicates && duplicates.length > 0) {
+          setDuplicateSubmitAction(() => () => handleSaveOS(true))
+          setDuplicateAlertOpen(true)
+          setIsSaving(false)
+          return
+        }
+      }
       const { data: pdfData, error: pdfError } = await supabase.functions.invoke('gerar-pdf', {
         body: {
           id: selectedDoc.id,
@@ -543,7 +561,7 @@ export default function OsManutencao() {
                 onKeyDown={(e) => {
                   if (e.key === 'Enter') {
                     e.preventDefault()
-                    handleSaveOS()
+                    handleSaveOS(false)
                   }
                 }}
               />
@@ -573,11 +591,37 @@ export default function OsManutencao() {
               Cancelar
             </Button>
             <Button
-              onClick={handleSaveOS}
+              onClick={() => handleSaveOS(false)}
               disabled={isSaving}
               className="bg-[#1A522E] hover:bg-[#154224] text-white"
             >
               {isSaving ? 'Salvando...' : 'Salvar e Concluir'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={duplicateAlertOpen} onOpenChange={setDuplicateAlertOpen}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Atenção</DialogTitle>
+            <DialogDescription>
+              Já existe um espelho de danos para esse carro, por favor verificar.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDuplicateAlertOpen(false)}>
+              Fechar
+            </Button>
+            <Button
+              onClick={() => {
+                setDuplicateAlertOpen(false)
+                if (duplicateSubmitAction) duplicateSubmitAction()
+                setDuplicateSubmitAction(null)
+              }}
+              className="bg-amber-600 hover:bg-amber-700 text-white"
+            >
+              Prosseguir mesmo assim
             </Button>
           </DialogFooter>
         </DialogContent>

@@ -29,6 +29,16 @@ import {
 } from '@/components/ui/select'
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog'
 
 const formSchema = z.object({
   numero_os: z.string().min(1, 'Campo obrigatório'),
@@ -77,6 +87,8 @@ export default function FormularioEspelhoDanos() {
   const navigate = useNavigate()
   const { toast } = useToast()
   const [loading, setLoading] = useState(false)
+  const [duplicateAlertOpen, setDuplicateAlertOpen] = useState(false)
+  const [duplicateSubmitAction, setDuplicateSubmitAction] = useState<(() => void) | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const { profile, user } = useAuth()
 
@@ -103,10 +115,26 @@ export default function FormularioEspelhoDanos() {
     }
   }, [profile, form])
 
-  async function onSubmit(values: FormValues) {
+  async function onSubmit(values: FormValues, ignoreDuplicate = false) {
     if (!id) return
     setLoading(true)
     try {
+      if (!ignoreDuplicate && values.numero_carro) {
+        const { data: duplicates } = await supabase
+          .from('documentos')
+          .select('id')
+          .eq('numero_carro', values.numero_carro)
+          .eq('excluido_manutencao', false)
+          .in('tipo_documento', ['Espelho de Danos', 'Vistoria'])
+
+        if (duplicates && duplicates.length > 0) {
+          setDuplicateSubmitAction(() => () => onSubmit(values, true))
+          setDuplicateAlertOpen(true)
+          setLoading(false)
+          return
+        }
+      }
+
       const now = new Date()
       const dataStr = format(now, 'yyyy-MM-dd')
       const horarioStr = format(now, 'HH:mm')
@@ -443,7 +471,7 @@ export default function FormularioEspelhoDanos() {
         </CardHeader>
         <CardContent>
           <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+            <form onSubmit={form.handleSubmit((v) => onSubmit(v, false))} className="space-y-4">
               <FormField
                 control={form.control}
                 name="numero_os"
@@ -687,6 +715,31 @@ export default function FormularioEspelhoDanos() {
           </Form>
         </CardContent>
       </Card>
+
+      <AlertDialog open={duplicateAlertOpen} onOpenChange={setDuplicateAlertOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Atenção</AlertDialogTitle>
+            <AlertDialogDescription>
+              Já existe um espelho de danos para esse carro, por favor verificar.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setDuplicateSubmitAction(null)}>
+              Fechar
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                if (duplicateSubmitAction) duplicateSubmitAction()
+                setDuplicateSubmitAction(null)
+              }}
+              className="bg-amber-600 hover:bg-amber-700 text-white"
+            >
+              Prosseguir mesmo assim
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   )
 }

@@ -572,49 +572,84 @@ export default function OsManutencao() {
                 </div>
               </div>
 
-              <div>
-                <p className="text-[#333333] font-bold mb-3 text-sm">Fotos Anexadas</p>
-                {(() => {
-                  const fotos = []
-                  if (viewDoc.foto_url) fotos.push(viewDoc.foto_url)
-                  if (Array.isArray(viewDoc.fotos_urls)) {
-                    fotos.push(...viewDoc.fotos_urls)
-                  }
-                  if (Array.isArray(viewDoc.fotos_manutencao)) {
-                    fotos.push(...viewDoc.fotos_manutencao)
-                  }
+              <div className="space-y-6">
+                <div>
+                  <p className="text-[#333333] font-bold mb-3 text-sm border-b pb-1">
+                    Fotos da Vistoria
+                  </p>
+                  {(() => {
+                    const fotosVistoria = []
+                    if (viewDoc.foto_url) fotosVistoria.push(viewDoc.foto_url)
+                    if (Array.isArray(viewDoc.fotos_urls)) {
+                      fotosVistoria.push(...viewDoc.fotos_urls)
+                    }
 
-                  if (fotos.length === 0) {
+                    if (fotosVistoria.length === 0) {
+                      return <p className="text-sm text-[#333333] italic">Nenhuma foto anexada.</p>
+                    }
+
                     return (
-                      <p className="text-sm text-[#333333] italic">
-                        Nenhuma foto foi anexada nesta vistoria.
-                      </p>
+                      <div className="grid grid-cols-2 gap-4">
+                        {fotosVistoria.map((url, idx) => (
+                          <a
+                            key={idx}
+                            href={url}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="block relative aspect-video bg-slate-100 rounded-md overflow-hidden border group"
+                          >
+                            <img
+                              src={url}
+                              alt={`Foto Vistoria ${idx + 1}`}
+                              className="object-cover w-full h-full transition-transform duration-300 group-hover:scale-105"
+                            />
+                            <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors flex items-center justify-center">
+                              <Eye className="text-white opacity-0 group-hover:opacity-100 transition-opacity" />
+                            </div>
+                          </a>
+                        ))}
+                      </div>
                     )
-                  }
+                  })()}
+                </div>
 
-                  return (
-                    <div className="grid grid-cols-2 gap-4">
-                      {fotos.map((url, idx) => (
-                        <a
-                          key={idx}
-                          href={url}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="block relative aspect-video bg-slate-100 rounded-md overflow-hidden border group"
-                        >
-                          <img
-                            src={url}
-                            alt={`Foto ${idx + 1}`}
-                            className="object-cover w-full h-full transition-transform duration-300 group-hover:scale-105"
-                          />
-                          <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors flex items-center justify-center">
-                            <Eye className="text-white opacity-0 group-hover:opacity-100 transition-opacity" />
-                          </div>
-                        </a>
-                      ))}
-                    </div>
-                  )
-                })()}
+                <div>
+                  <p className="text-[#333333] font-bold mb-3 text-sm border-b pb-1">
+                    Evidências de Manutenção
+                  </p>
+                  {(() => {
+                    const fotosManutencao = Array.isArray(viewDoc.fotos_manutencao)
+                      ? viewDoc.fotos_manutencao
+                      : []
+
+                    if (fotosManutencao.length === 0) {
+                      return <p className="text-sm text-[#333333] italic">Nenhuma foto anexada.</p>
+                    }
+
+                    return (
+                      <div className="grid grid-cols-2 gap-4">
+                        {fotosManutencao.map((url, idx) => (
+                          <a
+                            key={idx}
+                            href={url}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="block relative aspect-video bg-slate-100 rounded-md overflow-hidden border group"
+                          >
+                            <img
+                              src={url}
+                              alt={`Evidência Manutenção ${idx + 1}`}
+                              className="object-cover w-full h-full transition-transform duration-300 group-hover:scale-105"
+                            />
+                            <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors flex items-center justify-center">
+                              <Eye className="text-white opacity-0 group-hover:opacity-100 transition-opacity" />
+                            </div>
+                          </a>
+                        ))}
+                      </div>
+                    )
+                  })()}
+                </div>
               </div>
             </div>
           )}

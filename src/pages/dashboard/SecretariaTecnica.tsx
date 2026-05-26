@@ -211,7 +211,7 @@ export default function SecretariaTecnica() {
                 documentos.map((doc) => (
                   <TableRow key={doc.id}>
                     <TableCell className="font-medium text-slate-600">
-                      {doc.chamados?.formularios_ido?.[0]?.protocolo_ido || '-'}
+                      {doc.chamados?.formularios_ido?.[0]?.protocolo_ido || 'N/A'}
                     </TableCell>
                     <TableCell className="font-semibold text-slate-800">
                       {doc.numero_os || '-'}

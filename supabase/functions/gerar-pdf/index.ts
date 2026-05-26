@@ -222,13 +222,11 @@ Deno.serve(async (req: Request) => {
         }
       }
 
-      const safeOs = numero_os ? String(numero_os).replace(/[^a-zA-Z0-9]/g, '_') : ''
-      const safeCarro = numero_carro ? String(numero_carro).replace(/[^a-zA-Z0-9]/g, '_') : ''
-      const osStr = safeOs ? `_OS_${safeOs}` : ''
-      const carroStr = safeCarro ? `_CARRO_${safeCarro}` : ''
-      fileName = body.espelho_id
-        ? `ESPELHO_DE_DANOS${osStr}${carroStr}_${body.espelho_id}_${Date.now()}.pdf`
-        : `espelho_danos_${id}_${Date.now()}.pdf`
+      if (body.espelho_id) {
+        fileName = `espelho_danos_${body.espelho_id}.pdf`
+      } else {
+        fileName = `espelho_danos_${id}_${Date.now()}.pdf`
+      }
     }
 
     const pdfBytes = await pdfDoc.save()
@@ -240,7 +238,14 @@ Deno.serve(async (req: Request) => {
     )
 
     const bucket = id ? 'anexos_chamados_interno' : 'documentos'
-    const filePath = id ? `${id}/${fileName}` : fileName
+    let filePath = fileName
+    if (id) {
+      if (tipo_documento === 'espelho_danos' && body.espelho_id) {
+        filePath = `chamado_${id}/${fileName}`
+      } else {
+        filePath = `${id}/${fileName}`
+      }
+    }
 
     const { error: uploadError } = await supabaseAdmin.storage
       .from(bucket)

@@ -54,10 +54,13 @@ export default function SecretariaTecnica() {
 
       if (error) throw error
 
-      // Filter: must have photos (fotos_urls is NOT NULL and NOT EMPTY)
+      // Filter: must have maintenance photos (fotos_urls contains 'os_foto_')
       const withPhotos =
         data?.filter((doc: any) => {
-          return Array.isArray(doc.fotos_urls) && doc.fotos_urls.length > 0
+          return (
+            Array.isArray(doc.fotos_urls) &&
+            doc.fotos_urls.some((url: string) => url.includes('os_foto_'))
+          )
         }) || []
 
       setDocumentos(withPhotos)
@@ -70,14 +73,33 @@ export default function SecretariaTecnica() {
 
   useEffect(() => {
     fetchDocumentos()
+
+    // Real-time updates
+    const channel = supabase
+      .channel('secretaria_documentos_changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'documentos',
+        },
+        () => {
+          fetchDocumentos()
+        },
+      )
+      .subscribe()
+
+    return () => {
+      supabase.removeChannel(channel)
+    }
   }, [])
 
   const handleOpenPhotos = (doc: any) => {
     const photos: string[] = []
-    if (doc.foto_url) photos.push(doc.foto_url)
     if (Array.isArray(doc.fotos_urls)) {
       doc.fotos_urls.forEach((url: string) => {
-        if (url && !photos.includes(url)) photos.push(url)
+        if (url && url.includes('os_foto_') && !photos.includes(url)) photos.push(url)
       })
     }
     setSelectedPhotos(photos)
@@ -133,6 +155,19 @@ export default function SecretariaTecnica() {
     }
   }
 
+  const formatDate = (dateStr: string | null) => {
+    if (!dateStr) return '-'
+    const parts = dateStr.split('-')
+    if (parts.length === 3) {
+      return `${parts[2]}/${parts[1]}/${parts[0]}`
+    }
+    try {
+      return format(new Date(dateStr), 'dd/MM/yyyy')
+    } catch {
+      return dateStr
+    }
+  }
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col justify-between items-start gap-2">
@@ -172,7 +207,7 @@ export default function SecretariaTecnica() {
                 documentos.map((doc) => (
                   <TableRow key={doc.id}>
                     <TableCell className="font-medium text-slate-600">
-                      {doc.chamados?.registro_motorista || '-'}
+                      {doc.chamados?.id ? doc.chamados.id.substring(0, 8).toUpperCase() : '-'}
                     </TableCell>
                     <TableCell className="font-semibold text-slate-800">
                       {doc.numero_os || '-'}
@@ -339,68 +374,38 @@ export default function SecretariaTecnica() {
               <div className="grid grid-cols-2 gap-4 text-sm">
                 <div>
                   <p className="text-[#333333] font-bold mb-1">Número da OS</p>
-                  <p className="text-[#333333]">
-                    {viewDoc.formularios_espelho_danos?.numero_os || viewDoc.numero_os || '-'}
-                  </p>
+                  <p className="text-[#333333]">{viewDoc.numero_os || '-'}</p>
                 </div>
                 <div>
                   <p className="text-[#333333] font-bold mb-1">Garagem</p>
-                  <p className="text-[#333333]">
-                    {viewDoc.formularios_espelho_danos?.garagem || viewDoc.garagem || '-'}
-                  </p>
+                  <p className="text-[#333333]">{viewDoc.garagem || '-'}</p>
                 </div>
                 <div>
                   <p className="text-[#333333] font-bold mb-1">Linha</p>
-                  <p className="text-[#333333]">
-                    {viewDoc.formularios_espelho_danos?.linha || viewDoc.linha || '-'}
-                  </p>
+                  <p className="text-[#333333]">{viewDoc.linha || '-'}</p>
                 </div>
                 <div>
                   <p className="text-[#333333] font-bold mb-1">Carro</p>
-                  <p className="text-[#333333]">
-                    {viewDoc.formularios_espelho_danos?.numero_carro || viewDoc.numero_carro || '-'}
-                  </p>
+                  <p className="text-[#333333]">{viewDoc.numero_carro || '-'}</p>
                 </div>
                 <div>
                   <p className="text-[#333333] font-bold mb-1">Data / Horário</p>
                   <p className="text-[#333333]">
-                    {viewDoc.formularios_espelho_danos?.data
-                      ? format(
-                          new Date(viewDoc.formularios_espelho_danos.data + 'T12:00:00'),
-                          'dd/MM/yyyy',
-                        )
-                      : viewDoc.data
-                        ? format(new Date(viewDoc.data + 'T12:00:00'), 'dd/MM/yyyy')
-                        : '-'}{' '}
-                    {viewDoc.formularios_espelho_danos?.horario || viewDoc.horario
-                      ? `às ${viewDoc.formularios_espelho_danos?.horario || viewDoc.horario}`
-                      : ''}
+                    {formatDate(viewDoc.data)} {viewDoc.horario ? `às ${viewDoc.horario}` : ''}
                   </p>
                 </div>
                 <div>
                   <p className="text-[#333333] font-bold mb-1">Vistoriador</p>
                   <p className="text-[#333333]">
-                    {viewDoc.formularios_espelho_danos?.nome_vistoriador ||
-                      viewDoc.nome_responsavel ||
-                      '-'}
-                    {viewDoc.formularios_espelho_danos?.registro_vistoriador ||
-                    viewDoc.registro_responsavel
-                      ? ` (${viewDoc.formularios_espelho_danos?.registro_vistoriador || viewDoc.registro_responsavel})`
-                      : ''}
+                    {viewDoc.nome_responsavel || '-'}
+                    {viewDoc.registro_responsavel ? ` (${viewDoc.registro_responsavel})` : ''}
                   </p>
                 </div>
                 <div>
                   <p className="text-[#333333] font-bold mb-1">Motorista</p>
                   <p className="text-[#333333]">
-                    {viewDoc.formularios_espelho_danos?.nome_motorista ||
-                      viewDoc.nome_motorista ||
-                      viewDoc.chamados?.nome_motorista ||
-                      '-'}
-                    {viewDoc.formularios_espelho_danos?.registro_motorista ||
-                    viewDoc.registro_motorista ||
-                    viewDoc.chamados?.registro_motorista
-                      ? ` (${viewDoc.formularios_espelho_danos?.registro_motorista || viewDoc.registro_motorista || viewDoc.chamados?.registro_motorista})`
-                      : ''}
+                    {viewDoc.nome_motorista || '-'}
+                    {viewDoc.registro_motorista ? ` (${viewDoc.registro_motorista})` : ''}
                   </p>
                 </div>
               </div>
@@ -408,16 +413,14 @@ export default function SecretariaTecnica() {
               <div>
                 <p className="text-[#333333] font-bold mb-1 text-sm">Ocorrência</p>
                 <div className="text-sm text-[#333333] whitespace-pre-wrap">
-                  {viewDoc.formularios_espelho_danos?.ocorrencia || viewDoc.ocorrencia || '-'}
+                  {viewDoc.ocorrencia || '-'}
                 </div>
               </div>
 
               <div>
                 <p className="text-[#333333] font-bold mb-1 text-sm">Descrição dos Danos</p>
                 <div className="text-sm text-[#333333] whitespace-pre-wrap">
-                  {viewDoc.formularios_espelho_danos?.descricao_danos ||
-                    viewDoc.descricao_danos ||
-                    '-'}
+                  {viewDoc.descricao_danos || '-'}
                 </div>
               </div>
 

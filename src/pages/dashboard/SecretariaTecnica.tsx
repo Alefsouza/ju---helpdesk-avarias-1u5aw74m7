@@ -38,16 +38,15 @@ export default function SecretariaTecnica() {
         .from('documentos')
         .select('*')
         .in('tipo_documento', ['Vistoria', 'Espelho de Danos', 'OS de Manutenção'])
+        .not('fotos_urls', 'is', null)
         .order('criado_em', { ascending: false })
 
       if (error) throw error
 
-      // Filter: must have photos (foto_url or fotos_urls) and be an OS
+      // Filter: must have photos (fotos_urls is NOT NULL and NOT EMPTY)
       const withPhotos =
         data?.filter((doc: any) => {
-          const hasSinglePhoto = !!doc.foto_url
-          const hasMultiplePhotos = Array.isArray(doc.fotos_urls) && doc.fotos_urls.length > 0
-          return hasSinglePhoto || hasMultiplePhotos
+          return Array.isArray(doc.fotos_urls) && doc.fotos_urls.length > 0
         }) || []
 
       setDocumentos(withPhotos)

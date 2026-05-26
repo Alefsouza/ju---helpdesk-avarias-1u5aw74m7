@@ -209,6 +209,7 @@ export type Database = {
           numero_carro: string | null
           numero_os: string | null
           ocorrencia: string | null
+          orcamento_url: string | null
           registro_motorista: string | null
           registro_responsavel: string | null
           status_liberacao: string | null
@@ -235,6 +236,7 @@ export type Database = {
           numero_carro?: string | null
           numero_os?: string | null
           ocorrencia?: string | null
+          orcamento_url?: string | null
           registro_motorista?: string | null
           registro_responsavel?: string | null
           status_liberacao?: string | null
@@ -261,6 +263,7 @@ export type Database = {
           numero_carro?: string | null
           numero_os?: string | null
           ocorrencia?: string | null
+          orcamento_url?: string | null
           registro_motorista?: string | null
           registro_responsavel?: string | null
           status_liberacao?: string | null
@@ -575,6 +578,7 @@ export type Database = {
       is_coc: { Args: never; Returns: boolean }
       is_juridico: { Args: never; Returns: boolean }
       is_responsavel: { Args: never; Returns: boolean }
+      is_secretaria_tecnica: { Args: never; Returns: boolean }
       is_sinistro: { Args: never; Returns: boolean }
       is_sos: { Args: never; Returns: boolean }
       is_vistoriador: { Args: never; Returns: boolean }
@@ -820,6 +824,7 @@ export const Constants = {
 //   numero_carro: text (nullable)
 //   status_liberacao: text (nullable)
 //   formulario_id: uuid (nullable)
+//   orcamento_url: text (nullable)
 // Table: formularios_espelho_danos
 //   id: uuid (not null, default: gen_random_uuid())
 //   chamado_id: uuid (nullable)
@@ -932,7 +937,7 @@ export const Constants = {
 // Table: perfil_usuario
 //   FOREIGN KEY perfil_usuario_id_fkey: FOREIGN KEY (id) REFERENCES auth.users(id) ON DELETE CASCADE
 //   PRIMARY KEY perfil_usuario_pkey: PRIMARY KEY (id)
-//   CHECK perfil_usuario_tipo_usuario_check: CHECK ((tipo_usuario = ANY (ARRAY['basico'::text, 'responsavel'::text, 'admin'::text, 'vistoriador'::text, 'coc'::text, 'sos'::text, 'juridico'::text, 'sinistro'::text])))
+//   CHECK perfil_usuario_tipo_usuario_check: CHECK ((tipo_usuario = ANY (ARRAY['basico'::text, 'responsavel'::text, 'admin'::text, 'vistoriador'::text, 'coc'::text, 'sos'::text, 'juridico'::text, 'sinistro'::text, 'secretaria_tecnica'::text])))
 // Table: respostas_chamado
 //   FOREIGN KEY respostas_chamado_chamado_id_fkey: FOREIGN KEY (chamado_id) REFERENCES chamados(id) ON DELETE CASCADE
 //   PRIMARY KEY respostas_chamado_pkey: PRIMARY KEY (id)
@@ -984,8 +989,8 @@ export const Constants = {
 //   Policy "documentos_select_public_os" (SELECT, PERMISSIVE) roles={public}
 //     USING: ((tipo_documento = ANY (ARRAY['Vistoria'::text, 'Espelho de Danos'::text])) AND (numero_os IS NOT NULL) AND (numero_os <> ''::text))
 //   Policy "documentos_update" (UPDATE, PERMISSIVE) roles={authenticated}
-//     USING: ((chamado_id IS NULL) OR (chamado_id IN ( SELECT chamados.id    FROM chamados   WHERE ((chamados.responsavel_id = auth.uid()) OR (chamados.usuario_id = auth.uid())))) OR is_admin() OR is_responsavel() OR is_sinistro() OR is_vistoriador() OR is_juridico())
-//     WITH CHECK: ((chamado_id IS NULL) OR (chamado_id IN ( SELECT chamados.id    FROM chamados   WHERE ((chamados.responsavel_id = auth.uid()) OR (chamados.usuario_id = auth.uid())))) OR is_admin() OR is_responsavel() OR is_sinistro() OR is_vistoriador() OR is_juridico())
+//     USING: ((chamado_id IS NULL) OR (chamado_id IN ( SELECT chamados.id    FROM chamados   WHERE ((chamados.responsavel_id = auth.uid()) OR (chamados.usuario_id = auth.uid())))) OR is_admin() OR is_responsavel() OR is_sinistro() OR is_vistoriador() OR is_juridico() OR is_secretaria_tecnica())
+//     WITH CHECK: ((chamado_id IS NULL) OR (chamado_id IN ( SELECT chamados.id    FROM chamados   WHERE ((chamados.responsavel_id = auth.uid()) OR (chamados.usuario_id = auth.uid())))) OR is_admin() OR is_responsavel() OR is_sinistro() OR is_vistoriador() OR is_juridico() OR is_secretaria_tecnica())
 // Table: formularios_espelho_danos
 //   Policy "formularios_espelho_danos_insert" (INSERT, PERMISSIVE) roles={public}
 //     WITH CHECK: true
@@ -1133,6 +1138,19 @@ export const Constants = {
 //   BEGIN
 //     RETURN EXISTS (
 //       SELECT 1 FROM public.perfil_usuario WHERE id = auth.uid() AND tipo_usuario = 'responsavel'
+//     );
+//   END;
+//   $function$
+//
+// FUNCTION is_secretaria_tecnica()
+//   CREATE OR REPLACE FUNCTION public.is_secretaria_tecnica()
+//    RETURNS boolean
+//    LANGUAGE plpgsql
+//    SECURITY DEFINER
+//   AS $function$
+//   BEGIN
+//     RETURN EXISTS (
+//       SELECT 1 FROM public.perfil_usuario WHERE id = auth.uid() AND tipo_usuario = 'secretaria_tecnica'
 //     );
 //   END;
 //   $function$

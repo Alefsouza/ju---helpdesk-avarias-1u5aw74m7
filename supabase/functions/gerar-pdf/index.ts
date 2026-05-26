@@ -195,8 +195,12 @@ Deno.serve(async (req: Request) => {
         }
       }
 
+      const safeOs = numero_os ? String(numero_os).replace(/[^a-zA-Z0-9]/g, '_') : ''
+      const safeCarro = numero_carro ? String(numero_carro).replace(/[^a-zA-Z0-9]/g, '_') : ''
+      const osStr = safeOs ? `_OS_${safeOs}` : ''
+      const carroStr = safeCarro ? `_CARRO_${safeCarro}` : ''
       fileName = body.espelho_id
-        ? `ESPELHO_DE_DANOS_${body.espelho_id}.pdf`
+        ? `ESPELHO_DE_DANOS${osStr}${carroStr}_${body.espelho_id}.pdf`
         : `espelho_danos_${id}_${Date.now()}.pdf`
     }
 

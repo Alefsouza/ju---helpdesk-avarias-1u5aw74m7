@@ -959,7 +959,7 @@ export const Constants = {
 //   Policy "anexos_internos_insert" (INSERT, PERMISSIVE) roles={authenticated}
 //     WITH CHECK: (is_responsavel() OR is_sinistro() OR is_admin() OR is_juridico() OR is_secretaria_tecnica())
 //   Policy "anexos_internos_select" (SELECT, PERMISSIVE) roles={authenticated}
-//     USING: (is_responsavel() OR is_sinistro() OR is_admin() OR is_sos() OR is_juridico() OR is_secretaria_tecnica())
+//     USING: (is_responsavel() OR is_sinistro() OR is_admin() OR is_sos() OR is_juridico() OR is_secretaria_tecnica() OR (usuario_id = auth.uid()))
 //   Policy "anexos_internos_update" (UPDATE, PERMISSIVE) roles={authenticated}
 //     USING: ((usuario_id = auth.uid()) AND (is_responsavel() OR is_sinistro() OR is_admin() OR is_juridico() OR is_secretaria_tecnica()))
 //     WITH CHECK: ((usuario_id = auth.uid()) AND (is_responsavel() OR is_sinistro() OR is_admin() OR is_juridico() OR is_secretaria_tecnica()))

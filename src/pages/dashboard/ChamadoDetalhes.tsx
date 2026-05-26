@@ -1324,13 +1324,27 @@ export default function ChamadoDetalhes() {
 
         if (pdfError || !pdfData?.success) throw new Error('Erro ao gerar novo PDF')
 
-        const newUrl = `${pdfData.url}?v=${Date.now()}`
+        const newUrl = `${pdfData.url}?t=${Date.now()}`
+        const newNomeArquivo = pdfData.nome_arquivo || editingDoc.anexo.nome_arquivo
+
+        if (newNomeArquivo !== editingDoc.anexo.nome_arquivo) {
+          try {
+            const oldUrl = editingDoc.anexo.arquivo_url.split('?')[0]
+            const urlParts = oldUrl.split('/')
+            const oldFileName = urlParts[urlParts.length - 1]
+            const oldFolder = urlParts[urlParts.length - 2]
+            const oldPath = `${oldFolder}/${oldFileName}`
+            await supabase.storage.from('anexos_chamados_interno').remove([oldPath])
+          } catch (e) {
+            console.warn('Erro ao remover arquivo antigo:', e)
+          }
+        }
 
         await supabase
           .from('anexos_chamado_interno')
           .update({
             arquivo_url: newUrl,
-            nome_arquivo: pdfData.nome_arquivo || editingDoc.anexo.nome_arquivo,
+            nome_arquivo: newNomeArquivo,
           })
           .eq('id', editingDoc.anexo.id)
 
@@ -1362,8 +1376,20 @@ export default function ChamadoDetalhes() {
             .from('documentos')
             .update({
               arquivo_url: newUrl,
-              nome_arquivo: pdfData.nome_arquivo || editingDoc.anexo.nome_arquivo,
+              nome_arquivo: newNomeArquivo,
               atualizado_em: new Date().toISOString(),
+              numero_os: updateData.numero_os,
+              numero_carro: updateData.numero_carro,
+              linha: updateData.linha,
+              descricao_danos: updateData.descricao_danos,
+              data: updateData.data,
+              horario: updateData.horario,
+              ocorrencia: updateData.ocorrencia,
+              garagem: updateData.garagem,
+              registro_responsavel: updateData.registro_vistoriador,
+              nome_responsavel: updateData.nome_vistoriador,
+              registro_motorista: updateData.registro_motorista,
+              nome_motorista: updateData.nome_motorista,
             })
             .eq('id', matchDoc.id)
         }
@@ -1409,15 +1435,50 @@ export default function ChamadoDetalhes() {
 
         if (pdfError || !pdfData?.success) throw new Error('Erro ao gerar novo PDF IDO')
 
-        const newUrl = `${pdfData.url}?v=${Date.now()}`
+        const newUrl = `${pdfData.url}?t=${Date.now()}`
+        const newNomeArquivoIdo = pdfData.nome_arquivo || editingDoc.anexo.nome_arquivo
+
+        if (newNomeArquivoIdo !== editingDoc.anexo.nome_arquivo) {
+          try {
+            const oldUrl = editingDoc.anexo.arquivo_url.split('?')[0]
+            const urlParts = oldUrl.split('/')
+            const oldFileName = urlParts[urlParts.length - 1]
+            const oldFolder = urlParts[urlParts.length - 2]
+            const oldPath = `${oldFolder}/${oldFileName}`
+            await supabase.storage.from('anexos_chamados_interno').remove([oldPath])
+          } catch (e) {
+            console.warn('Erro ao remover arquivo antigo:', e)
+          }
+        }
 
         await supabase
           .from('anexos_chamado_interno')
           .update({
             arquivo_url: newUrl,
-            nome_arquivo: pdfData.nome_arquivo || editingDoc.anexo.nome_arquivo,
+            nome_arquivo: newNomeArquivoIdo,
           })
           .eq('id', editingDoc.anexo.id)
+
+        const oldFileNameIdo = editingDoc.anexo.nome_arquivo
+        const { data: docIdoByName } = await supabase
+          .from('documentos')
+          .select('id')
+          .eq('chamado_id', id as string)
+          .eq('nome_arquivo', oldFileNameIdo)
+          .maybeSingle()
+
+        if (docIdoByName) {
+          await supabase
+            .from('documentos')
+            .update({
+              arquivo_url: newUrl,
+              nome_arquivo: newNomeArquivoIdo,
+              atualizado_em: new Date().toISOString(),
+              nome_responsavel: updateData.colaborador_nome,
+              registro_responsavel: updateData.colaborador_registro,
+            })
+            .eq('id', docIdoByName.id)
+        }
 
         await supabase.from('historico_chamado').insert({
           chamado_id: id as string,

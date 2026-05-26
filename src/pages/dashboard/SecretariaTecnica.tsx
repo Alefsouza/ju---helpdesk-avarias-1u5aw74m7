@@ -14,7 +14,13 @@ import { Badge } from '@/components/ui/badge'
 import { useToast } from '@/hooks/use-toast'
 import { format } from 'date-fns'
 import { FileText, Image as ImageIcon, Upload, Paperclip, Loader2, Eye } from 'lucide-react'
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 
@@ -30,13 +36,18 @@ export default function SecretariaTecnica() {
   const [selectedDocId, setSelectedDocId] = useState<string | null>(null)
   const [uploading, setUploading] = useState(false)
   const [file, setFile] = useState<File | null>(null)
+  const [viewDoc, setViewDoc] = useState<any>(null)
 
   const fetchDocumentos = async () => {
     try {
       setLoading(true)
       const { data, error } = await supabase
         .from('documentos')
-        .select('*')
+        .select(`
+          *,
+          chamados(id, titulo, registro_motorista, responsavel_id),
+          formularios_espelho_danos(*)
+        `)
         .in('tipo_documento', ['Vistoria', 'Espelho de Danos', 'OS de Manutenção'])
         .not('fotos_urls', 'is', null)
         .order('criado_em', { ascending: false })
@@ -161,7 +172,11 @@ export default function SecretariaTecnica() {
                 documentos.map((doc) => (
                   <TableRow key={doc.id}>
                     <TableCell className="font-medium text-slate-600">
-                      {doc.numero_os || '-'}
+                      {doc.chamados?.registro_motorista ||
+                        doc.registro_motorista ||
+                        doc.registro_responsavel ||
+                        doc.chamados?.id?.substring(0, 8) ||
+                        '-'}
                     </TableCell>
                     <TableCell className="font-semibold text-slate-800">
                       {doc.numero_os || '-'}
@@ -194,13 +209,14 @@ export default function SecretariaTecnica() {
                       )}
                     </TableCell>
                     <TableCell className="text-right space-x-2">
-                      {doc.arquivo_url && (
-                        <Button variant="outline" size="sm" asChild title="Ver Espelho/OS">
-                          <a href={doc.arquivo_url} target="_blank" rel="noreferrer">
-                            <FileText className="w-4 h-4" />
-                          </a>
-                        </Button>
-                      )}
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setViewDoc(doc)}
+                        title="Ver Espelho/OS"
+                      >
+                        <FileText className="w-4 h-4" />
+                      </Button>
                       <Button
                         variant="outline"
                         size="sm"
@@ -311,6 +327,142 @@ export default function SecretariaTecnica() {
               </Button>
             </div>
           </form>
+        </DialogContent>
+      </Dialog>
+      <Dialog open={!!viewDoc} onOpenChange={(open) => !open && setViewDoc(null)}>
+        <DialogContent className="sm:max-w-[600px] max-h-[85vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="text-xl font-bold">
+              {viewDoc?.tipo_documento === 'Vistoria'
+                ? 'Detalhes da Vistoria'
+                : 'Detalhes do Documento'}
+            </DialogTitle>
+          </DialogHeader>
+          {viewDoc && (
+            <div className="space-y-6 py-4">
+              <div className="grid grid-cols-2 gap-4 text-sm">
+                <div>
+                  <p className="text-[#333333] font-bold mb-1">Número da OS</p>
+                  <p className="text-[#333333]">
+                    {viewDoc.formularios_espelho_danos?.numero_os || viewDoc.numero_os || '-'}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-[#333333] font-bold mb-1">Garagem</p>
+                  <p className="text-[#333333]">
+                    {viewDoc.formularios_espelho_danos?.garagem || viewDoc.garagem || '-'}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-[#333333] font-bold mb-1">Linha</p>
+                  <p className="text-[#333333]">
+                    {viewDoc.formularios_espelho_danos?.linha || viewDoc.linha || '-'}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-[#333333] font-bold mb-1">Carro</p>
+                  <p className="text-[#333333]">
+                    {viewDoc.formularios_espelho_danos?.numero_carro || viewDoc.numero_carro || '-'}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-[#333333] font-bold mb-1">Data / Horário</p>
+                  <p className="text-[#333333]">
+                    {viewDoc.formularios_espelho_danos?.data
+                      ? format(
+                          new Date(viewDoc.formularios_espelho_danos.data + 'T12:00:00'),
+                          'dd/MM/yyyy',
+                        )
+                      : viewDoc.data
+                        ? format(new Date(viewDoc.data + 'T12:00:00'), 'dd/MM/yyyy')
+                        : '-'}{' '}
+                    {viewDoc.formularios_espelho_danos?.horario || viewDoc.horario
+                      ? `às ${viewDoc.formularios_espelho_danos?.horario || viewDoc.horario}`
+                      : ''}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-[#333333] font-bold mb-1">Vistoriador</p>
+                  <p className="text-[#333333]">
+                    {viewDoc.formularios_espelho_danos?.nome_vistoriador ||
+                      viewDoc.nome_responsavel ||
+                      '-'}
+                    {viewDoc.formularios_espelho_danos?.registro_vistoriador ||
+                    viewDoc.registro_responsavel
+                      ? ` (${viewDoc.formularios_espelho_danos?.registro_vistoriador || viewDoc.registro_responsavel})`
+                      : ''}
+                  </p>
+                </div>
+              </div>
+
+              <div>
+                <p className="text-[#333333] font-bold mb-1 text-sm">Ocorrência</p>
+                <div className="text-sm text-[#333333] whitespace-pre-wrap">
+                  {viewDoc.formularios_espelho_danos?.ocorrencia || viewDoc.ocorrencia || '-'}
+                </div>
+              </div>
+
+              <div>
+                <p className="text-[#333333] font-bold mb-1 text-sm">Descrição dos Danos</p>
+                <div className="text-sm text-[#333333] whitespace-pre-wrap">
+                  {viewDoc.formularios_espelho_danos?.descricao_danos ||
+                    viewDoc.descricao_danos ||
+                    '-'}
+                </div>
+              </div>
+
+              <div>
+                <p className="text-[#333333] font-bold mb-3 text-sm">Fotos Anexadas</p>
+                {(() => {
+                  const fotos = []
+                  if (viewDoc.foto_url) fotos.push(viewDoc.foto_url)
+                  if (Array.isArray(viewDoc.fotos_urls)) {
+                    fotos.push(...viewDoc.fotos_urls)
+                  }
+
+                  if (fotos.length === 0) {
+                    return (
+                      <p className="text-sm text-[#333333] italic">
+                        Nenhuma foto foi anexada nesta vistoria.
+                      </p>
+                    )
+                  }
+
+                  return (
+                    <div className="grid grid-cols-2 gap-4">
+                      {fotos.map((url, idx) => (
+                        <a
+                          key={idx}
+                          href={url}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="block relative aspect-video bg-slate-100 rounded-md overflow-hidden border group"
+                        >
+                          <img
+                            src={url}
+                            alt={`Foto ${idx + 1}`}
+                            className="object-cover w-full h-full transition-transform duration-300 group-hover:scale-105"
+                          />
+                          <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors flex items-center justify-center">
+                            <Eye className="text-white opacity-0 group-hover:opacity-100 transition-opacity" />
+                          </div>
+                        </a>
+                      ))}
+                    </div>
+                  )
+                })()}
+              </div>
+            </div>
+          )}
+          <DialogFooter className="flex justify-end gap-2 sm:justify-end">
+            <Button
+              variant="outline"
+              onClick={() => setViewDoc(null)}
+              className="bg-white border-[#333333] text-[#333333] hover:bg-slate-50"
+            >
+              Fechar
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>

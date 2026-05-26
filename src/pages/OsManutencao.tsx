@@ -547,6 +547,13 @@ export default function OsManutencao() {
                     {viewDoc.registro_responsavel ? ` (${viewDoc.registro_responsavel})` : ''}
                   </p>
                 </div>
+                <div>
+                  <p className="text-[#333333] font-bold mb-1">Motorista</p>
+                  <p className="text-[#333333]">
+                    {viewDoc.nome_motorista || '-'}
+                    {viewDoc.registro_motorista ? ` (${viewDoc.registro_motorista})` : ''}
+                  </p>
+                </div>
               </div>
 
               <div>

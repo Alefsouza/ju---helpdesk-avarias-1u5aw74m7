@@ -45,7 +45,7 @@ export default function SecretariaTecnica() {
         .from('documentos')
         .select(`
           *,
-          chamados(id, titulo, registro_motorista, responsavel_id),
+          chamados(id, titulo, registro_motorista, nome_motorista, responsavel_id),
           formularios_espelho_danos(*)
         `)
         .in('tipo_documento', ['Vistoria', 'Espelho de Danos', 'OS de Manutenção'])
@@ -172,11 +172,7 @@ export default function SecretariaTecnica() {
                 documentos.map((doc) => (
                   <TableRow key={doc.id}>
                     <TableCell className="font-medium text-slate-600">
-                      {doc.chamados?.registro_motorista ||
-                        doc.registro_motorista ||
-                        doc.registro_responsavel ||
-                        doc.chamados?.id?.substring(0, 8) ||
-                        '-'}
+                      {doc.chamados?.registro_motorista || '-'}
                     </TableCell>
                     <TableCell className="font-semibold text-slate-800">
                       {doc.numero_os || '-'}
@@ -390,6 +386,20 @@ export default function SecretariaTecnica() {
                     {viewDoc.formularios_espelho_danos?.registro_vistoriador ||
                     viewDoc.registro_responsavel
                       ? ` (${viewDoc.formularios_espelho_danos?.registro_vistoriador || viewDoc.registro_responsavel})`
+                      : ''}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-[#333333] font-bold mb-1">Motorista</p>
+                  <p className="text-[#333333]">
+                    {viewDoc.formularios_espelho_danos?.nome_motorista ||
+                      viewDoc.nome_motorista ||
+                      viewDoc.chamados?.nome_motorista ||
+                      '-'}
+                    {viewDoc.formularios_espelho_danos?.registro_motorista ||
+                    viewDoc.registro_motorista ||
+                    viewDoc.chamados?.registro_motorista
+                      ? ` (${viewDoc.formularios_espelho_danos?.registro_motorista || viewDoc.registro_motorista || viewDoc.chamados?.registro_motorista})`
                       : ''}
                   </p>
                 </div>

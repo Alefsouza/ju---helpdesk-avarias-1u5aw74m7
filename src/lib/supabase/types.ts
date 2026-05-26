@@ -970,7 +970,7 @@ export const Constants = {
 //   Policy "chamados_insert" (INSERT, PERMISSIVE) roles={authenticated}
 //     WITH CHECK: (usuario_id = auth.uid())
 //   Policy "chamados_select" (SELECT, PERMISSIVE) roles={authenticated}
-//     USING: ((usuario_id = auth.uid()) OR (responsavel_id = auth.uid()) OR is_admin() OR is_responsavel() OR is_sos() OR is_coc() OR is_juridico() OR (is_sinistro() AND ((( SELECT perfil_usuario.garagem    FROM perfil_usuario   WHERE (perfil_usuario.id = auth.uid())) IS NOT NULL) AND (( SELECT perfil_usuario.garagem    FROM perfil_usuario   WHERE (perfil_usuario.id = auth.uid())) = COALESCE(garagem, ( SELECT perfil_usuario.garagem    FROM perfil_usuario   WHERE (perfil_usuario.id = chamados.usuario_id)))))))
+//     USING: ((usuario_id = auth.uid()) OR (responsavel_id = auth.uid()) OR is_admin() OR is_responsavel() OR is_sos() OR is_coc() OR is_juridico() OR is_secretaria_tecnica() OR (is_sinistro() AND ((( SELECT perfil_usuario.garagem    FROM perfil_usuario   WHERE (perfil_usuario.id = auth.uid())) IS NOT NULL) AND (( SELECT perfil_usuario.garagem    FROM perfil_usuario   WHERE (perfil_usuario.id = auth.uid())) = COALESCE(garagem, ( SELECT perfil_usuario.garagem    FROM perfil_usuario   WHERE (perfil_usuario.id = chamados.usuario_id)))))))
 //   Policy "chamados_select_public_manutencao" (SELECT, PERMISSIVE) roles={public}
 //     USING: (tipo_chamado = 'OS de Manutenção'::text)
 //   Policy "chamados_update" (UPDATE, PERMISSIVE) roles={authenticated}
@@ -995,7 +995,7 @@ export const Constants = {
 //   Policy "formularios_espelho_danos_insert" (INSERT, PERMISSIVE) roles={public}
 //     WITH CHECK: true
 //   Policy "formularios_espelho_danos_select" (SELECT, PERMISSIVE) roles={authenticated}
-//     USING: ((chamado_id IN ( SELECT chamados.id    FROM chamados   WHERE ((chamados.usuario_id = auth.uid()) OR (chamados.responsavel_id = auth.uid())))) OR is_admin() OR is_responsavel() OR is_sinistro() OR is_juridico())
+//     USING: ((chamado_id IN ( SELECT chamados.id    FROM chamados   WHERE ((chamados.usuario_id = auth.uid()) OR (chamados.responsavel_id = auth.uid())))) OR is_admin() OR is_responsavel() OR is_sinistro() OR is_juridico() OR is_secretaria_tecnica())
 //   Policy "formularios_espelho_danos_update" (UPDATE, PERMISSIVE) roles={authenticated}
 //     USING: ((chamado_id IN ( SELECT chamados.id    FROM chamados   WHERE (chamados.responsavel_id = auth.uid()))) OR is_admin() OR is_responsavel() OR is_sinistro() OR is_juridico())
 //     WITH CHECK: ((chamado_id IN ( SELECT chamados.id    FROM chamados   WHERE (chamados.responsavel_id = auth.uid()))) OR is_admin() OR is_responsavel() OR is_sinistro() OR is_juridico())

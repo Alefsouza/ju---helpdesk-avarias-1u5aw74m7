@@ -47,11 +47,11 @@ export default function SecretariaTecnica() {
           *,
           chamados(
             id, 
-            titulo, 
+            titulo,
+            pia,
             registro_motorista, 
             nome_motorista, 
-            responsavel_id,
-            formularios_ido(protocolo_ido)
+            responsavel_id
           ),
           formularios_espelho_danos(*)
         `)
@@ -211,7 +211,7 @@ export default function SecretariaTecnica() {
                 documentos.map((doc) => (
                   <TableRow key={doc.id}>
                     <TableCell className="font-medium text-slate-600">
-                      {doc.chamados?.formularios_ido?.[0]?.protocolo_ido || 'N/A'}
+                      {doc.chamados?.pia || '-'}
                     </TableCell>
                     <TableCell className="font-semibold text-slate-800">
                       {doc.numero_os || '-'}

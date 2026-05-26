@@ -1007,7 +1007,7 @@ export const Constants = {
 //   Policy "formularios_ido_insert" (INSERT, PERMISSIVE) roles={public}
 //     WITH CHECK: true
 //   Policy "formularios_ido_select" (SELECT, PERMISSIVE) roles={authenticated}
-//     USING: ((chamado_id IN ( SELECT chamados.id    FROM chamados   WHERE ((chamados.usuario_id = auth.uid()) OR (chamados.responsavel_id = auth.uid())))) OR is_admin() OR is_responsavel() OR is_sinistro() OR is_juridico())
+//     USING: ((chamado_id IN ( SELECT chamados.id    FROM chamados   WHERE ((chamados.usuario_id = auth.uid()) OR (chamados.responsavel_id = auth.uid())))) OR is_admin() OR is_responsavel() OR is_sinistro() OR is_juridico() OR is_secretaria_tecnica())
 //   Policy "formularios_ido_update" (UPDATE, PERMISSIVE) roles={authenticated}
 //     USING: ((chamado_id IN ( SELECT chamados.id    FROM chamados   WHERE (chamados.responsavel_id = auth.uid()))) OR is_admin() OR is_responsavel() OR is_sinistro() OR is_juridico())
 //     WITH CHECK: ((chamado_id IN ( SELECT chamados.id    FROM chamados   WHERE (chamados.responsavel_id = auth.uid()))) OR is_admin() OR is_responsavel() OR is_sinistro() OR is_juridico())

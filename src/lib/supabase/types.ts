@@ -956,14 +956,14 @@ export const Constants = {
 //     USING: (chamado_id IN ( SELECT chamados.id    FROM chamados))
 // Table: anexos_chamado_interno
 //   Policy "anexos_internos_delete" (DELETE, PERMISSIVE) roles={authenticated}
-//     USING: ((usuario_id = auth.uid()) AND (is_responsavel() OR is_sinistro() OR is_admin() OR is_juridico() OR is_secretaria_tecnica()))
+//     USING: (is_responsavel() OR is_sinistro() OR is_admin() OR is_juridico() OR is_secretaria_tecnica() OR (usuario_id = auth.uid()))
 //   Policy "anexos_internos_insert" (INSERT, PERMISSIVE) roles={authenticated}
 //     WITH CHECK: (is_responsavel() OR is_sinistro() OR is_admin() OR is_juridico() OR is_secretaria_tecnica())
 //   Policy "anexos_internos_select" (SELECT, PERMISSIVE) roles={authenticated}
 //     USING: (is_responsavel() OR is_sinistro() OR is_admin() OR is_sos() OR is_juridico() OR is_secretaria_tecnica() OR (usuario_id = auth.uid()))
 //   Policy "anexos_internos_update" (UPDATE, PERMISSIVE) roles={authenticated}
-//     USING: ((usuario_id = auth.uid()) AND (is_responsavel() OR is_sinistro() OR is_admin() OR is_juridico() OR is_secretaria_tecnica()))
-//     WITH CHECK: ((usuario_id = auth.uid()) AND (is_responsavel() OR is_sinistro() OR is_admin() OR is_juridico() OR is_secretaria_tecnica()))
+//     USING: (is_responsavel() OR is_sinistro() OR is_admin() OR is_juridico() OR is_secretaria_tecnica() OR (usuario_id = auth.uid()))
+//     WITH CHECK: (is_responsavel() OR is_sinistro() OR is_admin() OR is_juridico() OR is_secretaria_tecnica() OR (usuario_id = auth.uid()))
 // Table: auditoria_admin
 //   Policy "admin_auditoria_insert" (INSERT, PERMISSIVE) roles={authenticated}
 //     WITH CHECK: is_admin()

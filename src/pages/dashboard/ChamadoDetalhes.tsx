@@ -1386,39 +1386,26 @@ export default function ChamadoDetalhes() {
           const newUrl = `${pdfDataResult.url}?t=${Date.now()}`
           const newNomeArquivo = pdfDataResult.nome_arquivo || editingDoc.anexo.nome_arquivo
 
-          try {
-            const oldUrl = editingDoc.anexo.arquivo_url.split('?')[0]
-            const urlParts = oldUrl.split('/')
-            const oldFileName = urlParts[urlParts.length - 1]
-            const oldFolder = urlParts[urlParts.length - 2]
-            const oldPath = `${oldFolder}/${oldFileName}`
-            await supabase.storage.from('anexos_chamados_interno').remove([oldPath])
-          } catch (e) {
-            console.warn('Erro ao remover arquivo antigo:', e)
-          }
-
-          const newAnexoId = crypto.randomUUID()
+          // We don't delete the old file from storage to maintain version history as per the requirement.
 
           // Force an immediate local state update so UI is snappy and we don't only rely on Realtime
           setAnexosInternos((prev) =>
             prev.map((a) =>
               a.id === editingDoc.anexo.id
-                ? { ...a, id: newAnexoId, arquivo_url: newUrl, nome_arquivo: newNomeArquivo }
+                ? { ...a, arquivo_url: newUrl, nome_arquivo: newNomeArquivo }
                 : a,
             ),
           )
 
-          await supabase.from('anexos_chamado_interno').delete().eq('id', editingDoc.anexo.id)
-
-          await supabase.from('anexos_chamado_interno').insert({
-            id: newAnexoId,
-            chamado_id: id as string,
-            usuario_id: user?.id as string,
-            arquivo_url: newUrl,
-            nome_arquivo: newNomeArquivo,
-            tipo_arquivo: 'application/pdf',
-            tamanho_bytes: 0,
-          })
+          // Update existing record
+          await supabase
+            .from('anexos_chamado_interno')
+            .update({
+              arquivo_url: newUrl,
+              nome_arquivo: newNomeArquivo,
+              usuario_id: user?.id as string,
+            })
+            .eq('id', editingDoc.anexo.id)
 
           // Also update the related record in documentos table strictly via formulario_id
           let matchDoc = null
@@ -1518,39 +1505,26 @@ export default function ChamadoDetalhes() {
           const newUrl = `${pdfDataResult.url}?t=${Date.now()}`
           const newNomeArquivoIdo = pdfDataResult.nome_arquivo || editingDoc.anexo.nome_arquivo
 
-          try {
-            const oldUrl = editingDoc.anexo.arquivo_url.split('?')[0]
-            const urlParts = oldUrl.split('/')
-            const oldFileName = urlParts[urlParts.length - 1]
-            const oldFolder = urlParts[urlParts.length - 2]
-            const oldPath = `${oldFolder}/${oldFileName}`
-            await supabase.storage.from('anexos_chamados_interno').remove([oldPath])
-          } catch (e) {
-            console.warn('Erro ao remover arquivo antigo:', e)
-          }
-
-          const newAnexoId = crypto.randomUUID()
+          // We don't delete the old file from storage to maintain version history
 
           // Force local state update for IDO too
           setAnexosInternos((prev) =>
             prev.map((a) =>
               a.id === editingDoc.anexo.id
-                ? { ...a, id: newAnexoId, arquivo_url: newUrl, nome_arquivo: newNomeArquivoIdo }
+                ? { ...a, arquivo_url: newUrl, nome_arquivo: newNomeArquivoIdo }
                 : a,
             ),
           )
 
-          await supabase.from('anexos_chamado_interno').delete().eq('id', editingDoc.anexo.id)
-
-          await supabase.from('anexos_chamado_interno').insert({
-            id: newAnexoId,
-            chamado_id: id as string,
-            usuario_id: user?.id as string,
-            arquivo_url: newUrl,
-            nome_arquivo: newNomeArquivoIdo,
-            tipo_arquivo: 'application/pdf',
-            tamanho_bytes: 0,
-          })
+          // Update existing record
+          await supabase
+            .from('anexos_chamado_interno')
+            .update({
+              arquivo_url: newUrl,
+              nome_arquivo: newNomeArquivoIdo,
+              usuario_id: user?.id as string,
+            })
+            .eq('id', editingDoc.anexo.id)
 
           const oldFileNameIdo = editingDoc.anexo.nome_arquivo
           const { data: docIdoByName } = await supabase

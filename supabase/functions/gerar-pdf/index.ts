@@ -104,6 +104,10 @@ Deno.serve(async (req: Request) => {
     }
 
     let fileName = ''
+    const timestamp = new Date()
+      .toISOString()
+      .replace(/[-:T.]/g, '')
+      .substring(0, 14)
 
     if (tipo_documento === 'IDO') {
       drawText('Boletim de Ocorrência (IDO)', true, 20)
@@ -161,7 +165,7 @@ Deno.serve(async (req: Request) => {
         }
       }
 
-      fileName = `ido_${id}_${Date.now()}.pdf`
+      fileName = `ido_${id}_${timestamp}.pdf`
     } else {
       drawText('Espelho de Danos - Vistoria', true, 20)
       y -= 10
@@ -222,7 +226,9 @@ Deno.serve(async (req: Request) => {
         }
       }
 
-      fileName = `espelho_danos_${Date.now()}.pdf`
+      const numCarro = numero_carro || 'N/A'
+      const numOS = numero_os || 'N/A'
+      fileName = `Carro: ${numCarro} - OS: ${numOS} - ${timestamp}.pdf`
     }
 
     const pdfBytes = await pdfDoc.save()

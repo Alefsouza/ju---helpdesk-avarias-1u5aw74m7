@@ -226,9 +226,9 @@ Deno.serve(async (req: Request) => {
         }
       }
 
-      const numCarro = numero_carro || 'N/A'
-      const numOS = numero_os || 'N/A'
-      fileName = `Carro: ${numCarro} - OS: ${numOS} - ${timestamp}.pdf`
+      const numCarro = numero_carro || 'S-N'
+      const numOS = numero_os || 'S-N'
+      fileName = `Espelho de Danos - Carro: ${numCarro} - OS: ${numOS} - ${timestamp}.pdf`
     }
 
     const pdfBytes = await pdfDoc.save()

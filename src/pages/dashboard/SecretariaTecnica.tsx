@@ -134,8 +134,9 @@ export default function SecretariaTecnica() {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>OS / Carro</TableHead>
-                <TableHead>RA Responsável</TableHead>
+                <TableHead>RA</TableHead>
+                <TableHead>OS</TableHead>
+                <TableHead>Carro</TableHead>
                 <TableHead>Data</TableHead>
                 <TableHead>Descrição</TableHead>
                 <TableHead>Orçamento</TableHead>
@@ -145,26 +146,30 @@ export default function SecretariaTecnica() {
             <TableBody>
               {loading ? (
                 <TableRow>
-                  <TableCell colSpan={6} className="text-center py-8 text-slate-500">
+                  <TableCell colSpan={7} className="text-center py-8 text-slate-500">
                     <Loader2 className="w-6 h-6 animate-spin mx-auto mb-2" />
                     Carregando registros...
                   </TableCell>
                 </TableRow>
               ) : documentos.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={6} className="text-center py-8 text-slate-500">
+                  <TableCell colSpan={7} className="text-center py-8 text-slate-500">
                     Nenhum registro com evidências fotográficas encontrado.
                   </TableCell>
                 </TableRow>
               ) : (
                 documentos.map((doc) => (
                   <TableRow key={doc.id}>
-                    <TableCell>
-                      <div className="font-medium">OS: {doc.numero_os || '-'}</div>
-                      <div className="text-xs text-slate-500">Carro: {doc.numero_carro || '-'}</div>
+                    <TableCell className="font-medium text-slate-600">
+                      {doc.numero_os || '-'}
+                    </TableCell>
+                    <TableCell className="font-semibold text-slate-800">
+                      {doc.numero_os || '-'}
                     </TableCell>
                     <TableCell>
-                      {doc.registro_responsavel || doc.registro_motorista || '-'}
+                      <Badge variant="outline" className="font-mono bg-slate-50">
+                        {doc.numero_carro || '-'}
+                      </Badge>
                     </TableCell>
                     <TableCell>
                       {doc.data
@@ -172,8 +177,11 @@ export default function SecretariaTecnica() {
                         : format(new Date(doc.criado_em), 'dd/MM/yyyy')}
                     </TableCell>
                     <TableCell>
-                      <div className="max-w-[250px] truncate" title={doc.descricao_danos || ''}>
-                        {doc.descricao_danos || '-'}
+                      <div
+                        className="max-w-[250px] truncate"
+                        title={doc.ocorrencia || doc.descricao_danos || ''}
+                      >
+                        {doc.ocorrencia || doc.descricao_danos || '-'}
                       </div>
                     </TableCell>
                     <TableCell>

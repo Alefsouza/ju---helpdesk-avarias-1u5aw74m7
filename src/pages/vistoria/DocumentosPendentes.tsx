@@ -36,6 +36,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip
 
 type Documento = {
   id: string
+  chamado_id?: string | null
   garagem: string | null
   linha: string | null
   numero_carro: string | null
@@ -75,7 +76,7 @@ export default function DocumentosPendentes() {
       const { data, error } = await supabase
         .from('documentos')
         .select(
-          'id, garagem, linha, numero_carro, data, horario, ocorrencia, descricao_danos, foto_url, fotos_urls, nome_responsavel, registro_responsavel, nome_motorista, registro_motorista, criado_em',
+          'id, chamado_id, garagem, linha, numero_carro, data, horario, ocorrencia, descricao_danos, foto_url, fotos_urls, nome_responsavel, registro_responsavel, nome_motorista, registro_motorista, criado_em',
         )
         .eq('tipo_documento', 'Vistoria')
         .is('numero_os', null)
@@ -222,29 +223,66 @@ export default function DocumentosPendentes() {
       }
 
       const espelhoId = crypto.randomUUID()
-      const { error: formError } = await supabase.from('formularios_espelho_danos').insert({
-        id: espelhoId,
-        numero_os: numeroOS.trim(),
-        garagem: selectedDoc.garagem,
-        data: selectedDoc.data,
-        horario: selectedDoc.horario,
-        ocorrencia: selectedDoc.ocorrencia,
-        linha: selectedDoc.linha,
-        numero_carro: selectedDoc.numero_carro,
-        descricao_danos: selectedDoc.descricao_danos,
-        registro_vistoriador: selectedDoc.registro_responsavel,
-        nome_vistoriador: selectedDoc.nome_responsavel,
-        registro_motorista: selectedDoc.registro_motorista,
-        nome_motorista: selectedDoc.nome_motorista,
-      })
+      let finalEspelhoId = espelhoId
+      let shouldInsertForm = true
 
-      if (formError) throw formError
+      if (selectedDoc.chamado_id) {
+        const { data: existingForm } = await supabase
+          .from('formularios_espelho_danos')
+          .select('id')
+          .eq('chamado_id', selectedDoc.chamado_id)
+          .limit(1)
+          .maybeSingle()
+
+        if (existingForm) {
+          finalEspelhoId = existingForm.id
+          shouldInsertForm = false
+
+          await supabase
+            .from('formularios_espelho_danos')
+            .update({
+              numero_os: numeroOS.trim(),
+              garagem: selectedDoc.garagem,
+              data: selectedDoc.data,
+              horario: selectedDoc.horario,
+              ocorrencia: selectedDoc.ocorrencia,
+              linha: selectedDoc.linha,
+              numero_carro: selectedDoc.numero_carro,
+              descricao_danos: selectedDoc.descricao_danos,
+              registro_vistoriador: selectedDoc.registro_responsavel,
+              nome_vistoriador: selectedDoc.nome_responsavel,
+              registro_motorista: selectedDoc.registro_motorista,
+              nome_motorista: selectedDoc.nome_motorista,
+            })
+            .eq('id', finalEspelhoId)
+        }
+      }
+
+      if (shouldInsertForm) {
+        const { error: formError } = await supabase.from('formularios_espelho_danos').insert({
+          id: finalEspelhoId,
+          chamado_id: selectedDoc.chamado_id || null,
+          numero_os: numeroOS.trim(),
+          garagem: selectedDoc.garagem,
+          data: selectedDoc.data,
+          horario: selectedDoc.horario,
+          ocorrencia: selectedDoc.ocorrencia,
+          linha: selectedDoc.linha,
+          numero_carro: selectedDoc.numero_carro,
+          descricao_danos: selectedDoc.descricao_danos,
+          registro_vistoriador: selectedDoc.registro_responsavel,
+          nome_vistoriador: selectedDoc.nome_responsavel,
+          registro_motorista: selectedDoc.registro_motorista,
+          nome_motorista: selectedDoc.nome_motorista,
+        })
+        if (formError) throw formError
+      }
 
       // 1. Gerar PDF via Edge Function
       const { data: pdfData, error: pdfError } = await supabase.functions.invoke('gerar-pdf', {
         body: {
-          id: selectedDoc.id,
-          espelho_id: espelhoId,
+          id: selectedDoc.chamado_id || selectedDoc.id,
+          espelho_id: finalEspelhoId,
           garagem: selectedDoc.garagem,
           linha: selectedDoc.linha,
           numero_carro: selectedDoc.numero_carro,
@@ -274,7 +312,7 @@ export default function DocumentosPendentes() {
           arquivo_url: url,
           nome_arquivo: nome_arquivo || `Espelho_Danos_OS_${numeroOS.trim()}.pdf`,
           tipo_documento: 'Espelho de Danos',
-          formulario_id: espelhoId,
+          formulario_id: finalEspelhoId,
         })
         .eq('id', selectedDoc.id)
         .select()
@@ -288,25 +326,35 @@ export default function DocumentosPendentes() {
         description: 'Número da OS salvo e PDF gerado com sucesso. Documento concluído.',
       })
 
+      if (selectedDoc.chamado_id) {
+        // Se o documento já pertencia a um chamado, registramos o anexo interno e o histórico via RPC
+        await supabase.rpc('registrar_espelho_danos', {
+          p_chamado_id: selectedDoc.chamado_id,
+          p_nome_arquivo: updatedDoc.nome_arquivo,
+          p_arquivo_url: updatedDoc.arquivo_url,
+          p_tamanho_bytes: 0,
+        })
+      } else {
+        // 3. Criar chamado automaticamente em background se não havia chamado
+        supabase.functions
+          .invoke('criar-chamado-vistoria', {
+            body: { documento: updatedDoc },
+          })
+          .then(({ error: functionError }) => {
+            if (functionError) {
+              console.error(
+                'Erro retornado pela Edge Function criar-chamado-vistoria:',
+                functionError,
+              )
+            }
+          })
+          .catch((err) => {
+            console.error('Erro ao chamar Edge Function criar-chamado-vistoria:', err)
+          })
+      }
+
       setDocumentos((docs) => docs.filter((d) => d.id !== selectedDoc.id))
       handleCloseModal()
-
-      // 3. Criar chamado automaticamente em background (não bloqueia o usuário)
-      supabase.functions
-        .invoke('criar-chamado-vistoria', {
-          body: { documento: updatedDoc },
-        })
-        .then(({ error: functionError }) => {
-          if (functionError) {
-            console.error(
-              'Erro retornado pela Edge Function criar-chamado-vistoria:',
-              functionError,
-            )
-          }
-        })
-        .catch((err) => {
-          console.error('Erro ao chamar Edge Function criar-chamado-vistoria:', err)
-        })
     } catch (error: any) {
       console.error('Erro ao salvar OS:', error)
       toast({

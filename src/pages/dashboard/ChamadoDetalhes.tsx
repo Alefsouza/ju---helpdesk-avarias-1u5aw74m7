@@ -70,6 +70,7 @@ import { ptBR } from 'date-fns/locale'
 import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
 import { UnificarChamadoModal } from '@/components/UnificarChamadoModal'
+import { useDocumentAction } from '@/hooks/use-document-action'
 
 type Chamado = any
 type Perfil = any
@@ -643,8 +644,6 @@ export default function ChamadoDetalhes() {
   const [transferObservacao, setTransferObservacao] = useState('')
   const [transferLoading, setTransferLoading] = useState(false)
   const [uploadingInternal, setUploadingInternal] = useState(false)
-  const [viewingInternalId, setViewingInternalId] = useState<string | null>(null)
-  const [viewingAnexoId, setViewingAnexoId] = useState<string | null>(null)
 
   const [editingDoc, setEditingDoc] = useState<{
     anexo: AnexoInterno
@@ -655,6 +654,8 @@ export default function ChamadoDetalhes() {
   const [savingDoc, setSavingDoc] = useState(false)
   const [duplicateAlertOpen, setDuplicateAlertOpen] = useState(false)
   const [duplicateSubmitAction, setDuplicateSubmitAction] = useState<(() => void) | null>(null)
+
+  const { handleDocumentAction, loadingAction } = useDocumentAction()
 
   const fileInputRef = useRef<HTMLInputElement>(null)
   const internalFileInputRef = useRef<HTMLInputElement>(null)
@@ -1169,25 +1170,31 @@ export default function ChamadoDetalhes() {
     setEditingDocLoading(true)
     try {
       if (tipo === 'Espelho') {
-        let espelhoId = null
-        const match = anexo.nome_arquivo.match(/ESPELHO_DE_DANOS_([a-f0-9-]+)\.pdf/i)
-        if (match) espelhoId = match[1]
-
         let formData = null
 
-        if (espelhoId) {
+        const { data: docs } = await supabase
+          .from('documentos')
+          .select('*')
+          .eq('chamado_id', id)
+          .in('tipo_documento', ['Espelho de Danos', 'Vistoria'])
+          .order('criado_em', { ascending: false })
+
+        let matchDoc = null
+        if (docs && docs.length > 0) {
+          matchDoc = docs.find((d) => d.nome_arquivo === anexo.nome_arquivo) || docs[0]
+        }
+
+        if (matchDoc && matchDoc.formulario_id) {
           const { data, error } = await supabase
             .from('formularios_espelho_danos')
             .select('*')
-            .eq('id', espelhoId)
+            .eq('id', matchDoc.formulario_id)
             .single()
 
           if (!error && data) {
             formData = data
           }
-        }
-
-        if (!formData) {
+        } else if (!formData) {
           const { data, error } = await supabase
             .from('formularios_espelho_danos')
             .select('*')
@@ -1199,34 +1206,21 @@ export default function ChamadoDetalhes() {
           if (!error && data) formData = data
         }
 
-        if (!formData) {
-          const { data: docData, error: docError } = await supabase
-            .from('documentos')
-            .select('*')
-            .eq('chamado_id', id)
-            .in('tipo_documento', ['Espelho de Danos', 'Vistoria'])
-            .order('criado_em', { ascending: false })
-            .limit(1)
-            .maybeSingle()
-
-          if (docError) throw docError
-
-          if (docData) {
-            formData = {
-              chamado_id: id,
-              numero_os: docData.numero_os || '',
-              garagem: docData.garagem || '',
-              numero_carro: docData.numero_carro || '',
-              linha: docData.linha || '',
-              descricao_danos: docData.descricao_danos || '',
-              data: docData.data || '',
-              horario: docData.horario || '',
-              ocorrencia: docData.ocorrencia || '',
-              registro_vistoriador: docData.registro_responsavel || '',
-              nome_vistoriador: docData.nome_responsavel || '',
-              registro_motorista: docData.registro_motorista || '',
-              nome_motorista: docData.nome_motorista || '',
-            }
+        if (!formData && matchDoc) {
+          formData = {
+            chamado_id: id,
+            numero_os: matchDoc.numero_os || '',
+            garagem: matchDoc.garagem || '',
+            numero_carro: matchDoc.numero_carro || '',
+            linha: matchDoc.linha || '',
+            descricao_danos: matchDoc.descricao_danos || '',
+            data: matchDoc.data || '',
+            horario: matchDoc.horario || '',
+            ocorrencia: matchDoc.ocorrencia || '',
+            registro_vistoriador: matchDoc.registro_responsavel || '',
+            nome_vistoriador: matchDoc.nome_responsavel || '',
+            registro_motorista: matchDoc.registro_motorista || '',
+            nome_motorista: matchDoc.nome_motorista || '',
           }
         }
 
@@ -1283,16 +1277,31 @@ export default function ChamadoDetalhes() {
         }
 
         let finalFormId = formId
+        const updateDataLimpa = {
+          numero_os: updateData.numero_os,
+          garagem: updateData.garagem,
+          data: updateData.data,
+          horario: updateData.horario,
+          ocorrencia: updateData.ocorrencia,
+          linha: updateData.linha,
+          descricao_danos: updateData.descricao_danos,
+          nome_vistoriador: updateData.nome_vistoriador,
+          registro_vistoriador: updateData.registro_vistoriador,
+          nome_motorista: updateData.nome_motorista,
+          registro_motorista: updateData.registro_motorista,
+          numero_carro: updateData.numero_carro,
+        }
+
         if (formId) {
           const { error: updateError } = await supabase
             .from('formularios_espelho_danos')
-            .update(updateData)
+            .update(updateDataLimpa)
             .eq('id', formId)
           if (updateError) throw updateError
         } else {
           const { data: newForm, error: insertError } = await supabase
             .from('formularios_espelho_danos')
-            .insert({ chamado_id: id as string, ...updateData })
+            .insert({ chamado_id: id as string, ...updateDataLimpa })
             .select('id')
             .single()
           if (insertError) throw insertError
@@ -1301,7 +1310,7 @@ export default function ChamadoDetalhes() {
 
         const { data: docData } = await supabase
           .from('documentos')
-          .select('fotos_urls, foto_url')
+          .select('id, fotos_urls, foto_url')
           .eq('chamado_id', id as string)
           .in('tipo_documento', ['Espelho de Danos', 'Vistoria'])
           .order('criado_em', { ascending: false })
@@ -1320,7 +1329,7 @@ export default function ChamadoDetalhes() {
           body: {
             tipo_documento: 'espelho_danos',
             id: id,
-            ...updateData,
+            ...updateDataLimpa,
             fotos,
             espelho_id: finalFormId || undefined,
           },
@@ -1354,11 +1363,11 @@ export default function ChamadoDetalhes() {
 
         // Also update the related record in documentos table
         let matchDoc = null
-        if (formId) {
+        if (finalFormId) {
           const { data: docById } = await supabase
             .from('documentos')
             .select('id')
-            .eq('formulario_id', formId)
+            .eq('formulario_id', finalFormId)
             .maybeSingle()
           if (docById) matchDoc = docById
         }
@@ -1383,18 +1392,18 @@ export default function ChamadoDetalhes() {
               nome_arquivo: newNomeArquivo,
               atualizado_em: new Date().toISOString(),
               formulario_id: finalFormId,
-              numero_os: updateData.numero_os,
-              numero_carro: updateData.numero_carro,
-              linha: updateData.linha,
-              descricao_danos: updateData.descricao_danos,
-              data: updateData.data,
-              horario: updateData.horario,
-              ocorrencia: updateData.ocorrencia,
-              garagem: updateData.garagem,
-              registro_responsavel: updateData.registro_vistoriador,
-              nome_responsavel: updateData.nome_vistoriador,
-              registro_motorista: updateData.registro_motorista,
-              nome_motorista: updateData.nome_motorista,
+              numero_os: updateDataLimpa.numero_os,
+              numero_carro: updateDataLimpa.numero_carro,
+              linha: updateDataLimpa.linha,
+              descricao_danos: updateDataLimpa.descricao_danos,
+              data: updateDataLimpa.data,
+              horario: updateDataLimpa.horario,
+              ocorrencia: updateDataLimpa.ocorrencia,
+              garagem: updateDataLimpa.garagem,
+              registro_responsavel: updateDataLimpa.registro_vistoriador,
+              nome_responsavel: updateDataLimpa.nome_vistoriador,
+              registro_motorista: updateDataLimpa.registro_motorista,
+              nome_motorista: updateDataLimpa.nome_motorista,
             })
             .eq('id', matchDoc.id)
         }
@@ -1584,59 +1593,12 @@ export default function ChamadoDetalhes() {
     }
   }
 
-  const handleViewInternal = async (anexo: AnexoInterno) => {
-    try {
-      setViewingInternalId(anexo.id)
-
-      const cacheBuster = `cb=${Date.now()}`
-      const finalUrl = anexo.arquivo_url.includes('?')
-        ? `${anexo.arquivo_url}&${cacheBuster}`
-        : `${anexo.arquivo_url}?${cacheBuster}`
-
-      const response = await fetch(finalUrl)
-      if (!response.ok) throw new Error('not_found')
-      const blob = await response.blob()
-
-      const url = window.URL.createObjectURL(blob)
-      window.open(url, '_blank')
-      setTimeout(() => URL.revokeObjectURL(url), 1000)
-    } catch (err: any) {
-      if (err.message === 'not_found') {
-        toast.error('Arquivo não encontrado')
-      } else {
-        toast.error('Erro ao abrir documento')
-      }
-    } finally {
-      setViewingInternalId(null)
-    }
+  const handleViewInternal = (anexo: AnexoInterno) => {
+    handleDocumentAction(anexo.id, anexo.arquivo_url, anexo.nome_arquivo, 'view')
   }
 
-  const handleDownloadInternal = async (anexo: AnexoInterno) => {
-    try {
-      const cacheBuster = `cb=${Date.now()}`
-      const finalUrl = anexo.arquivo_url.includes('?')
-        ? `${anexo.arquivo_url}&${cacheBuster}`
-        : `${anexo.arquivo_url}?${cacheBuster}`
-
-      const response = await fetch(finalUrl)
-      if (!response.ok) throw new Error('not_found')
-      const blob = await response.blob()
-
-      const url = window.URL.createObjectURL(blob)
-      const a = document.createElement('a')
-      a.href = url
-      a.download = anexo.nome_arquivo
-      document.body.appendChild(a)
-      a.click()
-      window.URL.revokeObjectURL(url)
-      document.body.removeChild(a)
-    } catch (err: any) {
-      if (err.message === 'not_found') {
-        toast.error('Arquivo não encontrado')
-      } else {
-        toast.error('Erro ao baixar arquivo. Tente novamente')
-      }
-    }
+  const handleDownloadInternal = (anexo: AnexoInterno) => {
+    handleDocumentAction(anexo.id, anexo.arquivo_url, anexo.nome_arquivo, 'download')
   }
 
   const getAnexoStorageInfo = (url: string) => {
@@ -1672,59 +1634,12 @@ export default function ChamadoDetalhes() {
     }
   }
 
-  const handleDownloadAnexo = async (anexo: Anexo) => {
-    try {
-      const cacheBuster = `cb=${Date.now()}`
-      const finalUrl = anexo.url_arquivo.includes('?')
-        ? `${anexo.url_arquivo}&${cacheBuster}`
-        : `${anexo.url_arquivo}?${cacheBuster}`
-
-      const response = await fetch(finalUrl)
-      if (!response.ok) throw new Error('not_found')
-      const blob = await response.blob()
-
-      const url = window.URL.createObjectURL(blob)
-      const a = document.createElement('a')
-      a.href = url
-      a.download = anexo.nome_arquivo
-      document.body.appendChild(a)
-      a.click()
-      window.URL.revokeObjectURL(url)
-      document.body.removeChild(a)
-    } catch (err: any) {
-      if (err.message === 'not_found') {
-        toast.error('Arquivo não encontrado')
-      } else {
-        toast.error('Erro ao baixar arquivo. Tente novamente')
-      }
-    }
+  const handleDownloadAnexo = (anexo: Anexo) => {
+    handleDocumentAction(anexo.id, anexo.url_arquivo, anexo.nome_arquivo, 'download')
   }
 
-  const handleViewAnexo = async (anexo: Anexo) => {
-    try {
-      setViewingAnexoId(anexo.id)
-
-      const cacheBuster = `cb=${Date.now()}`
-      const finalUrl = anexo.url_arquivo.includes('?')
-        ? `${anexo.url_arquivo}&${cacheBuster}`
-        : `${anexo.url_arquivo}?${cacheBuster}`
-
-      const response = await fetch(finalUrl)
-      if (!response.ok) throw new Error('not_found')
-      const blob = await response.blob()
-
-      const url = window.URL.createObjectURL(blob)
-      window.open(url, '_blank')
-      setTimeout(() => URL.revokeObjectURL(url), 1000)
-    } catch (err: any) {
-      if (err.message === 'not_found') {
-        toast.error('Arquivo não encontrado')
-      } else {
-        toast.error('Erro ao abrir documento')
-      }
-    } finally {
-      setViewingAnexoId(null)
-    }
+  const handleViewAnexo = (anexo: Anexo) => {
+    handleDocumentAction(anexo.id, anexo.url_arquivo, anexo.nome_arquivo, 'view')
   }
 
   const getTipoArquivo = (mime: string) => {
@@ -2536,20 +2451,30 @@ export default function ChamadoDetalhes() {
                         variant="ghost"
                         className="h-8 w-8 text-slate-500 hover:text-slate-900"
                         onClick={() => handleDownloadInternal(anexo)}
-                        disabled={viewingInternalId === anexo.id}
+                        disabled={
+                          loadingAction === `${anexo.id}-download` ||
+                          loadingAction === `${anexo.id}-view`
+                        }
                         title="Baixar anexo"
                       >
-                        <Download className="h-4 w-4" />
+                        {loadingAction === `${anexo.id}-download` ? (
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                        ) : (
+                          <Download className="h-4 w-4" />
+                        )}
                       </Button>
                       <Button
                         size="icon"
                         variant="ghost"
                         className="h-8 w-8 text-slate-500 hover:text-slate-900"
                         onClick={() => handleViewInternal(anexo)}
-                        disabled={viewingInternalId === anexo.id}
+                        disabled={
+                          loadingAction === `${anexo.id}-download` ||
+                          loadingAction === `${anexo.id}-view`
+                        }
                         title="Visualizar anexo"
                       >
-                        {viewingInternalId === anexo.id ? (
+                        {loadingAction === `${anexo.id}-view` ? (
                           <Loader2 className="h-4 w-4 animate-spin" />
                         ) : (
                           <Eye className="h-4 w-4" />
@@ -2561,7 +2486,10 @@ export default function ChamadoDetalhes() {
                           variant="ghost"
                           className="h-8 w-8 text-slate-500 hover:text-red-600"
                           onClick={() => handleDeleteInternal(anexo.id, anexo.arquivo_url)}
-                          disabled={viewingInternalId === anexo.id}
+                          disabled={
+                            loadingAction === `${anexo.id}-download` ||
+                            loadingAction === `${anexo.id}-view`
+                          }
                           title="Excluir anexo"
                         >
                           <Trash2 className="h-4 w-4" />
@@ -2622,20 +2550,30 @@ export default function ChamadoDetalhes() {
                         variant="ghost"
                         className="h-8 w-8 text-slate-500 hover:text-slate-900"
                         onClick={() => handleDownloadAnexo(anexo)}
-                        disabled={viewingAnexoId === anexo.id}
+                        disabled={
+                          loadingAction === `${anexo.id}-download` ||
+                          loadingAction === `${anexo.id}-view`
+                        }
                         title="Baixar anexo"
                       >
-                        <Download className="h-4 w-4" />
+                        {loadingAction === `${anexo.id}-download` ? (
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                        ) : (
+                          <Download className="h-4 w-4" />
+                        )}
                       </Button>
                       <Button
                         size="icon"
                         variant="ghost"
                         className="h-8 w-8 text-slate-500 hover:text-slate-900"
                         onClick={() => handleViewAnexo(anexo)}
-                        disabled={viewingAnexoId === anexo.id}
+                        disabled={
+                          loadingAction === `${anexo.id}-download` ||
+                          loadingAction === `${anexo.id}-view`
+                        }
                         title="Visualizar anexo"
                       >
-                        {viewingAnexoId === anexo.id ? (
+                        {loadingAction === `${anexo.id}-view` ? (
                           <Loader2 className="h-4 w-4 animate-spin" />
                         ) : (
                           <Eye className="h-4 w-4" />
@@ -2647,7 +2585,10 @@ export default function ChamadoDetalhes() {
                           variant="ghost"
                           className="h-8 w-8 text-slate-500 hover:text-red-600"
                           onClick={() => handleDeleteAnexo(anexo.id, anexo.url_arquivo)}
-                          disabled={viewingAnexoId === anexo.id}
+                          disabled={
+                            loadingAction === `${anexo.id}-download` ||
+                            loadingAction === `${anexo.id}-view`
+                          }
                           title="Excluir anexo"
                         >
                           <Trash2 className="h-4 w-4" />

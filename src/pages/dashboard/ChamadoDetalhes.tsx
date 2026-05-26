@@ -1181,7 +1181,10 @@ export default function ChamadoDetalhes() {
 
         let matchDoc = null
         if (docs && docs.length > 0) {
-          matchDoc = docs.find((d) => d.nome_arquivo === anexo.nome_arquivo) || docs[0]
+          matchDoc =
+            docs.find((d) => d.nome_arquivo === anexo.nome_arquivo) ||
+            docs.find((d) => d.formulario_id) ||
+            docs[0]
         }
 
         if (matchDoc && matchDoc.formulario_id) {
@@ -1208,6 +1211,7 @@ export default function ChamadoDetalhes() {
 
         if (!formData && matchDoc) {
           formData = {
+            id: matchDoc.formulario_id || undefined,
             chamado_id: id,
             numero_os: matchDoc.numero_os || '',
             garagem: matchDoc.garagem || '',
@@ -1308,14 +1312,37 @@ export default function ChamadoDetalhes() {
           finalFormId = newForm.id
         }
 
-        const { data: docData } = await supabase
-          .from('documentos')
-          .select('id, fotos_urls, foto_url')
-          .eq('chamado_id', id as string)
-          .in('tipo_documento', ['Espelho de Danos', 'Vistoria'])
-          .order('criado_em', { ascending: false })
-          .limit(1)
-          .maybeSingle()
+        let docData = null
+        if (finalFormId) {
+          const { data } = await supabase
+            .from('documentos')
+            .select('id, fotos_urls, foto_url')
+            .eq('formulario_id', finalFormId)
+            .maybeSingle()
+          docData = data
+        }
+
+        if (!docData) {
+          const { data } = await supabase
+            .from('documentos')
+            .select('id, fotos_urls, foto_url')
+            .eq('chamado_id', id as string)
+            .eq('nome_arquivo', editingDoc.anexo.nome_arquivo)
+            .maybeSingle()
+          docData = data
+        }
+
+        if (!docData) {
+          const { data } = await supabase
+            .from('documentos')
+            .select('id, fotos_urls, foto_url')
+            .eq('chamado_id', id as string)
+            .in('tipo_documento', ['Espelho de Danos', 'Vistoria'])
+            .order('criado_em', { ascending: false })
+            .limit(1)
+            .maybeSingle()
+          docData = data
+        }
 
         let fotos: string[] = []
         if (docData) {
@@ -1359,6 +1386,15 @@ export default function ChamadoDetalhes() {
             }
           }
 
+          // Force an immediate local state update so UI is snappy and we don't only rely on Realtime
+          setAnexosInternos((prev) =>
+            prev.map((a) =>
+              a.id === editingDoc.anexo.id
+                ? { ...a, arquivo_url: newUrl, nome_arquivo: newNomeArquivo }
+                : a,
+            ),
+          )
+
           await supabase
             .from('anexos_chamado_interno')
             .update({
@@ -1367,7 +1403,7 @@ export default function ChamadoDetalhes() {
             })
             .eq('id', editingDoc.anexo.id)
 
-          // Also update the related record in documentos table
+          // Also update the related record in documentos table strictly via formulario_id
           let matchDoc = null
           if (finalFormId) {
             const { data: docById } = await supabase
@@ -1477,6 +1513,15 @@ export default function ChamadoDetalhes() {
               console.warn('Erro ao remover arquivo antigo:', e)
             }
           }
+
+          // Force local state update for IDO too
+          setAnexosInternos((prev) =>
+            prev.map((a) =>
+              a.id === editingDoc.anexo.id
+                ? { ...a, arquivo_url: newUrl, nome_arquivo: newNomeArquivoIdo }
+                : a,
+            ),
+          )
 
           await supabase
             .from('anexos_chamado_interno')

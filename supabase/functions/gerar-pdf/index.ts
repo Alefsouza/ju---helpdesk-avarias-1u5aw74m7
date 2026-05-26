@@ -130,6 +130,37 @@ Deno.serve(async (req: Request) => {
       drawText(`Endereço: ${testemunha_3_endereco || '-'}`)
       drawText(`Telefone: ${testemunha_3_telefone || '-'}`)
 
+      if (body.assinatura_base64) {
+        y -= 20
+        drawText('Assinatura Digital:', true, 12)
+        try {
+          const base64Data = body.assinatura_base64.split(',')[1] || body.assinatura_base64
+          const isPng = body.assinatura_base64.includes('png')
+          const imgBytes = Uint8Array.from(atob(base64Data), (c) => c.charCodeAt(0))
+          let pdfImage
+          if (isPng) {
+            pdfImage = await pdfDoc.embedPng(imgBytes)
+          } else {
+            pdfImage = await pdfDoc.embedJpg(imgBytes)
+          }
+          const imgDims = pdfImage.scaleToFit(150, 100)
+
+          if (y - imgDims.height < 50) {
+            page = pdfDoc.addPage()
+            y = height - 50
+          }
+          page.drawImage(pdfImage, {
+            x: marginX,
+            y: y - imgDims.height,
+            width: imgDims.width,
+            height: imgDims.height,
+          })
+          y -= imgDims.height + 10
+        } catch (err) {
+          console.error('Failed to embed signature', err)
+        }
+      }
+
       fileName = `ido_${id}_${Date.now()}.pdf`
     } else {
       drawText('Espelho de Danos - Vistoria', true, 20)
@@ -226,6 +257,27 @@ Deno.serve(async (req: Request) => {
     const {
       data: { publicUrl },
     } = supabaseAdmin.storage.from(bucket).getPublicUrl(filePath)
+
+    if (body.espelho_id) {
+      await supabaseAdmin
+        .from('documentos')
+        .update({
+          arquivo_url: publicUrl,
+          nome_arquivo: fileName,
+          atualizado_em: new Date().toISOString(),
+        })
+        .eq('formulario_id', body.espelho_id)
+    } else if (tipo_documento === 'IDO' && id) {
+      await supabaseAdmin
+        .from('documentos')
+        .update({
+          arquivo_url: publicUrl,
+          nome_arquivo: fileName,
+          atualizado_em: new Date().toISOString(),
+        })
+        .eq('chamado_id', id)
+        .eq('tipo_documento', 'IDO')
+    }
 
     return new Response(JSON.stringify({ success: true, url: publicUrl, nome_arquivo: fileName }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },

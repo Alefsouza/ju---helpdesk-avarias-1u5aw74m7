@@ -1179,12 +1179,25 @@ export default function ChamadoDetalhes() {
           .in('tipo_documento', ['Espelho de Danos', 'Vistoria'])
           .order('criado_em', { ascending: false })
 
+        let extractedFormId = null
+        const formIdMatch = anexo.nome_arquivo.match(
+          /_([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})_/i,
+        )
+        if (formIdMatch && formIdMatch[1]) {
+          extractedFormId = formIdMatch[1]
+        }
+
         let matchDoc = null
         if (docs && docs.length > 0) {
-          matchDoc =
-            docs.find((d) => d.nome_arquivo === anexo.nome_arquivo) ||
-            docs.find((d) => d.formulario_id) ||
-            docs[0]
+          if (extractedFormId) {
+            matchDoc = docs.find((d) => d.formulario_id === extractedFormId)
+          }
+          if (!matchDoc) {
+            matchDoc =
+              docs.find((d) => d.nome_arquivo.split('?')[0] === anexo.nome_arquivo.split('?')[0]) ||
+              docs.find((d) => d.formulario_id) ||
+              docs[0]
+          }
         }
 
         if (matchDoc && matchDoc.formulario_id) {
@@ -2485,7 +2498,9 @@ export default function ChamadoDetalhes() {
                             variant="ghost"
                             className="h-8 w-8 text-slate-500 hover:text-blue-600"
                             onClick={() => handleEditInternalDoc(anexo, 'IDO')}
-                            disabled={editingDocLoading}
+                            disabled={
+                              editingDocLoading || (savingDoc && editingDoc?.anexo.id === anexo.id)
+                            }
                             title="Editar IDO"
                           >
                             <Pencil className="h-4 w-4" />
@@ -2499,7 +2514,9 @@ export default function ChamadoDetalhes() {
                             variant="ghost"
                             className="h-8 w-8 text-slate-500 hover:text-blue-600"
                             onClick={() => handleEditInternalDoc(anexo, 'Espelho')}
-                            disabled={editingDocLoading}
+                            disabled={
+                              editingDocLoading || (savingDoc && editingDoc?.anexo.id === anexo.id)
+                            }
                             title="Editar Espelho de Danos"
                           >
                             <Pencil className="h-4 w-4" />
@@ -2512,11 +2529,13 @@ export default function ChamadoDetalhes() {
                         onClick={() => handleDownloadInternal(anexo)}
                         disabled={
                           loadingAction === `${anexo.id}-download` ||
-                          loadingAction === `${anexo.id}-view`
+                          loadingAction === `${anexo.id}-view` ||
+                          (savingDoc && editingDoc?.anexo.id === anexo.id)
                         }
                         title="Baixar anexo"
                       >
-                        {loadingAction === `${anexo.id}-download` ? (
+                        {loadingAction === `${anexo.id}-download` ||
+                        (savingDoc && editingDoc?.anexo.id === anexo.id) ? (
                           <Loader2 className="h-4 w-4 animate-spin" />
                         ) : (
                           <Download className="h-4 w-4" />
@@ -2529,11 +2548,13 @@ export default function ChamadoDetalhes() {
                         onClick={() => handleViewInternal(anexo)}
                         disabled={
                           loadingAction === `${anexo.id}-download` ||
-                          loadingAction === `${anexo.id}-view`
+                          loadingAction === `${anexo.id}-view` ||
+                          (savingDoc && editingDoc?.anexo.id === anexo.id)
                         }
                         title="Visualizar anexo"
                       >
-                        {loadingAction === `${anexo.id}-view` ? (
+                        {loadingAction === `${anexo.id}-view` ||
+                        (savingDoc && editingDoc?.anexo.id === anexo.id) ? (
                           <Loader2 className="h-4 w-4 animate-spin" />
                         ) : (
                           <Eye className="h-4 w-4" />
@@ -2547,7 +2568,8 @@ export default function ChamadoDetalhes() {
                           onClick={() => handleDeleteInternal(anexo.id, anexo.arquivo_url)}
                           disabled={
                             loadingAction === `${anexo.id}-download` ||
-                            loadingAction === `${anexo.id}-view`
+                            loadingAction === `${anexo.id}-view` ||
+                            (savingDoc && editingDoc?.anexo.id === anexo.id)
                           }
                           title="Excluir anexo"
                         >

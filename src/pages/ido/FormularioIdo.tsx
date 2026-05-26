@@ -275,10 +275,12 @@ export default function FormularioIdo() {
         .from('anexos_chamados_interno')
         .getPublicUrl(filePath)
 
+      const fileUrlWithCacheBuster = `${urlData.publicUrl}?t=${Date.now()}`
+
       const { error: rpcError } = await supabase.rpc('registrar_boletim_ido' as any, {
         p_chamado_id: id,
         p_nome_arquivo: fileName,
-        p_arquivo_url: urlData.publicUrl,
+        p_arquivo_url: fileUrlWithCacheBuster,
         p_tamanho_bytes: pdfBlob.size,
       })
 
@@ -290,7 +292,7 @@ export default function FormularioIdo() {
       const { error: docError } = await supabase.from('documentos').insert({
         tipo_documento: 'IDO',
         nome_arquivo: fileName,
-        arquivo_url: urlData.publicUrl,
+        arquivo_url: fileUrlWithCacheBuster,
         registro_responsavel: data.colaborador_registro,
         nome_responsavel: data.colaborador_nome,
         registro_motorista: null,

@@ -1282,6 +1282,7 @@ export default function ChamadoDetalhes() {
           }
         }
 
+        let finalFormId = formId
         if (formId) {
           const { error: updateError } = await supabase
             .from('formularios_espelho_danos')
@@ -1289,10 +1290,13 @@ export default function ChamadoDetalhes() {
             .eq('id', formId)
           if (updateError) throw updateError
         } else {
-          const { error: insertError } = await supabase
+          const { data: newForm, error: insertError } = await supabase
             .from('formularios_espelho_danos')
             .insert({ chamado_id: id as string, ...updateData })
+            .select('id')
+            .single()
           if (insertError) throw insertError
+          finalFormId = newForm.id
         }
 
         const { data: docData } = await supabase
@@ -1318,7 +1322,7 @@ export default function ChamadoDetalhes() {
             id: id,
             ...updateData,
             fotos,
-            espelho_id: formId || undefined,
+            espelho_id: finalFormId || undefined,
           },
         })
 
@@ -1378,6 +1382,7 @@ export default function ChamadoDetalhes() {
               arquivo_url: newUrl,
               nome_arquivo: newNomeArquivo,
               atualizado_em: new Date().toISOString(),
+              formulario_id: finalFormId,
               numero_os: updateData.numero_os,
               numero_carro: updateData.numero_carro,
               linha: updateData.linha,

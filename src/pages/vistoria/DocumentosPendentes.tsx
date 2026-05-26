@@ -221,10 +221,30 @@ export default function DocumentosPendentes() {
         }
       }
 
+      const espelhoId = crypto.randomUUID()
+      const { error: formError } = await supabase.from('formularios_espelho_danos').insert({
+        id: espelhoId,
+        numero_os: numeroOS.trim(),
+        garagem: selectedDoc.garagem,
+        data: selectedDoc.data,
+        horario: selectedDoc.horario,
+        ocorrencia: selectedDoc.ocorrencia,
+        linha: selectedDoc.linha,
+        numero_carro: selectedDoc.numero_carro,
+        descricao_danos: selectedDoc.descricao_danos,
+        registro_vistoriador: selectedDoc.registro_responsavel,
+        nome_vistoriador: selectedDoc.nome_responsavel,
+        registro_motorista: selectedDoc.registro_motorista,
+        nome_motorista: selectedDoc.nome_motorista,
+      })
+
+      if (formError) throw formError
+
       // 1. Gerar PDF via Edge Function
       const { data: pdfData, error: pdfError } = await supabase.functions.invoke('gerar-pdf', {
         body: {
           id: selectedDoc.id,
+          espelho_id: espelhoId,
           garagem: selectedDoc.garagem,
           linha: selectedDoc.linha,
           numero_carro: selectedDoc.numero_carro,
@@ -254,6 +274,7 @@ export default function DocumentosPendentes() {
           arquivo_url: url,
           nome_arquivo: nome_arquivo || `Espelho_Danos_OS_${numeroOS.trim()}.pdf`,
           tipo_documento: 'Espelho de Danos',
+          formulario_id: espelhoId,
         })
         .eq('id', selectedDoc.id)
         .select()

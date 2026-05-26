@@ -63,6 +63,13 @@ Deno.serve(async (req: Request) => {
     // 2. Update document with chamado_id
     await supabaseAdmin.from('documentos').update({ chamado_id: chamadoId }).eq('id', documento.id)
 
+    if (documento.formulario_id) {
+      await supabaseAdmin
+        .from('formularios_espelho_danos')
+        .update({ chamado_id: chamadoId })
+        .eq('id', documento.formulario_id)
+    }
+
     // 3. Add PDF as internal attachment
     if (documento.arquivo_url) {
       await supabaseAdmin.from('anexos_chamado_interno').insert({

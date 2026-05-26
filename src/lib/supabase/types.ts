@@ -198,6 +198,7 @@ export type Database = {
           excluido_manutencao: boolean
           formulario_id: string | null
           foto_url: string | null
+          fotos_manutencao: Json | null
           fotos_urls: Json | null
           garagem: string | null
           horario: string | null
@@ -225,6 +226,7 @@ export type Database = {
           excluido_manutencao?: boolean
           formulario_id?: string | null
           foto_url?: string | null
+          fotos_manutencao?: Json | null
           fotos_urls?: Json | null
           garagem?: string | null
           horario?: string | null
@@ -252,6 +254,7 @@ export type Database = {
           excluido_manutencao?: boolean
           formulario_id?: string | null
           foto_url?: string | null
+          fotos_manutencao?: Json | null
           fotos_urls?: Json | null
           garagem?: string | null
           horario?: string | null
@@ -825,6 +828,7 @@ export const Constants = {
 //   status_liberacao: text (nullable)
 //   formulario_id: uuid (nullable)
 //   orcamento_url: text (nullable)
+//   fotos_manutencao: jsonb (nullable, default: '[]'::jsonb)
 // Table: formularios_espelho_danos
 //   id: uuid (not null, default: gen_random_uuid())
 //   chamado_id: uuid (nullable)

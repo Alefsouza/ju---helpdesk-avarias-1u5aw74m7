@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import { supabase } from '@/lib/supabase/client'
 import {
   Table,
@@ -9,7 +9,7 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import { Button } from '@/components/ui/button'
-import { Eye, Download, Search, Wrench, CheckCircle } from 'lucide-react'
+import { Eye, Download, Search, Wrench, CheckCircle, Camera, Loader2 } from 'lucide-react'
 import { format, parseISO } from 'date-fns'
 import { Input } from '@/components/ui/input'
 import { Card, CardContent } from '@/components/ui/card'
@@ -40,6 +40,9 @@ export default function OsManutencao() {
   const [isSaving, setIsSaving] = useState(false)
   const [duplicateAlertOpen, setDuplicateAlertOpen] = useState(false)
   const [duplicateSubmitAction, setDuplicateSubmitAction] = useState<(() => void) | null>(null)
+  const [uploadingPhotoId, setUploadingPhotoId] = useState<string | null>(null)
+  const fileInputRef = useRef<HTMLInputElement>(null)
+  const uploadTargetDoc = useRef<any>(null)
   const { toast } = useToast()
 
   useEffect(() => {
@@ -98,6 +101,70 @@ export default function OsManutencao() {
     e.preventDefault()
     const downloadUrl = url + (url.includes('?') ? '&download=' : '?download=')
     window.open(downloadUrl, '_blank')
+  }
+
+  const handleCameraClick = (doc: any) => {
+    uploadTargetDoc.current = doc
+    if (fileInputRef.current) {
+      fileInputRef.current.click()
+    }
+  }
+
+  const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    const targetDoc = uploadTargetDoc.current
+
+    if (!file || !targetDoc) {
+      if (e.target) e.target.value = ''
+      return
+    }
+
+    try {
+      setUploadingPhotoId(targetDoc.id)
+
+      const fileExt = file.name.split('.').pop()
+      const fileName = `os_foto_${targetDoc.id}_${Date.now()}.${fileExt}`
+
+      const { error: uploadError } = await supabase.storage
+        .from('documentos')
+        .upload(fileName, file, { upsert: false })
+
+      if (uploadError) throw uploadError
+
+      const { data: publicUrlData } = supabase.storage.from('documentos').getPublicUrl(fileName)
+
+      const newUrl = publicUrlData.publicUrl
+
+      const currentFotos = Array.isArray(targetDoc.fotos_urls) ? targetDoc.fotos_urls : []
+      const newFotosUrls = [...currentFotos, newUrl]
+
+      const { error: updateError } = await supabase
+        .from('documentos')
+        .update({ fotos_urls: newFotosUrls })
+        .eq('id', targetDoc.id)
+
+      if (updateError) throw updateError
+
+      toast({
+        title: 'Sucesso',
+        description: 'Foto anexada com sucesso!',
+      })
+
+      setDocumentos((docs) =>
+        docs.map((d) => (d.id === targetDoc.id ? { ...d, fotos_urls: newFotosUrls } : d)),
+      )
+    } catch (error: any) {
+      console.error('Erro ao fazer upload da foto:', error)
+      toast({
+        title: 'Erro',
+        description: error.message || 'Erro ao fazer upload da foto.',
+        variant: 'destructive',
+      })
+    } finally {
+      setUploadingPhotoId(null)
+      uploadTargetDoc.current = null
+      if (e.target) e.target.value = ''
+    }
   }
 
   const handleRelease = async (status: string) => {
@@ -397,6 +464,20 @@ export default function OsManutencao() {
                               <Button
                                 variant="ghost"
                                 size="icon"
+                                className="h-8 w-8 text-slate-500 hover:text-blue-600 hover:bg-blue-50"
+                                onClick={() => handleCameraClick(doc)}
+                                disabled={uploadingPhotoId === doc.id}
+                                title="Anexar Foto"
+                              >
+                                {uploadingPhotoId === doc.id ? (
+                                  <Loader2 className="h-4 w-4 animate-spin" />
+                                ) : (
+                                  <Camera className="h-4 w-4" />
+                                )}
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="icon"
                                 className="h-8 w-8 text-slate-500 hover:text-green-600 hover:bg-green-50"
                                 onClick={() => setDocToRelease(doc)}
                                 title="Liberar Veículo"
@@ -414,6 +495,14 @@ export default function OsManutencao() {
             </CardContent>
           </Card>
         </div>
+
+        <input
+          type="file"
+          accept="image/*"
+          ref={fileInputRef}
+          style={{ display: 'none' }}
+          onChange={handlePhotoUpload}
+        />
       </main>
 
       {/* Modal Visualizar Detalhes */}

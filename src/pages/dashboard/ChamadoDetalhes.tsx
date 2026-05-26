@@ -1582,23 +1582,15 @@ export default function ChamadoDetalhes() {
   const handleViewInternal = async (anexo: AnexoInterno) => {
     try {
       setViewingInternalId(anexo.id)
-      const urlParts = anexo.arquivo_url.split('/anexos_chamados_interno/')
-      const pathWithQuery = urlParts.length > 1 ? urlParts[1] : null
-      const path = pathWithQuery ? pathWithQuery.split('?')[0] : null
 
-      let blob: Blob
+      const cacheBuster = `cb=${Date.now()}`
+      const finalUrl = anexo.arquivo_url.includes('?')
+        ? `${anexo.arquivo_url}&${cacheBuster}`
+        : `${anexo.arquivo_url}?${cacheBuster}`
 
-      if (path) {
-        const { data, error } = await supabase.storage
-          .from('anexos_chamados_interno')
-          .download(path)
-        if (error) throw new Error('not_found')
-        blob = data
-      } else {
-        const response = await fetch(anexo.arquivo_url)
-        if (!response.ok) throw new Error('not_found')
-        blob = await response.blob()
-      }
+      const response = await fetch(finalUrl)
+      if (!response.ok) throw new Error('not_found')
+      const blob = await response.blob()
 
       const url = window.URL.createObjectURL(blob)
       window.open(url, '_blank')
@@ -1616,23 +1608,14 @@ export default function ChamadoDetalhes() {
 
   const handleDownloadInternal = async (anexo: AnexoInterno) => {
     try {
-      const urlParts = anexo.arquivo_url.split('/anexos_chamados_interno/')
-      const pathWithQuery = urlParts.length > 1 ? urlParts[1] : null
-      const path = pathWithQuery ? pathWithQuery.split('?')[0] : null
+      const cacheBuster = `cb=${Date.now()}`
+      const finalUrl = anexo.arquivo_url.includes('?')
+        ? `${anexo.arquivo_url}&${cacheBuster}`
+        : `${anexo.arquivo_url}?${cacheBuster}`
 
-      let blob: Blob
-
-      if (path) {
-        const { data, error } = await supabase.storage
-          .from('anexos_chamados_interno')
-          .download(path)
-        if (error) throw new Error('not_found')
-        blob = data
-      } else {
-        const response = await fetch(anexo.arquivo_url)
-        if (!response.ok) throw new Error('not_found')
-        blob = await response.blob()
-      }
+      const response = await fetch(finalUrl)
+      if (!response.ok) throw new Error('not_found')
+      const blob = await response.blob()
 
       const url = window.URL.createObjectURL(blob)
       const a = document.createElement('a')
@@ -1686,18 +1669,14 @@ export default function ChamadoDetalhes() {
 
   const handleDownloadAnexo = async (anexo: Anexo) => {
     try {
-      const { bucket, path } = getAnexoStorageInfo(anexo.url_arquivo)
-      let blob: Blob
+      const cacheBuster = `cb=${Date.now()}`
+      const finalUrl = anexo.url_arquivo.includes('?')
+        ? `${anexo.url_arquivo}&${cacheBuster}`
+        : `${anexo.url_arquivo}?${cacheBuster}`
 
-      if (path) {
-        const { data, error } = await supabase.storage.from(bucket).download(path)
-        if (error) throw new Error('not_found')
-        blob = data
-      } else {
-        const response = await fetch(anexo.url_arquivo)
-        if (!response.ok) throw new Error('not_found')
-        blob = await response.blob()
-      }
+      const response = await fetch(finalUrl)
+      if (!response.ok) throw new Error('not_found')
+      const blob = await response.blob()
 
       const url = window.URL.createObjectURL(blob)
       const a = document.createElement('a')
@@ -1719,18 +1698,15 @@ export default function ChamadoDetalhes() {
   const handleViewAnexo = async (anexo: Anexo) => {
     try {
       setViewingAnexoId(anexo.id)
-      const { bucket, path } = getAnexoStorageInfo(anexo.url_arquivo)
-      let blob: Blob
 
-      if (path) {
-        const { data, error } = await supabase.storage.from(bucket).download(path)
-        if (error) throw new Error('not_found')
-        blob = data
-      } else {
-        const response = await fetch(anexo.url_arquivo)
-        if (!response.ok) throw new Error('not_found')
-        blob = await response.blob()
-      }
+      const cacheBuster = `cb=${Date.now()}`
+      const finalUrl = anexo.url_arquivo.includes('?')
+        ? `${anexo.url_arquivo}&${cacheBuster}`
+        : `${anexo.url_arquivo}?${cacheBuster}`
+
+      const response = await fetch(finalUrl)
+      if (!response.ok) throw new Error('not_found')
+      const blob = await response.blob()
 
       const url = window.URL.createObjectURL(blob)
       window.open(url, '_blank')

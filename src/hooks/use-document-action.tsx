@@ -40,6 +40,11 @@ export function useDocumentAction() {
         toast.info('Download iniciado...')
       }
 
+      const cacheBuster = `cb=${Date.now()}`
+      finalUrl = finalUrl.includes('?')
+        ? `${finalUrl}&${cacheBuster}`
+        : `${finalUrl}?${cacheBuster}`
+
       let blob: Blob | null = null
       let attempts = 0
       const maxAttempts = 3

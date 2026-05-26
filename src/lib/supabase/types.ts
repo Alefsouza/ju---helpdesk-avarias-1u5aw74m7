@@ -283,7 +283,7 @@ export type Database = {
           {
             foreignKeyName: 'documentos_formulario_id_fkey'
             columns: ['formulario_id']
-            isOneToOne: false
+            isOneToOne: true
             referencedRelation: 'formularios_espelho_danos'
             referencedColumns: ['id']
           },
@@ -922,6 +922,7 @@ export const Constants = {
 // Table: documentos
 //   FOREIGN KEY documentos_chamado_id_fkey: FOREIGN KEY (chamado_id) REFERENCES chamados(id) ON DELETE SET NULL
 //   FOREIGN KEY documentos_formulario_id_fkey: FOREIGN KEY (formulario_id) REFERENCES formularios_espelho_danos(id) ON DELETE SET NULL
+//   UNIQUE documentos_formulario_id_key: UNIQUE (formulario_id)
 //   PRIMARY KEY documentos_pkey: PRIMARY KEY (id)
 //   CHECK documentos_tipo_documento_check: CHECK ((tipo_documento = ANY (ARRAY['IDO'::text, 'Espelho de Danos'::text, 'Vistoria'::text])))
 // Table: formularios_espelho_danos
@@ -1474,6 +1475,7 @@ export const Constants = {
 // Table: documentos
 //   CREATE INDEX documentos_chamado_id_idx ON public.documentos USING btree (chamado_id)
 //   CREATE INDEX documentos_formulario_id_idx ON public.documentos USING btree (formulario_id)
+//   CREATE UNIQUE INDEX documentos_formulario_id_key ON public.documentos USING btree (formulario_id)
 //   CREATE INDEX documentos_registro_responsavel_idx ON public.documentos USING btree (registro_responsavel)
 //   CREATE INDEX documentos_tipo_documento_idx ON public.documentos USING btree (tipo_documento)
 // Table: formularios_espelho_danos

@@ -222,11 +222,7 @@ Deno.serve(async (req: Request) => {
         }
       }
 
-      if (body.espelho_id) {
-        fileName = `espelho_danos_${body.espelho_id}.pdf`
-      } else {
-        fileName = `espelho_danos_${id}_${Date.now()}.pdf`
-      }
+      fileName = `espelho_danos_${Date.now()}.pdf`
     }
 
     const pdfBytes = await pdfDoc.save()
@@ -240,11 +236,7 @@ Deno.serve(async (req: Request) => {
     const bucket = id ? 'anexos_chamados_interno' : 'documentos'
     let filePath = fileName
     if (id) {
-      if (tipo_documento === 'espelho_danos' && body.espelho_id) {
-        filePath = `chamado_${id}/${fileName}`
-      } else {
-        filePath = `${id}/${fileName}`
-      }
+      filePath = `${id}/${fileName}`
     }
 
     const { error: uploadError } = await supabaseAdmin.storage

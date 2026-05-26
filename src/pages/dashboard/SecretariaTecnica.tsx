@@ -45,26 +45,29 @@ export default function SecretariaTecnica() {
         .from('documentos')
         .select(`
           *,
-          chamados(
+          chamados!inner(
             id, 
             titulo,
             pia,
             registro_motorista, 
             nome_motorista, 
-            responsavel_id
+            responsavel_id,
+            tipo_chamado
           ),
           formularios_espelho_danos(*)
         `)
-        .in('tipo_documento', ['Vistoria', 'Espelho de Danos', 'OS de Manutenção'])
-        .or('orcamento_url.is.null,orcamento_url.eq.""')
+        .eq('chamados.tipo_chamado', 'OS de Manutenção')
         .order('criado_em', { ascending: false })
 
       if (error) throw error
 
-      // Filter: must have maintenance photos (fotos_manutencao not empty)
+      // Filter: must have maintenance photos (fotos_manutencao not empty) OR fotos_urls not empty
       const withPhotos =
         data?.filter((doc: any) => {
-          return Array.isArray(doc.fotos_manutencao) && doc.fotos_manutencao.length > 0
+          const hasManutencao =
+            Array.isArray(doc.fotos_manutencao) && doc.fotos_manutencao.length > 0
+          const hasUrls = Array.isArray(doc.fotos_urls) && doc.fotos_urls.length > 0
+          return hasManutencao || hasUrls
         }) || []
 
       setDocumentos(withPhotos)
@@ -103,6 +106,11 @@ export default function SecretariaTecnica() {
     const photos: string[] = []
     if (Array.isArray(doc.fotos_manutencao)) {
       doc.fotos_manutencao.forEach((url: string) => {
+        if (url && !photos.includes(url)) photos.push(url)
+      })
+    }
+    if (Array.isArray(doc.fotos_urls)) {
+      doc.fotos_urls.forEach((url: string) => {
         if (url && !photos.includes(url)) photos.push(url)
       })
     }
@@ -245,60 +253,52 @@ export default function SecretariaTecnica() {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>RA</TableHead>
-                <TableHead>OS</TableHead>
                 <TableHead>Carro</TableHead>
-                <TableHead>Data</TableHead>
-                <TableHead>Descrição</TableHead>
-                <TableHead>Orçamento</TableHead>
+                <TableHead>OS</TableHead>
+                <TableHead>Garagem</TableHead>
+                <TableHead>Data / Hora</TableHead>
+                <TableHead>Status</TableHead>
                 <TableHead className="text-right">Ações</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {loading ? (
                 <TableRow>
-                  <TableCell colSpan={7} className="text-center py-8 text-slate-500">
+                  <TableCell colSpan={6} className="text-center py-8 text-slate-500">
                     <Loader2 className="w-6 h-6 animate-spin mx-auto mb-2" />
                     Carregando registros...
                   </TableCell>
                 </TableRow>
               ) : documentos.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={7} className="text-center py-8 text-slate-500">
+                  <TableCell colSpan={6} className="text-center py-8 text-slate-500">
                     Nenhum registro com evidências fotográficas encontrado.
                   </TableCell>
                 </TableRow>
               ) : (
                 documentos.map((doc) => (
                   <TableRow key={doc.id}>
-                    <TableCell className="font-medium text-slate-600">
-                      {doc.chamados?.pia || '-'}
-                    </TableCell>
-                    <TableCell className="font-semibold text-slate-800">
-                      {doc.numero_os || '-'}
-                    </TableCell>
                     <TableCell>
                       <Badge variant="outline" className="font-mono bg-slate-50">
                         {doc.numero_carro || '-'}
                       </Badge>
                     </TableCell>
+                    <TableCell className="font-semibold text-slate-800">
+                      {doc.numero_os || '-'}
+                    </TableCell>
+                    <TableCell className="text-slate-600">{doc.garagem || '-'}</TableCell>
                     <TableCell>
                       {doc.data
-                        ? format(new Date(doc.data + 'T12:00:00'), 'dd/MM/yyyy')
+                        ? `${format(new Date(doc.data + 'T12:00:00'), 'dd/MM/yyyy')} ${doc.horario || ''}`
                         : format(new Date(doc.criado_em), 'dd/MM/yyyy')}
                     </TableCell>
                     <TableCell>
-                      <div className="whitespace-normal break-words">
-                        {doc.descricao_danos || doc.ocorrencia || '-'}
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      {doc.orcamento_url ? (
-                        <Badge variant="default" className="bg-emerald-600 hover:bg-emerald-700">
-                          Anexado
+                      {doc.status_liberacao ? (
+                        <Badge variant="default" className="bg-blue-600 hover:bg-blue-700">
+                          {doc.status_liberacao}
                         </Badge>
                       ) : (
-                        <Badge variant="secondary">Pendente</Badge>
+                        <Badge variant="secondary">Não Liberado</Badge>
                       )}
                     </TableCell>
                     <TableCell className="text-right space-x-2">

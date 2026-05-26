@@ -50,6 +50,7 @@ export default function SecretariaTecnica() {
         `)
         .in('tipo_documento', ['Vistoria', 'Espelho de Danos', 'OS de Manutenção'])
         .not('fotos_urls', 'is', null)
+        .or('orcamento_url.is.null,orcamento_url.eq.""')
         .order('criado_em', { ascending: false })
 
       if (error) throw error

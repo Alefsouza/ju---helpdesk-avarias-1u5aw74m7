@@ -6,7 +6,6 @@ import * as z from 'zod'
 import { Camera, X, AlertCircle } from 'lucide-react'
 import { supabase } from '@/lib/supabase/client'
 import { useToast } from '@/hooks/use-toast'
-import { jsPDF } from 'jspdf'
 import { format } from 'date-fns'
 import { useAuth } from '@/hooks/use-auth'
 import {
@@ -180,225 +179,30 @@ export default function FormularioEspelhoDanosFixo() {
         }
       }
 
-      let logoBase64: string | null = null
-      try {
-        const res = await fetch(
-          'https://wrnhfpncasqifaisvyaf.supabase.co/storage/v1/object/public/documentos/logo-via-sudeste.png',
-        )
-        if (res.ok) {
-          const blob = await res.blob()
-          logoBase64 = await new Promise<string>((resolve, reject) => {
-            const reader = new FileReader()
-            reader.onloadend = () => {
-              let result = reader.result as string
-              if (!result.startsWith('data:image/')) {
-                result = result.replace(/^data:[^;]+;base64,/, 'data:image/png;base64,')
-              }
-              resolve(result)
-            }
-            reader.onerror = reject
-            reader.readAsDataURL(blob)
-          })
-        }
-      } catch (err) {
-        console.error('Erro ao carregar logo:', err)
-      }
+      const { data: pdfData, error: pdfError } = await supabase.functions.invoke('gerar-pdf', {
+        body: {
+          tipo_documento: 'espelho_danos',
+          id: null,
+          ...formValuesToSave,
+          fotos: fotosUrls,
+          espelho_id: espelhoId,
+        },
+      })
 
-      let pdfBlob: Blob
-      try {
-        const doc = new jsPDF({ format: 'a4', unit: 'mm' })
-        const pageWidth = doc.internal.pageSize.getWidth()
-        const pageHeight = doc.internal.pageSize.getHeight()
-        const margin = 25
-        const contentWidth = pageWidth - 2 * margin
-        let currentY = margin
-        let pageNumber = 1
+      if (pdfError || !pdfData?.success)
+        throw new Error('Erro ao gerar documento PDF. Tente novamente.')
 
-        const addHeader = () => {
-          if (logoBase64) {
-            doc.addImage(logoBase64, 'PNG', 20, 20, 25, 12)
-          }
-
-          doc.setFont('helvetica', 'bold')
-          doc.setFontSize(18)
-          doc.setTextColor(43, 43, 43)
-          doc.text('Espelho de Danos', pageWidth / 2, 28, { align: 'center' })
-
-          currentY = 45
-        }
-
-        const addFooter = () => {
-          const footerY = pageHeight - 25
-          doc.setDrawColor(224, 224, 224)
-          doc.setLineWidth(0.5)
-          doc.line(25, footerY, pageWidth - 25, footerY)
-
-          doc.setFont('helvetica', 'normal')
-          doc.setFontSize(9)
-          doc.setTextColor(150, 150, 150)
-          const dateStr = `Gerado em: ${format(new Date(), 'dd/MM/yyyy HH:mm:ss')}`
-          doc.text(dateStr, 25, footerY + 5)
-        }
-
-        addHeader()
-        addFooter()
-
-        const renderField = (title: string, value: string) => {
-          doc.setFontSize(10)
-
-          if (currentY + 10 > pageHeight - 30) {
-            doc.addPage()
-            pageNumber++
-            addHeader()
-            addFooter()
-          }
-
-          doc.setFont('helvetica', 'bold')
-          doc.setTextColor(43, 43, 43)
-          doc.text(title, margin, currentY)
-
-          let currentLineY = currentY + 6
-
-          doc.setFont('helvetica', 'normal')
-          doc.setTextColor(0, 0, 0)
-
-          const lines = doc.splitTextToSize(value || '-', contentWidth)
-          for (let i = 0; i < lines.length; i++) {
-            if (currentLineY > pageHeight - 30) {
-              doc.addPage()
-              pageNumber++
-              addHeader()
-              addFooter()
-              currentLineY = 45
-            }
-            doc.text(lines[i], margin, currentLineY)
-            currentLineY += 4.2
-          }
-          currentY = currentLineY - 4.2 + 11
-        }
-
-        const dataFormatada = format(now, 'dd/MM/yyyy')
-
-        renderField('Número de OS', values.numero_os)
-        renderField('Garagem', values.garagem)
-        renderField('Data', dataFormatada)
-        renderField('Horário', horarioStr)
-        renderField('Ocorrência', values.ocorrencia)
-        renderField('Linha', values.linha)
-        renderField('Número do Carro', values.numero_carro)
-        renderField('Descrição dos Danos', values.descricao_danos)
-
-        if (values.fotos_dano && values.fotos_dano.length > 0) {
-          if (currentY + 10 > pageHeight - 30) {
-            doc.addPage()
-            pageNumber++
-            addHeader()
-            addFooter()
-          }
-
-          doc.setFontSize(10)
-          doc.setFont('helvetica', 'bold')
-          doc.setTextColor(43, 43, 43)
-          doc.text('Fotos do Dano', margin, currentY)
-
-          let photosStartY = currentY + 6
-          const photoWidth = 80
-          const photoHeight = 60
-          const colSpacing = 10
-
-          for (let i = 0; i < values.fotos_dano.length; i++) {
-            const foto = values.fotos_dano[i]
-            const col = i % 2
-
-            if (col === 0 && photosStartY + photoHeight > pageHeight - 30) {
-              doc.addPage()
-              pageNumber++
-              addHeader()
-              addFooter()
-              photosStartY = 45
-              doc.setFontSize(10)
-              doc.setFont('helvetica', 'bold')
-              doc.setTextColor(43, 43, 43)
-              doc.text('Fotos do Dano (Continuação)', margin, photosStartY)
-              photosStartY += 6
-            }
-
-            const xPos = margin + col * (photoWidth + colSpacing)
-
-            try {
-              const imageType = foto.startsWith('data:image/png') ? 'PNG' : 'JPEG'
-              const props = doc.getImageProperties(foto)
-              const imgRatio = props.width / props.height
-              const boxRatio = photoWidth / photoHeight
-
-              let finalWidth = photoWidth
-              let finalHeight = photoHeight
-
-              if (imgRatio > boxRatio) {
-                finalHeight = photoWidth / imgRatio
-              } else {
-                finalWidth = photoHeight * imgRatio
-              }
-
-              const xOffset = xPos + (photoWidth - finalWidth) / 2
-              const yOffset = photosStartY + (photoHeight - finalHeight) / 2
-
-              doc.addImage(foto, imageType, xOffset, yOffset, finalWidth, finalHeight)
-            } catch (e) {
-              doc.setFontSize(10)
-              doc.setFont('helvetica', 'normal')
-              doc.setTextColor(0, 0, 0)
-              doc.text('[Erro]', xPos, photosStartY + 5)
-            }
-
-            if (i === values.fotos_dano.length - 1) {
-              currentY = photosStartY + photoHeight + 10
-            } else if (col === 1) {
-              photosStartY += photoHeight + 5
-            }
-          }
-        }
-
-        renderField('Registro do Vistoriador', values.registro_vistoriador)
-        renderField('Nome do Vistoriador', values.nome_vistoriador)
-        renderField('Registro do Motorista', values.registro_motorista)
-        renderField('Nome do Motorista', values.nome_motorista)
-
-        for (let i = 1; i <= pageNumber; i++) {
-          doc.setPage(i)
-          doc.setFont('helvetica', 'normal')
-          doc.setFontSize(9)
-          doc.setTextColor(150, 150, 150)
-          doc.text(`Página ${i} de ${pageNumber}`, pageWidth - 25, pageHeight - 25 + 5, {
-            align: 'right',
-          })
-        }
-
-        pdfBlob = doc.output('blob')
-      } catch (err) {
-        throw new Error('Erro ao gerar documento. Tente novamente')
-      }
-
-      const fileName = `ESPELHO_DE_DANOS_${espelhoId}.pdf`
-
-      const { error: uploadError } = await supabase.storage
-        .from('documentos')
-        .upload(fileName, pdfBlob, {
-          contentType: 'application/pdf',
-          upsert: true,
-        })
-
-      if (uploadError) throw new Error('Erro ao salvar documento. Tente novamente')
-
-      const { data: publicUrlData } = supabase.storage.from('documentos').getPublicUrl(fileName)
+      const fileName = pdfData.nome_arquivo
+      const fileUrl = `${pdfData.url}?t=${Date.now()}`
 
       const { error: docError } = await supabase.from('documentos').insert({
         tipo_documento: 'Espelho de Danos',
         nome_arquivo: fileName,
-        arquivo_url: publicUrlData.publicUrl,
-        registro_responsavel: values.registro_motorista,
-        nome_responsavel: values.nome_motorista,
+        arquivo_url: fileUrl,
+        registro_responsavel: values.registro_vistoriador,
+        nome_responsavel: values.nome_vistoriador,
         registro_motorista: values.registro_motorista,
+        nome_motorista: values.nome_motorista,
         numero_os: values.numero_os,
         linha: values.linha,
         numero_carro: values.numero_carro,

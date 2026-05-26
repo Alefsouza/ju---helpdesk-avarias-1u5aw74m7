@@ -64,10 +64,6 @@ Deno.serve(async (req: Request) => {
       testemunha_3_telefone,
     } = body
 
-    if (!id) {
-      throw new Error('ID é obrigatório')
-    }
-
     // Generate PDF
     const pdfDoc = await PDFDocument.create()
     let page = pdfDoc.addPage()
@@ -212,8 +208,8 @@ Deno.serve(async (req: Request) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
     )
 
-    const bucket = 'anexos_chamados_interno'
-    const filePath = `${id}/${fileName}`
+    const bucket = id ? 'anexos_chamados_interno' : 'documentos'
+    const filePath = id ? `${id}/${fileName}` : fileName
 
     const { error: uploadError } = await supabaseAdmin.storage
       .from(bucket)

@@ -15,6 +15,16 @@ import {
   DialogTitle,
   DialogFooter,
 } from '@/components/ui/dialog'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -50,6 +60,8 @@ export default function DocumentosPendentes() {
   const [selectedViewDoc, setSelectedViewDoc] = useState<Documento | null>(null)
   const [numeroOS, setNumeroOS] = useState('')
   const [isSaving, setIsSaving] = useState(false)
+  const [duplicateAlertOpen, setDuplicateAlertOpen] = useState(false)
+  const [duplicateSubmitAction, setDuplicateSubmitAction] = useState<(() => void) | null>(null)
   const { toast } = useToast()
 
   const fetchDocumentos = async () => {
@@ -114,7 +126,7 @@ export default function DocumentosPendentes() {
     setIsViewModalOpen(true)
   }
 
-  const handleSaveOS = async () => {
+  const handleSaveOS = async (ignoreDuplicate = false) => {
     if (!numeroOS.trim()) {
       toast({
         title: 'Atenção',
@@ -128,6 +140,23 @@ export default function DocumentosPendentes() {
 
     setIsSaving(true)
     try {
+      if (!ignoreDuplicate && selectedDoc.numero_carro) {
+        const { data: duplicates } = await supabase
+          .from('documentos')
+          .select('id')
+          .eq('numero_carro', selectedDoc.numero_carro)
+          .eq('excluido_manutencao', false)
+          .in('tipo_documento', ['Espelho de Danos', 'Vistoria'])
+          .neq('id', selectedDoc.id)
+
+        if (duplicates && duplicates.length > 0) {
+          setDuplicateSubmitAction(() => () => handleSaveOS(true))
+          setDuplicateAlertOpen(true)
+          setIsSaving(false)
+          return
+        }
+      }
+
       // 1. Gerar PDF via Edge Function
       const { data: pdfData, error: pdfError } = await supabase.functions.invoke('gerar-pdf', {
         body: {
@@ -317,7 +346,7 @@ export default function DocumentosPendentes() {
                 onKeyDown={(e) => {
                   if (e.key === 'Enter') {
                     e.preventDefault()
-                    handleSaveOS()
+                    handleSaveOS(false)
                   }
                 }}
               />
@@ -347,7 +376,7 @@ export default function DocumentosPendentes() {
               Cancelar
             </Button>
             <Button
-              onClick={handleSaveOS}
+              onClick={() => handleSaveOS(false)}
               disabled={isSaving}
               className="bg-[#225f3d] hover:bg-[#1a4a2f] text-white"
             >
@@ -471,6 +500,31 @@ export default function DocumentosPendentes() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <AlertDialog open={duplicateAlertOpen} onOpenChange={setDuplicateAlertOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Atenção</AlertDialogTitle>
+            <AlertDialogDescription>
+              Já existe um espelho de danos para esse carro, por favor verificar.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setDuplicateSubmitAction(null)}>
+              Fechar
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                if (duplicateSubmitAction) duplicateSubmitAction()
+                setDuplicateSubmitAction(null)
+              }}
+              className="bg-amber-600 hover:bg-amber-700 text-white"
+            >
+              Prosseguir mesmo assim
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   )
 }

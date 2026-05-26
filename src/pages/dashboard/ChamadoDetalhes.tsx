@@ -808,7 +808,7 @@ export default function ChamadoDetalhes() {
             (d) => d.chamado_id !== id && d.formulario_id !== formId,
           )
 
-          if (isDuplicate) {
+          if (isDuplicate && currentUserProfile?.tipo_usuario === 'vistoriador') {
             setDuplicateSubmitAction(() => () => handleSaveDocEdit(true))
             setDuplicateAlertOpen(true)
             setSavingDoc(false)

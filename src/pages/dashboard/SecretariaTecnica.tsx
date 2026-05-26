@@ -128,11 +128,37 @@ export default function SecretariaTecnica() {
       } = await supabase.auth.getUser()
       if (!user) throw new Error('Usuário não autenticado.')
 
+      let chamadoId = selectedDoc.chamado_id
+      let ticketData = null
+
+      if (chamadoId) {
+        const { data } = await supabase
+          .from('chamados')
+          .select('id, numero_os, carro, pia')
+          .eq('id', chamadoId)
+          .maybeSingle()
+        ticketData = data
+      } else if (selectedDoc.numero_os) {
+        const { data } = await supabase
+          .from('chamados')
+          .select('id, numero_os, carro, pia')
+          .eq('numero_os', selectedDoc.numero_os)
+          .limit(1)
+          .maybeSingle()
+        if (data) {
+          ticketData = data
+          chamadoId = data.id
+        }
+      }
+
+      const osNumber = ticketData?.numero_os || selectedDoc.numero_os || 'N/A'
+      const carNumber = ticketData?.carro || selectedDoc.numero_carro || 'N/A'
+
       const fileExt = file.name.split('.').pop()
       const storageFileName = `orcamento_${selectedDoc.id}_${Date.now()}.${fileExt}`
       const filePath = `orcamentos/${storageFileName}`
 
-      const displayFileName = `Orçamento - OS: ${selectedDoc.numero_os || 'N/A'} - Carro: ${selectedDoc.numero_carro || 'N/A'}.${fileExt}`
+      const displayFileName = `Orçamento - OS: ${osNumber} - Carro: ${carNumber}.${fileExt}`
 
       const { error: uploadError } = await supabase.storage
         .from('anexos_chamados_interno')
@@ -146,16 +172,21 @@ export default function SecretariaTecnica() {
 
       const orcamento_url = publicUrlData.publicUrl
 
+      const docUpdateData: any = { orcamento_url }
+      if (chamadoId && !selectedDoc.chamado_id) {
+        docUpdateData.chamado_id = chamadoId
+      }
+
       const { error: updateError } = await supabase
         .from('documentos')
-        .update({ orcamento_url })
+        .update(docUpdateData)
         .eq('id', selectedDoc.id)
 
       if (updateError) throw updateError
 
-      if (selectedDoc.chamado_id) {
+      if (chamadoId) {
         const { error: anexoError } = await supabase.from('anexos_chamado_interno').insert({
-          chamado_id: selectedDoc.chamado_id,
+          chamado_id: chamadoId,
           usuario_id: user.id,
           nome_arquivo: displayFileName,
           arquivo_url: orcamento_url,
@@ -166,7 +197,7 @@ export default function SecretariaTecnica() {
         if (anexoError) throw anexoError
 
         const { error: histError } = await supabase.from('historico_chamado').insert({
-          chamado_id: selectedDoc.chamado_id,
+          chamado_id: chamadoId,
           usuario_id: user.id,
           acao: 'respondido',
           detalhes: 'Orçamento anexado pela Secretaria Técnica',
@@ -175,7 +206,7 @@ export default function SecretariaTecnica() {
         if (histError) throw histError
       }
 
-      toast({ title: 'Sucesso', description: 'Orçamento anexado com sucesso.' })
+      toast({ title: 'Sucesso', description: 'Orçamento anexado e vinculado com sucesso!' })
       setUploadModalOpen(false)
       fetchDocumentos()
     } catch (error: any) {

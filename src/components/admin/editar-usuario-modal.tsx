@@ -158,6 +158,7 @@ export function EditarUsuarioModal({
                       <SelectItem value="sos">SOS</SelectItem>
                       <SelectItem value="juridico">Jurídico</SelectItem>
                       <SelectItem value="sinistro">Sinistro</SelectItem>
+                      <SelectItem value="secretaria_tecnica">Secretária Técnica</SelectItem>
                     </SelectContent>
                   </Select>
                   <FormMessage />

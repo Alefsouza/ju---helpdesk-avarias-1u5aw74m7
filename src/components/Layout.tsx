@@ -47,6 +47,7 @@ function AppSidebar() {
   const isCoc = tipo === 'coc'
   const isSos = tipo === 'sos'
   const isJuridico = tipo === 'juridico'
+  const isSecretariaTecnica = tipo === 'secretaria_tecnica'
 
   return (
     <Sidebar className="border-r-0">
@@ -165,6 +166,21 @@ function AppSidebar() {
                     </SidebarMenuButton>
                   </SidebarMenuItem>
                 </>
+              )}
+
+              {(isAdmin || isSecretariaTecnica) && (
+                <SidebarMenuItem>
+                  <SidebarMenuButton
+                    asChild
+                    isActive={location.pathname === '/dashboard/secretaria-tecnica'}
+                    className="data-[active=true]:bg-transparent data-[active=true]:text-[#c8e6c9] hover:bg-[#c8e6c9]/10 hover:text-[#c8e6c9] text-white transition-colors"
+                  >
+                    <Link to="/dashboard/secretaria-tecnica">
+                      <FileText />
+                      <span>Sec. Técnica</span>
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
               )}
 
               {isCoc && (
@@ -389,7 +405,8 @@ function useRealtimeNotifications(userId: string | undefined, profile: any) {
               profile?.tipo_usuario === 'responsavel' ||
               profile?.tipo_usuario === 'sinistro' ||
               profile?.tipo_usuario === 'admin' ||
-              profile?.tipo_usuario === 'juridico'
+              profile?.tipo_usuario === 'juridico' ||
+              profile?.tipo_usuario === 'secretaria_tecnica'
             ) {
               shouldNotify = true
             }
@@ -462,6 +479,16 @@ export default function Layout() {
       return <Navigate to="/sos/pendentes" replace />
     }
     return <Navigate to="/dashboard" replace />
+  }
+
+  // Redirect Secretária Técnica from other areas
+  if (user && profile?.tipo_usuario === 'secretaria_tecnica') {
+    const isSecRoute =
+      location.pathname === '/dashboard/secretaria-tecnica' ||
+      location.pathname === '/dashboard/perfil'
+    if (!isSecRoute) {
+      return <Navigate to="/dashboard/secretaria-tecnica" replace />
+    }
   }
 
   // Redirect Vistoriador from other areas

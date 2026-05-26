@@ -34,6 +34,7 @@ import CarrosLiberadosPlantao from './pages/CarrosLiberadosPlantao'
 import NotFound from './pages/NotFound'
 import Layout from './components/Layout'
 import { AuthProvider, useAuth } from './hooks/use-auth'
+import SecretariaTecnica from './pages/dashboard/SecretariaTecnica'
 
 const DashboardRoute = () => {
   const { profile, loading } = useAuth()
@@ -43,9 +44,16 @@ const DashboardRoute = () => {
     if (!loading && profile?.tipo_usuario === 'juridico') {
       navigate('/dashboard/meus-atendimentos', { replace: true })
     }
+    if (!loading && profile?.tipo_usuario === 'secretaria_tecnica') {
+      navigate('/dashboard/secretaria-tecnica', { replace: true })
+    }
   }, [profile, loading, navigate])
 
-  if (loading || profile?.tipo_usuario === 'juridico') {
+  if (
+    loading ||
+    profile?.tipo_usuario === 'juridico' ||
+    profile?.tipo_usuario === 'secretaria_tecnica'
+  ) {
     return null
   }
 
@@ -72,6 +80,7 @@ const App = () => (
             <Route path="/dashboard/relatorios" element={<Relatorios />} />
             <Route path="/dashboard/documentos" element={<Documentos />} />
             <Route path="/dashboard/perfil" element={<Perfil />} />
+            <Route path="/dashboard/secretaria-tecnica" element={<SecretariaTecnica />} />
             <Route path="/vistoria/novo" element={<VistoriaForm />} />
             <Route path="/vistoria/pendentes" element={<DocumentosPendentes />} />
             <Route path="/espelhos-danos" element={<EspelhosDanos />} />

@@ -220,11 +220,8 @@ export default function SecretariaTecnica() {
                         : format(new Date(doc.criado_em), 'dd/MM/yyyy')}
                     </TableCell>
                     <TableCell>
-                      <div
-                        className="max-w-[250px] truncate"
-                        title={doc.ocorrencia || doc.descricao_danos || ''}
-                      >
-                        {doc.ocorrencia || doc.descricao_danos || '-'}
+                      <div className="whitespace-normal break-words">
+                        {doc.descricao_danos || doc.ocorrencia || '-'}
                       </div>
                     </TableCell>
                     <TableCell>

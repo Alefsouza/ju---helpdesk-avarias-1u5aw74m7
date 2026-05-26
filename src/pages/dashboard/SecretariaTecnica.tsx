@@ -461,44 +461,6 @@ export default function SecretariaTecnica() {
                     )
                   })()}
                 </div>
-
-                <div>
-                  <p className="text-[#333333] font-bold mb-3 text-sm border-b pb-1">
-                    Evidências de Manutenção
-                  </p>
-                  {(() => {
-                    const fotosManutencao = Array.isArray(viewDoc.fotos_manutencao)
-                      ? viewDoc.fotos_manutencao
-                      : []
-
-                    if (fotosManutencao.length === 0) {
-                      return <p className="text-sm text-[#333333] italic">Nenhuma foto anexada.</p>
-                    }
-
-                    return (
-                      <div className="grid grid-cols-2 gap-4">
-                        {fotosManutencao.map((url, idx) => (
-                          <a
-                            key={idx}
-                            href={url}
-                            target="_blank"
-                            rel="noreferrer"
-                            className="block relative aspect-video bg-slate-100 rounded-md overflow-hidden border group"
-                          >
-                            <img
-                              src={url}
-                              alt={`Evidência Manutenção ${idx + 1}`}
-                              className="object-cover w-full h-full transition-transform duration-300 group-hover:scale-105"
-                            />
-                            <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors flex items-center justify-center">
-                              <Eye className="text-white opacity-0 group-hover:opacity-100 transition-opacity" />
-                            </div>
-                          </a>
-                        ))}
-                      </div>
-                    )
-                  })()}
-                </div>
               </div>
             </div>
           )}

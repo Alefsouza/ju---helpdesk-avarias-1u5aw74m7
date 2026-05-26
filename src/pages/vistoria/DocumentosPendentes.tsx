@@ -30,8 +30,9 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { useToast } from '@/hooks/use-toast'
 import { format } from 'date-fns'
-import { FileEdit, Eye } from 'lucide-react'
+import { FileEdit, Eye, AlertTriangle, Trash2 } from 'lucide-react'
 import { Skeleton } from '@/components/ui/skeleton'
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 
 type Documento = {
   id: string
@@ -49,6 +50,7 @@ type Documento = {
   nome_motorista: string | null
   registro_motorista: string | null
   criado_em: string
+  hasDuplicate?: boolean
 }
 
 export default function DocumentosPendentes() {
@@ -60,8 +62,12 @@ export default function DocumentosPendentes() {
   const [selectedViewDoc, setSelectedViewDoc] = useState<Documento | null>(null)
   const [numeroOS, setNumeroOS] = useState('')
   const [isSaving, setIsSaving] = useState(false)
+
   const [duplicateAlertOpen, setDuplicateAlertOpen] = useState(false)
-  const [duplicateSubmitAction, setDuplicateSubmitAction] = useState<(() => void) | null>(null)
+  const [deleteAlertOpen, setDeleteAlertOpen] = useState(false)
+  const [docToDelete, setDocToDelete] = useState<Documento | null>(null)
+  const [isDeleting, setIsDeleting] = useState(false)
+
   const { toast } = useToast()
 
   const fetchDocumentos = async () => {
@@ -73,10 +79,33 @@ export default function DocumentosPendentes() {
         )
         .eq('tipo_documento', 'Vistoria')
         .is('numero_os', null)
+        .eq('excluido_manutencao', false)
         .order('criado_em', { ascending: false })
 
       if (error) throw error
-      setDocumentos(data || [])
+
+      const carrosParaVerificar = [...new Set(data?.map((d) => d.numero_carro).filter(Boolean))]
+
+      let duplicadosSet = new Set<string>()
+      if (carrosParaVerificar.length > 0) {
+        const { data: espelhos } = await supabase
+          .from('documentos')
+          .select('numero_carro')
+          .eq('tipo_documento', 'Espelho de Danos')
+          .eq('excluido_manutencao', false)
+          .in('numero_carro', carrosParaVerificar)
+
+        if (espelhos) {
+          duplicadosSet = new Set(espelhos.map((e) => e.numero_carro as string))
+        }
+      }
+
+      const docsWithDuplicateFlag = (data || []).map((doc) => ({
+        ...doc,
+        hasDuplicate: doc.numero_carro ? duplicadosSet.has(doc.numero_carro) : false,
+      }))
+
+      setDocumentos(docsWithDuplicateFlag)
     } catch (error) {
       console.error('Erro ao buscar documentos:', error)
       toast({
@@ -97,6 +126,18 @@ export default function DocumentosPendentes() {
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'documentos', filter: `tipo_documento=eq.Vistoria` },
+        () => {
+          fetchDocumentos()
+        },
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'documentos',
+          filter: `tipo_documento=eq.Espelho de Danos`,
+        },
         () => {
           fetchDocumentos()
         },
@@ -126,7 +167,31 @@ export default function DocumentosPendentes() {
     setIsViewModalOpen(true)
   }
 
-  const handleSaveOS = async (ignoreDuplicate = false) => {
+  const confirmDelete = async () => {
+    if (!docToDelete) return
+    setIsDeleting(true)
+    try {
+      const { error } = await supabase.rpc('ocultar_documento_manutencao', { p_id: docToDelete.id })
+      if (error) throw error
+      toast({
+        title: 'Sucesso',
+        description: 'Documento excluído com sucesso.',
+      })
+      setDocumentos((docs) => docs.filter((d) => d.id !== docToDelete.id))
+    } catch (error) {
+      toast({
+        title: 'Erro',
+        description: 'Erro ao excluir documento.',
+        variant: 'destructive',
+      })
+    } finally {
+      setIsDeleting(false)
+      setDeleteAlertOpen(false)
+      setDocToDelete(null)
+    }
+  }
+
+  const handleSaveOS = async () => {
     if (!numeroOS.trim()) {
       toast({
         title: 'Atenção',
@@ -140,17 +205,16 @@ export default function DocumentosPendentes() {
 
     setIsSaving(true)
     try {
-      if (!ignoreDuplicate && selectedDoc.numero_carro) {
+      if (selectedDoc.numero_carro) {
         const { data: duplicates } = await supabase
           .from('documentos')
           .select('id')
           .eq('numero_carro', selectedDoc.numero_carro)
           .eq('excluido_manutencao', false)
-          .in('tipo_documento', ['Espelho de Danos', 'Vistoria'])
+          .eq('tipo_documento', 'Espelho de Danos')
           .neq('id', selectedDoc.id)
 
         if (duplicates && duplicates.length > 0) {
-          setDuplicateSubmitAction(() => () => handleSaveOS(true))
           setDuplicateAlertOpen(true)
           setIsSaving(false)
           return
@@ -267,7 +331,7 @@ export default function DocumentosPendentes() {
               <TableHead>Carro</TableHead>
               <TableHead>Data</TableHead>
               <TableHead>Descrição dos Danos</TableHead>
-              <TableHead className="text-right w-[280px]">Ações</TableHead>
+              <TableHead className="text-right w-[340px]">Ações</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -297,6 +361,20 @@ export default function DocumentosPendentes() {
                   </TableCell>
                   <TableCell className="text-right">
                     <div className="flex items-center justify-end gap-2">
+                      {doc.hasDuplicate && (
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <div className="flex items-center justify-center h-8 w-8 cursor-help">
+                              <AlertTriangle className="h-5 w-5 text-yellow-500" />
+                            </div>
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <p>
+                              Já existe um espelho de danos para esse carro, por favor verificar.
+                            </p>
+                          </TooltipContent>
+                        </Tooltip>
+                      )}
                       <Button
                         variant="outline"
                         size="sm"
@@ -314,6 +392,18 @@ export default function DocumentosPendentes() {
                       >
                         <FileEdit className="mr-2 h-4 w-4" />
                         Preencher OS
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        className="h-8 w-8 text-red-600 hover:text-red-700 hover:bg-red-50 border-red-200"
+                        onClick={() => {
+                          setDocToDelete(doc)
+                          setDeleteAlertOpen(true)
+                        }}
+                        title="Excluir"
+                      >
+                        <Trash2 className="h-4 w-4" />
                       </Button>
                     </div>
                   </TableCell>
@@ -346,7 +436,7 @@ export default function DocumentosPendentes() {
                 onKeyDown={(e) => {
                   if (e.key === 'Enter') {
                     e.preventDefault()
-                    handleSaveOS(false)
+                    handleSaveOS()
                   }
                 }}
               />
@@ -376,7 +466,7 @@ export default function DocumentosPendentes() {
               Cancelar
             </Button>
             <Button
-              onClick={() => handleSaveOS(false)}
+              onClick={() => handleSaveOS()}
               disabled={isSaving}
               className="bg-[#225f3d] hover:bg-[#1a4a2f] text-white"
             >
@@ -510,17 +600,32 @@ export default function DocumentosPendentes() {
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel onClick={() => setDuplicateSubmitAction(null)}>
+            <AlertDialogCancel onClick={() => setDuplicateAlertOpen(false)}>
               Fechar
             </AlertDialogCancel>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={deleteAlertOpen} onOpenChange={setDeleteAlertOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Confirmar Exclusão</AlertDialogTitle>
+            <AlertDialogDescription>
+              Tem certeza que deseja excluir esta vistoria? Esta ação não poderá ser desfeita.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isDeleting}>Cancelar</AlertDialogCancel>
             <AlertDialogAction
-              onClick={() => {
-                if (duplicateSubmitAction) duplicateSubmitAction()
-                setDuplicateSubmitAction(null)
+              onClick={(e) => {
+                e.preventDefault()
+                confirmDelete()
               }}
-              className="bg-amber-600 hover:bg-amber-700 text-white"
+              disabled={isDeleting}
+              className="bg-red-600 hover:bg-red-700 text-white"
             >
-              Prosseguir mesmo assim
+              {isDeleting ? 'Excluindo...' : 'Excluir'}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

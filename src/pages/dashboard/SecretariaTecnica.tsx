@@ -33,7 +33,7 @@ export default function SecretariaTecnica() {
   const [photosModalOpen, setPhotosModalOpen] = useState(false)
   const [selectedPhotos, setSelectedPhotos] = useState<string[]>([])
   const [uploadModalOpen, setUploadModalOpen] = useState(false)
-  const [selectedDocId, setSelectedDocId] = useState<string | null>(null)
+  const [selectedDoc, setSelectedDoc] = useState<any | null>(null)
   const [uploading, setUploading] = useState(false)
   const [file, setFile] = useState<File | null>(null)
   const [viewDoc, setViewDoc] = useState<any>(null)
@@ -110,21 +110,29 @@ export default function SecretariaTecnica() {
     setPhotosModalOpen(true)
   }
 
-  const handleUploadClick = (docId: string) => {
-    setSelectedDocId(docId)
+  const handleUploadClick = (doc: any) => {
+    setSelectedDoc(doc)
     setFile(null)
     setUploadModalOpen(true)
   }
 
   const handleUploadSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!file || !selectedDocId) return
+    if (!file || !selectedDoc) return
 
     try {
       setUploading(true)
+
+      const {
+        data: { user },
+      } = await supabase.auth.getUser()
+      if (!user) throw new Error('Usuário não autenticado.')
+
       const fileExt = file.name.split('.').pop()
-      const fileName = `orcamento_${selectedDocId}_${Date.now()}.${fileExt}`
-      const filePath = `orcamentos/${fileName}`
+      const storageFileName = `orcamento_${selectedDoc.id}_${Date.now()}.${fileExt}`
+      const filePath = `orcamentos/${storageFileName}`
+
+      const displayFileName = `Orçamento - OS: ${selectedDoc.numero_os || 'N/A'} - Carro: ${selectedDoc.numero_carro || 'N/A'}.${fileExt}`
 
       const { error: uploadError } = await supabase.storage
         .from('anexos_chamados_interno')
@@ -141,9 +149,31 @@ export default function SecretariaTecnica() {
       const { error: updateError } = await supabase
         .from('documentos')
         .update({ orcamento_url })
-        .eq('id', selectedDocId)
+        .eq('id', selectedDoc.id)
 
       if (updateError) throw updateError
+
+      if (selectedDoc.chamado_id) {
+        const { error: anexoError } = await supabase.from('anexos_chamado_interno').insert({
+          chamado_id: selectedDoc.chamado_id,
+          usuario_id: user.id,
+          nome_arquivo: displayFileName,
+          arquivo_url: orcamento_url,
+          tipo_arquivo: file.type || 'application/octet-stream',
+          tamanho_bytes: file.size,
+        })
+
+        if (anexoError) throw anexoError
+
+        const { error: histError } = await supabase.from('historico_chamado').insert({
+          chamado_id: selectedDoc.chamado_id,
+          usuario_id: user.id,
+          acao: 'respondido',
+          detalhes: 'Orçamento anexado pela Secretaria Técnica',
+        })
+
+        if (histError) throw histError
+      }
 
       toast({ title: 'Sucesso', description: 'Orçamento anexado com sucesso.' })
       setUploadModalOpen(false)
@@ -272,7 +302,7 @@ export default function SecretariaTecnica() {
                         <Button
                           variant="default"
                           size="sm"
-                          onClick={() => handleUploadClick(doc.id)}
+                          onClick={() => handleUploadClick(doc)}
                           title="Anexar Orçamento"
                         >
                           <Upload className="w-4 h-4" />

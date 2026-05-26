@@ -49,19 +49,15 @@ export default function SecretariaTecnica() {
           formularios_espelho_danos(*)
         `)
         .in('tipo_documento', ['Vistoria', 'Espelho de Danos', 'OS de Manutenção'])
-        .not('fotos_urls', 'is', null)
         .or('orcamento_url.is.null,orcamento_url.eq.""')
         .order('criado_em', { ascending: false })
 
       if (error) throw error
 
-      // Filter: must have maintenance photos (fotos_urls contains 'os_foto_')
+      // Filter: must have maintenance photos (fotos_manutencao not empty)
       const withPhotos =
         data?.filter((doc: any) => {
-          return (
-            Array.isArray(doc.fotos_urls) &&
-            doc.fotos_urls.some((url: string) => url.includes('os_foto_'))
-          )
+          return Array.isArray(doc.fotos_manutencao) && doc.fotos_manutencao.length > 0
         }) || []
 
       setDocumentos(withPhotos)
@@ -98,9 +94,9 @@ export default function SecretariaTecnica() {
 
   const handleOpenPhotos = (doc: any) => {
     const photos: string[] = []
-    if (Array.isArray(doc.fotos_urls)) {
-      doc.fotos_urls.forEach((url: string) => {
-        if (url && url.includes('os_foto_') && !photos.includes(url)) photos.push(url)
+    if (Array.isArray(doc.fotos_manutencao)) {
+      doc.fotos_manutencao.forEach((url: string) => {
+        if (url && !photos.includes(url)) photos.push(url)
       })
     }
     setSelectedPhotos(photos)
@@ -432,6 +428,9 @@ export default function SecretariaTecnica() {
                   if (viewDoc.foto_url) fotos.push(viewDoc.foto_url)
                   if (Array.isArray(viewDoc.fotos_urls)) {
                     fotos.push(...viewDoc.fotos_urls)
+                  }
+                  if (Array.isArray(viewDoc.fotos_manutencao)) {
+                    fotos.push(...viewDoc.fotos_manutencao)
                   }
 
                   if (fotos.length === 0) {

@@ -135,12 +135,14 @@ export default function OsManutencao() {
 
       const newUrl = publicUrlData.publicUrl
 
-      const currentFotos = Array.isArray(targetDoc.fotos_urls) ? targetDoc.fotos_urls : []
+      const currentFotos = Array.isArray(targetDoc.fotos_manutencao)
+        ? targetDoc.fotos_manutencao
+        : []
       const newFotosUrls = [...currentFotos, newUrl]
 
       const { error: updateError } = await supabase
         .from('documentos')
-        .update({ fotos_urls: newFotosUrls })
+        .update({ fotos_manutencao: newFotosUrls })
         .eq('id', targetDoc.id)
 
       if (updateError) throw updateError
@@ -151,7 +153,7 @@ export default function OsManutencao() {
       })
 
       setDocumentos((docs) =>
-        docs.map((d) => (d.id === targetDoc.id ? { ...d, fotos_urls: newFotosUrls } : d)),
+        docs.map((d) => (d.id === targetDoc.id ? { ...d, fotos_manutencao: newFotosUrls } : d)),
       )
     } catch (error: any) {
       console.error('Erro ao fazer upload da foto:', error)
@@ -577,6 +579,9 @@ export default function OsManutencao() {
                   if (viewDoc.foto_url) fotos.push(viewDoc.foto_url)
                   if (Array.isArray(viewDoc.fotos_urls)) {
                     fotos.push(...viewDoc.fotos_urls)
+                  }
+                  if (Array.isArray(viewDoc.fotos_manutencao)) {
+                    fotos.push(...viewDoc.fotos_manutencao)
                   }
 
                   if (fotos.length === 0) {

@@ -1325,97 +1325,104 @@ export default function ChamadoDetalhes() {
           }
         }
 
-        const { data: pdfData, error: pdfError } = await supabase.functions.invoke('gerar-pdf', {
-          body: {
-            tipo_documento: 'espelho_danos',
-            id: id,
-            ...updateDataLimpa,
-            fotos,
-            espelho_id: finalFormId || undefined,
-          },
-        })
-
-        if (pdfError || !pdfData?.success) throw new Error('Erro ao gerar novo PDF')
-
-        const newUrl = `${pdfData.url}?t=${Date.now()}`
-        const newNomeArquivo = pdfData.nome_arquivo || editingDoc.anexo.nome_arquivo
-
-        if (newNomeArquivo !== editingDoc.anexo.nome_arquivo) {
-          try {
-            const oldUrl = editingDoc.anexo.arquivo_url.split('?')[0]
-            const urlParts = oldUrl.split('/')
-            const oldFileName = urlParts[urlParts.length - 1]
-            const oldFolder = urlParts[urlParts.length - 2]
-            const oldPath = `${oldFolder}/${oldFileName}`
-            await supabase.storage.from('anexos_chamados_interno').remove([oldPath])
-          } catch (e) {
-            console.warn('Erro ao remover arquivo antigo:', e)
-          }
-        }
-
-        await supabase
-          .from('anexos_chamado_interno')
-          .update({
-            arquivo_url: newUrl,
-            nome_arquivo: newNomeArquivo,
+        let pdfDataResult = null
+        try {
+          const { data: pdfData, error: pdfError } = await supabase.functions.invoke('gerar-pdf', {
+            body: {
+              tipo_documento: 'espelho_danos',
+              id: id,
+              ...updateDataLimpa,
+              fotos,
+              espelho_id: finalFormId || undefined,
+            },
           })
-          .eq('id', editingDoc.anexo.id)
-
-        // Also update the related record in documentos table
-        let matchDoc = null
-        if (finalFormId) {
-          const { data: docById } = await supabase
-            .from('documentos')
-            .select('id')
-            .eq('formulario_id', finalFormId)
-            .maybeSingle()
-          if (docById) matchDoc = docById
+          if (pdfError || !pdfData?.success) throw new Error('Erro ao gerar novo PDF')
+          pdfDataResult = pdfData
+        } catch (err) {
+          toast.error('Dados salvos, mas houve erro ao gerar o novo PDF do Espelho de Danos.')
         }
 
-        if (!matchDoc) {
-          // Fallback to name or url matching
-          const oldFileName = editingDoc.anexo.nome_arquivo
-          const { data: docByName } = await supabase
-            .from('documentos')
-            .select('id')
-            .eq('chamado_id', id as string)
-            .eq('nome_arquivo', oldFileName)
-            .maybeSingle()
-          if (docByName) matchDoc = docByName
-        }
+        if (pdfDataResult) {
+          const newUrl = `${pdfDataResult.url}?t=${Date.now()}`
+          const newNomeArquivo = pdfDataResult.nome_arquivo || editingDoc.anexo.nome_arquivo
 
-        if (matchDoc) {
+          if (newNomeArquivo !== editingDoc.anexo.nome_arquivo) {
+            try {
+              const oldUrl = editingDoc.anexo.arquivo_url.split('?')[0]
+              const urlParts = oldUrl.split('/')
+              const oldFileName = urlParts[urlParts.length - 1]
+              const oldFolder = urlParts[urlParts.length - 2]
+              const oldPath = `${oldFolder}/${oldFileName}`
+              await supabase.storage.from('anexos_chamados_interno').remove([oldPath])
+            } catch (e) {
+              console.warn('Erro ao remover arquivo antigo:', e)
+            }
+          }
+
           await supabase
-            .from('documentos')
+            .from('anexos_chamado_interno')
             .update({
               arquivo_url: newUrl,
               nome_arquivo: newNomeArquivo,
-              atualizado_em: new Date().toISOString(),
-              formulario_id: finalFormId,
-              numero_os: updateDataLimpa.numero_os,
-              numero_carro: updateDataLimpa.numero_carro,
-              linha: updateDataLimpa.linha,
-              descricao_danos: updateDataLimpa.descricao_danos,
-              data: updateDataLimpa.data,
-              horario: updateDataLimpa.horario,
-              ocorrencia: updateDataLimpa.ocorrencia,
-              garagem: updateDataLimpa.garagem,
-              registro_responsavel: updateDataLimpa.registro_vistoriador,
-              nome_responsavel: updateDataLimpa.nome_vistoriador,
-              registro_motorista: updateDataLimpa.registro_motorista,
-              nome_motorista: updateDataLimpa.nome_motorista,
             })
-            .eq('id', matchDoc.id)
+            .eq('id', editingDoc.anexo.id)
+
+          // Also update the related record in documentos table
+          let matchDoc = null
+          if (finalFormId) {
+            const { data: docById } = await supabase
+              .from('documentos')
+              .select('id')
+              .eq('formulario_id', finalFormId)
+              .maybeSingle()
+            if (docById) matchDoc = docById
+          }
+
+          if (!matchDoc) {
+            // Fallback to name or url matching
+            const oldFileName = editingDoc.anexo.nome_arquivo
+            const { data: docByName } = await supabase
+              .from('documentos')
+              .select('id')
+              .eq('chamado_id', id as string)
+              .eq('nome_arquivo', oldFileName)
+              .maybeSingle()
+            if (docByName) matchDoc = docByName
+          }
+
+          if (matchDoc) {
+            await supabase
+              .from('documentos')
+              .update({
+                arquivo_url: newUrl,
+                nome_arquivo: newNomeArquivo,
+                atualizado_em: new Date().toISOString(),
+                formulario_id: finalFormId,
+                numero_os: updateDataLimpa.numero_os,
+                numero_carro: updateDataLimpa.numero_carro,
+                linha: updateDataLimpa.linha,
+                descricao_danos: updateDataLimpa.descricao_danos,
+                data: updateDataLimpa.data,
+                horario: updateDataLimpa.horario,
+                ocorrencia: updateDataLimpa.ocorrencia,
+                garagem: updateDataLimpa.garagem,
+                registro_responsavel: updateDataLimpa.registro_vistoriador,
+                nome_responsavel: updateDataLimpa.nome_vistoriador,
+                registro_motorista: updateDataLimpa.registro_motorista,
+                nome_motorista: updateDataLimpa.nome_motorista,
+              })
+              .eq('id', matchDoc.id)
+          }
+
+          await supabase.from('historico_chamado').insert({
+            chamado_id: id as string,
+            acao: 'respondido',
+            usuario_id: user?.id as string,
+            detalhes: 'Espelho de Danos preenchido e anexado com sucesso',
+          })
+
+          toast.success('Documento atualizado com sucesso!')
         }
-
-        await supabase.from('historico_chamado').insert({
-          chamado_id: id as string,
-          acao: 'respondido',
-          usuario_id: user?.id as string,
-          detalhes: 'Espelho de Danos preenchido e anexado com sucesso',
-        })
-
-        toast.success('Documento atualizado com sucesso!')
       } else {
         const {
           id: formId,
@@ -1439,69 +1446,76 @@ export default function ChamadoDetalhes() {
           if (insertError) throw insertError
         }
 
-        const { data: pdfData, error: pdfError } = await supabase.functions.invoke('gerar-pdf', {
-          body: {
-            tipo_documento: 'IDO',
-            id: id,
-            ...updateData,
-          },
-        })
-
-        if (pdfError || !pdfData?.success) throw new Error('Erro ao gerar novo PDF IDO')
-
-        const newUrl = `${pdfData.url}?t=${Date.now()}`
-        const newNomeArquivoIdo = pdfData.nome_arquivo || editingDoc.anexo.nome_arquivo
-
-        if (newNomeArquivoIdo !== editingDoc.anexo.nome_arquivo) {
-          try {
-            const oldUrl = editingDoc.anexo.arquivo_url.split('?')[0]
-            const urlParts = oldUrl.split('/')
-            const oldFileName = urlParts[urlParts.length - 1]
-            const oldFolder = urlParts[urlParts.length - 2]
-            const oldPath = `${oldFolder}/${oldFileName}`
-            await supabase.storage.from('anexos_chamados_interno').remove([oldPath])
-          } catch (e) {
-            console.warn('Erro ao remover arquivo antigo:', e)
-          }
+        let pdfDataResult = null
+        try {
+          const { data: pdfData, error: pdfError } = await supabase.functions.invoke('gerar-pdf', {
+            body: {
+              tipo_documento: 'IDO',
+              id: id,
+              ...updateData,
+            },
+          })
+          if (pdfError || !pdfData?.success) throw new Error('Erro ao gerar novo PDF IDO')
+          pdfDataResult = pdfData
+        } catch (err) {
+          toast.error('Dados salvos, mas houve erro ao gerar o novo PDF do IDO.')
         }
 
-        await supabase
-          .from('anexos_chamado_interno')
-          .update({
-            arquivo_url: newUrl,
-            nome_arquivo: newNomeArquivoIdo,
-          })
-          .eq('id', editingDoc.anexo.id)
+        if (pdfDataResult) {
+          const newUrl = `${pdfDataResult.url}?t=${Date.now()}`
+          const newNomeArquivoIdo = pdfDataResult.nome_arquivo || editingDoc.anexo.nome_arquivo
 
-        const oldFileNameIdo = editingDoc.anexo.nome_arquivo
-        const { data: docIdoByName } = await supabase
-          .from('documentos')
-          .select('id')
-          .eq('chamado_id', id as string)
-          .eq('nome_arquivo', oldFileNameIdo)
-          .maybeSingle()
+          if (newNomeArquivoIdo !== editingDoc.anexo.nome_arquivo) {
+            try {
+              const oldUrl = editingDoc.anexo.arquivo_url.split('?')[0]
+              const urlParts = oldUrl.split('/')
+              const oldFileName = urlParts[urlParts.length - 1]
+              const oldFolder = urlParts[urlParts.length - 2]
+              const oldPath = `${oldFolder}/${oldFileName}`
+              await supabase.storage.from('anexos_chamados_interno').remove([oldPath])
+            } catch (e) {
+              console.warn('Erro ao remover arquivo antigo:', e)
+            }
+          }
 
-        if (docIdoByName) {
           await supabase
-            .from('documentos')
+            .from('anexos_chamado_interno')
             .update({
               arquivo_url: newUrl,
               nome_arquivo: newNomeArquivoIdo,
-              atualizado_em: new Date().toISOString(),
-              nome_responsavel: updateData.colaborador_nome,
-              registro_responsavel: updateData.colaborador_registro,
             })
-            .eq('id', docIdoByName.id)
+            .eq('id', editingDoc.anexo.id)
+
+          const oldFileNameIdo = editingDoc.anexo.nome_arquivo
+          const { data: docIdoByName } = await supabase
+            .from('documentos')
+            .select('id')
+            .eq('chamado_id', id as string)
+            .eq('nome_arquivo', oldFileNameIdo)
+            .maybeSingle()
+
+          if (docIdoByName) {
+            await supabase
+              .from('documentos')
+              .update({
+                arquivo_url: newUrl,
+                nome_arquivo: newNomeArquivoIdo,
+                atualizado_em: new Date().toISOString(),
+                nome_responsavel: updateData.colaborador_nome,
+                registro_responsavel: updateData.colaborador_registro,
+              })
+              .eq('id', docIdoByName.id)
+          }
+
+          await supabase.from('historico_chamado').insert({
+            chamado_id: id as string,
+            acao: 'respondido',
+            usuario_id: user?.id as string,
+            detalhes: 'Boletim de Ocorrência (IDO) atualizado pelo usuário',
+          })
+
+          toast.success('Documento IDO atualizado com sucesso!')
         }
-
-        await supabase.from('historico_chamado').insert({
-          chamado_id: id as string,
-          acao: 'respondido',
-          usuario_id: user?.id as string,
-          detalhes: 'Boletim de Ocorrência (IDO) atualizado pelo usuário',
-        })
-
-        toast.success('Documento IDO atualizado com sucesso!')
       }
 
       fetchChamadoData()

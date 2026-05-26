@@ -196,7 +196,7 @@ Deno.serve(async (req: Request) => {
       const osStr = safeOs ? `_OS_${safeOs}` : ''
       const carroStr = safeCarro ? `_CARRO_${safeCarro}` : ''
       fileName = body.espelho_id
-        ? `ESPELHO_DE_DANOS${osStr}${carroStr}_${body.espelho_id}.pdf`
+        ? `ESPELHO_DE_DANOS${osStr}${carroStr}_${body.espelho_id}_${Date.now()}.pdf`
         : `espelho_danos_${id}_${Date.now()}.pdf`
     }
 

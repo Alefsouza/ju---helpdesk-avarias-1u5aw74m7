@@ -45,7 +45,14 @@ export default function SecretariaTecnica() {
         .from('documentos')
         .select(`
           *,
-          chamados(id, titulo, registro_motorista, nome_motorista, responsavel_id),
+          chamados(
+            id, 
+            titulo, 
+            registro_motorista, 
+            nome_motorista, 
+            responsavel_id,
+            formularios_ido(protocolo_ido)
+          ),
           formularios_espelho_danos(*)
         `)
         .in('tipo_documento', ['Vistoria', 'Espelho de Danos', 'OS de Manutenção'])
@@ -204,7 +211,7 @@ export default function SecretariaTecnica() {
                 documentos.map((doc) => (
                   <TableRow key={doc.id}>
                     <TableCell className="font-medium text-slate-600">
-                      {doc.chamados?.id ? doc.chamados.id.substring(0, 8).toUpperCase() : '-'}
+                      {doc.chamados?.formularios_ido?.[0]?.protocolo_ido || '-'}
                     </TableCell>
                     <TableCell className="font-semibold text-slate-800">
                       {doc.numero_os || '-'}

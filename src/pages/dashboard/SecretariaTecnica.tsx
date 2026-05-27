@@ -247,92 +247,113 @@ export default function SecretariaTecnica() {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Carro</TableHead>
+                <TableHead>RA</TableHead>
                 <TableHead>OS</TableHead>
+                <TableHead>Carro</TableHead>
                 <TableHead>Garagem</TableHead>
-                <TableHead>Data / Hora</TableHead>
-                <TableHead>Status</TableHead>
+                <TableHead>Data</TableHead>
+                <TableHead>Descrição</TableHead>
                 <TableHead className="text-right">Ações</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {loading ? (
                 <TableRow>
-                  <TableCell colSpan={6} className="text-center py-8 text-slate-500">
+                  <TableCell colSpan={7} className="text-center py-8 text-slate-500">
                     <Loader2 className="w-6 h-6 animate-spin mx-auto mb-2" />
                     Carregando registros...
                   </TableCell>
                 </TableRow>
               ) : documentos.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={6} className="text-center py-8 text-slate-500">
+                  <TableCell colSpan={7} className="text-center py-8 text-slate-500">
                     Nenhum registro com evidências fotográficas encontrado.
                   </TableCell>
                 </TableRow>
               ) : (
                 documentos.map((doc) => (
                   <TableRow key={doc.id}>
+                    <TableCell className="font-medium text-slate-700">
+                      {doc.registro_responsavel || '-'}
+                    </TableCell>
+                    <TableCell className="font-semibold text-slate-800">
+                      {doc.numero_os || '-'}
+                    </TableCell>
                     <TableCell>
                       <Badge variant="outline" className="font-mono bg-slate-50">
                         {doc.numero_carro || '-'}
                       </Badge>
                     </TableCell>
-                    <TableCell className="font-semibold text-slate-800">
-                      {doc.numero_os || '-'}
-                    </TableCell>
                     <TableCell className="text-slate-600">{doc.garagem || '-'}</TableCell>
                     <TableCell>
                       {doc.data
-                        ? `${format(new Date(doc.data + 'T12:00:00'), 'dd/MM/yyyy')} ${doc.horario || ''}`
+                        ? format(new Date(doc.data + 'T12:00:00'), 'dd/MM/yyyy')
                         : format(new Date(doc.criado_em), 'dd/MM/yyyy')}
                     </TableCell>
                     <TableCell>
-                      {doc.status_liberacao ? (
-                        <Badge variant="default" className="bg-blue-600 hover:bg-blue-700">
-                          {doc.status_liberacao}
-                        </Badge>
-                      ) : (
-                        <Badge variant="secondary">Não Liberado</Badge>
-                      )}
+                      <div
+                        className="line-clamp-2 text-sm text-slate-600 max-w-xs"
+                        title={doc.ocorrencia || doc.descricao_danos}
+                      >
+                        {doc.ocorrencia || doc.descricao_danos || '-'}
+                      </div>
                     </TableCell>
-                    <TableCell className="text-right space-x-2">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => setViewDoc(doc)}
-                        title="Ver Espelho/OS"
-                      >
-                        <FileText className="w-4 h-4" />
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleOpenPhotos(doc)}
-                        title="Ver Fotos"
-                      >
-                        <ImageIcon className="w-4 h-4" />
-                      </Button>
-                      {doc.orcamento_url ? (
-                        <Button variant="outline" size="sm" asChild title="Ver Orçamento">
-                          <a
-                            href={doc.orcamento_url}
-                            target="_blank"
-                            rel="noreferrer"
-                            className="text-emerald-600 border-emerald-200 hover:bg-emerald-50"
-                          >
-                            <Eye className="w-4 h-4" />
-                          </a>
-                        </Button>
-                      ) : (
+                    <TableCell className="text-right">
+                      <div className="flex justify-end gap-2">
                         <Button
-                          variant="default"
+                          variant="outline"
                           size="sm"
-                          onClick={() => handleUploadClick(doc)}
-                          title="Anexar Orçamento"
+                          onClick={() => {
+                            if (doc.arquivo_url) {
+                              window.open(doc.arquivo_url, '_blank')
+                            } else {
+                              setViewDoc(doc)
+                            }
+                          }}
+                          title="Ver Espelho/OS"
                         >
-                          <Upload className="w-4 h-4" />
+                          <FileText className="w-4 h-4" />
                         </Button>
-                      )}
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleOpenPhotos(doc)}
+                          title="Ver Fotos da OS"
+                        >
+                          <ImageIcon className="w-4 h-4" />
+                        </Button>
+                        {doc.orcamento_url ? (
+                          <>
+                            <Button variant="outline" size="sm" asChild title="Ver Orçamento">
+                              <a
+                                href={doc.orcamento_url}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="text-emerald-600 border-emerald-200 hover:bg-emerald-50"
+                              >
+                                <Eye className="w-4 h-4" />
+                              </a>
+                            </Button>
+                            <Button
+                              variant="default"
+                              size="sm"
+                              onClick={() => handleUploadClick(doc)}
+                              title="Atualizar Orçamento"
+                            >
+                              <Upload className="w-4 h-4" />
+                            </Button>
+                          </>
+                        ) : (
+                          <Button
+                            variant="default"
+                            size="sm"
+                            onClick={() => handleUploadClick(doc)}
+                            title="Anexar Orçamento"
+                          >
+                            <Upload className="w-4 h-4" />
+                          </Button>
+                        )}
+                      </div>
                     </TableCell>
                   </TableRow>
                 ))

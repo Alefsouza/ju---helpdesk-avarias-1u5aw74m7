@@ -19,6 +19,7 @@ import {
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { ScrollArea } from '@/components/ui/scroll-area'
+import { useAuth } from '@/hooks/use-auth'
 import {
   Select,
   SelectContent,
@@ -41,13 +42,21 @@ export default function EspelhosDanos() {
   const [month, setMonth] = useState<string>('all')
   const [year, setYear] = useState<string>(new Date().getFullYear().toString())
 
+  const { profile } = useAuth()
+  const userType = profile?.tipo_usuario
+  const userGaragem = profile?.garagem
+
   useEffect(() => {
+    if (!userType) return
+
     const fetchDocs = async () => {
-      const { data } = await supabase
-        .from('documentos')
-        .select('*')
-        .eq('tipo_documento', 'Espelho de Danos')
-        .order('criado_em', { ascending: false })
+      let query = supabase.from('documentos').select('*').eq('tipo_documento', 'Espelho de Danos')
+
+      if (userType === 'vistoriador' && userGaragem) {
+        query = query.eq('garagem', userGaragem)
+      }
+
+      const { data } = await query.order('criado_em', { ascending: false })
 
       if (data) setDocumentos(data)
     }
@@ -64,7 +73,13 @@ export default function EspelhosDanos() {
           table: 'documentos',
           filter: 'tipo_documento=eq.Espelho de Danos',
         },
-        () => {
+        (payload) => {
+          if (userType === 'vistoriador' && userGaragem) {
+            const newRecord = payload.new as any
+            if (newRecord && newRecord.garagem && newRecord.garagem !== userGaragem) {
+              return
+            }
+          }
           fetchDocs()
         },
       )
@@ -73,7 +88,7 @@ export default function EspelhosDanos() {
     return () => {
       supabase.removeChannel(channel)
     }
-  }, [])
+  }, [userType, userGaragem])
 
   const handleSaveOs = async () => {
     if (!editOsDoc || !osInput.trim()) return

@@ -286,7 +286,7 @@ export default function SecretariaTecnica() {
                 documentos.map((doc) => (
                   <TableRow key={doc.id}>
                     <TableCell className="font-medium text-slate-700">
-                      {doc.registro_responsavel || '-'}
+                      {doc.chamados?.pia || '-'}
                     </TableCell>
                     <TableCell className="font-semibold text-slate-800">
                       {doc.numero_os || '-'}

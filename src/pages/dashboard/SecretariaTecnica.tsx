@@ -52,7 +52,8 @@ export default function SecretariaTecnica() {
             registro_motorista, 
             nome_motorista, 
             responsavel_id,
-            tipo_chamado
+            tipo_chamado,
+            carro
           ),
           formularios_espelho_danos(*)
         `)
@@ -63,15 +64,15 @@ export default function SecretariaTecnica() {
 
       if (error) throw error
 
-      // Filter: must have maintenance photos (fotos_manutencao not empty) or orcamento_url
-      const withEvidences =
+      // Filter: must have maintenance photos (fotos_manutencao not empty) AND NO orcamento_url
+      const pendingDocuments =
         data?.filter((doc: any) => {
           const hasPhotos = Array.isArray(doc.fotos_manutencao) && doc.fotos_manutencao.length > 0
           const hasOrcamento = !!doc.orcamento_url
-          return hasPhotos || hasOrcamento
+          return hasPhotos && !hasOrcamento
         }) || []
 
-      setDocumentos(withEvidences)
+      setDocumentos(pendingDocuments)
     } catch (err: any) {
       toast({ title: 'Erro', description: 'Erro ao carregar documentos', variant: 'destructive' })
     } finally {
@@ -166,13 +167,14 @@ export default function SecretariaTecnica() {
       }
 
       const osNumber = ticketData?.numero_os || selectedDoc.numero_os || 'N/A'
-      const carNumber = ticketData?.carro || selectedDoc.numero_carro || 'N/A'
+      const carNumber =
+        ticketData?.carro || selectedDoc.chamados?.carro || selectedDoc.numero_carro || 'N/A'
 
       const fileExt = file.name.split('.').pop()
       const storageFileName = `orcamento_${selectedDoc.id}_${Date.now()}.${fileExt}`
       const filePath = `orcamentos/${storageFileName}`
 
-      const displayFileName = `Orçamento - OS: ${osNumber} - Carro: ${carNumber}.${fileExt}`
+      const displayFileName = `Orçamento - Carro: ${carNumber} - OS: ${osNumber}.${fileExt}`
 
       const { error: uploadError } = await supabase.storage
         .from('anexos_chamados_interno')
@@ -214,7 +216,7 @@ export default function SecretariaTecnica() {
           chamado_id: chamadoId,
           usuario_id: user.id,
           acao: 'respondido',
-          detalhes: 'Orçamento anexado pela Secretaria Técnica',
+          detalhes: 'Orçamento anexado pela Secretaria Técnica.',
         })
 
         if (histError) throw histError

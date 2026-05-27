@@ -126,7 +126,8 @@ export default function CarrosLiberadosPlantao() {
         (d.numero_carro?.toLowerCase() || '').includes(term) ||
         (d.linha?.toLowerCase() || '').includes(term)
 
-      const isLiberado = d.excluido_manutencao === true
+      const isLiberado =
+        d.excluido_manutencao === true || d.status_liberacao === 'Liberado com Pendência'
       const matchStatus =
         statusFilter === 'todos' ||
         (statusFilter === 'liberado' &&
@@ -139,8 +140,10 @@ export default function CarrosLiberadosPlantao() {
       return matchSearch && matchStatus
     })
     .sort((a, b) => {
-      const aLiberado = a.excluido_manutencao === true
-      const bLiberado = b.excluido_manutencao === true
+      const aLiberado =
+        a.excluido_manutencao === true || a.status_liberacao === 'Liberado com Pendência'
+      const bLiberado =
+        b.excluido_manutencao === true || b.status_liberacao === 'Liberado com Pendência'
       if (aLiberado && !bLiberado) return -1
       if (!aLiberado && bLiberado) return 1
 
@@ -221,7 +224,9 @@ export default function CarrosLiberadosPlantao() {
                   </TableHeader>
                   <TableBody>
                     {filtered.map((d) => {
-                      const isLiberado = d.excluido_manutencao === true
+                      const isLiberado =
+                        d.excluido_manutencao === true ||
+                        d.status_liberacao === 'Liberado com Pendência'
                       const dateObj = new Date(d.atualizado_em || d.criado_em)
                       const formattedDate = format(dateObj, "dd/MM/yyyy 'às' HH:mm", {
                         locale: ptBR,

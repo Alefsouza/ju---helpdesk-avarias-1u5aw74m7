@@ -9,7 +9,16 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import { Button } from '@/components/ui/button'
-import { Eye, Download, Search, Wrench, CheckCircle, Camera, Loader2 } from 'lucide-react'
+import {
+  Eye,
+  Download,
+  Search,
+  Wrench,
+  CheckCircle,
+  Camera,
+  Loader2,
+  AlertCircle,
+} from 'lucide-react'
 import { format, parseISO } from 'date-fns'
 import { Input } from '@/components/ui/input'
 import { Card, CardContent } from '@/components/ui/card'
@@ -25,6 +34,7 @@ import {
 } from '@/components/ui/dialog'
 import { Label } from '@/components/ui/label'
 import { useToast } from '@/hooks/use-toast'
+import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from '@/components/ui/tooltip'
 
 export default function OsManutencao() {
   const [documentos, setDocumentos] = useState<any[]>([])
@@ -188,7 +198,14 @@ export default function OsManutencao() {
         description: `Veículo marcado como: ${status}`,
       })
 
-      setDocumentos((docs) => docs.filter((d) => d.id !== docToRelease.id))
+      setDocumentos((docs) => {
+        if (status === 'Liberado com Pendência') {
+          return docs.map((d) =>
+            d.id === docToRelease.id ? { ...d, status_liberacao: status } : d,
+          )
+        }
+        return docs.filter((d) => d.id !== docToRelease.id)
+      })
     } catch (error: any) {
       console.error('Erro ao ocultar documento:', error)
       toast({
@@ -481,6 +498,20 @@ export default function OsManutencao() {
                                   <Camera className="h-4 w-4" />
                                 )}
                               </Button>
+                              {doc.status_liberacao === 'Liberado com Pendência' && (
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <div className="flex items-center justify-center h-8 w-8 text-amber-500 bg-amber-50 rounded-md cursor-help mr-1">
+                                      <AlertCircle className="h-4 w-4" />
+                                    </div>
+                                  </TooltipTrigger>
+                                  <TooltipContent>
+                                    <p>
+                                      Este veículo foi liberado, mas possui pendências de manutenção
+                                    </p>
+                                  </TooltipContent>
+                                </Tooltip>
+                              )}
                               <Button
                                 variant="ghost"
                                 size="icon"
@@ -781,7 +812,7 @@ export default function OsManutencao() {
           </DialogHeader>
           <div className="flex flex-col gap-3 py-4">
             <Button
-              onClick={() => handleRelease('Liberado')}
+              onClick={() => handleRelease('Liberado (Sem Pendências)')}
               disabled={isReleasing}
               className="w-full bg-emerald-600 hover:bg-emerald-700 text-white py-6 text-base"
             >

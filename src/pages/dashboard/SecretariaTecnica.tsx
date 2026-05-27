@@ -45,7 +45,7 @@ export default function SecretariaTecnica() {
         .from('documentos')
         .select(`
           *,
-          chamados!inner(
+          chamados (
             id, 
             titulo,
             pia,
@@ -56,18 +56,17 @@ export default function SecretariaTecnica() {
           ),
           formularios_espelho_danos(*)
         `)
-        .eq('chamados.tipo_chamado', 'OS de Manutenção')
+        .in('tipo_documento', ['Vistoria', 'Espelho de Danos'])
+        .not('numero_os', 'is', null)
+        .neq('numero_os', '')
         .order('criado_em', { ascending: false })
 
       if (error) throw error
 
-      // Filter: must have maintenance photos (fotos_manutencao not empty) OR fotos_urls not empty
+      // Filter: must have maintenance photos (fotos_manutencao not empty)
       const withPhotos =
         data?.filter((doc: any) => {
-          const hasManutencao =
-            Array.isArray(doc.fotos_manutencao) && doc.fotos_manutencao.length > 0
-          const hasUrls = Array.isArray(doc.fotos_urls) && doc.fotos_urls.length > 0
-          return hasManutencao || hasUrls
+          return Array.isArray(doc.fotos_manutencao) && doc.fotos_manutencao.length > 0
         }) || []
 
       setDocumentos(withPhotos)
@@ -106,11 +105,6 @@ export default function SecretariaTecnica() {
     const photos: string[] = []
     if (Array.isArray(doc.fotos_manutencao)) {
       doc.fotos_manutencao.forEach((url: string) => {
-        if (url && !photos.includes(url)) photos.push(url)
-      })
-    }
-    if (Array.isArray(doc.fotos_urls)) {
-      doc.fotos_urls.forEach((url: string) => {
         if (url && !photos.includes(url)) photos.push(url)
       })
     }

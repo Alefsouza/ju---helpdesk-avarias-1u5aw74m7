@@ -135,17 +135,21 @@ export default function OsManutencao() {
 
       const newUrl = publicUrlData.publicUrl
 
+      const { data: userData } = await supabase.auth.getUser()
+      const userId = userData?.user?.id || null
+
+      const { error: updateError } = await supabase.rpc('anexar_foto_manutencao' as any, {
+        p_documento_id: targetDoc.id,
+        p_foto_url: newUrl,
+        p_usuario_id: userId,
+      })
+
+      if (updateError) throw updateError
+
       const currentFotos = Array.isArray(targetDoc.fotos_manutencao)
         ? targetDoc.fotos_manutencao
         : []
       const newFotosUrls = [...currentFotos, newUrl]
-
-      const { error: updateError } = await supabase
-        .from('documentos')
-        .update({ fotos_manutencao: newFotosUrls })
-        .eq('id', targetDoc.id)
-
-      if (updateError) throw updateError
 
       toast({
         title: 'Sucesso',

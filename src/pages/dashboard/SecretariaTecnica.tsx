@@ -31,7 +31,7 @@ export default function SecretariaTecnica() {
 
   // Modal States
   const [photosModalOpen, setPhotosModalOpen] = useState(false)
-  const [selectedPhotos, setSelectedPhotos] = useState<string[]>([])
+  const [selectedPhotos, setSelectedPhotos] = useState<{ url: string; type: 'photo' | 'pdf' }[]>([])
   const [uploadModalOpen, setUploadModalOpen] = useState(false)
   const [selectedDoc, setSelectedDoc] = useState<any | null>(null)
   const [uploading, setUploading] = useState(false)
@@ -63,13 +63,15 @@ export default function SecretariaTecnica() {
 
       if (error) throw error
 
-      // Filter: must have maintenance photos (fotos_manutencao not empty)
-      const withPhotos =
+      // Filter: must have maintenance photos (fotos_manutencao not empty) or orcamento_url
+      const withEvidences =
         data?.filter((doc: any) => {
-          return Array.isArray(doc.fotos_manutencao) && doc.fotos_manutencao.length > 0
+          const hasPhotos = Array.isArray(doc.fotos_manutencao) && doc.fotos_manutencao.length > 0
+          const hasOrcamento = !!doc.orcamento_url
+          return hasPhotos || hasOrcamento
         }) || []
 
-      setDocumentos(withPhotos)
+      setDocumentos(withEvidences)
     } catch (err: any) {
       toast({ title: 'Erro', description: 'Erro ao carregar documentos', variant: 'destructive' })
     } finally {
@@ -102,12 +104,22 @@ export default function SecretariaTecnica() {
   }, [])
 
   const handleOpenPhotos = (doc: any) => {
-    const photos: string[] = []
+    const photos: { url: string; type: 'photo' | 'pdf' }[] = []
     if (Array.isArray(doc.fotos_manutencao)) {
       doc.fotos_manutencao.forEach((url: string) => {
-        if (url && !photos.includes(url)) photos.push(url)
+        if (url && !photos.some((p) => p.url === url)) {
+          photos.push({ url, type: 'photo' })
+        }
       })
     }
+
+    if (doc.orcamento_url) {
+      if (!photos.some((p) => p.url === doc.orcamento_url)) {
+        const isPdf = doc.orcamento_url.toLowerCase().split('?')[0].endsWith('.pdf')
+        photos.push({ url: doc.orcamento_url, type: isPdf ? 'pdf' : 'photo' })
+      }
+    }
+
     setSelectedPhotos(photos)
     setPhotosModalOpen(true)
   }
@@ -267,7 +279,7 @@ export default function SecretariaTecnica() {
               ) : documentos.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={7} className="text-center py-8 text-slate-500">
-                    Nenhum registro com evidências fotográficas encontrado.
+                    Nenhum registro com evidências ou orçamento encontrado.
                   </TableCell>
                 </TableRow>
               ) : (
@@ -316,37 +328,14 @@ export default function SecretariaTecnica() {
                         >
                           <ImageIcon className="w-4 h-4" />
                         </Button>
-                        {doc.orcamento_url ? (
-                          <>
-                            <Button variant="outline" size="sm" asChild title="Ver Orçamento">
-                              <a
-                                href={doc.orcamento_url}
-                                target="_blank"
-                                rel="noreferrer"
-                                className="text-emerald-600 border-emerald-200 hover:bg-emerald-50"
-                              >
-                                <Eye className="w-4 h-4" />
-                              </a>
-                            </Button>
-                            <Button
-                              variant="default"
-                              size="sm"
-                              onClick={() => handleUploadClick(doc)}
-                              title="Atualizar Orçamento"
-                            >
-                              <Upload className="w-4 h-4" />
-                            </Button>
-                          </>
-                        ) : (
-                          <Button
-                            variant="default"
-                            size="sm"
-                            onClick={() => handleUploadClick(doc)}
-                            title="Anexar Orçamento"
-                          >
-                            <Upload className="w-4 h-4" />
-                          </Button>
-                        )}
+                        <Button
+                          variant="default"
+                          size="sm"
+                          onClick={() => handleUploadClick(doc)}
+                          title={doc.orcamento_url ? 'Atualizar Orçamento' : 'Anexar Orçamento'}
+                        >
+                          <Upload className="w-4 h-4" />
+                        </Button>
                       </div>
                     </TableCell>
                   </TableRow>
@@ -364,21 +353,32 @@ export default function SecretariaTecnica() {
           </DialogHeader>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-4 max-h-[70vh] overflow-y-auto p-1">
             {selectedPhotos.length === 0 ? (
-              <p className="text-slate-500">Nenhuma foto disponível.</p>
+              <p className="text-slate-500">Nenhuma evidência disponível.</p>
             ) : (
-              selectedPhotos.map((url, i) => (
+              selectedPhotos.map((item, i) => (
                 <a
                   key={i}
-                  href={url}
+                  href={item.url}
                   target="_blank"
                   rel="noreferrer"
-                  className="block relative aspect-video bg-slate-100 rounded-lg overflow-hidden border hover:ring-2 ring-primary transition-all"
+                  className="block relative aspect-video bg-slate-100 rounded-lg overflow-hidden border hover:ring-2 ring-primary transition-all flex items-center justify-center"
                 >
-                  <img
-                    src={url}
-                    alt={`Evidência ${i + 1}`}
-                    className="object-cover w-full h-full"
-                  />
+                  {item.type === 'pdf' ? (
+                    <div className="flex flex-col items-center justify-center p-4">
+                      <FileText className="w-12 h-12 text-slate-400 mb-2" />
+                      <span className="text-sm font-medium text-slate-600 text-center">
+                        Orçamento (PDF)
+                        <br />
+                        Clique para abrir
+                      </span>
+                    </div>
+                  ) : (
+                    <img
+                      src={item.url}
+                      alt={`Evidência ${i + 1}`}
+                      className="object-cover w-full h-full"
+                    />
+                  )}
                 </a>
               ))
             )}

@@ -24,6 +24,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import { Checkbox } from '@/components/ui/checkbox'
 import { toast } from 'sonner'
 import { Loader2, UploadCloud } from 'lucide-react'
 
@@ -37,7 +38,7 @@ const formSchema = z.object({
   linha: z.string().min(1, 'Obrigatório'),
   local_ocorrencia: z.string().min(1, 'Obrigatório'),
   operacao: z.enum(['RA', 'RN', 'OPN'], { required_error: 'Selecione uma operação' }),
-  avarias: z.enum(['Vítima com avarias', 'Vítima sem avarias'], {
+  colisao: z.enum(['Sim', 'Não'], {
     required_error: 'Selecione uma opção',
   }),
 })
@@ -60,7 +61,7 @@ export default function NovoChamadoCoc() {
       linha: '',
       local_ocorrencia: '',
       operacao: undefined,
-      avarias: undefined,
+      colisao: undefined as unknown as 'Sim' | 'Não',
     },
   })
 
@@ -117,13 +118,17 @@ export default function NovoChamadoCoc() {
         toast.warning('Veículo não encontrado na frota. Chamado criado como Pendente.')
       }
 
-      const tituloChamado = `${values.avarias} - Carro: ${values.carro}`
+      const tituloChamado =
+        values.colisao === 'Sim'
+          ? `Houve Vítima - Com colisão - Carro: ${values.carro}`
+          : `Houve Vítima - Sem Colisão - Carro: ${values.carro}`
 
       const insertData: any = {
         usuario_id: user.id,
         titulo: tituloChamado,
         descricao: values.descricao,
         status: statusChamado,
+        prioridade: 'urgente',
         registro_motorista: values.registro_motorista,
         nome_motorista: values.nome_motorista,
         registro_cobrador: values.registro_cobrador,
@@ -132,7 +137,7 @@ export default function NovoChamadoCoc() {
         linha: values.linha,
         local_ocorrencia: values.local_ocorrencia,
         operacao: values.operacao,
-        tipo_chamado: values.avarias,
+        tipo_chamado: values.colisao === 'Sim' ? 'Com colisão' : 'Sem colisão',
       }
 
       if (garagemEncontrada) {
@@ -333,21 +338,46 @@ export default function NovoChamadoCoc() {
 
                 <FormField
                   control={form.control}
-                  name="avarias"
+                  name="colisao"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Avarias?</FormLabel>
-                      <Select onValueChange={field.onChange} defaultValue={field.value}>
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Selecione..." />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          <SelectItem value="Vítima com avarias">Vítima com avarias</SelectItem>
-                          <SelectItem value="Vítima sem avarias">Vítima sem avarias</SelectItem>
-                        </SelectContent>
-                      </Select>
+                      <FormLabel>Houve colisão?</FormLabel>
+                      <FormControl>
+                        <div className="flex gap-6 pt-2">
+                          <div className="flex items-center space-x-2">
+                            <Checkbox
+                              id="colisao-sim"
+                              checked={field.value === 'Sim'}
+                              onCheckedChange={(checked) => {
+                                if (checked) field.onChange('Sim')
+                                else if (field.value === 'Sim') field.onChange(undefined)
+                              }}
+                            />
+                            <label
+                              htmlFor="colisao-sim"
+                              className="text-sm font-medium leading-none cursor-pointer"
+                            >
+                              Sim
+                            </label>
+                          </div>
+                          <div className="flex items-center space-x-2">
+                            <Checkbox
+                              id="colisao-nao"
+                              checked={field.value === 'Não'}
+                              onCheckedChange={(checked) => {
+                                if (checked) field.onChange('Não')
+                                else if (field.value === 'Não') field.onChange(undefined)
+                              }}
+                            />
+                            <label
+                              htmlFor="colisao-nao"
+                              className="text-sm font-medium leading-none cursor-pointer"
+                            >
+                              Não
+                            </label>
+                          </div>
+                        </div>
+                      </FormControl>
                       <FormMessage />
                     </FormItem>
                   )}

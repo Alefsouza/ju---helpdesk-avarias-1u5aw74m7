@@ -283,7 +283,7 @@ function AppSidebar() {
                 </>
               )}
 
-              {(isAdmin || isVistoriador) && (
+              {isAdmin && (
                 <>
                   <SidebarMenuItem>
                     <SidebarMenuButton

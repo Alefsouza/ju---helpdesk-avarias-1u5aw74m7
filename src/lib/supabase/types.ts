@@ -998,7 +998,7 @@ export const Constants = {
 //   Policy "documentos_insert" (INSERT, PERMISSIVE) roles={public}
 //     WITH CHECK: true
 //   Policy "documentos_select" (SELECT, PERMISSIVE) roles={authenticated}
-//     USING: true
+//     USING: ((NOT is_vistoriador()) OR (garagem = ( SELECT perfil_usuario.garagem    FROM perfil_usuario   WHERE (perfil_usuario.id = auth.uid()))))
 //   Policy "documentos_select_public_os" (SELECT, PERMISSIVE) roles={public}
 //     USING: ((tipo_documento = ANY (ARRAY['Vistoria'::text, 'Espelho de Danos'::text])) AND (numero_os IS NOT NULL) AND (numero_os <> ''::text))
 //   Policy "documentos_update" (UPDATE, PERMISSIVE) roles={authenticated}
@@ -1008,7 +1008,7 @@ export const Constants = {
 //   Policy "formularios_espelho_danos_insert" (INSERT, PERMISSIVE) roles={public}
 //     WITH CHECK: true
 //   Policy "formularios_espelho_danos_select" (SELECT, PERMISSIVE) roles={authenticated}
-//     USING: ((chamado_id IN ( SELECT chamados.id    FROM chamados   WHERE ((chamados.usuario_id = auth.uid()) OR (chamados.responsavel_id = auth.uid())))) OR is_admin() OR is_responsavel() OR is_sinistro() OR is_juridico() OR is_secretaria_tecnica())
+//     USING: ((chamado_id IN ( SELECT chamados.id    FROM chamados   WHERE ((chamados.usuario_id = auth.uid()) OR (chamados.responsavel_id = auth.uid())))) OR is_admin() OR is_responsavel() OR is_sinistro() OR is_juridico() OR is_secretaria_tecnica() OR (is_vistoriador() AND (garagem = ( SELECT perfil_usuario.garagem    FROM perfil_usuario   WHERE (perfil_usuario.id = auth.uid())))))
 //   Policy "formularios_espelho_danos_update" (UPDATE, PERMISSIVE) roles={authenticated}
 //     USING: ((chamado_id IN ( SELECT chamados.id    FROM chamados   WHERE (chamados.responsavel_id = auth.uid()))) OR is_admin() OR is_responsavel() OR is_sinistro() OR is_juridico())
 //     WITH CHECK: ((chamado_id IN ( SELECT chamados.id    FROM chamados   WHERE (chamados.responsavel_id = auth.uid()))) OR is_admin() OR is_responsavel() OR is_sinistro() OR is_juridico())

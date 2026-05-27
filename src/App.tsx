@@ -96,7 +96,14 @@ const App = () => (
           <Route path="/ido/:id" element={<FormularioIdo />} />
           <Route path="/espelho-danos/sucesso" element={<SucessoEspelhoDanos />} />
           <Route path="/espelho-danos/:id" element={<FormularioEspelhoDanos />} />
-          <Route path="/os-manutencao" element={<OsManutencao />} />
+          <Route
+            path="/os-manutencao"
+            element={<OsManutencao garagemFilter="Cursino" title="OS - Manutenção (Cursino)" />}
+          />
+          <Route
+            path="/os-manutencao-leste"
+            element={<OsManutencao garagemFilter="Sapopemba" title="OS - Manutenção Leste" />}
+          />
           <Route path="/carros-liberados-plantao" element={<CarrosLiberadosPlantao />} />
           <Route path="*" element={<NotFound />} />
         </Routes>

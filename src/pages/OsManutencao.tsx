@@ -36,7 +36,15 @@ import { Label } from '@/components/ui/label'
 import { useToast } from '@/hooks/use-toast'
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from '@/components/ui/tooltip'
 
-export default function OsManutencao() {
+interface OsManutencaoProps {
+  garagemFilter?: string
+  title?: string
+}
+
+export default function OsManutencao({
+  garagemFilter = 'Cursino',
+  title = 'OS - Manutenção',
+}: OsManutencaoProps) {
   const [documentos, setDocumentos] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
@@ -55,11 +63,34 @@ export default function OsManutencao() {
   const uploadTargetDoc = useRef<any>(null)
   const { toast } = useToast()
 
+  const fetchDocumentos = async () => {
+    try {
+      setLoading(true)
+      const { data, error } = await supabase
+        .from('documentos')
+        .select('*')
+        .in('tipo_documento', ['Vistoria', 'Espelho de Danos'])
+        .not('numero_os', 'is', null)
+        .neq('numero_os', '')
+        .neq('excluido_manutencao' as any, true)
+        .ilike('garagem', garagemFilter)
+        .order('criado_em', { ascending: false })
+
+      if (error) throw error
+      setDocumentos(data || [])
+    } catch (error) {
+      console.error('Erro ao buscar documentos:', error)
+    } finally {
+      setLoading(false)
+    }
+  }
+
   useEffect(() => {
     fetchDocumentos()
 
+    const channelName = `documentos_os_changes_${garagemFilter}`
     const channel = supabase
-      .channel('documentos_os_changes')
+      .channel(channelName)
       .on(
         'postgres_changes',
         {
@@ -76,28 +107,7 @@ export default function OsManutencao() {
     return () => {
       supabase.removeChannel(channel)
     }
-  }, [])
-
-  const fetchDocumentos = async () => {
-    try {
-      setLoading(true)
-      const { data, error } = await supabase
-        .from('documentos')
-        .select('*')
-        .in('tipo_documento', ['Vistoria', 'Espelho de Danos'])
-        .not('numero_os', 'is', null)
-        .neq('numero_os', '')
-        .neq('excluido_manutencao' as any, true)
-        .order('criado_em', { ascending: false })
-
-      if (error) throw error
-      setDocumentos(data || [])
-    } catch (error) {
-      console.error('Erro ao buscar documentos:', error)
-    } finally {
-      setLoading(false)
-    }
-  }
+  }, [garagemFilter])
 
   const filteredDocs = documentos.filter(
     (doc) =>
@@ -352,7 +362,7 @@ export default function OsManutencao() {
               <Wrench className="h-6 w-6 text-primary" />
             </div>
             <div>
-              <h1 className="text-xl font-bold text-white">OS - Manutenção</h1>
+              <h1 className="text-xl font-bold text-white">{title}</h1>
             </div>
           </div>
         </div>

@@ -1281,13 +1281,20 @@ export const Constants = {
 //    LANGUAGE plpgsql
 //    SECURITY DEFINER
 //   AS $function$
-//   BEGIN
-//     UPDATE public.documentos
-//     SET excluido_manutencao = TRUE,
-//         status_liberacao = p_status
-//     WHERE id = p_id;
-//   END;
-//   $function$
+//     BEGIN
+//       IF p_status = 'Liberado (Sem Pendências)' OR p_status = 'Liberado' THEN
+//         UPDATE public.documentos
+//         SET excluido_manutencao = TRUE,
+//             status_liberacao = p_status
+//         WHERE id = p_id;
+//       ELSE
+//         UPDATE public.documentos
+//         SET excluido_manutencao = FALSE,
+//             status_liberacao = p_status
+//         WHERE id = p_id;
+//       END IF;
+//     END;
+//     $function$
 //
 // FUNCTION marcar_chamados_pendentes_por_inatividade()
 //   CREATE OR REPLACE FUNCTION public.marcar_chamados_pendentes_por_inatividade()

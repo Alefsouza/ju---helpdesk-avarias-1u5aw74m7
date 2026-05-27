@@ -104,7 +104,18 @@ const App = () => (
             path="/os-manutencao-leste"
             element={<OsManutencao garagemFilter="Sapopemba" title="OS - Manutenção Leste" />}
           />
-          <Route path="/carros-liberados-plantao" element={<CarrosLiberadosPlantao />} />
+          <Route
+            path="/carros-liberados-plantao"
+            element={
+              <CarrosLiberadosPlantao garagemFilter="Cursino" title="Carros Liberados (Cursino)" />
+            }
+          />
+          <Route
+            path="/carros-liberados-leste"
+            element={
+              <CarrosLiberadosPlantao garagemFilter="Sapopemba" title="Carros Liberados (Leste)" />
+            }
+          />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </TooltipProvider>

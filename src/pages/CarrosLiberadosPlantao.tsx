@@ -26,7 +26,15 @@ import {
 import { Skeleton } from '@/components/ui/skeleton'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 
-export default function CarrosLiberadosPlantao() {
+interface CarrosLiberadosProps {
+  garagemFilter?: string
+  title?: string
+}
+
+export default function CarrosLiberadosPlantao({
+  garagemFilter = 'Cursino',
+  title = 'Carros Liberados - Plantão',
+}: CarrosLiberadosProps) {
   const [documentos, setDocumentos] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
@@ -36,7 +44,7 @@ export default function CarrosLiberadosPlantao() {
     fetchDocumentos()
 
     const subscriptionDocs = supabase
-      .channel('public:documentos_plantao')
+      .channel(`public:documentos_liberados_${garagemFilter}`)
       .on(
         'postgres_changes',
         {
@@ -51,7 +59,7 @@ export default function CarrosLiberadosPlantao() {
       .subscribe()
 
     const subscriptionChamados = supabase
-      .channel('public:chamados_operacao')
+      .channel(`public:chamados_operacao_${garagemFilter}`)
       .on(
         'postgres_changes',
         {
@@ -69,7 +77,7 @@ export default function CarrosLiberadosPlantao() {
       subscriptionDocs.unsubscribe()
       subscriptionChamados.unsubscribe()
     }
-  }, [])
+  }, [garagemFilter])
 
   const fetchDocumentos = async () => {
     try {
@@ -79,6 +87,7 @@ export default function CarrosLiberadosPlantao() {
         .in('tipo_documento', ['Vistoria', 'Espelho de Danos'])
         .not('numero_os', 'is', null)
         .neq('numero_os', '')
+        .ilike('garagem', garagemFilter)
 
       if (error) throw error
 
@@ -159,7 +168,7 @@ export default function CarrosLiberadosPlantao() {
           <div>
             <h1 className="text-3xl font-bold text-gray-900 tracking-tight flex items-center gap-2">
               <Bus className="h-8 w-8 text-primary" />
-              Carros Liberados - Plantão
+              {title}
             </h1>
             <p className="text-gray-500 mt-1">
               Acompanhamento em tempo real das operações de manutenção

@@ -28,6 +28,7 @@ import {
   Folder,
   FileText,
   Wrench,
+  CheckCircle,
 } from 'lucide-react'
 import { Skeleton } from '@/components/ui/skeleton'
 import { useEffect, useState } from 'react'
@@ -306,6 +307,30 @@ function AppSidebar() {
                       <Link to="/os-manutencao-leste">
                         <Wrench />
                         <span>OS Manutenção Leste</span>
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                  <SidebarMenuItem>
+                    <SidebarMenuButton
+                      asChild
+                      isActive={location.pathname === '/carros-liberados-plantao'}
+                      className="data-[active=true]:bg-transparent data-[active=true]:text-[#c8e6c9] hover:bg-[#c8e6c9]/10 hover:text-[#c8e6c9] text-white transition-colors"
+                    >
+                      <Link to="/carros-liberados-plantao">
+                        <CheckCircle />
+                        <span>Carros Liberados (Cursino)</span>
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                  <SidebarMenuItem>
+                    <SidebarMenuButton
+                      asChild
+                      isActive={location.pathname === '/carros-liberados-leste'}
+                      className="data-[active=true]:bg-transparent data-[active=true]:text-[#c8e6c9] hover:bg-[#c8e6c9]/10 hover:text-[#c8e6c9] text-white transition-colors"
+                    >
+                      <Link to="/carros-liberados-leste">
+                        <CheckCircle />
+                        <span>Carros Liberados (Leste)</span>
                       </Link>
                     </SidebarMenuButton>
                   </SidebarMenuItem>

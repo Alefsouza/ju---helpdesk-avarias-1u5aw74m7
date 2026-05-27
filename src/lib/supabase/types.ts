@@ -983,7 +983,7 @@ export const Constants = {
 //   Policy "chamados_insert" (INSERT, PERMISSIVE) roles={authenticated}
 //     WITH CHECK: (usuario_id = auth.uid())
 //   Policy "chamados_select" (SELECT, PERMISSIVE) roles={authenticated}
-//     USING: ((usuario_id = auth.uid()) OR (responsavel_id = auth.uid()) OR is_admin() OR is_responsavel() OR is_sos() OR is_coc() OR is_juridico() OR is_secretaria_tecnica() OR (is_sinistro() AND ((( SELECT perfil_usuario.garagem    FROM perfil_usuario   WHERE (perfil_usuario.id = auth.uid())) IS NOT NULL) AND (( SELECT perfil_usuario.garagem    FROM perfil_usuario   WHERE (perfil_usuario.id = auth.uid())) = COALESCE(garagem, ( SELECT perfil_usuario.garagem    FROM perfil_usuario   WHERE (perfil_usuario.id = chamados.usuario_id)))))))
+//     USING: ((usuario_id = auth.uid()) OR (responsavel_id = auth.uid()) OR is_admin() OR is_responsavel() OR is_sos() OR is_coc() OR is_juridico() OR is_secretaria_tecnica() OR (is_vistoriador() AND (garagem = ( SELECT perfil_usuario.garagem    FROM perfil_usuario   WHERE (perfil_usuario.id = auth.uid())))) OR (is_sinistro() AND ((( SELECT perfil_usuario.garagem    FROM perfil_usuario   WHERE (perfil_usuario.id = auth.uid())) IS NOT NULL) AND (( SELECT perfil_usuario.garagem    FROM perfil_usuario   WHERE (perfil_usuario.id = auth.uid())) = COALESCE(garagem, ( SELECT perfil_usuario.garagem    FROM perfil_usuario   WHERE (perfil_usuario.id = chamados.usuario_id)))))))
 //   Policy "chamados_select_public_manutencao" (SELECT, PERMISSIVE) roles={public}
 //     USING: (tipo_chamado = 'OS de Manutenção'::text)
 //   Policy "chamados_update" (UPDATE, PERMISSIVE) roles={authenticated}
@@ -1513,6 +1513,22 @@ export const Constants = {
 //   END;
 //   $function$
 //
+// FUNCTION set_garagem_from_profile()
+//   CREATE OR REPLACE FUNCTION public.set_garagem_from_profile()
+//    RETURNS trigger
+//    LANGUAGE plpgsql
+//    SECURITY DEFINER
+//   AS $function$
+//   BEGIN
+//     IF NEW.garagem IS NULL OR NEW.garagem = '' THEN
+//       SELECT garagem INTO NEW.garagem
+//       FROM public.perfil_usuario
+//       WHERE id = auth.uid();
+//     END IF;
+//     RETURN NEW;
+//   END;
+//   $function$
+//
 // FUNCTION sync_chamado_status_interno()
 //   CREATE OR REPLACE FUNCTION public.sync_chamado_status_interno()
 //    RETURNS trigger
@@ -1550,9 +1566,13 @@ export const Constants = {
 
 // --- TRIGGERS ---
 // Table: chamados
+//   trg_chamados_set_garagem: CREATE TRIGGER trg_chamados_set_garagem BEFORE INSERT ON public.chamados FOR EACH ROW EXECUTE FUNCTION set_garagem_from_profile()
 //   trigger_sync_chamado_status_interno: CREATE TRIGGER trigger_sync_chamado_status_interno BEFORE INSERT OR UPDATE OF responsavel_id ON public.chamados FOR EACH ROW EXECUTE FUNCTION sync_chamado_status_interno()
 // Table: documentos
+//   trg_documentos_set_garagem: CREATE TRIGGER trg_documentos_set_garagem BEFORE INSERT ON public.documentos FOR EACH ROW EXECUTE FUNCTION set_garagem_from_profile()
 //   update_documentos_atualizado_em_trigger: CREATE TRIGGER update_documentos_atualizado_em_trigger BEFORE UPDATE ON public.documentos FOR EACH ROW EXECUTE FUNCTION update_documentos_atualizado_em()
+// Table: formularios_espelho_danos
+//   trg_formularios_espelho_danos_set_garagem: CREATE TRIGGER trg_formularios_espelho_danos_set_garagem BEFORE INSERT ON public.formularios_espelho_danos FOR EACH ROW EXECUTE FUNCTION set_garagem_from_profile()
 
 // --- INDEXES ---
 // Table: documentos

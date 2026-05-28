@@ -156,25 +156,30 @@ export default function NovoChamadoCoc() {
 
       if (chamadoError) throw chamadoError
 
-      // 2. Upload files and save attachments
+      // 2. Upload files and save as internal attachments
       for (const f of files) {
         const fileExt = f.name.split('.').pop() || 'dat'
-        const fileName = `${chamado.id}-${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`
+        const fileName = `${chamado.id}/${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`
 
-        const { error: uploadError } = await supabase.storage.from('anexos').upload(fileName, f)
+        const { error: uploadError } = await supabase.storage
+          .from('anexos_chamados_interno')
+          .upload(fileName, f)
 
         if (uploadError) throw uploadError
 
-        const { data: publicUrlData } = supabase.storage.from('anexos').getPublicUrl(fileName)
+        const { data: publicUrlData } = supabase.storage
+          .from('anexos_chamados_interno')
+          .getPublicUrl(fileName)
 
         const mappedTipo = f.type || 'application/octet-stream'
 
-        const { error: anexoError } = await supabase.from('anexos_chamado').insert({
+        const { error: anexoError } = await supabase.from('anexos_chamado_interno').insert({
           chamado_id: chamado.id,
-          url_arquivo: publicUrlData.publicUrl,
+          usuario_id: user.id,
+          arquivo_url: publicUrlData.publicUrl,
           nome_arquivo: f.name,
           tipo_arquivo: mappedTipo,
-          tamanho_mb: Number((f.size / (1024 * 1024)).toFixed(2)),
+          tamanho_bytes: f.size,
         })
 
         if (anexoError) throw anexoError

@@ -25,6 +25,7 @@ import { Search, Inbox, AlertCircle, ArrowRight, AlertTriangle } from 'lucide-re
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent } from '@/components/ui/card'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
+import { cn } from '@/lib/utils'
 
 export default function ChamadosAbertos() {
   const { user } = useAuth()
@@ -73,29 +74,47 @@ export default function ChamadosAbertos() {
           {} as Record<string, string>,
         )
 
-        const carros = data.map((c) => c.carro).filter(Boolean)
+        const extractCarro = (c: any) => {
+          if (c.carro && c.carro.trim() !== '') return c.carro.trim().toUpperCase()
+          const matchCarro = c.titulo?.match(/carro\s+([a-zA-Z0-9_-]+)/i)
+          if (matchCarro) return matchCarro[1].toUpperCase()
+          const matchDigits = c.titulo?.match(/\b(\d{3,6})\b/)
+          return matchDigits ? matchDigits[1] : null
+        }
+
+        const dataProcessed = data.map((c) => ({
+          ...c,
+          carroExtracted: extractCarro(c),
+          dateCriadoNorm: c.criado_em?.substring(0, 10),
+        }))
+
+        const carros = dataProcessed.map((c) => c.carroExtracted).filter(Boolean)
         const duplicatesSet = new Set<string>()
 
         if (carros.length > 0) {
           const { data: inServiceTickets } = await supabase
             .from('chamados')
-            .select('id, carro, data_ocorrencia, status')
+            .select('id, carro, titulo, data_ocorrencia, criado_em, status')
             .eq('status', 'em_atendimento')
-            .not('carro', 'is', null)
 
           if (inServiceTickets) {
-            data.forEach((c) => {
-              if (c.carro) {
-                const cDateCriado = c.criado_em?.substring(0, 10)
-                const cCarroNorm = c.carro.trim().toLowerCase()
+            const inServiceProcessed = inServiceTickets.map((d) => ({
+              ...d,
+              carroExtracted: extractCarro(d),
+              dateOcorrenciaNorm: d.data_ocorrencia?.substring(0, 10),
+              dateCriadoNorm: d.criado_em?.substring(0, 10),
+            }))
 
-                const hasDuplicate = inServiceTickets.some((d) => {
-                  if (!d.carro || !d.data_ocorrencia) return false
-                  const dCarroNorm = d.carro.trim().toLowerCase()
+            dataProcessed.forEach((c) => {
+              if (c.carroExtracted) {
+                const hasDuplicate = inServiceProcessed.some((d) => {
+                  if (!d.carroExtracted) return false
+                  const isCarroMatch = d.carroExtracted === c.carroExtracted
+                  const isDateMatch =
+                    (d.dateCriadoNorm && d.dateCriadoNorm === c.dateCriadoNorm) ||
+                    (d.dateOcorrenciaNorm && d.dateOcorrenciaNorm === c.dateCriadoNorm)
 
-                  return (
-                    dCarroNorm === cCarroNorm && cDateCriado === d.data_ocorrencia.substring(0, 10)
-                  )
+                  return isCarroMatch && isDateMatch
                 })
 
                 if (hasDuplicate) {
@@ -106,7 +125,7 @@ export default function ChamadosAbertos() {
           }
         }
 
-        const chamadosComNome = data.map((c) => ({
+        const chamadosComNome = dataProcessed.map((c) => ({
           ...c,
           nome_usuario: perfilMap?.[c.usuario_id] || 'Usuário Desconhecido',
           is_duplicate: duplicatesSet.has(c.id),
@@ -326,7 +345,12 @@ export default function ChamadosAbertos() {
                 {filteredChamados.map((c) => (
                   <TableRow
                     key={c.id}
-                    className="cursor-pointer hover:bg-slate-50/80 transition-colors group"
+                    className={cn(
+                      'cursor-pointer transition-colors group',
+                      c.is_duplicate
+                        ? 'bg-amber-50/40 hover:bg-amber-50/60'
+                        : 'hover:bg-slate-50/80',
+                    )}
                     onClick={() => navigateToDetails(c.id)}
                   >
                     <TableCell>
@@ -340,7 +364,8 @@ export default function ChamadosAbertos() {
                               </TooltipTrigger>
                               <TooltipContent>
                                 <p>
-                                  Já existe um chamado em atendimento para este veículo nesta data.
+                                  Atenção: Já existe um chamado em atendimento para este veículo com
+                                  esta data.
                                 </p>
                               </TooltipContent>
                             </Tooltip>
@@ -382,7 +407,12 @@ export default function ChamadosAbertos() {
             {filteredChamados.map((c) => (
               <Card
                 key={c.id}
-                className="cursor-pointer hover:border-slate-300 transition-colors"
+                className={cn(
+                  'cursor-pointer transition-colors',
+                  c.is_duplicate
+                    ? 'bg-amber-50/40 border-amber-200 hover:border-amber-300'
+                    : 'hover:border-slate-300',
+                )}
                 onClick={() => navigateToDetails(c.id)}
               >
                 <CardContent className="p-4 space-y-4">
@@ -397,7 +427,8 @@ export default function ChamadosAbertos() {
                             </TooltipTrigger>
                             <TooltipContent>
                               <p>
-                                Já existe um chamado em atendimento para este veículo nesta data.
+                                Atenção: Já existe um chamado em atendimento para este veículo com
+                                esta data.
                               </p>
                             </TooltipContent>
                           </Tooltip>

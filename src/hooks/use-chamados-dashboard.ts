@@ -32,7 +32,8 @@ export function useChamadosDashboard() {
             (other) =>
               other.id !== c.id &&
               other.carro === c.carro &&
-              other.data_ocorrencia === c.data_ocorrencia,
+              other.data_ocorrencia === c.data_ocorrencia &&
+              (other.status === 'aberto' || other.status === 'em_atendimento'),
           ),
         )
 

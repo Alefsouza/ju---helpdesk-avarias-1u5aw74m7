@@ -22,6 +22,8 @@ import {
 } from '@/components/ui/table'
 import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
+import { AlertTriangle } from 'lucide-react'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -41,6 +43,9 @@ type Chamado = {
   prioridade: string
   criado_em: string
   pia?: string | null
+  carro?: string | null
+  data_ocorrencia?: string | null
+  is_duplicate?: boolean
 }
 
 const statusColors: Record<string, string> = {
@@ -115,7 +120,7 @@ export default function MeusChamados() {
 
       let query = supabase
         .from('chamados')
-        .select('id, titulo, status, prioridade, criado_em, pia')
+        .select('id, titulo, status, prioridade, criado_em, pia, carro, data_ocorrencia')
         .eq('usuario_id', user.id)
         .order(sortConfig.field, { ascending: sortConfig.direction === 'asc' })
 
@@ -147,7 +152,38 @@ export default function MeusChamados() {
       const { data, error: dbError } = await query
       if (dbError) throw dbError
 
-      setChamados(data || [])
+      let finalData = data || []
+      const carros = finalData.map((c) => c.carro).filter(Boolean)
+      const duplicatesSet = new Set<string>()
+
+      if (carros.length > 0) {
+        const { data: possibleDuplicates } = await supabase
+          .from('chamados')
+          .select('id, carro, data_ocorrencia')
+          .in('carro', carros)
+          .in('status', ['aberto', 'em_atendimento'])
+
+        if (possibleDuplicates) {
+          finalData.forEach((c) => {
+            if (c.carro && c.data_ocorrencia) {
+              const hasDuplicate = possibleDuplicates.some(
+                (d) =>
+                  d.id !== c.id && d.carro === c.carro && d.data_ocorrencia === c.data_ocorrencia,
+              )
+              if (hasDuplicate) {
+                duplicatesSet.add(c.id)
+              }
+            }
+          })
+        }
+      }
+
+      const chamadosComDuplicate = finalData.map((c) => ({
+        ...c,
+        is_duplicate: duplicatesSet.has(c.id),
+      }))
+
+      setChamados(chamadosComDuplicate)
     } catch (err: any) {
       console.error(err)
       setError('Erro ao carregar chamados')
@@ -340,12 +376,29 @@ export default function MeusChamados() {
                   <TableRow key={c.id} className="hover:bg-muted/50">
                     <TableCell className="font-medium text-slate-600">{c.pia || '—'}</TableCell>
                     <TableCell className="font-medium">
-                      <Link
-                        to={`/dashboard/chamados/${c.id}`}
-                        className="hover:underline hover:text-primary transition-colors"
-                      >
-                        {c.titulo}
-                      </Link>
+                      <div className="flex items-center gap-2">
+                        <Link
+                          to={`/dashboard/chamados/${c.id}`}
+                          className="hover:underline hover:text-primary transition-colors line-clamp-2"
+                        >
+                          {c.titulo}
+                        </Link>
+                        {c.is_duplicate && (
+                          <TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <AlertTriangle className="h-4 w-4 text-yellow-500 shrink-0 cursor-help" />
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                <p>
+                                  Já existe um chamado para esse Carro, com a mesma data de
+                                  ocorrência.
+                                </p>
+                              </TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
+                        )}
+                      </div>
                     </TableCell>
                     <TableCell>
                       <Badge variant="outline" className={statusColors[c.status] || ''}>
@@ -393,12 +446,28 @@ export default function MeusChamados() {
                     <span className="text-xs text-muted-foreground">{formatDate(c.criado_em)}</span>
                   </div>
 
-                  <Link
-                    to={`/dashboard/chamados/${c.id}`}
-                    className="font-semibold text-lg leading-tight hover:text-primary"
-                  >
-                    {c.titulo}
-                  </Link>
+                  <div className="flex items-center justify-between gap-2">
+                    <Link
+                      to={`/dashboard/chamados/${c.id}`}
+                      className="font-semibold text-lg leading-tight hover:text-primary line-clamp-2"
+                    >
+                      {c.titulo}
+                    </Link>
+                    {c.is_duplicate && (
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <AlertTriangle className="h-5 w-5 text-yellow-500 shrink-0 cursor-help" />
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <p>
+                              Já existe um chamado para esse Carro, com a mesma data de ocorrência.
+                            </p>
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+                    )}
+                  </div>
 
                   <div className="flex flex-wrap gap-2 mt-2">
                     <Badge variant="outline" className={statusColors[c.status] || ''}>

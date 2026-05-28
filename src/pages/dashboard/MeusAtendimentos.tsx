@@ -23,9 +23,11 @@ import {
   ArrowUpDown,
   RotateCcw,
   Link as LinkIcon,
+  AlertTriangle,
 } from 'lucide-react'
 import { UnificarChamadoModal } from '@/components/UnificarChamadoModal'
 import { Badge } from '@/components/ui/badge'
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -182,12 +184,26 @@ export default function MeusAtendimentos() {
           {} as Record<string, string>,
         )
 
+        const duplicatesSet = new Set<string>()
+        data.forEach((c) => {
+          if (c.carro && c.data_ocorrencia) {
+            const hasDuplicate = data.some(
+              (d) =>
+                d.id !== c.id && d.carro === c.carro && d.data_ocorrencia === c.data_ocorrencia,
+            )
+            if (hasDuplicate) {
+              duplicatesSet.add(c.id)
+            }
+          }
+        })
+
         const chamadosComNome = data.map((c) => ({
           ...c,
           nome_usuario: perfilMap?.[c.usuario_id] || 'Usuário Desconhecido',
           nome_responsavel: c.responsavel_id
             ? perfilMap?.[c.responsavel_id] || 'Sem responsável'
             : 'Sem responsável',
+          is_duplicate: duplicatesSet.has(c.id),
         }))
 
         setChamados(chamadosComNome)
@@ -537,8 +553,25 @@ export default function MeusAtendimentos() {
                       </div>
                     </TableCell>
                     <TableCell className="align-middle">
-                      <div className="line-clamp-2 font-medium text-slate-900" title={c.titulo}>
-                        {c.titulo}
+                      <div className="flex items-center gap-2">
+                        <div className="line-clamp-2 font-medium text-slate-900" title={c.titulo}>
+                          {c.titulo}
+                        </div>
+                        {c.is_duplicate && (
+                          <TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <AlertTriangle className="h-4 w-4 text-yellow-500 shrink-0 cursor-help" />
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                <p>
+                                  Já existe um chamado para esse Carro, com a mesma data de
+                                  ocorrência.
+                                </p>
+                              </TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
+                        )}
                       </div>
                     </TableCell>
                     <TableCell className="align-middle text-sm">
@@ -655,7 +688,24 @@ export default function MeusAtendimentos() {
                       <div className="text-xs font-semibold text-slate-500 mb-1 flex items-center gap-1">
                         R.A.: {c.pia || '—'}
                       </div>
-                      <h3 className="font-semibold text-slate-900 line-clamp-1">{c.titulo}</h3>
+                      <div className="flex items-center gap-2">
+                        <h3 className="font-semibold text-slate-900 line-clamp-1">{c.titulo}</h3>
+                        {c.is_duplicate && (
+                          <TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <AlertTriangle className="h-4 w-4 text-yellow-500 shrink-0 cursor-help" />
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                <p>
+                                  Já existe um chamado para esse Carro, com a mesma data de
+                                  ocorrência.
+                                </p>
+                              </TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
+                        )}
+                      </div>
                     </div>
                   </div>
 

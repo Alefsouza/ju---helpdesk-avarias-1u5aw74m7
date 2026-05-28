@@ -79,8 +79,9 @@ export default function ChamadosAbertos() {
         if (carros.length > 0) {
           const { data: possibleDuplicates } = await supabase
             .from('chamados')
-            .select('id, carro, data_ocorrencia')
+            .select('id, carro, data_ocorrencia, status')
             .in('carro', carros)
+            .in('status', ['aberto', 'em_atendimento'])
 
           if (possibleDuplicates) {
             data.forEach((c) => {

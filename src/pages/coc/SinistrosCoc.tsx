@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo } from 'react'
 import { supabase } from '@/lib/supabase/client'
 import { format, parseISO } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
-import { Eye, PlusCircle, Search } from 'lucide-react'
+import { Eye, Search } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import {
@@ -30,7 +30,6 @@ import {
 } from '@/components/ui/dialog'
 import { Label } from '@/components/ui/label'
 import { toast } from 'sonner'
-import { Badge } from '@/components/ui/badge'
 
 export default function SinistrosCoc() {
   const [sinistros, setSinistros] = useState<any[]>([])
@@ -42,10 +41,7 @@ export default function SinistrosCoc() {
   const [searchQuery, setSearchQuery] = useState('')
 
   const [viewModalOpen, setViewModalOpen] = useState(false)
-  const [osModalOpen, setOsModalOpen] = useState(false)
   const [selectedSinistro, setSelectedSinistro] = useState<any>(null)
-  const [osNumber, setOsNumber] = useState('')
-  const [savingOS, setSavingOS] = useState(false)
 
   const fetchSinistros = async () => {
     try {
@@ -140,9 +136,8 @@ export default function SinistrosCoc() {
         const matchCarro = s.carro?.toLowerCase().includes(query)
         const matchTitulo = s.titulo?.toLowerCase().includes(query)
         const matchMotorista = s.nome_motorista?.toLowerCase().includes(query)
-        const matchOs = s.numero_os?.toLowerCase().includes(query)
 
-        if (!matchCarro && !matchTitulo && !matchMotorista && !matchOs) {
+        if (!matchCarro && !matchTitulo && !matchMotorista) {
           return false
         }
       }
@@ -151,40 +146,9 @@ export default function SinistrosCoc() {
     })
   }, [sinistros, filterType, selectedMonth, selectedDay, searchQuery])
 
-  const handleSaveOS = async () => {
-    if (!osNumber.trim()) {
-      toast.error('Informe o número da OS')
-      return
-    }
-
-    setSavingOS(true)
-    try {
-      const { error } = await supabase
-        .from('chamados')
-        .update({ numero_os: osNumber })
-        .eq('id', selectedSinistro.id)
-
-      if (error) throw error
-
-      toast.success('OS salva com sucesso')
-      setOsModalOpen(false)
-      fetchSinistros()
-    } catch (error: any) {
-      toast.error('Erro ao salvar OS: ' + error.message)
-    } finally {
-      setSavingOS(false)
-    }
-  }
-
   const openView = (s: any) => {
     setSelectedSinistro(s)
     setViewModalOpen(true)
-  }
-
-  const openOS = (s: any) => {
-    setSelectedSinistro(s)
-    setOsNumber('')
-    setOsModalOpen(true)
   }
 
   return (
@@ -251,7 +215,7 @@ export default function SinistrosCoc() {
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
             <Input
-              placeholder="Pesquisar por carro, título, motorista ou OS..."
+              placeholder="Pesquisar por carro, título ou motorista..."
               className="pl-9"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
@@ -305,24 +269,19 @@ export default function SinistrosCoc() {
                     Local
                   </div>
                 </TableHead>
-                <TableHead className="p-0 border-r border-slate-200/50 hover:bg-slate-50 transition-colors">
-                  <div className="resize-x overflow-hidden w-[120px] min-w-[80px] h-12 px-4 flex items-center">
-                    OS
-                  </div>
-                </TableHead>
                 <TableHead className="text-right whitespace-nowrap px-4">Ações</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {loading ? (
                 <TableRow>
-                  <TableCell colSpan={10} className="text-center py-8 text-slate-500">
+                  <TableCell colSpan={9} className="text-center py-8 text-slate-500">
                     Carregando...
                   </TableCell>
                 </TableRow>
               ) : filteredSinistros.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={10} className="text-center py-8 text-slate-500">
+                  <TableCell colSpan={9} className="text-center py-8 text-slate-500">
                     Nenhum sinistro encontrado
                   </TableCell>
                 </TableRow>
@@ -349,17 +308,6 @@ export default function SinistrosCoc() {
                     <TableCell className="max-w-[300px] truncate" title={s.local_ocorrencia}>
                       {s.local_ocorrencia || '-'}
                     </TableCell>
-                    <TableCell className="whitespace-nowrap">
-                      {s.numero_os ? (
-                        <Badge className="bg-emerald-50 text-emerald-600 border-emerald-200 hover:bg-emerald-100">
-                          {s.numero_os}
-                        </Badge>
-                      ) : (
-                        <Badge variant="secondary" className="text-slate-500">
-                          Sem OS
-                        </Badge>
-                      )}
-                    </TableCell>
                     <TableCell className="text-right whitespace-nowrap">
                       <div className="flex justify-end gap-2">
                         <Button
@@ -370,16 +318,6 @@ export default function SinistrosCoc() {
                         >
                           <Eye className="w-4 h-4 text-slate-600" />
                         </Button>
-                        {!s.numero_os && (
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => openOS(s)}
-                            title="Preencher OS"
-                          >
-                            <PlusCircle className="w-4 h-4 text-emerald-600" />
-                          </Button>
-                        )}
                       </div>
                     </TableCell>
                   </TableRow>
@@ -452,12 +390,6 @@ export default function SinistrosCoc() {
                 <p className="text-sm font-medium text-slate-500">Tipo de Avaria</p>
                 <p className="text-sm">{selectedSinistro.tipo_chamado || '-'}</p>
               </div>
-              <div className="space-y-1 sm:col-span-2">
-                <p className="text-sm font-medium text-slate-500">OS</p>
-                <p className="text-sm font-bold text-emerald-600">
-                  {selectedSinistro.numero_os || 'Não preenchido'}
-                </p>
-              </div>
 
               {selectedSinistro.anexos_chamado?.[0] && (
                 <div className="space-y-1 sm:col-span-2 mt-4">
@@ -489,49 +421,6 @@ export default function SinistrosCoc() {
           <DialogFooter>
             <Button variant="outline" onClick={() => setViewModalOpen(false)}>
               Fechar
-            </Button>
-            {selectedSinistro && !selectedSinistro.numero_os && (
-              <Button
-                onClick={() => {
-                  setViewModalOpen(false)
-                  openOS(selectedSinistro)
-                }}
-              >
-                Preencher OS
-              </Button>
-            )}
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      <Dialog open={osModalOpen} onOpenChange={setOsModalOpen}>
-        <DialogContent className="max-w-sm">
-          <DialogHeader>
-            <DialogTitle>Preencher Ordem de Serviço</DialogTitle>
-            <DialogDescription>Vincule um número de OS a este sinistro.</DialogDescription>
-          </DialogHeader>
-
-          <div className="py-4">
-            <div className="space-y-2">
-              <Label htmlFor="os_number">
-                Número da OS <span className="text-red-500">*</span>
-              </Label>
-              <Input
-                id="os_number"
-                placeholder="Ex: 12345"
-                value={osNumber}
-                onChange={(e) => setOsNumber(e.target.value)}
-                autoFocus
-              />
-            </div>
-          </div>
-
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setOsModalOpen(false)} disabled={savingOS}>
-              Cancelar
-            </Button>
-            <Button onClick={handleSaveOS} disabled={savingOS}>
-              {savingOS ? 'Salvando...' : 'Salvar'}
             </Button>
           </DialogFooter>
         </DialogContent>

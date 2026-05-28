@@ -321,7 +321,7 @@ export default function ChamadosAbertos() {
                               <TooltipContent>
                                 <p>
                                   Atenção: Já existe um chamado ativo (aberto ou em atendimento)
-                                  para este veículo com a mesma data de criação ou ocorrência.
+                                  para este veículo com a mesma Data de Ocorrência e Carro.
                                 </p>
                               </TooltipContent>
                             </Tooltip>
@@ -384,7 +384,7 @@ export default function ChamadosAbertos() {
                             <TooltipContent>
                               <p>
                                 Atenção: Já existe um chamado ativo (aberto ou em atendimento) para
-                                este veículo com a mesma data de criação ou ocorrência.
+                                este veículo com a mesma Data de Ocorrência e Carro.
                               </p>
                             </TooltipContent>
                           </Tooltip>

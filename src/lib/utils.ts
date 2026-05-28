@@ -1,39 +1,31 @@
-import { type ClassValue, clsx } from 'clsx'
+import { clsx, type ClassValue } from 'clsx'
 import { twMerge } from 'tailwind-merge'
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
 }
 
-export function isDuplicateTicket(ticket: any, allActiveTickets: any[]) {
-  if (!ticket || !ticket.carro) return false
+export function isDuplicateTicket(ticket: any, activeTickets: any[]) {
+  if (!ticket || !activeTickets || !Array.isArray(activeTickets)) return false
 
-  const ticketCarroNum = ticket.carro.replace(/\D/g, '')
-  if (!ticketCarroNum) return false
+  const ticketDate = ticket.data_ocorrencia
+  const ticketCar = ticket.carro
 
-  const getTicketDate = (t: any) => {
-    if (t.data_ocorrencia) return t.data_ocorrencia.split('T')[0]
-    if (t.criado_em) return new Date(t.criado_em).toISOString().split('T')[0]
-    return null
-  }
+  if (!ticketDate || !ticketCar) return false
 
-  const ticketDate = getTicketDate(ticket)
-  if (!ticketDate) return false
-
-  return allActiveTickets.some((other) => {
-    // Cannot be duplicate of itself
+  return activeTickets.some((other) => {
     if (other.id === ticket.id) return false
 
-    // Only check against open or in-progress tickets
-    if (other.status !== 'aberto' && other.status !== 'em_atendimento') return false
+    if (!other.data_ocorrencia || other.data_ocorrencia !== ticketDate) return false
 
-    if (!other.carro) return false
-    const otherCarroNum = other.carro.replace(/\D/g, '')
-    if (!otherCarroNum) return false
+    const otherCar = other.carro
+    const otherTitle = other.titulo || ''
+    const ticketTitle = ticket.titulo || ''
 
-    const otherDate = getTicketDate(other)
-    if (!otherDate) return false
+    const isExactCarMatch = !!(otherCar && otherCar === ticketCar)
+    const isTicketCarInOtherTitle = !!(ticketCar && otherTitle.includes(ticketCar))
+    const isOtherCarInTicketTitle = !!(otherCar && ticketTitle.includes(otherCar))
 
-    return ticketCarroNum === otherCarroNum && ticketDate === otherDate
+    return isExactCarMatch || isTicketCarInOtherTitle || isOtherCarInTicketTitle
   })
 }

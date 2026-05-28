@@ -77,21 +77,27 @@ export default function ChamadosAbertos() {
         const duplicatesSet = new Set<string>()
 
         if (carros.length > 0) {
-          const { data: possibleDuplicates } = await supabase
+          const { data: inServiceTickets } = await supabase
             .from('chamados')
-            .select('id, carro, data_ocorrencia, criado_em, status')
-            .in('carro', carros)
+            .select('id, carro, data_ocorrencia, status')
+            .eq('status', 'em_atendimento')
+            .not('carro', 'is', null)
 
-          if (possibleDuplicates) {
+          if (inServiceTickets) {
             data.forEach((c) => {
               if (c.carro) {
                 const cDateCriado = c.criado_em?.substring(0, 10)
-                const hasDuplicate = possibleDuplicates.some((d) => {
-                  if (d.id === c.id || d.carro !== c.carro) return false
-                  return Boolean(
-                    cDateCriado && d.data_ocorrencia && cDateCriado === d.data_ocorrencia,
+                const cCarroNorm = c.carro.trim().toLowerCase()
+
+                const hasDuplicate = inServiceTickets.some((d) => {
+                  if (!d.carro || !d.data_ocorrencia) return false
+                  const dCarroNorm = d.carro.trim().toLowerCase()
+
+                  return (
+                    dCarroNorm === cCarroNorm && cDateCriado === d.data_ocorrencia.substring(0, 10)
                   )
                 })
+
                 if (hasDuplicate) {
                   duplicatesSet.add(c.id)
                 }
@@ -333,7 +339,9 @@ export default function ChamadosAbertos() {
                                 <AlertTriangle className="h-4 w-4 text-yellow-500 shrink-0" />
                               </TooltipTrigger>
                               <TooltipContent>
-                                <p>Possível duplicidade detectada para este veículo nesta data.</p>
+                                <p>
+                                  Já existe um chamado em atendimento para este veículo nesta data.
+                                </p>
                               </TooltipContent>
                             </Tooltip>
                           </TooltipProvider>
@@ -388,7 +396,9 @@ export default function ChamadosAbertos() {
                               <AlertTriangle className="h-4 w-4 text-yellow-500 shrink-0" />
                             </TooltipTrigger>
                             <TooltipContent>
-                              <p>Possível duplicidade detectada para este veículo nesta data.</p>
+                              <p>
+                                Já existe um chamado em atendimento para este veículo nesta data.
+                              </p>
                             </TooltipContent>
                           </Tooltip>
                         </TooltipProvider>

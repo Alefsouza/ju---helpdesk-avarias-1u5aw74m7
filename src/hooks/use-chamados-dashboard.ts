@@ -25,16 +25,14 @@ export function useChamadosDashboard() {
 
       const allChamados = chamadosRes.data || []
       const mapped = allChamados.map((c) => {
-        const cDates = [c.data_ocorrencia, c.criado_em?.substring(0, 10)].filter(Boolean)
+        const cDateCriado = c.criado_em?.substring(0, 10)
         const is_duplicate = Boolean(
           c.carro &&
           allChamados.some((other) => {
             if (other.id === c.id || other.carro !== c.carro) return false
-            if (other.status !== 'aberto' && other.status !== 'em_atendimento') return false
-            const otherDates = [other.data_ocorrencia, other.criado_em?.substring(0, 10)].filter(
-              Boolean,
+            return Boolean(
+              cDateCriado && other.data_ocorrencia && cDateCriado === other.data_ocorrencia,
             )
-            return cDates.some((date) => otherDates.includes(date))
           }),
         )
 

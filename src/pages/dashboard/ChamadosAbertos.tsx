@@ -81,16 +81,16 @@ export default function ChamadosAbertos() {
             .from('chamados')
             .select('id, carro, data_ocorrencia, criado_em, status')
             .in('carro', carros)
-            .in('status', ['aberto', 'em_atendimento'])
 
           if (possibleDuplicates) {
             data.forEach((c) => {
               if (c.carro) {
-                const cDates = [c.data_ocorrencia, c.criado_em?.substring(0, 10)].filter(Boolean)
+                const cDateCriado = c.criado_em?.substring(0, 10)
                 const hasDuplicate = possibleDuplicates.some((d) => {
                   if (d.id === c.id || d.carro !== c.carro) return false
-                  const dDates = [d.data_ocorrencia, d.criado_em?.substring(0, 10)].filter(Boolean)
-                  return cDates.some((date) => dDates.includes(date))
+                  return Boolean(
+                    cDateCriado && d.data_ocorrencia && cDateCriado === d.data_ocorrencia,
+                  )
                 })
                 if (hasDuplicate) {
                   duplicatesSet.add(c.id)
@@ -333,10 +333,7 @@ export default function ChamadosAbertos() {
                                 <AlertTriangle className="h-4 w-4 text-yellow-500 shrink-0" />
                               </TooltipTrigger>
                               <TooltipContent>
-                                <p>
-                                  Já existe um chamado para esse Carro, com a mesma data de
-                                  ocorrência
-                                </p>
+                                <p>Possível duplicidade detectada para este veículo nesta data.</p>
                               </TooltipContent>
                             </Tooltip>
                           </TooltipProvider>
@@ -391,9 +388,7 @@ export default function ChamadosAbertos() {
                               <AlertTriangle className="h-4 w-4 text-yellow-500 shrink-0" />
                             </TooltipTrigger>
                             <TooltipContent>
-                              <p>
-                                Já existe um chamado para esse Carro, com a mesma data de ocorrência
-                              </p>
+                              <p>Possível duplicidade detectada para este veículo nesta data.</p>
                             </TooltipContent>
                           </Tooltip>
                         </TooltipProvider>

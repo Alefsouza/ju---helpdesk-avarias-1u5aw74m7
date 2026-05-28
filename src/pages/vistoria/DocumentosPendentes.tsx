@@ -192,7 +192,7 @@ export default function DocumentosPendentes() {
     }
   }
 
-  const handleSaveOS = async () => {
+  const handleSaveOS = async (forceSave = false) => {
     if (!numeroOS.trim()) {
       toast({
         title: 'Atenção',
@@ -206,7 +206,7 @@ export default function DocumentosPendentes() {
 
     setIsSaving(true)
     try {
-      if (selectedDoc.numero_carro) {
+      if (selectedDoc.numero_carro && !forceSave) {
         const { data: duplicates } = await supabase
           .from('documentos')
           .select('id')
@@ -667,13 +667,25 @@ export default function DocumentosPendentes() {
           <AlertDialogHeader>
             <AlertDialogTitle>Atenção</AlertDialogTitle>
             <AlertDialogDescription>
-              Já existe um espelho de danos para esse carro, por favor verificar.
+              Já existe um espelho de danos para esse carro, por favor verificar. Deseja continuar e
+              salvar mesmo assim?
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel onClick={() => setDuplicateAlertOpen(false)}>
+            <AlertDialogCancel onClick={() => setDuplicateAlertOpen(false)} disabled={isSaving}>
               Fechar
             </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={(e) => {
+                e.preventDefault()
+                setDuplicateAlertOpen(false)
+                handleSaveOS(true)
+              }}
+              disabled={isSaving}
+              className="bg-[#225f3d] hover:bg-[#1a4a2f] text-white"
+            >
+              Salvar e Concluir
+            </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>

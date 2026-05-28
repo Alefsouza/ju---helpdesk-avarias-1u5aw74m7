@@ -496,6 +496,35 @@ export type Database = {
           },
         ]
       }
+      participantes_chamado: {
+        Row: {
+          chamado_id: string
+          criado_em: string
+          id: string
+          usuario_id: string
+        }
+        Insert: {
+          chamado_id: string
+          criado_em?: string
+          id?: string
+          usuario_id: string
+        }
+        Update: {
+          chamado_id?: string
+          criado_em?: string
+          id?: string
+          usuario_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: 'participantes_chamado_chamado_id_fkey'
+            columns: ['chamado_id']
+            isOneToOne: false
+            referencedRelation: 'chamados'
+            referencedColumns: ['id']
+          },
+        ]
+      }
       perfil_usuario: {
         Row: {
           ativo: boolean
@@ -893,6 +922,11 @@ export const Constants = {
 //   usuario_id: uuid (not null)
 //   detalhes: text (nullable)
 //   criado_em: timestamp with time zone (not null, default: now())
+// Table: participantes_chamado
+//   id: uuid (not null, default: gen_random_uuid())
+//   chamado_id: uuid (not null)
+//   usuario_id: uuid (not null)
+//   criado_em: timestamp with time zone (not null, default: now())
 // Table: perfil_usuario
 //   id: uuid (not null)
 //   email: text (not null)
@@ -951,6 +985,11 @@ export const Constants = {
 //   FOREIGN KEY historico_chamado_chamado_id_fkey: FOREIGN KEY (chamado_id) REFERENCES chamados(id) ON DELETE CASCADE
 //   PRIMARY KEY historico_chamado_pkey: PRIMARY KEY (id)
 //   FOREIGN KEY historico_chamado_usuario_id_fkey: FOREIGN KEY (usuario_id) REFERENCES auth.users(id) ON DELETE CASCADE
+// Table: participantes_chamado
+//   FOREIGN KEY participantes_chamado_chamado_id_fkey: FOREIGN KEY (chamado_id) REFERENCES chamados(id) ON DELETE CASCADE
+//   UNIQUE participantes_chamado_chamado_id_usuario_id_key: UNIQUE (chamado_id, usuario_id)
+//   PRIMARY KEY participantes_chamado_pkey: PRIMARY KEY (id)
+//   FOREIGN KEY participantes_chamado_usuario_id_fkey: FOREIGN KEY (usuario_id) REFERENCES auth.users(id) ON DELETE CASCADE
 // Table: perfil_usuario
 //   FOREIGN KEY perfil_usuario_id_fkey: FOREIGN KEY (id) REFERENCES auth.users(id) ON DELETE CASCADE
 //   PRIMARY KEY perfil_usuario_pkey: PRIMARY KEY (id)
@@ -972,7 +1011,7 @@ export const Constants = {
 //   Policy "anexos_internos_insert" (INSERT, PERMISSIVE) roles={authenticated}
 //     WITH CHECK: (is_responsavel() OR is_sinistro() OR is_admin() OR is_juridico() OR is_secretaria_tecnica())
 //   Policy "anexos_internos_select" (SELECT, PERMISSIVE) roles={authenticated}
-//     USING: (is_responsavel() OR is_sinistro() OR is_admin() OR is_sos() OR is_juridico() OR is_secretaria_tecnica() OR (usuario_id = auth.uid()))
+//     USING: (is_responsavel() OR is_sinistro() OR is_admin() OR is_sos() OR is_juridico() OR is_secretaria_tecnica() OR (usuario_id = auth.uid()) OR (chamado_id IN ( SELECT participantes_chamado.chamado_id    FROM participantes_chamado   WHERE (participantes_chamado.usuario_id = auth.uid()))))
 //   Policy "anexos_internos_update" (UPDATE, PERMISSIVE) roles={authenticated}
 //     USING: (is_responsavel() OR is_sinistro() OR is_admin() OR is_juridico() OR is_secretaria_tecnica() OR (usuario_id = auth.uid()))
 //     WITH CHECK: (is_responsavel() OR is_sinistro() OR is_admin() OR is_juridico() OR is_secretaria_tecnica() OR (usuario_id = auth.uid()))
@@ -987,12 +1026,12 @@ export const Constants = {
 //   Policy "chamados_insert" (INSERT, PERMISSIVE) roles={authenticated}
 //     WITH CHECK: (usuario_id = auth.uid())
 //   Policy "chamados_select" (SELECT, PERMISSIVE) roles={authenticated}
-//     USING: ((usuario_id = auth.uid()) OR (responsavel_id = auth.uid()) OR is_admin() OR is_responsavel() OR is_sos() OR is_coc() OR is_juridico() OR is_secretaria_tecnica() OR (is_vistoriador() AND (garagem = ( SELECT perfil_usuario.garagem    FROM perfil_usuario   WHERE (perfil_usuario.id = auth.uid())))) OR (is_sinistro() AND ((( SELECT perfil_usuario.garagem    FROM perfil_usuario   WHERE (perfil_usuario.id = auth.uid())) IS NOT NULL) AND (( SELECT perfil_usuario.garagem    FROM perfil_usuario   WHERE (perfil_usuario.id = auth.uid())) = COALESCE(garagem, ( SELECT perfil_usuario.garagem    FROM perfil_usuario   WHERE (perfil_usuario.id = chamados.usuario_id)))))))
+//     USING: ((usuario_id = auth.uid()) OR (responsavel_id = auth.uid()) OR is_admin() OR is_responsavel() OR is_sos() OR is_coc() OR is_juridico() OR is_secretaria_tecnica() OR (is_vistoriador() AND (garagem = ( SELECT perfil_usuario.garagem    FROM perfil_usuario   WHERE (perfil_usuario.id = auth.uid())))) OR (is_sinistro() AND ((( SELECT perfil_usuario.garagem    FROM perfil_usuario   WHERE (perfil_usuario.id = auth.uid())) IS NOT NULL) AND (( SELECT perfil_usuario.garagem    FROM perfil_usuario   WHERE (perfil_usuario.id = auth.uid())) = COALESCE(garagem, ( SELECT perfil_usuario.garagem    FROM perfil_usuario   WHERE (perfil_usuario.id = chamados.usuario_id)))))) OR (id IN ( SELECT participantes_chamado.chamado_id    FROM participantes_chamado   WHERE (participantes_chamado.usuario_id = auth.uid()))))
 //   Policy "chamados_select_public_manutencao" (SELECT, PERMISSIVE) roles={public}
 //     USING: (tipo_chamado = 'OS de Manutenção'::text)
 //   Policy "chamados_update" (UPDATE, PERMISSIVE) roles={authenticated}
-//     USING: ((usuario_id = auth.uid()) OR (responsavel_id = auth.uid()) OR is_admin() OR is_sos() OR is_coc() OR (((status = 'aberto'::text) OR (status = 'finalizado'::text)) AND (is_responsavel() OR is_juridico() OR (is_sinistro() AND (( SELECT perfil_usuario.garagem    FROM perfil_usuario   WHERE (perfil_usuario.id = auth.uid())) = COALESCE(garagem, ( SELECT perfil_usuario.garagem    FROM perfil_usuario   WHERE (perfil_usuario.id = chamados.usuario_id))))))))
-//     WITH CHECK: ((usuario_id = auth.uid()) OR (responsavel_id = auth.uid()) OR is_admin() OR is_sos() OR is_coc() OR (((status = 'aberto'::text) OR (status = 'finalizado'::text)) AND (is_responsavel() OR is_juridico() OR (is_sinistro() AND (( SELECT perfil_usuario.garagem    FROM perfil_usuario   WHERE (perfil_usuario.id = auth.uid())) = COALESCE(garagem, ( SELECT perfil_usuario.garagem    FROM perfil_usuario   WHERE (perfil_usuario.id = chamados.usuario_id))))))))
+//     USING: ((usuario_id = auth.uid()) OR (responsavel_id = auth.uid()) OR is_admin() OR is_sos() OR is_coc() OR (((status = 'aberto'::text) OR (status = 'finalizado'::text)) AND (is_responsavel() OR is_juridico() OR (is_sinistro() AND (( SELECT perfil_usuario.garagem    FROM perfil_usuario   WHERE (perfil_usuario.id = auth.uid())) = COALESCE(garagem, ( SELECT perfil_usuario.garagem    FROM perfil_usuario   WHERE (perfil_usuario.id = chamados.usuario_id))))))) OR (id IN ( SELECT participantes_chamado.chamado_id    FROM participantes_chamado   WHERE (participantes_chamado.usuario_id = auth.uid()))))
+//     WITH CHECK: ((usuario_id = auth.uid()) OR (responsavel_id = auth.uid()) OR is_admin() OR is_sos() OR is_coc() OR (((status = 'aberto'::text) OR (status = 'finalizado'::text)) AND (is_responsavel() OR is_juridico() OR (is_sinistro() AND (( SELECT perfil_usuario.garagem    FROM perfil_usuario   WHERE (perfil_usuario.id = auth.uid())) = COALESCE(garagem, ( SELECT perfil_usuario.garagem    FROM perfil_usuario   WHERE (perfil_usuario.id = chamados.usuario_id))))))) OR (id IN ( SELECT participantes_chamado.chamado_id    FROM participantes_chamado   WHERE (participantes_chamado.usuario_id = auth.uid()))))
 //   Policy "chamados_update_public_manutencao" (UPDATE, PERMISSIVE) roles={public}
 //     USING: (tipo_chamado = 'OS de Manutenção'::text)
 //     WITH CHECK: (tipo_chamado = 'OS de Manutenção'::text)
@@ -1038,7 +1077,10 @@ export const Constants = {
 //   Policy "Permitir INSERT para responsáveis e admin" (INSERT, PERMISSIVE) roles={authenticated}
 //     WITH CHECK: (auth.uid() IS NOT NULL)
 //   Policy "Permitir SELECT para admin e responsáveis" (SELECT, PERMISSIVE) roles={authenticated}
-//     USING: ((( SELECT perfil_usuario.tipo_usuario    FROM perfil_usuario   WHERE (perfil_usuario.id = auth.uid())) = ANY (ARRAY['admin'::text, 'responsavel'::text, 'sinistro'::text, 'juridico'::text])) OR (chamado_id IN ( SELECT chamados.id    FROM chamados   WHERE (chamados.usuario_id = auth.uid()))))
+//     USING: ((( SELECT perfil_usuario.tipo_usuario    FROM perfil_usuario   WHERE (perfil_usuario.id = auth.uid())) = ANY (ARRAY['admin'::text, 'responsavel'::text, 'sinistro'::text, 'juridico'::text])) OR (chamado_id IN ( SELECT chamados.id    FROM chamados   WHERE (chamados.usuario_id = auth.uid()))) OR (chamado_id IN ( SELECT participantes_chamado.chamado_id    FROM participantes_chamado   WHERE (participantes_chamado.usuario_id = auth.uid()))))
+// Table: participantes_chamado
+//   Policy "participantes_select" (SELECT, PERMISSIVE) roles={authenticated}
+//     USING: ((usuario_id = auth.uid()) OR (chamado_id IN ( SELECT chamados.id    FROM chamados   WHERE ((chamados.usuario_id = auth.uid()) OR (chamados.responsavel_id = auth.uid())))) OR is_admin() OR is_responsavel() OR is_sinistro() OR is_juridico())
 // Table: perfil_usuario
 //   Policy "perfil_select" (SELECT, PERMISSIVE) roles={authenticated}
 //     USING: true
@@ -1597,3 +1639,5 @@ export const Constants = {
 // Table: frota_veiculos
 //   CREATE INDEX frota_veiculos_placa_idx ON public.frota_veiculos USING btree (placa)
 //   CREATE UNIQUE INDEX frota_veiculos_prefixo_key ON public.frota_veiculos USING btree (prefixo)
+// Table: participantes_chamado
+//   CREATE UNIQUE INDEX participantes_chamado_chamado_id_usuario_id_key ON public.participantes_chamado USING btree (chamado_id, usuario_id)

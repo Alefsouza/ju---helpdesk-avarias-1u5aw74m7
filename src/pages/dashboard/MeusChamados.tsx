@@ -45,7 +45,9 @@ type Chamado = {
   pia?: string | null
   carro?: string | null
   data_ocorrencia?: string | null
+  descricao?: string
   is_duplicate?: boolean
+  is_unified?: boolean
 }
 
 const statusColors: Record<string, string> = {
@@ -127,7 +129,7 @@ export default function MeusChamados() {
 
       let query = supabase
         .from('chamados')
-        .select('id, titulo, status, prioridade, criado_em, pia, carro, data_ocorrencia')
+        .select('id, titulo, status, prioridade, criado_em, pia, carro, data_ocorrencia, descricao')
         .order(sortConfig.field, { ascending: sortConfig.direction === 'asc' })
 
       if (partIds.length > 0) {
@@ -193,6 +195,9 @@ export default function MeusChamados() {
       const chamadosComDuplicate = finalData.map((c) => ({
         ...c,
         is_duplicate: duplicatesSet.has(c.id),
+        is_unified:
+          c.status === 'finalizado' &&
+          c.descricao?.includes('[SISTEMA]: Este chamado foi unificado'),
       }))
 
       setChamados(chamadosComDuplicate)
@@ -410,6 +415,23 @@ export default function MeusChamados() {
                             </Tooltip>
                           </TooltipProvider>
                         )}
+                        {c.is_unified && (
+                          <TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <AlertCircle className="h-4 w-4 text-green-500 shrink-0 cursor-help" />
+                              </TooltipTrigger>
+                              <TooltipContent className="max-w-xs">
+                                <p>
+                                  Seu chamado foi integrado a outro que já estava aberto pela nossa
+                                  equipe. Isso é uma boa notícia, pois já estávamos ciente do seu
+                                  problema. Você pode acompanhar tudo no novo chamado que surgiu
+                                  para você! Obrigado!
+                                </p>
+                              </TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
+                        )}
                       </div>
                     </TableCell>
                     <TableCell>
@@ -465,20 +487,40 @@ export default function MeusChamados() {
                     >
                       {c.titulo}
                     </Link>
-                    {c.is_duplicate && (
-                      <TooltipProvider>
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <AlertTriangle className="h-5 w-5 text-yellow-500 shrink-0 cursor-help" />
-                          </TooltipTrigger>
-                          <TooltipContent>
-                            <p>
-                              Já existe um chamado para esse Carro, com a mesma data de ocorrência.
-                            </p>
-                          </TooltipContent>
-                        </Tooltip>
-                      </TooltipProvider>
-                    )}
+                    <div className="flex items-center gap-2">
+                      {c.is_duplicate && (
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <AlertTriangle className="h-5 w-5 text-yellow-500 shrink-0 cursor-help" />
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p>
+                                Já existe um chamado para esse Carro, com a mesma data de
+                                ocorrência.
+                              </p>
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                      )}
+                      {c.is_unified && (
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <AlertCircle className="h-5 w-5 text-green-500 shrink-0 cursor-help" />
+                            </TooltipTrigger>
+                            <TooltipContent className="max-w-xs">
+                              <p>
+                                Seu chamado foi integrado a outro que já estava aberto pela nossa
+                                equipe. Isso é uma boa notícia, pois já estávamos ciente do seu
+                                problema. Você pode acompanhar tudo no novo chamado que surgiu para
+                                você! Obrigado!
+                              </p>
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                      )}
+                    </div>
                   </div>
 
                   <div className="flex flex-wrap gap-2 mt-2">

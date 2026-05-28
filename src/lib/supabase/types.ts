@@ -1080,7 +1080,7 @@ export const Constants = {
 //     USING: ((( SELECT perfil_usuario.tipo_usuario    FROM perfil_usuario   WHERE (perfil_usuario.id = auth.uid())) = ANY (ARRAY['admin'::text, 'responsavel'::text, 'sinistro'::text, 'juridico'::text])) OR (chamado_id IN ( SELECT chamados.id    FROM chamados   WHERE (chamados.usuario_id = auth.uid()))) OR (chamado_id IN ( SELECT participantes_chamado.chamado_id    FROM participantes_chamado   WHERE (participantes_chamado.usuario_id = auth.uid()))))
 // Table: participantes_chamado
 //   Policy "participantes_select" (SELECT, PERMISSIVE) roles={authenticated}
-//     USING: ((usuario_id = auth.uid()) OR (chamado_id IN ( SELECT chamados.id    FROM chamados   WHERE ((chamados.usuario_id = auth.uid()) OR (chamados.responsavel_id = auth.uid())))) OR is_admin() OR is_responsavel() OR is_sinistro() OR is_juridico())
+//     USING: ((usuario_id = auth.uid()) OR is_admin() OR is_responsavel() OR is_sinistro() OR is_juridico())
 // Table: perfil_usuario
 //   Policy "perfil_select" (SELECT, PERMISSIVE) roles={authenticated}
 //     USING: true

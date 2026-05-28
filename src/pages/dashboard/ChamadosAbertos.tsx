@@ -25,7 +25,7 @@ import { Search, Inbox, AlertCircle, ArrowRight, AlertTriangle } from 'lucide-re
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent } from '@/components/ui/card'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
-import { cn } from '@/lib/utils'
+import { cn, isDuplicateTicket } from '@/lib/utils'
 
 export default function ChamadosAbertos() {
   const { user } = useAuth()
@@ -74,71 +74,17 @@ export default function ChamadosAbertos() {
           {} as Record<string, string>,
         )
 
-        const extractCarro = (c: any) => {
-          if (c.carro && c.carro.trim() !== '') return c.carro.trim().toUpperCase()
-          const matchCarro = c.titulo?.match(/carro\s+([a-zA-Z0-9_-]+)/i)
-          if (matchCarro) return matchCarro[1].toUpperCase()
-          const matchDigits = c.titulo?.match(/\b(\d{3,6})\b/)
-          return matchDigits ? matchDigits[1] : null
-        }
+        const { data: activeChamados } = await supabase
+          .from('chamados')
+          .select('id, carro, titulo, data_ocorrencia, criado_em, status')
+          .in('status', ['aberto', 'em_atendimento'])
 
-        const dataProcessed = data.map((c) => ({
-          ...c,
-          carroExtracted: extractCarro(c),
-          dateCriadoNorm: c.criado_em?.substring(0, 10),
-        }))
+        const allActiveChamados = activeChamados || []
 
-        const carros = dataProcessed.map((c) => c.carroExtracted).filter(Boolean)
-        const duplicatesSet = new Set<string>()
-
-        if (carros.length > 0) {
-          const { data: inServiceTickets } = await supabase
-            .from('chamados')
-            .select('id, carro, titulo, data_ocorrencia, criado_em, status')
-            .eq('status', 'em_atendimento')
-
-          const inServiceProcessed = (inServiceTickets || []).map((d) => ({
-            id: d.id,
-            carroExtracted: extractCarro(d),
-            dateOcorrenciaNorm: d.data_ocorrencia?.substring(0, 10),
-            dateCriadoNorm: d.criado_em?.substring(0, 10),
-          }))
-
-          const allActiveProcessed = [
-            ...dataProcessed.map((d) => ({
-              id: d.id,
-              carroExtracted: d.carroExtracted,
-              dateOcorrenciaNorm: d.data_ocorrencia?.substring(0, 10),
-              dateCriadoNorm: d.dateCriadoNorm,
-            })),
-            ...inServiceProcessed,
-          ]
-
-          dataProcessed.forEach((c) => {
-            if (c.carroExtracted) {
-              const hasDuplicate = allActiveProcessed.some((d) => {
-                if (d.id === c.id) return false
-                if (!d.carroExtracted) return false
-
-                const isCarroMatch = d.carroExtracted === c.carroExtracted
-                const isDateMatch =
-                  (d.dateCriadoNorm && d.dateCriadoNorm === c.dateCriadoNorm) ||
-                  (d.dateOcorrenciaNorm && d.dateOcorrenciaNorm === c.dateCriadoNorm)
-
-                return isCarroMatch && isDateMatch
-              })
-
-              if (hasDuplicate) {
-                duplicatesSet.add(c.id)
-              }
-            }
-          })
-        }
-
-        const chamadosComNome = dataProcessed.map((c) => ({
+        const chamadosComNome = data.map((c) => ({
           ...c,
           nome_usuario: perfilMap?.[c.usuario_id] || 'Usuário Desconhecido',
-          is_duplicate: duplicatesSet.has(c.id),
+          is_duplicate: isDuplicateTicket(c, allActiveChamados),
         }))
 
         setChamados(chamadosComNome)
@@ -375,7 +321,7 @@ export default function ChamadosAbertos() {
                               <TooltipContent>
                                 <p>
                                   Atenção: Já existe um chamado ativo (aberto ou em atendimento)
-                                  para este veículo com esta data.
+                                  para este veículo com a mesma data de criação ou ocorrência.
                                 </p>
                               </TooltipContent>
                             </Tooltip>
@@ -438,7 +384,7 @@ export default function ChamadosAbertos() {
                             <TooltipContent>
                               <p>
                                 Atenção: Já existe um chamado ativo (aberto ou em atendimento) para
-                                este veículo com esta data.
+                                este veículo com a mesma data de criação ou ocorrência.
                               </p>
                             </TooltipContent>
                           </Tooltip>

@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '@/lib/supabase/client'
+import { isDuplicateTicket } from '@/lib/utils'
 
 export function useChamadosDashboard() {
   const [chamados, setChamados] = useState<any[]>([])
@@ -24,34 +25,12 @@ export function useChamadosDashboard() {
       if (respRes.error) throw respRes.error
 
       const allChamados = chamadosRes.data || []
-
-      const extractCarro = (c: any) => {
-        if (c.carro) return c.carro.trim().toUpperCase()
-        const match = c.titulo?.match(/carro\s+([a-zA-Z0-9_-]+)/i)
-        return match ? match[1].toUpperCase() : null
-      }
-
-      const allProcessed = allChamados.map((c) => ({
-        id: c.id,
-        carroExtracted: extractCarro(c),
-        dataOcorrenciaDate: c.data_ocorrencia ? c.data_ocorrencia.substring(0, 10) : null,
-      }))
+      const activeChamados = allChamados.filter(
+        (c) => c.status === 'aberto' || c.status === 'em_atendimento',
+      )
 
       const mapped = allChamados.map((c) => {
-        const carro = extractCarro(c)
-        const dateCriado = c.criado_em ? c.criado_em.substring(0, 10) : null
-
-        const is_duplicate = Boolean(
-          carro &&
-          dateCriado &&
-          allProcessed.some((other) => {
-            return (
-              other.id !== c.id &&
-              other.carroExtracted === carro &&
-              other.dataOcorrenciaDate === dateCriado
-            )
-          }),
-        )
+        const is_duplicate = isDuplicateTicket(c, activeChamados)
 
         return {
           ...c,

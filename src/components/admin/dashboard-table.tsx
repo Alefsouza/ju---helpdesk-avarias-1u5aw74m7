@@ -288,8 +288,8 @@ export function DashboardTable({
                                 </TooltipTrigger>
                                 <TooltipContent>
                                   <p>
-                                    Já existe um chamado para esse Carro, com a mesma data de
-                                    ocorrência.
+                                    Atenção: Já existe um chamado ativo (aberto ou em atendimento)
+                                    para este veículo com a mesma data de criação ou ocorrência.
                                   </p>
                                 </TooltipContent>
                               </Tooltip>
@@ -357,8 +357,8 @@ export function DashboardTable({
                                 </TooltipTrigger>
                                 <TooltipContent>
                                   <p>
-                                    Já existe um chamado para esse Carro, com a mesma data de
-                                    ocorrência.
+                                    Atenção: Já existe um chamado ativo (aberto ou em atendimento)
+                                    para este veículo com a mesma data de criação ou ocorrência.
                                   </p>
                                 </TooltipContent>
                               </Tooltip>

@@ -184,12 +184,33 @@ export default function MeusAtendimentos() {
           {} as Record<string, string>,
         )
 
+        const { data: allChamadosForDups } = await supabase
+          .from('chamados')
+          .select('id, carro, titulo, data_ocorrencia')
+
+        const extractCarro = (c: any) => {
+          if (c.carro) return c.carro.trim().toUpperCase()
+          const match = c.titulo?.match(/carro\s+([a-zA-Z0-9_-]+)/i)
+          return match ? match[1].toUpperCase() : null
+        }
+
+        const allProcessed = (allChamadosForDups || []).map((c) => ({
+          id: c.id,
+          carroExtracted: extractCarro(c),
+          dataOcorrenciaDate: c.data_ocorrencia ? c.data_ocorrencia.substring(0, 10) : null,
+        }))
+
         const duplicatesSet = new Set<string>()
         data.forEach((c) => {
-          if (c.carro && c.data_ocorrencia) {
-            const hasDuplicate = data.some(
-              (d) =>
-                d.id !== c.id && d.carro === c.carro && d.data_ocorrencia === c.data_ocorrencia,
+          const carro = extractCarro(c)
+          const dateCriado = c.criado_em ? c.criado_em.substring(0, 10) : null
+
+          if (carro && dateCriado) {
+            const hasDuplicate = allProcessed.some(
+              (other) =>
+                other.id !== c.id &&
+                other.carroExtracted === carro &&
+                other.dataOcorrenciaDate === dateCriado,
             )
             if (hasDuplicate) {
               duplicatesSet.add(c.id)
@@ -565,8 +586,9 @@ export default function MeusAtendimentos() {
                               </TooltipTrigger>
                               <TooltipContent>
                                 <p>
-                                  Já existe um chamado para esse Carro, com a mesma data de
-                                  ocorrência.
+                                  Potencial duplicidade: Existe outro chamado para este veículo onde
+                                  a data de ocorrência coincide com a data de criação deste
+                                  registro.
                                 </p>
                               </TooltipContent>
                             </Tooltip>
@@ -698,8 +720,9 @@ export default function MeusAtendimentos() {
                               </TooltipTrigger>
                               <TooltipContent>
                                 <p>
-                                  Já existe um chamado para esse Carro, com a mesma data de
-                                  ocorrência.
+                                  Potencial duplicidade: Existe outro chamado para este veículo onde
+                                  a data de ocorrência coincide com a data de criação deste
+                                  registro.
                                 </p>
                               </TooltipContent>
                             </Tooltip>

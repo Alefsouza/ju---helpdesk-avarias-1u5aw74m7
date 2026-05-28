@@ -261,7 +261,7 @@ export default function SecretariaTecnica() {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>RA</TableHead>
+                <TableHead>RA/PIA</TableHead>
                 <TableHead>OS</TableHead>
                 <TableHead>Carro</TableHead>
                 <TableHead>Garagem</TableHead>
@@ -445,6 +445,10 @@ export default function SecretariaTecnica() {
           {viewDoc && (
             <div className="space-y-6 py-4">
               <div className="grid grid-cols-2 gap-4 text-sm">
+                <div>
+                  <p className="text-[#333333] font-bold mb-1">RA/PIA</p>
+                  <p className="text-[#333333]">{viewDoc.chamados?.pia || '-'}</p>
+                </div>
                 <div>
                   <p className="text-[#333333] font-bold mb-1">Número da OS</p>
                   <p className="text-[#333333]">{viewDoc.numero_os || '-'}</p>

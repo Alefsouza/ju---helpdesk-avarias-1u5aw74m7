@@ -166,13 +166,24 @@ Deno.serve(async (req: Request) => {
       .eq('id', origem_id)
 
     // Update destination ticket status to 'em_atendimento' and update timestamp
-    await supabaseAdmin
-      .from('chamados')
-      .update({
-        status: 'em_atendimento',
-        atualizado_em: new Date().toISOString(),
-      })
-      .eq('id', destino_id)
+    const destinoUpdates: any = {
+      status: 'em_atendimento',
+      atualizado_em: new Date().toISOString(),
+    }
+
+    // Migrate PIA to preserve RA values during unification
+    if (!destino.pia && origem.pia) {
+      destinoUpdates.pia = origem.pia
+    } else if (
+      destino.pia &&
+      origem.pia &&
+      destino.pia !== origem.pia &&
+      !destino.pia.includes(origem.pia)
+    ) {
+      destinoUpdates.pia = `${destino.pia} / ${origem.pia}`
+    }
+
+    await supabaseAdmin.from('chamados').update(destinoUpdates).eq('id', destino_id)
 
     // Add history records to destination
     await supabaseAdmin.from('historico_chamado').insert([

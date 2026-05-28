@@ -97,32 +97,42 @@ export default function ChamadosAbertos() {
             .select('id, carro, titulo, data_ocorrencia, criado_em, status')
             .eq('status', 'em_atendimento')
 
-          if (inServiceTickets) {
-            const inServiceProcessed = inServiceTickets.map((d) => ({
-              ...d,
-              carroExtracted: extractCarro(d),
+          const inServiceProcessed = (inServiceTickets || []).map((d) => ({
+            id: d.id,
+            carroExtracted: extractCarro(d),
+            dateOcorrenciaNorm: d.data_ocorrencia?.substring(0, 10),
+            dateCriadoNorm: d.criado_em?.substring(0, 10),
+          }))
+
+          const allActiveProcessed = [
+            ...dataProcessed.map((d) => ({
+              id: d.id,
+              carroExtracted: d.carroExtracted,
               dateOcorrenciaNorm: d.data_ocorrencia?.substring(0, 10),
-              dateCriadoNorm: d.criado_em?.substring(0, 10),
-            }))
+              dateCriadoNorm: d.dateCriadoNorm,
+            })),
+            ...inServiceProcessed,
+          ]
 
-            dataProcessed.forEach((c) => {
-              if (c.carroExtracted) {
-                const hasDuplicate = inServiceProcessed.some((d) => {
-                  if (!d.carroExtracted) return false
-                  const isCarroMatch = d.carroExtracted === c.carroExtracted
-                  const isDateMatch =
-                    (d.dateCriadoNorm && d.dateCriadoNorm === c.dateCriadoNorm) ||
-                    (d.dateOcorrenciaNorm && d.dateOcorrenciaNorm === c.dateCriadoNorm)
+          dataProcessed.forEach((c) => {
+            if (c.carroExtracted) {
+              const hasDuplicate = allActiveProcessed.some((d) => {
+                if (d.id === c.id) return false
+                if (!d.carroExtracted) return false
 
-                  return isCarroMatch && isDateMatch
-                })
+                const isCarroMatch = d.carroExtracted === c.carroExtracted
+                const isDateMatch =
+                  (d.dateCriadoNorm && d.dateCriadoNorm === c.dateCriadoNorm) ||
+                  (d.dateOcorrenciaNorm && d.dateOcorrenciaNorm === c.dateCriadoNorm)
 
-                if (hasDuplicate) {
-                  duplicatesSet.add(c.id)
-                }
+                return isCarroMatch && isDateMatch
+              })
+
+              if (hasDuplicate) {
+                duplicatesSet.add(c.id)
               }
-            })
-          }
+            }
+          })
         }
 
         const chamadosComNome = dataProcessed.map((c) => ({
@@ -364,8 +374,8 @@ export default function ChamadosAbertos() {
                               </TooltipTrigger>
                               <TooltipContent>
                                 <p>
-                                  Atenção: Já existe um chamado em atendimento para este veículo com
-                                  esta data.
+                                  Atenção: Já existe um chamado ativo (aberto ou em atendimento)
+                                  para este veículo com esta data.
                                 </p>
                               </TooltipContent>
                             </Tooltip>
@@ -427,8 +437,8 @@ export default function ChamadosAbertos() {
                             </TooltipTrigger>
                             <TooltipContent>
                               <p>
-                                Atenção: Já existe um chamado em atendimento para este veículo com
-                                esta data.
+                                Atenção: Já existe um chamado ativo (aberto ou em atendimento) para
+                                este veículo com esta data.
                               </p>
                             </TooltipContent>
                           </Tooltip>

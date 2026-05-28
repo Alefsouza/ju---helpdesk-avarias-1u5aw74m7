@@ -186,7 +186,7 @@ export default function MeusAtendimentos() {
 
         const { data: allChamadosForDups } = await supabase
           .from('chamados')
-          .select('id, carro, titulo, data_ocorrencia')
+          .select('id, carro, titulo, data_ocorrencia, criado_em')
 
         const extractCarro = (c: any) => {
           if (c.carro) return c.carro.trim().toUpperCase()
@@ -198,20 +198,29 @@ export default function MeusAtendimentos() {
           id: c.id,
           carroExtracted: extractCarro(c),
           dataOcorrenciaDate: c.data_ocorrencia ? c.data_ocorrencia.substring(0, 10) : null,
+          criadoEmDate: c.criado_em ? c.criado_em.substring(0, 10) : null,
         }))
 
         const duplicatesSet = new Set<string>()
         data.forEach((c) => {
           const carro = extractCarro(c)
           const dateCriado = c.criado_em ? c.criado_em.substring(0, 10) : null
+          const dateOcorrencia = c.data_ocorrencia ? c.data_ocorrencia.substring(0, 10) : null
 
-          if (carro && dateCriado) {
-            const hasDuplicate = allProcessed.some(
-              (other) =>
-                other.id !== c.id &&
-                other.carroExtracted === carro &&
-                other.dataOcorrenciaDate === dateCriado,
-            )
+          if (carro) {
+            const hasDuplicate = allProcessed.some((other) => {
+              if (other.id === c.id || other.carroExtracted !== carro) return false
+
+              const match1 = Boolean(
+                dateCriado && other.dataOcorrenciaDate && dateCriado === other.dataOcorrenciaDate,
+              )
+              const match2 = Boolean(
+                dateOcorrencia && other.criadoEmDate && dateOcorrencia === other.criadoEmDate,
+              )
+
+              return match1 || match2
+            })
+
             if (hasDuplicate) {
               duplicatesSet.add(c.id)
             }
@@ -587,8 +596,8 @@ export default function MeusAtendimentos() {
                               <TooltipContent>
                                 <p>
                                   Potencial duplicidade: Existe outro chamado para este veículo onde
-                                  a data de ocorrência coincide com a data de criação deste
-                                  registro.
+                                  a data de ocorrência coincide com a data de criação (ou
+                                  vice-versa).
                                 </p>
                               </TooltipContent>
                             </Tooltip>
@@ -721,8 +730,8 @@ export default function MeusAtendimentos() {
                               <TooltipContent>
                                 <p>
                                   Potencial duplicidade: Existe outro chamado para este veículo onde
-                                  a data de ocorrência coincide com a data de criação deste
-                                  registro.
+                                  a data de ocorrência coincide com a data de criação (ou
+                                  vice-versa).
                                 </p>
                               </TooltipContent>
                             </Tooltip>

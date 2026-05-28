@@ -1,8 +1,7 @@
 import { useEffect, useState } from 'react'
-import { useNavigate, useSearchParams } from 'react-router-dom'
+import { useNavigate } from 'react-router-dom'
 import { supabase } from '@/lib/supabase/client'
 import { useAuth } from '@/hooks/use-auth'
-import { useToast } from '@/hooks/use-toast'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import {
@@ -19,13 +18,19 @@ import {
   Inbox,
   AlertCircle,
   ArrowRight,
-  Check,
   ArrowUpDown,
+  Calendar as CalendarIcon,
   RotateCcw,
-  Link as LinkIcon,
 } from 'lucide-react'
-import { UnificarChamadoModal } from '@/components/UnificarChamadoModal'
 import { Badge } from '@/components/ui/badge'
+import { Card, CardContent } from '@/components/ui/card'
+import { format } from 'date-fns'
+import { ptBR } from 'date-fns/locale'
+import { DateRange } from 'react-day-picker'
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
+import { Calendar } from '@/components/ui/calendar'
+import { cn } from '@/lib/utils'
+import { useToast } from '@/hooks/use-toast'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -36,38 +41,26 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
-import { Card, CardContent } from '@/components/ui/card'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
 
-export default function MeusAtendimentos() {
+export default function Finalizados() {
   const { user } = useAuth()
   const { toast } = useToast()
   const navigate = useNavigate()
-  const [searchParams, setSearchParams] = useSearchParams()
 
   const [chamados, setChamados] = useState<any[]>([])
-  const [unificarChamado, setUnificarChamado] = useState<{
-    id: string
-    titulo: string
-    pia?: string
-  } | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(false)
+
   const [searchTerm, setSearchTerm] = useState('')
   const [debouncedSearch, setDebouncedSearch] = useState('')
-  const [completingId, setCompletingId] = useState<string | null>(null)
-  const [confirmFinalizarId, setConfirmFinalizarId] = useState<string | null>(null)
-  const [confirmReabrirId, setConfirmReabrirId] = useState<string | null>(null)
+  const [date, setDate] = useState<DateRange | undefined>()
+
   const [currentUserProfile, setCurrentUserProfile] = useState<any>(null)
   const [sortConfig, setSortConfig] = useState<{ key: string; direction: 'asc' | 'desc' } | null>(
     null,
   )
+  const [confirmReabrirId, setConfirmReabrirId] = useState<string | null>(null)
+  const [completingId, setCompletingId] = useState<string | null>(null)
 
   useEffect(() => {
     if (user) {
@@ -94,14 +87,13 @@ export default function MeusAtendimentos() {
     solicitante: 180,
     prioridade: 120,
     colaborador: 180,
-    status: 160,
     atualizacao: 160,
-    acoes: 140,
+    acoes: 100,
   }
 
   const [columnWidths, setColumnWidths] = useState<Record<string, number>>(() => {
     try {
-      const saved = localStorage.getItem('atendimentos_col_widths')
+      const saved = localStorage.getItem('finalizados_col_widths')
       return saved ? JSON.parse(saved) : defaultWidths
     } catch {
       return defaultWidths
@@ -122,25 +114,18 @@ export default function MeusAtendimentos() {
 
   useEffect(() => {
     if (!resizingCol) return
-
     const onMouseMove = (e: MouseEvent) => {
       const diff = e.clientX - startX
       const newWidth = Math.max(50, startWidth + diff)
-
       setColumnWidths((prev) => {
         const updated = { ...prev, [resizingCol]: newWidth }
-        localStorage.setItem('atendimentos_col_widths', JSON.stringify(updated))
+        localStorage.setItem('finalizados_col_widths', JSON.stringify(updated))
         return updated
       })
     }
-
-    const onMouseUp = () => {
-      setResizingCol(null)
-    }
-
+    const onMouseUp = () => setResizingCol(null)
     document.addEventListener('mousemove', onMouseMove)
     document.addEventListener('mouseup', onMouseUp)
-
     return () => {
       document.removeEventListener('mousemove', onMouseMove)
       document.removeEventListener('mouseup', onMouseUp)
@@ -148,20 +133,39 @@ export default function MeusAtendimentos() {
   }, [resizingCol, startX, startWidth])
 
   useEffect(() => {
-    const timer = setTimeout(() => setDebouncedSearch(searchTerm), 300)
+    const timer = setTimeout(() => setDebouncedSearch(searchTerm), 500)
     return () => clearTimeout(timer)
   }, [searchTerm])
 
-  const fetchChamados = async () => {
+  const fetchFinalizados = async () => {
     if (!user) return
     setLoading(true)
     setError(false)
     try {
-      const { data, error: err } = await supabase
+      let query = supabase
         .from('chamados')
         .select('*')
-        .in('status', ['em_atendimento', 'aberto'])
-        .order('criado_em', { ascending: false })
+        .eq('status', 'finalizado')
+        .order('atualizado_em', { ascending: false })
+        .limit(200)
+
+      if (debouncedSearch) {
+        const term = `%${debouncedSearch}%`
+        query = query.or(
+          `titulo.ilike.${term},carro.ilike.${term},registro_motorista.ilike.${term},registro_cobrador.ilike.${term},descricao.ilike.${term},pia.ilike.${term}`,
+        )
+      }
+
+      if (date?.from) {
+        query = query.gte('criado_em', date.from.toISOString())
+      }
+      if (date?.to) {
+        const toDate = new Date(date.to)
+        toDate.setHours(23, 59, 59, 999)
+        query = query.lte('criado_em', toDate.toISOString())
+      }
+
+      const { data, error: err } = await query
 
       if (err) throw err
 
@@ -203,19 +207,8 @@ export default function MeusAtendimentos() {
   }
 
   useEffect(() => {
-    fetchChamados()
-
-    const channel = supabase
-      .channel('meus_atendimentos_realtime')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'chamados' }, () => {
-        fetchChamados()
-      })
-      .subscribe()
-
-    return () => {
-      supabase.removeChannel(channel)
-    }
-  }, [user])
+    fetchFinalizados()
+  }, [user, debouncedSearch, date])
 
   const handleReabrir = async (chamadoId: string) => {
     setCompletingId(chamadoId)
@@ -242,43 +235,12 @@ export default function MeusAtendimentos() {
       if (histError) throw histError
 
       toast({ title: 'Chamado reaberto com sucesso!' })
-      setChamados((prev) =>
-        prev.map((c) =>
-          c.id === chamadoId ? { ...c, status: 'aberto', responsavel_id: user?.id } : c,
-        ),
-      )
+      setChamados((prev) => prev.filter((c) => c.id !== chamadoId))
 
       navigate(`/dashboard/chamados/${chamadoId}`)
     } catch (e) {
       console.error(e)
       toast({ title: 'Erro ao reabrir chamado', variant: 'destructive' })
-    } finally {
-      setCompletingId(null)
-    }
-  }
-
-  const handleFinalizar = async (chamadoId: string) => {
-    setCompletingId(chamadoId)
-    setConfirmFinalizarId(null)
-    try {
-      const { error: updateError } = await supabase
-        .from('chamados')
-        .update({ status: 'finalizado', atualizado_em: new Date().toISOString() })
-        .eq('id', chamadoId)
-
-      if (updateError) throw updateError
-
-      const { error: histError } = await supabase
-        .from('historico_chamado')
-        .insert({ chamado_id: chamadoId, usuario_id: user?.id, acao: 'finalizado' })
-
-      if (histError) throw histError
-
-      toast({ title: 'Chamado finalizado com sucesso!' })
-      setChamados((prev) => prev.filter((c) => c.id !== chamadoId))
-    } catch (e) {
-      console.error(e)
-      toast({ title: 'Erro ao finalizar chamado', variant: 'destructive' })
     } finally {
       setCompletingId(null)
     }
@@ -326,42 +288,23 @@ export default function MeusAtendimentos() {
     })
   }
 
-  const filteredChamados = chamados
-    .filter((c) => {
-      if (!debouncedSearch) return true
-      const term = debouncedSearch.toLowerCase()
-      return (
-        c.titulo?.toLowerCase().includes(term) ||
-        c.pia?.toLowerCase().includes(term) ||
-        c.nome_usuario?.toLowerCase().includes(term)
-      )
-    })
-    .sort((a, b) => {
-      if (sortConfig) {
-        const aVal = String(a[sortConfig.key] || '').toLowerCase()
-        const bVal = String(b[sortConfig.key] || '').toLowerCase()
-        if (aVal < bVal) return sortConfig.direction === 'asc' ? -1 : 1
-        if (aVal > bVal) return sortConfig.direction === 'asc' ? 1 : -1
-        return 0
-      }
-
-      const aIsMine = a.responsavel_id === user?.id
-      const bIsMine = b.responsavel_id === user?.id
-
-      if (aIsMine && !bIsMine) return -1
-      if (!aIsMine && bIsMine) return 1
-
-      return new Date(b.criado_em).getTime() - new Date(a.criado_em).getTime()
-    })
+  const sortedChamados = [...chamados].sort((a, b) => {
+    if (sortConfig) {
+      const aVal = String(a[sortConfig.key] || '').toLowerCase()
+      const bVal = String(b[sortConfig.key] || '').toLowerCase()
+      if (aVal < bVal) return sortConfig.direction === 'asc' ? -1 : 1
+      if (aVal > bVal) return sortConfig.direction === 'asc' ? 1 : -1
+      return 0
+    }
+    return new Date(b.atualizado_em).getTime() - new Date(a.atualizado_em).getTime()
+  })
 
   return (
     <div className="space-y-6 max-w-6xl mx-auto p-2 sm:p-4 animate-fade-in-up">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight text-slate-900">Atendimentos</h1>
-          <p className="text-slate-500">
-            Acompanhe todos os chamados que estão atualmente em atendimento.
-          </p>
+          <h1 className="text-3xl font-bold tracking-tight text-slate-900">Finalizados</h1>
+          <p className="text-slate-500">Histórico de chamados finalizados.</p>
         </div>
       </div>
 
@@ -369,11 +312,50 @@ export default function MeusAtendimentos() {
         <div className="relative flex-1">
           <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-slate-500" />
           <Input
-            placeholder="Pesquisar por Solicitante, R.A. ou Título..."
-            className="pl-9 bg-white shadow-sm max-w-md"
+            placeholder="Pesquisar por Título, R.A., Carro, Descrição..."
+            className="pl-9 bg-white shadow-sm w-full"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
           />
+        </div>
+        <div className="w-full sm:w-auto z-10">
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button
+                id="date"
+                variant={'outline'}
+                className={cn(
+                  'w-full sm:w-[300px] justify-start text-left font-normal bg-white shadow-sm',
+                  !date && 'text-muted-foreground',
+                )}
+              >
+                <CalendarIcon className="mr-2 h-4 w-4" />
+                {date?.from ? (
+                  date.to ? (
+                    <>
+                      {format(date.from, 'dd/MM/yyyy', { locale: ptBR })} -{' '}
+                      {format(date.to, 'dd/MM/yyyy', { locale: ptBR })}
+                    </>
+                  ) : (
+                    format(date.from, 'dd/MM/yyyy', { locale: ptBR })
+                  )
+                ) : (
+                  <span>Filtrar por data</span>
+                )}
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-auto p-0 z-50" align="end">
+              <Calendar
+                initialFocus
+                mode="range"
+                defaultMonth={date?.from}
+                selected={date}
+                onSelect={setDate}
+                numberOfMonths={2}
+                locale={ptBR}
+              />
+            </PopoverContent>
+          </Popover>
         </div>
       </div>
 
@@ -387,24 +369,21 @@ export default function MeusAtendimentos() {
         <div className="text-center py-16 bg-white rounded-lg border shadow-sm">
           <AlertCircle className="h-12 w-12 mx-auto text-red-500 mb-4" />
           <h3 className="text-lg font-medium text-slate-900">Erro ao carregar chamados</h3>
-          <p className="text-slate-500 mb-6">Ocorreu um problema ao buscar seus atendimentos.</p>
-          <Button onClick={fetchChamados}>Tentar novamente</Button>
+          <p className="text-slate-500 mb-6">Ocorreu um problema ao buscar o histórico.</p>
+          <Button onClick={fetchFinalizados}>Tentar novamente</Button>
         </div>
-      ) : filteredChamados.length === 0 ? (
+      ) : sortedChamados.length === 0 ? (
         <div className="text-center py-16 bg-white rounded-lg border shadow-sm">
           <Inbox className="h-12 w-12 mx-auto text-slate-300 mb-4" />
-          <h3 className="text-lg font-medium text-slate-900">Nenhum atendimento encontrado</h3>
+          <h3 className="text-lg font-medium text-slate-900">Nenhum chamado finalizado</h3>
           <p className="text-slate-500 mb-6 max-w-sm mx-auto">
-            Não há chamados correspondentes aos filtros selecionados no momento.
+            Não há chamados correspondentes aos filtros selecionados.
           </p>
-          <Button onClick={() => navigate('/dashboard/chamados-abertos')}>
-            Ir para Fila de Atendimento
-          </Button>
         </div>
       ) : (
         <>
           {/* Desktop Table */}
-          <div className="hidden md:block rounded-md border bg-white shadow-sm overflow-x-auto w-full relative select-none">
+          <div className="hidden md:block rounded-md border bg-white shadow-sm overflow-x-auto w-full relative select-none z-0">
             <Table style={{ tableLayout: 'fixed', minWidth: 'max-content' }} className="w-full">
               <TableHeader>
                 <TableRow className="bg-slate-50">
@@ -490,27 +469,11 @@ export default function MeusAtendimentos() {
 
                   <TableHead
                     className="relative cursor-pointer hover:bg-slate-100 transition-colors group"
-                    onClick={() => handleSort('status')}
-                    style={{ width: columnWidths.status }}
-                  >
-                    <div className="flex items-center gap-1 overflow-hidden pr-2">
-                      <span className="truncate">Status</span>
-                      <ArrowUpDown className="h-3 w-3 shrink-0 text-slate-400 group-hover:text-slate-600" />
-                    </div>
-                    <div
-                      className="absolute right-0 top-0 h-full w-[3px] cursor-col-resize bg-slate-200 hover:bg-slate-400 active:bg-slate-600 z-10 transition-colors"
-                      onMouseDown={(e) => onDragStart(e, 'status')}
-                      onClick={(e) => e.stopPropagation()}
-                    />
-                  </TableHead>
-
-                  <TableHead
-                    className="relative cursor-pointer hover:bg-slate-100 transition-colors group"
                     onClick={() => handleSort('atualizado_em')}
                     style={{ width: columnWidths.atualizacao }}
                   >
                     <div className="flex items-center gap-1 overflow-hidden pr-2">
-                      <span className="truncate whitespace-nowrap">Última Atualização</span>
+                      <span className="truncate whitespace-nowrap">Finalizado Em</span>
                       <ArrowUpDown className="h-3 w-3 shrink-0 text-slate-400 group-hover:text-slate-600" />
                     </div>
                     <div
@@ -526,7 +489,7 @@ export default function MeusAtendimentos() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredChamados.map((c) => (
+                {sortedChamados.map((c) => (
                   <TableRow key={c.id} className="hover:bg-slate-50/80 transition-colors h-[60px]">
                     <TableCell className="align-middle">
                       <div
@@ -560,24 +523,6 @@ export default function MeusAtendimentos() {
                         {c.nome_responsavel}
                       </div>
                     </TableCell>
-                    <TableCell className="align-middle">
-                      <Badge
-                        variant="outline"
-                        className={
-                          c.status === 'finalizado'
-                            ? 'bg-slate-100 text-slate-800 border-slate-200'
-                            : c.status === 'aberto'
-                              ? 'bg-blue-100 text-blue-800 border-blue-200'
-                              : 'bg-yellow-100 text-yellow-800 border-yellow-200'
-                        }
-                      >
-                        {c.status === 'finalizado'
-                          ? 'FINALIZADO'
-                          : c.status === 'aberto'
-                            ? 'ABERTO'
-                            : 'EM ATENDIMENTO'}
-                      </Badge>
-                    </TableCell>
                     <TableCell className="align-middle text-sm text-slate-500 whitespace-nowrap">
                       {formatDate(c.atualizado_em)}
                     </TableCell>
@@ -587,27 +532,12 @@ export default function MeusAtendimentos() {
                           variant="outline"
                           size="sm"
                           onClick={() => navigateToDetails(c.id)}
-                          title="Abrir Atendimento"
+                          title="Ver Detalhes"
                           className="px-2"
                         >
                           <ArrowRight className="h-4 w-4" />
                         </Button>
-                        {c.responsavel_id === user?.id && c.status !== 'finalizado' && (
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            className="px-2"
-                            onClick={(e) => {
-                              e.stopPropagation()
-                              setConfirmFinalizarId(c.id)
-                            }}
-                            disabled={completingId === c.id}
-                            title="Finalizar"
-                          >
-                            <Check className="h-4 w-4" />
-                          </Button>
-                        )}
-                        {c.status === 'finalizado' && isSupport && (
+                        {isSupport && (
                           <Button
                             variant="outline"
                             size="sm"
@@ -622,21 +552,6 @@ export default function MeusAtendimentos() {
                             <RotateCcw className="h-4 w-4" />
                           </Button>
                         )}
-                        {c.status !== 'finalizado' && isSupport && (
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            className="px-2"
-                            onClick={(e) => {
-                              e.stopPropagation()
-                              setUnificarChamado({ id: c.id, titulo: c.titulo, pia: c.pia })
-                            }}
-                            disabled={completingId === c.id}
-                            title="Unificar Chamado"
-                          >
-                            <LinkIcon className="h-4 w-4" />
-                          </Button>
-                        )}
                       </div>
                     </TableCell>
                   </TableRow>
@@ -646,8 +561,8 @@ export default function MeusAtendimentos() {
           </div>
 
           {/* Mobile Cards */}
-          <div className="md:hidden space-y-4">
-            {filteredChamados.map((c) => (
+          <div className="md:hidden space-y-4 z-0">
+            {sortedChamados.map((c) => (
               <Card key={c.id} className="border-slate-200">
                 <CardContent className="p-4 space-y-4">
                   <div className="flex justify-between items-start gap-2">
@@ -663,19 +578,9 @@ export default function MeusAtendimentos() {
                     <PriorityBadge priority={c.prioridade} />
                     <Badge
                       variant="outline"
-                      className={
-                        c.status === 'finalizado'
-                          ? 'bg-slate-100 text-slate-800 border-slate-200'
-                          : c.status === 'aberto'
-                            ? 'bg-blue-100 text-blue-800 border-blue-200'
-                            : 'bg-yellow-100 text-yellow-800 border-yellow-200'
-                      }
+                      className="bg-slate-100 text-slate-800 border-slate-200"
                     >
-                      {c.status === 'finalizado'
-                        ? 'FINALIZADO'
-                        : c.status === 'aberto'
-                          ? 'ABERTO'
-                          : 'EM ATENDIMENTO'}
+                      FINALIZADO
                     </Badge>
                   </div>
 
@@ -696,25 +601,11 @@ export default function MeusAtendimentos() {
                       variant="outline"
                       className="flex-1"
                       onClick={() => navigateToDetails(c.id)}
-                      title="Abrir Atendimento"
+                      title="Ver Detalhes"
                     >
                       <ArrowRight className="h-4 w-4" />
                     </Button>
-                    {c.responsavel_id === user?.id && c.status !== 'finalizado' && (
-                      <Button
-                        variant="outline"
-                        className="flex-1"
-                        onClick={(e) => {
-                          e.stopPropagation()
-                          setConfirmFinalizarId(c.id)
-                        }}
-                        disabled={completingId === c.id}
-                        title="Finalizar"
-                      >
-                        <Check className="h-4 w-4" />
-                      </Button>
-                    )}
-                    {c.status === 'finalizado' && isSupport && (
+                    {isSupport && (
                       <Button
                         variant="outline"
                         className="flex-1"
@@ -728,20 +619,6 @@ export default function MeusAtendimentos() {
                         <RotateCcw className="h-4 w-4" />
                       </Button>
                     )}
-                    {c.status !== 'finalizado' && isSupport && (
-                      <Button
-                        variant="outline"
-                        className="flex-1"
-                        onClick={(e) => {
-                          e.stopPropagation()
-                          setUnificarChamado({ id: c.id, titulo: c.titulo, pia: c.pia })
-                        }}
-                        disabled={completingId === c.id}
-                        title="Unificar Chamado"
-                      >
-                        <LinkIcon className="h-4 w-4" />
-                      </Button>
-                    )}
                   </div>
                 </CardContent>
               </Card>
@@ -749,17 +626,6 @@ export default function MeusAtendimentos() {
           </div>
         </>
       )}
-
-      <UnificarChamadoModal
-        isOpen={!!unificarChamado}
-        onClose={() => setUnificarChamado(null)}
-        sourceChamado={unificarChamado}
-        onSuccess={(destinoId) => {
-          setUnificarChamado(null)
-          fetchChamados()
-          navigate(`/dashboard/chamados/${destinoId}`)
-        }}
-      />
 
       <AlertDialog
         open={!!confirmReabrirId}
@@ -779,29 +645,6 @@ export default function MeusAtendimentos() {
               className="bg-blue-600 hover:bg-blue-700 text-white"
             >
               Confirmar
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-
-      <AlertDialog
-        open={!!confirmFinalizarId}
-        onOpenChange={(open) => !open && setConfirmFinalizarId(null)}
-      >
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Finalizar Atendimento</AlertDialogTitle>
-            <AlertDialogDescription>
-              Tem certeza que deseja finalizar este atendimento? Esta ação não poderá ser desfeita.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={() => confirmFinalizarId && handleFinalizar(confirmFinalizarId)}
-              className="bg-green-600 hover:bg-green-700 text-white"
-            >
-              Sim, Finalizar
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

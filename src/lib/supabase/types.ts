@@ -117,6 +117,7 @@ export type Database = {
           atualizado_em: string
           carro: string | null
           criado_em: string
+          data_ocorrencia: string | null
           descricao: string
           garagem: string | null
           id: string
@@ -141,6 +142,7 @@ export type Database = {
           atualizado_em?: string
           carro?: string | null
           criado_em?: string
+          data_ocorrencia?: string | null
           descricao: string
           garagem?: string | null
           id?: string
@@ -165,6 +167,7 @@ export type Database = {
           atualizado_em?: string
           carro?: string | null
           criado_em?: string
+          data_ocorrencia?: string | null
           descricao?: string
           garagem?: string | null
           id?: string
@@ -810,6 +813,7 @@ export const Constants = {
 //   numero_os: text (nullable)
 //   status_interno: text (nullable)
 //   garagem: text (nullable)
+//   data_ocorrencia: date (nullable)
 // Table: documentos
 //   id: uuid (not null, default: gen_random_uuid())
 //   tipo_documento: text (not null)

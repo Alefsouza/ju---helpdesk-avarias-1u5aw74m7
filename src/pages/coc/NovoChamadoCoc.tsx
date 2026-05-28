@@ -26,7 +26,7 @@ import {
 } from '@/components/ui/select'
 import { Checkbox } from '@/components/ui/checkbox'
 import { toast } from 'sonner'
-import { Loader2, UploadCloud } from 'lucide-react'
+import { Loader2, UploadCloud, X, File as FileIcon } from 'lucide-react'
 
 const formSchema = z.object({
   descricao: z.string().min(5, 'A descrição é obrigatória'),
@@ -46,7 +46,7 @@ const formSchema = z.object({
 export default function NovoChamadoCoc() {
   const { user } = useAuth()
   const navigate = useNavigate()
-  const [file, setFile] = useState<File | null>(null)
+  const [files, setFiles] = useState<File[]>([])
   const [isSubmitting, setIsSubmitting] = useState(false)
 
   const form = useForm<z.infer<typeof formSchema>>({
@@ -97,8 +97,8 @@ export default function NovoChamadoCoc() {
   async function onSubmit(values: z.infer<typeof formSchema>) {
     if (!user) return
 
-    if (!file) {
-      toast.error('O anexo é obrigatório')
+    if (files.length === 0) {
+      toast.error('Pelo menos um anexo é obrigatório')
       return
     }
 
@@ -153,32 +153,33 @@ export default function NovoChamadoCoc() {
 
       if (chamadoError) throw chamadoError
 
-      // 2. Upload file
-      const fileExt = file.name.split('.').pop() || 'dat'
-      const fileName = `${chamado.id}-${Date.now()}.${fileExt}`
+      // 2. Upload files and save attachments
+      for (const f of files) {
+        const fileExt = f.name.split('.').pop() || 'dat'
+        const fileName = `${chamado.id}-${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`
 
-      const { error: uploadError } = await supabase.storage.from('anexos').upload(fileName, file)
+        const { error: uploadError } = await supabase.storage.from('anexos').upload(fileName, f)
 
-      if (uploadError) throw uploadError
+        if (uploadError) throw uploadError
 
-      const { data: publicUrlData } = supabase.storage.from('anexos').getPublicUrl(fileName)
+        const { data: publicUrlData } = supabase.storage.from('anexos').getPublicUrl(fileName)
 
-      // 3. Save attachment
-      const mappedTipo = file.type || 'application/octet-stream'
+        const mappedTipo = f.type || 'application/octet-stream'
 
-      const { error: anexoError } = await supabase.from('anexos_chamado').insert({
-        chamado_id: chamado.id,
-        url_arquivo: publicUrlData.publicUrl,
-        nome_arquivo: file.name,
-        tipo_arquivo: mappedTipo,
-        tamanho_mb: Number((file.size / (1024 * 1024)).toFixed(2)),
-      })
+        const { error: anexoError } = await supabase.from('anexos_chamado').insert({
+          chamado_id: chamado.id,
+          url_arquivo: publicUrlData.publicUrl,
+          nome_arquivo: f.name,
+          tipo_arquivo: mappedTipo,
+          tamanho_mb: Number((f.size / (1024 * 1024)).toFixed(2)),
+        })
 
-      if (anexoError) throw anexoError
+        if (anexoError) throw anexoError
+      }
 
       toast.success('Chamado enviado com sucesso!')
       form.reset()
-      setFile(null)
+      setFiles([])
     } catch (error) {
       console.error(error)
       toast.error('Erro ao enviar chamado. Tente novamente.')
@@ -403,16 +404,29 @@ export default function NovoChamadoCoc() {
               />
 
               <div className="space-y-2">
-                <FormLabel>Anexo (Obrigatório)</FormLabel>
-                <div className="border-2 border-dashed border-slate-200 rounded-lg p-6 text-center hover:bg-slate-50 transition-colors">
+                <FormLabel>Anexos (Obrigatório)</FormLabel>
+                <div
+                  className="border-2 border-dashed border-slate-200 rounded-lg p-6 text-center hover:bg-slate-50 transition-colors"
+                  onDragOver={(e) => e.preventDefault()}
+                  onDrop={(e) => {
+                    e.preventDefault()
+                    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+                      setFiles((prev) => [...prev, ...Array.from(e.dataTransfer.files)])
+                    }
+                  }}
+                >
                   <input
                     type="file"
                     id="file-upload"
                     className="hidden"
                     accept="image/*,.pdf"
+                    multiple
                     onChange={(e) => {
-                      const f = e.target.files?.[0]
-                      if (f) setFile(f)
+                      if (e.target.files && e.target.files.length > 0) {
+                        setFiles((prev) => [...prev, ...Array.from(e.target.files as FileList)])
+                        // Reset the input value so the same file can be selected again if removed
+                        e.target.value = ''
+                      }
                     }}
                   />
                   <label
@@ -421,12 +435,45 @@ export default function NovoChamadoCoc() {
                   >
                     <UploadCloud className="w-8 h-8 text-slate-400" />
                     <span className="text-sm font-medium text-slate-600">
-                      {file
-                        ? file.name
-                        : 'Clique para selecionar ou arraste o arquivo (PDF, Imagem)'}
+                      Clique para selecionar ou arraste arquivos (PDF, Imagem)
+                    </span>
+                    <span className="text-xs text-slate-500">
+                      {files.length} arquivo(s) selecionado(s)
                     </span>
                   </label>
                 </div>
+
+                {files.length > 0 && (
+                  <div className="mt-4 space-y-2">
+                    {files.map((f, index) => (
+                      <div
+                        key={index}
+                        className="flex items-center justify-between p-3 bg-slate-50 border rounded-md"
+                      >
+                        <div className="flex items-center gap-3 overflow-hidden">
+                          <FileIcon className="w-5 h-5 text-slate-500 flex-shrink-0" />
+                          <div className="flex flex-col overflow-hidden">
+                            <span className="text-sm font-medium text-slate-700 truncate">
+                              {f.name}
+                            </span>
+                            <span className="text-xs text-slate-500">
+                              {(f.size / (1024 * 1024)).toFixed(2)} MB
+                            </span>
+                          </div>
+                        </div>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => setFiles((prev) => prev.filter((_, i) => i !== index))}
+                          className="text-slate-500 hover:text-red-500"
+                        >
+                          <X className="w-4 h-4" />
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
 
               <div className="flex justify-end pt-4 border-t">

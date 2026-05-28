@@ -163,7 +163,8 @@ export default function VistoriaForm() {
       if (dbError) throw dbError
 
       toast.success('Vistoria registrada com sucesso!')
-      navigate('/vistoria/pendentes')
+      form.reset()
+      setPhotos([])
     } catch (error: any) {
       console.error('Erro ao enviar vistoria:', error)
       toast.error(error.message || 'Erro ao registrar vistoria. Tente novamente.')

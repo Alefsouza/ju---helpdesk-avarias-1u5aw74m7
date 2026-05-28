@@ -79,17 +79,19 @@ export default function ChamadosAbertos() {
         if (carros.length > 0) {
           const { data: possibleDuplicates } = await supabase
             .from('chamados')
-            .select('id, carro, data_ocorrencia, status')
+            .select('id, carro, data_ocorrencia, criado_em, status')
             .in('carro', carros)
             .in('status', ['aberto', 'em_atendimento'])
 
           if (possibleDuplicates) {
             data.forEach((c) => {
-              if (c.carro && c.data_ocorrencia) {
-                const hasDuplicate = possibleDuplicates.some(
-                  (d) =>
-                    d.id !== c.id && d.carro === c.carro && d.data_ocorrencia === c.data_ocorrencia,
-                )
+              if (c.carro) {
+                const cDates = [c.data_ocorrencia, c.criado_em?.substring(0, 10)].filter(Boolean)
+                const hasDuplicate = possibleDuplicates.some((d) => {
+                  if (d.id === c.id || d.carro !== c.carro) return false
+                  const dDates = [d.data_ocorrencia, d.criado_em?.substring(0, 10)].filter(Boolean)
+                  return cDates.some((date) => dDates.includes(date))
+                })
                 if (hasDuplicate) {
                   duplicatesSet.add(c.id)
                 }
@@ -333,7 +335,7 @@ export default function ChamadosAbertos() {
                               <TooltipContent>
                                 <p>
                                   Já existe um chamado para esse Carro, com a mesma data de
-                                  ocorrência.
+                                  ocorrência
                                 </p>
                               </TooltipContent>
                             </Tooltip>
@@ -390,8 +392,7 @@ export default function ChamadosAbertos() {
                             </TooltipTrigger>
                             <TooltipContent>
                               <p>
-                                Já existe um chamado para esse Carro, com a mesma data de
-                                ocorrência.
+                                Já existe um chamado para esse Carro, com a mesma data de ocorrência
                               </p>
                             </TooltipContent>
                           </Tooltip>

@@ -1579,6 +1579,10 @@ export const Constants = {
 //   trg_formularios_espelho_danos_set_garagem: CREATE TRIGGER trg_formularios_espelho_danos_set_garagem BEFORE INSERT ON public.formularios_espelho_danos FOR EACH ROW EXECUTE FUNCTION set_garagem_from_profile()
 
 // --- INDEXES ---
+// Table: chamados
+//   CREATE INDEX idx_chamados_carro ON public.chamados USING btree (carro)
+//   CREATE INDEX idx_chamados_data_ocorrencia ON public.chamados USING btree (data_ocorrencia)
+//   CREATE INDEX idx_chamados_status ON public.chamados USING btree (status)
 // Table: documentos
 //   CREATE INDEX documentos_chamado_id_idx ON public.documentos USING btree (chamado_id)
 //   CREATE INDEX documentos_formulario_id_idx ON public.documentos USING btree (formulario_id)

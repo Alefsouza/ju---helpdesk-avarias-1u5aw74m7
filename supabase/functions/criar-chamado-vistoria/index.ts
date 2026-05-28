@@ -44,6 +44,7 @@ Deno.serve(async (req: Request) => {
     // 1. Create the ticket
     const titulo = `Avaria no carro ${documento.numero_carro || 'N/A'} - OS ${documento.numero_os}`
     const descricao = documento.descricao_danos || 'Sem descrição'
+    const dataOcorrencia = documento.data || new Date().toISOString().split('T')[0]
 
     const { data: novoChamado, error: chamadoError } = await supabaseAdmin
       .from('chamados')
@@ -52,6 +53,8 @@ Deno.serve(async (req: Request) => {
         descricao,
         status: 'aberto',
         usuario_id: user.id,
+        carro: documento.numero_carro || null,
+        data_ocorrencia: dataOcorrencia,
       })
       .select('id')
       .single()

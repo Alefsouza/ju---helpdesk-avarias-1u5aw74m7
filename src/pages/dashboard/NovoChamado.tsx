@@ -15,6 +15,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
+import { Calendar } from '@/components/ui/calendar'
+import { cn } from '@/lib/utils'
+import { format } from 'date-fns'
+import { ptBR } from 'date-fns/locale'
 import { toast } from 'sonner'
 import {
   UploadCloud,
@@ -24,6 +29,7 @@ import {
   CheckCircle2,
   RefreshCw,
   Loader2,
+  CalendarIcon,
 } from 'lucide-react'
 
 type FileCategory =
@@ -130,6 +136,7 @@ export default function NovoChamado() {
 
   const [tipoChamado, setTipoChamado] = useState<'Colisão' | 'Lesão Corporal' | ''>('')
   const [titulo, setTitulo] = useState('')
+  const [dataOcorrencia, setDataOcorrencia] = useState<Date | undefined>(undefined)
   const [descricao, setDescricao] = useState('')
   const [placaOnibus, setPlacaOnibus] = useState('')
   const [identifiedGaragem, setIdentifiedGaragem] = useState<string | null>(null)
@@ -363,6 +370,11 @@ export default function NovoChamado() {
       return
     }
 
+    if (!dataOcorrencia) {
+      toast.error('A data da ocorrência é obrigatória')
+      return
+    }
+
     if (!descricao.trim()) {
       toast.error('A descrição é obrigatória')
       return
@@ -431,6 +443,7 @@ export default function NovoChamado() {
           status: 'aberto',
           garagem: identifiedGaragem !== 'NOT_FOUND' ? identifiedGaragem : null,
           carro: placaOnibus,
+          data_ocorrencia: format(dataOcorrencia, 'yyyy-MM-dd'),
           criado_em: new Date().toISOString(),
         } as any)
         .select()
@@ -495,6 +508,7 @@ export default function NovoChamado() {
     !tipoChamado ||
     files.some((f) => f.status !== 'success') ||
     !titulo.trim() ||
+    !dataOcorrencia ||
     !descricao.trim() ||
     placaOnibus.length !== 8
 
@@ -519,6 +533,7 @@ export default function NovoChamado() {
                     setTipoChamado(val)
                     setFiles([])
                     setTitulo('')
+                    setDataOcorrencia(undefined)
                     setDescricao('')
                     setPlacaOnibus('')
                     setIdentifiedGaragem(null)
@@ -583,6 +598,37 @@ export default function NovoChamado() {
                       onChange={(e) => setTitulo(e.target.value)}
                       required
                     />
+                  </div>
+
+                  <div className="space-y-2 flex flex-col">
+                    <Label htmlFor="dataOcorrencia">Data da Ocorrência *</Label>
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <Button
+                          variant={'outline'}
+                          className={cn(
+                            'justify-start text-left font-normal',
+                            !dataOcorrencia && 'text-muted-foreground',
+                          )}
+                        >
+                          <CalendarIcon className="mr-2 h-4 w-4" />
+                          {dataOcorrencia ? (
+                            format(dataOcorrencia, 'PPP', { locale: ptBR })
+                          ) : (
+                            <span>Selecione uma data</span>
+                          )}
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0" align="start">
+                        <Calendar
+                          mode="single"
+                          selected={dataOcorrencia}
+                          onSelect={setDataOcorrencia}
+                          initialFocus
+                          locale={ptBR}
+                        />
+                      </PopoverContent>
+                    </Popover>
                   </div>
 
                   <div className="space-y-2">

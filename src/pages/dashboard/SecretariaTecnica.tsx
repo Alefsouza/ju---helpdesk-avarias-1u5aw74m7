@@ -23,6 +23,7 @@ import {
 } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { Textarea } from '@/components/ui/textarea'
 
 export default function SecretariaTecnica() {
   const [documentos, setDocumentos] = useState<any[]>([])
@@ -36,6 +37,8 @@ export default function SecretariaTecnica() {
   const [selectedDoc, setSelectedDoc] = useState<any | null>(null)
   const [uploading, setUploading] = useState(false)
   const [file, setFile] = useState<File | null>(null)
+  const [numeroOrcamento, setNumeroOrcamento] = useState('')
+  const [detalhesOrcamento, setDetalhesOrcamento] = useState('')
   const [viewDoc, setViewDoc] = useState<any>(null)
 
   const fetchDocumentos = async () => {
@@ -139,12 +142,14 @@ export default function SecretariaTecnica() {
   const handleUploadClick = (doc: any) => {
     setSelectedDoc(doc)
     setFile(null)
+    setNumeroOrcamento('')
+    setDetalhesOrcamento('')
     setUploadModalOpen(true)
   }
 
   const handleUploadSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!file || !selectedDoc) return
+    if (!file || !selectedDoc || !numeroOrcamento || !detalhesOrcamento) return
 
     try {
       setUploading(true)
@@ -185,7 +190,7 @@ export default function SecretariaTecnica() {
       const storageFileName = `orcamento_${selectedDoc.id}_${Date.now()}.${fileExt}`
       const filePath = `orcamentos/${storageFileName}`
 
-      const displayFileName = `Orçamento - Carro: ${carNumber} - OS: ${osNumber}.${fileExt}`
+      const displayFileName = `Orçamento: ${numeroOrcamento} - OS: ${osNumber} - Carro: ${carNumber}.${fileExt}`
 
       const { error: uploadError } = await supabase.storage
         .from('anexos_chamados_interno')
@@ -227,7 +232,7 @@ export default function SecretariaTecnica() {
           chamado_id: chamadoId,
           usuario_id: user.id,
           acao: 'respondido',
-          detalhes: 'Orçamento anexado pela Secretaria Técnica.',
+          detalhes: detalhesOrcamento,
         })
 
         if (histError) throw histError
@@ -409,6 +414,26 @@ export default function SecretariaTecnica() {
           </DialogHeader>
           <form onSubmit={handleUploadSubmit} className="space-y-4 mt-4">
             <div className="space-y-2">
+              <Label>Número do Orçamento</Label>
+              <Input
+                value={numeroOrcamento}
+                onChange={(e) => setNumeroOrcamento(e.target.value)}
+                placeholder="Ex: ORC-12345"
+                disabled={uploading}
+                required
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Detalhes do Orçamento</Label>
+              <Textarea
+                value={detalhesOrcamento}
+                onChange={(e) => setDetalhesOrcamento(e.target.value)}
+                placeholder="Descreva os detalhes..."
+                disabled={uploading}
+                required
+              />
+            </div>
+            <div className="space-y-2">
               <Label>Arquivo (PDF ou Imagem)</Label>
               <Input
                 type="file"
@@ -418,7 +443,7 @@ export default function SecretariaTecnica() {
                 required
               />
             </div>
-            <div className="flex justify-end gap-2">
+            <div className="flex justify-end gap-2 mt-6">
               <Button
                 type="button"
                 variant="outline"
@@ -427,7 +452,10 @@ export default function SecretariaTecnica() {
               >
                 Cancelar
               </Button>
-              <Button type="submit" disabled={!file || uploading}>
+              <Button
+                type="submit"
+                disabled={!file || !numeroOrcamento || !detalhesOrcamento || uploading}
+              >
                 {uploading ? (
                   <>
                     <Loader2 className="w-4 h-4 mr-2 animate-spin" />

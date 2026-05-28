@@ -189,12 +189,7 @@ function AppSidebar() {
                     asChild
                     isActive={location.pathname === '/dashboard/secretaria-tecnica'}
                     className="data-[active=true]:bg-transparent data-[active=true]:text-[#c8e6c9] hover:bg-[#c8e6c9]/10 hover:text-[#c8e6c9] text-white transition-colors"
-                  >
-                    <Link to="/dashboard/secretaria-tecnica">
-                      <FileText />
-                      <span>Sec. Técnica</span>
-                    </Link>
-                  </SidebarMenuButton>
+                  ></SidebarMenuButton>
                 </SidebarMenuItem>
               )}
 
@@ -304,48 +299,28 @@ function AppSidebar() {
                       asChild
                       isActive={location.pathname === '/os-manutencao'}
                       className="data-[active=true]:bg-transparent data-[active=true]:text-[#c8e6c9] hover:bg-[#c8e6c9]/10 hover:text-[#c8e6c9] text-white transition-colors"
-                    >
-                      <Link to="/os-manutencao">
-                        <Wrench />
-                        <span>OS Manutenção (Cursino)</span>
-                      </Link>
-                    </SidebarMenuButton>
+                    ></SidebarMenuButton>
                   </SidebarMenuItem>
                   <SidebarMenuItem>
                     <SidebarMenuButton
                       asChild
                       isActive={location.pathname === '/os-manutencao-leste'}
                       className="data-[active=true]:bg-transparent data-[active=true]:text-[#c8e6c9] hover:bg-[#c8e6c9]/10 hover:text-[#c8e6c9] text-white transition-colors"
-                    >
-                      <Link to="/os-manutencao-leste">
-                        <Wrench />
-                        <span>OS Manutenção Leste</span>
-                      </Link>
-                    </SidebarMenuButton>
+                    ></SidebarMenuButton>
                   </SidebarMenuItem>
                   <SidebarMenuItem>
                     <SidebarMenuButton
                       asChild
                       isActive={location.pathname === '/carros-liberados-plantao'}
                       className="data-[active=true]:bg-transparent data-[active=true]:text-[#c8e6c9] hover:bg-[#c8e6c9]/10 hover:text-[#c8e6c9] text-white transition-colors"
-                    >
-                      <Link to="/carros-liberados-plantao">
-                        <CheckCircle />
-                        <span>Carros Liberados (Cursino)</span>
-                      </Link>
-                    </SidebarMenuButton>
+                    ></SidebarMenuButton>
                   </SidebarMenuItem>
                   <SidebarMenuItem>
                     <SidebarMenuButton
                       asChild
                       isActive={location.pathname === '/carros-liberados-leste'}
                       className="data-[active=true]:bg-transparent data-[active=true]:text-[#c8e6c9] hover:bg-[#c8e6c9]/10 hover:text-[#c8e6c9] text-white transition-colors"
-                    >
-                      <Link to="/carros-liberados-leste">
-                        <CheckCircle />
-                        <span>Carros Liberados (Leste)</span>
-                      </Link>
-                    </SidebarMenuButton>
+                    ></SidebarMenuButton>
                   </SidebarMenuItem>
                 </>
               )}

@@ -131,59 +131,63 @@ export default function OsManutencao({
   }
 
   const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
+    const files = e.target.files
     const targetDoc = uploadTargetDoc.current
 
-    if (!file || !targetDoc) {
+    if (!files || files.length === 0 || !targetDoc) {
       if (e.target) e.target.value = ''
       return
     }
 
     try {
       setUploadingPhotoId(targetDoc.id)
+      const newUrls: string[] = []
 
-      const fileExt = file.name.split('.').pop()
-      const fileName = `os_foto_${targetDoc.id}_${Date.now()}.${fileExt}`
+      for (let i = 0; i < files.length; i++) {
+        const file = files[i]
+        const fileExt = file.name.split('.').pop()
+        const fileName = `os_foto_${targetDoc.id}_${Date.now()}_${i}.${fileExt}`
 
-      const { error: uploadError } = await supabase.storage
-        .from('documentos')
-        .upload(fileName, file, { upsert: false })
+        const { error: uploadError } = await supabase.storage
+          .from('documentos')
+          .upload(fileName, file, { upsert: false })
 
-      if (uploadError) throw uploadError
+        if (uploadError) throw uploadError
 
-      const { data: publicUrlData } = supabase.storage.from('documentos').getPublicUrl(fileName)
-
-      const newUrl = publicUrlData.publicUrl
+        const { data: publicUrlData } = supabase.storage.from('documentos').getPublicUrl(fileName)
+        newUrls.push(publicUrlData.publicUrl)
+      }
 
       const { data: userData } = await supabase.auth.getUser()
       const userId = userData?.user?.id || null
 
-      const { error: updateError } = await supabase.rpc('anexar_foto_manutencao' as any, {
-        p_documento_id: targetDoc.id,
-        p_foto_url: newUrl,
-        p_usuario_id: userId,
-      })
-
-      if (updateError) throw updateError
+      for (const newUrl of newUrls) {
+        const { error: updateError } = await supabase.rpc('anexar_foto_manutencao' as any, {
+          p_documento_id: targetDoc.id,
+          p_foto_url: newUrl,
+          p_usuario_id: userId,
+        })
+        if (updateError) throw updateError
+      }
 
       const currentFotos = Array.isArray(targetDoc.fotos_manutencao)
         ? targetDoc.fotos_manutencao
         : []
-      const newFotosUrls = [...currentFotos, newUrl]
+      const newFotosUrls = [...currentFotos, ...newUrls]
 
       toast({
         title: 'Sucesso',
-        description: 'Foto anexada com sucesso!',
+        description: `${newUrls.length > 1 ? newUrls.length + ' fotos anexadas' : 'Foto anexada'} com sucesso!`,
       })
 
       setDocumentos((docs) =>
         docs.map((d) => (d.id === targetDoc.id ? { ...d, fotos_manutencao: newFotosUrls } : d)),
       )
     } catch (error: any) {
-      console.error('Erro ao fazer upload da foto:', error)
+      console.error('Erro ao fazer upload da(s) foto(s):', error)
       toast({
         title: 'Erro',
-        description: error.message || 'Erro ao fazer upload da foto.',
+        description: error.message || 'Erro ao fazer upload da(s) foto(s).',
         variant: 'destructive',
       })
     } finally {
@@ -494,20 +498,31 @@ export default function OsManutencao({
                               >
                                 <Download className="h-4 w-4" />
                               </Button>
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className="h-8 w-8 text-slate-500 hover:text-blue-600 hover:bg-blue-50"
-                                onClick={() => handleCameraClick(doc)}
-                                disabled={uploadingPhotoId === doc.id}
-                                title="Anexar Foto"
-                              >
-                                {uploadingPhotoId === doc.id ? (
-                                  <Loader2 className="h-4 w-4 animate-spin" />
-                                ) : (
-                                  <Camera className="h-4 w-4" />
-                                )}
-                              </Button>
+                              <div className="relative inline-block">
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-8 w-8 text-slate-500 hover:text-blue-600 hover:bg-blue-50"
+                                  onClick={() => handleCameraClick(doc)}
+                                  disabled={uploadingPhotoId === doc.id}
+                                  title="Anexar Foto"
+                                >
+                                  {uploadingPhotoId === doc.id ? (
+                                    <Loader2 className="h-4 w-4 animate-spin" />
+                                  ) : (
+                                    <Camera className="h-4 w-4" />
+                                  )}
+                                </Button>
+                                {Array.isArray(doc.fotos_manutencao) &&
+                                  doc.fotos_manutencao.length > 0 && (
+                                    <span
+                                      className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-blue-100 text-[10px] font-bold text-blue-600 border border-white"
+                                      title={`${doc.fotos_manutencao.length} foto(s) anexada(s)`}
+                                    >
+                                      {doc.fotos_manutencao.length}
+                                    </span>
+                                  )}
+                              </div>
                               {doc.status_liberacao === 'Liberado com Pendência' && (
                                 <Tooltip>
                                   <TooltipTrigger asChild>
@@ -546,6 +561,7 @@ export default function OsManutencao({
         <input
           type="file"
           accept="image/*"
+          multiple
           ref={fileInputRef}
           style={{ display: 'none' }}
           onChange={handlePhotoUpload}

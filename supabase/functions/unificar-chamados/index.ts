@@ -123,6 +123,30 @@ Deno.serve(async (req: Request) => {
       .update({ chamado_id: destino_id })
       .eq('chamado_id', origem_id)
 
+    // Update anexos_chamado_interno
+    await supabaseAdmin
+      .from('anexos_chamado_interno')
+      .update({ chamado_id: destino_id })
+      .eq('chamado_id', origem_id)
+
+    // Update documentos (RA/PIA)
+    await supabaseAdmin
+      .from('documentos')
+      .update({ chamado_id: destino_id })
+      .eq('chamado_id', origem_id)
+
+    // Update formularios_espelho_danos
+    await supabaseAdmin
+      .from('formularios_espelho_danos')
+      .update({ chamado_id: destino_id })
+      .eq('chamado_id', origem_id)
+
+    // Update formularios_ido
+    await supabaseAdmin
+      .from('formularios_ido')
+      .update({ chamado_id: destino_id })
+      .eq('chamado_id', origem_id)
+
     // Update historico_chamado
     await supabaseAdmin
       .from('historico_chamado')
@@ -146,7 +170,7 @@ Deno.serve(async (req: Request) => {
       chamado_id: destino_id,
       acao: 'transferido',
       usuario_id: user.id,
-      detalhes: `O chamado "${origem.titulo}" (ID: ${origem_id.substring(0, 8)}) foi unificado a este chamado por ${profile.nome_completo}.`,
+      detalhes: `O chamado "${origem.titulo}" (ID: ${origem_id.substring(0, 8)}) foi unificado a este chamado por ${profile.nome_completo}. Documentação e anexos migrados do chamado unificado ${origem_id.substring(0, 8)}.`,
     })
 
     return new Response(JSON.stringify({ success: true }), {

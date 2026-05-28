@@ -84,6 +84,32 @@ Deno.serve(async (req: Request) => {
     // Ensure we do not overwrite the destination's primary context (pia, titulo, tipo_chamado, prioridade)
     // Only moving explicitly requested related tables.
 
+    // Copy participants and original creator
+    if (origem.usuario_id) {
+      await supabaseAdmin.from('participantes_chamado').upsert(
+        {
+          chamado_id: destino_id,
+          usuario_id: origem.usuario_id,
+        },
+        { onConflict: 'chamado_id, usuario_id' },
+      )
+    }
+
+    const { data: sourceParticipants } = await supabaseAdmin
+      .from('participantes_chamado')
+      .select('usuario_id')
+      .eq('chamado_id', origem_id)
+
+    if (sourceParticipants && sourceParticipants.length > 0) {
+      const inserts = sourceParticipants.map((p: any) => ({
+        chamado_id: destino_id,
+        usuario_id: p.usuario_id,
+      }))
+      await supabaseAdmin
+        .from('participantes_chamado')
+        .upsert(inserts, { onConflict: 'chamado_id, usuario_id' })
+    }
+
     // Start data migration:
     // Update respostas_chamado
     await supabaseAdmin

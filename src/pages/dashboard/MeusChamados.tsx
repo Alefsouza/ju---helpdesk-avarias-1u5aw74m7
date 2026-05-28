@@ -118,11 +118,23 @@ export default function MeusChamados() {
       } = await supabase.auth.getUser()
       if (!user) throw new Error('Usuário não autenticado')
 
+      const { data: participations } = await supabase
+        .from('participantes_chamado')
+        .select('chamado_id')
+        .eq('usuario_id', user.id)
+
+      const partIds = participations?.map((p) => p.chamado_id) || []
+
       let query = supabase
         .from('chamados')
         .select('id, titulo, status, prioridade, criado_em, pia, carro, data_ocorrencia')
-        .eq('usuario_id', user.id)
         .order(sortConfig.field, { ascending: sortConfig.direction === 'asc' })
+
+      if (partIds.length > 0) {
+        query = query.or(`usuario_id.eq.${user.id},id.in.(${partIds.join(',')})`)
+      } else {
+        query = query.eq('usuario_id', user.id)
+      }
 
       if (sortConfig.field !== 'criado_em') {
         query = query.order('criado_em', { ascending: false })

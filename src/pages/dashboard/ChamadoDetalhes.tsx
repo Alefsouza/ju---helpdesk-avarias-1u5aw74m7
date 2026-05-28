@@ -615,6 +615,7 @@ export default function ChamadoDetalhes() {
   const { user } = useAuth()
 
   const [chamado, setChamado] = useState<Chamado | null>(null)
+  const [isParticipant, setIsParticipant] = useState(false)
   const [descricaoDisplay, setDescricaoDisplay] = useState('')
   const [solicitante, setSolicitante] = useState<Perfil | null>(null)
   const [anexos, setAnexos] = useState<Anexo[]>([])
@@ -693,6 +694,15 @@ export default function ChamadoDetalhes() {
       const { data } = await supabase.from('perfil_usuario').select('*').eq('id', user.id).single()
       currUser = data
       setCurrentUserProfile(currUser)
+
+      const { data: participantData } = await supabase
+        .from('participantes_chamado')
+        .select('id')
+        .eq('chamado_id', id)
+        .eq('usuario_id', user.id)
+        .maybeSingle()
+
+      setIsParticipant(!!participantData)
     }
 
     let internalAttachments: AnexoInterno[] = []
@@ -2067,7 +2077,7 @@ export default function ChamadoDetalhes() {
   const isResponsible = chamado.responsavel_id === user?.id
   const isSolicitante = chamado.usuario_id === user?.id
 
-  const canReply = isSolicitante || isResponsible || isSupport
+  const canReply = isSolicitante || isResponsible || isSupport || isParticipant
   const canFinalize = isSupport && chamado.status !== 'finalizado'
   const canTransfer = isSupport && isResponsible && chamado.status !== 'finalizado'
   const canEditRA = isSupport

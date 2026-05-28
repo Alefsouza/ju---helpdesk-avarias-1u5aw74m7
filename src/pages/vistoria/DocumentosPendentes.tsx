@@ -485,7 +485,7 @@ export default function DocumentosPendentes() {
 
       {/* Modal Preencher OS */}
       <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
-        <DialogContent className="sm:max-w-[425px]">
+        <DialogContent className="sm:max-w-[425px] max-h-[85vh] overflow-y-auto overflow-x-hidden">
           <DialogHeader>
             <DialogTitle>Preencher Número da OS</DialogTitle>
           </DialogHeader>
@@ -511,22 +511,24 @@ export default function DocumentosPendentes() {
               />
             </div>
             {selectedDoc && (
-              <div className="text-sm text-muted-foreground bg-slate-50 p-3 rounded-md border mt-2 space-y-1">
+              <div className="text-sm text-slate-600 bg-slate-50 p-4 rounded-md border mt-2 space-y-2 overflow-x-hidden">
                 <p>
-                  <strong>Garagem:</strong> {selectedDoc.garagem || '-'}
-                </p>
-                <p>
-                  <strong>Linha:</strong> {selectedDoc.linha || '-'}
+                  <strong className="text-slate-900">Garagem:</strong> {selectedDoc.garagem || '-'}
                 </p>
                 <p>
-                  <strong>Carro:</strong> {selectedDoc.numero_carro || '-'}
+                  <strong className="text-slate-900">Linha:</strong> {selectedDoc.linha || '-'}
                 </p>
                 <p>
-                  <strong>Data:</strong> {formatDate(selectedDoc.data)}
+                  <strong className="text-slate-900">Carro:</strong>{' '}
+                  {selectedDoc.numero_carro || '-'}
                 </p>
-                <p className="line-clamp-2" title={selectedDoc.descricao_danos || ''}>
-                  <strong>Danos:</strong> {truncateText(selectedDoc.descricao_danos, 80)}
+                <p>
+                  <strong className="text-slate-900">Data:</strong> {formatDate(selectedDoc.data)}
                 </p>
+                <div className="break-words whitespace-pre-wrap">
+                  <strong className="text-slate-900">Danos:</strong>{' '}
+                  {selectedDoc.descricao_danos || '-'}
+                </div>
               </div>
             )}
           </div>

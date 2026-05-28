@@ -138,7 +138,9 @@ export default function NovoChamadoCoc() {
         local_ocorrencia: values.local_ocorrencia,
         operacao: values.operacao,
         tipo_chamado: values.colisao === 'Sim' ? 'Com colisão' : 'Sem colisão',
-        data_ocorrencia: new Date().toISOString().split('T')[0],
+        data_ocorrencia: new Date(new Date().getTime() - new Date().getTimezoneOffset() * 60000)
+          .toISOString()
+          .split('T')[0],
       }
 
       if (garagemEncontrada) {

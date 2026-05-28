@@ -41,10 +41,51 @@ Deno.serve(async (req: Request) => {
       throw new Error('Documento inválido ou sem número de OS')
     }
 
-    // 1. Create the ticket
+    // 1. Identify garage
+    let garagemToInsert = documento.garagem || null
+
+    if (!garagemToInsert && documento.numero_carro) {
+      const { data: veiculo } = await supabaseAdmin
+        .from('frota_veiculos')
+        .select('garagem')
+        .eq('prefixo', documento.numero_carro.trim())
+        .maybeSingle()
+      if (veiculo?.garagem) {
+        garagemToInsert = veiculo.garagem
+      }
+    }
+
+    if (!garagemToInsert) {
+      const { data: profile } = await supabaseAdmin
+        .from('perfil_usuario')
+        .select('garagem')
+        .eq('id', user.id)
+        .maybeSingle()
+      if (profile?.garagem) {
+        garagemToInsert = profile.garagem
+      }
+    }
+
+    // 2. Format occurrence date (YYYY-MM-DD)
+    let dataOcorrencia = documento.data
+    if (!dataOcorrencia) {
+      const now = new Date()
+      dataOcorrencia = new Date(now.getTime() - now.getTimezoneOffset() * 60000)
+        .toISOString()
+        .split('T')[0]
+    } else {
+      dataOcorrencia = dataOcorrencia.split('T')[0]
+      if (dataOcorrencia.includes('/')) {
+        const parts = dataOcorrencia.split('/')
+        if (parts.length === 3) {
+          dataOcorrencia = `${parts[2]}-${parts[1]}-${parts[0]}`
+        }
+      }
+    }
+
+    // 3. Create the ticket
     const titulo = `Avaria no carro ${documento.numero_carro || 'N/A'} - OS ${documento.numero_os}`
     const descricao = documento.descricao_danos || 'Sem descrição'
-    const dataOcorrencia = documento.data || new Date().toISOString().split('T')[0]
 
     const { data: novoChamado, error: chamadoError } = await supabaseAdmin
       .from('chamados')
@@ -55,6 +96,7 @@ Deno.serve(async (req: Request) => {
         usuario_id: user.id,
         carro: documento.numero_carro || null,
         data_ocorrencia: dataOcorrencia,
+        garagem: garagemToInsert,
       })
       .select('id')
       .single()
@@ -63,7 +105,7 @@ Deno.serve(async (req: Request) => {
 
     const chamadoId = novoChamado.id
 
-    // 2. Update document with chamado_id
+    // 4. Update document with chamado_id
     await supabaseAdmin.from('documentos').update({ chamado_id: chamadoId }).eq('id', documento.id)
 
     if (documento.formulario_id) {

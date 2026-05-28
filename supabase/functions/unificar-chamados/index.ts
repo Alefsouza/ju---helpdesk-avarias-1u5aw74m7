@@ -165,13 +165,31 @@ Deno.serve(async (req: Request) => {
       })
       .eq('id', origem_id)
 
-    // Add history record to destination
-    await supabaseAdmin.from('historico_chamado').insert({
-      chamado_id: destino_id,
-      acao: 'transferido',
-      usuario_id: user.id,
-      detalhes: `O chamado "${origem.titulo}" (ID: ${origem_id.substring(0, 8)}) foi unificado a este chamado por ${profile.nome_completo}. Documentação e anexos migrados do chamado unificado ${origem_id.substring(0, 8)}.`,
-    })
+    // Update destination ticket status to 'em_atendimento' and update timestamp
+    await supabaseAdmin
+      .from('chamados')
+      .update({
+        status: 'em_atendimento',
+        atualizado_em: new Date().toISOString(),
+      })
+      .eq('id', destino_id)
+
+    // Add history records to destination
+    await supabaseAdmin.from('historico_chamado').insert([
+      {
+        chamado_id: destino_id,
+        acao: 'transferido',
+        usuario_id: user.id,
+        detalhes: `O chamado "${origem.titulo}" (ID: ${origem_id.substring(0, 8)}) foi unificado a este chamado por ${profile.nome_completo}. Documentação e anexos migrados do chamado unificado ${origem_id.substring(0, 8)}.`,
+      },
+      {
+        chamado_id: destino_id,
+        acao: 'atribuido',
+        usuario_id: user.id,
+        detalhes:
+          'Status alterado para Em Atendimento automaticamente após a unificação de registros.',
+      },
+    ])
 
     return new Response(JSON.stringify({ success: true }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },

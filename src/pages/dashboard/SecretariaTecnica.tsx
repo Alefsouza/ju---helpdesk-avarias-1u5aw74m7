@@ -97,6 +97,17 @@ export default function SecretariaTecnica() {
           fetchDocumentos()
         },
       )
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'chamados',
+        },
+        () => {
+          fetchDocumentos()
+        },
+      )
       .subscribe()
 
     return () => {
@@ -261,7 +272,7 @@ export default function SecretariaTecnica() {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>RA/PIA</TableHead>
+                <TableHead>RA</TableHead>
                 <TableHead>OS</TableHead>
                 <TableHead>Carro</TableHead>
                 <TableHead>Garagem</TableHead>
@@ -446,7 +457,7 @@ export default function SecretariaTecnica() {
             <div className="space-y-6 py-4">
               <div className="grid grid-cols-2 gap-4 text-sm">
                 <div>
-                  <p className="text-[#333333] font-bold mb-1">RA/PIA</p>
+                  <p className="text-[#333333] font-bold mb-1">RA</p>
                   <p className="text-[#333333]">{viewDoc.chamados?.pia || '-'}</p>
                 </div>
                 <div>

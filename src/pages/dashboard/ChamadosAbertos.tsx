@@ -21,9 +21,10 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import { Skeleton } from '@/components/ui/skeleton'
-import { Search, Inbox, AlertCircle, ArrowRight } from 'lucide-react'
+import { Search, Inbox, AlertCircle, ArrowRight, AlertTriangle } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent } from '@/components/ui/card'
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 
 export default function ChamadosAbertos() {
   const { user } = useAuth()
@@ -72,9 +73,34 @@ export default function ChamadosAbertos() {
           {} as Record<string, string>,
         )
 
+        const carros = data.map((c) => c.carro).filter(Boolean)
+        const duplicatesSet = new Set<string>()
+
+        if (carros.length > 0) {
+          const { data: possibleDuplicates } = await supabase
+            .from('chamados')
+            .select('id, carro, data_ocorrencia')
+            .in('carro', carros)
+
+          if (possibleDuplicates) {
+            data.forEach((c) => {
+              if (c.carro && c.data_ocorrencia) {
+                const hasDuplicate = possibleDuplicates.some(
+                  (d) =>
+                    d.id !== c.id && d.carro === c.carro && d.data_ocorrencia === c.data_ocorrencia,
+                )
+                if (hasDuplicate) {
+                  duplicatesSet.add(c.id)
+                }
+              }
+            })
+          }
+        }
+
         const chamadosComNome = data.map((c) => ({
           ...c,
           nome_usuario: perfilMap?.[c.usuario_id] || 'Usuário Desconhecido',
+          is_duplicate: duplicatesSet.has(c.id),
         }))
 
         setChamados(chamadosComNome)
@@ -295,7 +321,24 @@ export default function ChamadosAbertos() {
                     onClick={() => navigateToDetails(c.id)}
                   >
                     <TableCell>
-                      <div className="font-medium text-slate-900 line-clamp-1">{c.titulo}</div>
+                      <div className="flex items-center gap-2">
+                        <div className="font-medium text-slate-900 line-clamp-1">{c.titulo}</div>
+                        {c.is_duplicate && (
+                          <TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <AlertTriangle className="h-4 w-4 text-yellow-500 shrink-0" />
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                <p>
+                                  Já existe um chamado para esse Carro, com a mesma data de
+                                  ocorrência.
+                                </p>
+                              </TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
+                        )}
+                      </div>
                     </TableCell>
                     <TableCell className="text-sm">
                       <span className="font-medium text-slate-700">{c.nome_usuario}</span>
@@ -336,8 +379,23 @@ export default function ChamadosAbertos() {
               >
                 <CardContent className="p-4 space-y-4">
                   <div className="flex justify-between items-start gap-2">
-                    <div className="flex-1 min-w-0">
+                    <div className="flex-1 min-w-0 flex items-center gap-2">
                       <h3 className="font-semibold text-slate-900 line-clamp-1">{c.titulo}</h3>
+                      {c.is_duplicate && (
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <AlertTriangle className="h-4 w-4 text-yellow-500 shrink-0" />
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p>
+                                Já existe um chamado para esse Carro, com a mesma data de
+                                ocorrência.
+                              </p>
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                      )}
                     </div>
                     <PriorityBadge priority={c.prioridade} />
                   </div>

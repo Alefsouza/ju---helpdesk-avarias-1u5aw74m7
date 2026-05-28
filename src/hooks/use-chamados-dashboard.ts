@@ -23,12 +23,27 @@ export function useChamadosDashboard() {
       if (chamadosRes.error) throw chamadosRes.error
       if (respRes.error) throw respRes.error
 
-      const mapped = (chamadosRes.data || []).map((c) => ({
-        ...c,
-        responsavel: (respRes.data || []).find((r) => r.id === c.responsavel_id) || null,
-        respostas: (respostasRes.data || []).filter((r) => r.chamado_id === c.id),
-        historico: (historicoRes.data || []).filter((h) => h.chamado_id === c.id),
-      }))
+      const allChamados = chamadosRes.data || []
+      const mapped = allChamados.map((c) => {
+        const is_duplicate = Boolean(
+          c.carro &&
+          c.data_ocorrencia &&
+          allChamados.some(
+            (other) =>
+              other.id !== c.id &&
+              other.carro === c.carro &&
+              other.data_ocorrencia === c.data_ocorrencia,
+          ),
+        )
+
+        return {
+          ...c,
+          responsavel: (respRes.data || []).find((r) => r.id === c.responsavel_id) || null,
+          respostas: (respostasRes.data || []).filter((r) => r.chamado_id === c.id),
+          historico: (historicoRes.data || []).filter((h) => h.chamado_id === c.id),
+          is_duplicate,
+        }
+      })
 
       setChamados(mapped)
       setResponsaveis(respRes.data || [])

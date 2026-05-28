@@ -21,9 +21,10 @@ import { Badge } from '@/components/ui/badge'
 import { Card, CardContent } from '@/components/ui/card'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { Calendar } from '@/components/ui/calendar'
-import { Search, FilterX, ExternalLink, CalendarIcon } from 'lucide-react'
+import { Search, FilterX, ExternalLink, CalendarIcon, AlertTriangle } from 'lucide-react'
 import { format, isAfter, isBefore, subDays, startOfDay, endOfDay } from 'date-fns'
 import { cn } from '@/lib/utils'
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 
 export function DashboardTable({
   chamados,
@@ -276,8 +277,25 @@ export function DashboardTable({
                       key={c.id}
                       className="border-[#f0f0f0] odd:bg-white even:bg-[#fbfbfb] hover:bg-[#f0f0f0]/50 transition-colors"
                     >
-                      <TableCell className="font-medium text-[#212121] truncate max-w-[250px]">
-                        {c.titulo}
+                      <TableCell className="font-medium text-[#212121] max-w-[250px]">
+                        <div className="flex items-center gap-2">
+                          <span className="truncate">{c.titulo}</span>
+                          {c.is_duplicate && (
+                            <TooltipProvider>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <AlertTriangle className="h-4 w-4 text-yellow-500 shrink-0 cursor-help" />
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  <p>
+                                    Já existe um chamado para esse Carro, com a mesma data de
+                                    ocorrência.
+                                  </p>
+                                </TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
+                          )}
+                        </div>
                       </TableCell>
                       <TableCell>
                         <Badge className={statusColor[c.status]} variant="secondary">
@@ -329,7 +347,24 @@ export function DashboardTable({
                   <CardContent className="p-4 space-y-3">
                     <div className="flex justify-between items-start">
                       <div className="space-y-1">
-                        <h4 className="font-medium leading-tight">{c.titulo}</h4>
+                        <div className="flex items-center gap-2">
+                          <h4 className="font-medium leading-tight">{c.titulo}</h4>
+                          {c.is_duplicate && (
+                            <TooltipProvider>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <AlertTriangle className="h-4 w-4 text-yellow-500 shrink-0 cursor-help" />
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  <p>
+                                    Já existe um chamado para esse Carro, com a mesma data de
+                                    ocorrência.
+                                  </p>
+                                </TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
+                          )}
+                        </div>
                       </div>
                     </div>
                     <div className="flex flex-wrap gap-2">

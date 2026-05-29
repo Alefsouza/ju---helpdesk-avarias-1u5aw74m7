@@ -10,6 +10,7 @@ export const updateAdminUser = async (
     endereco?: string
     departamento?: string
     garagem?: string | null
+    registro?: string | null
   },
 ) => {
   return await supabase.functions.invoke('manage-users', {
@@ -26,6 +27,7 @@ export const createAdminUser = async (data: {
   endereco?: string
   departamento?: string
   garagem?: string | null
+  registro?: string | null
 }) => {
   return await supabase.functions.invoke('manage-users', {
     body: { action: 'create', ...data },

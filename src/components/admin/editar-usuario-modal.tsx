@@ -39,6 +39,7 @@ const formSchema = z.object({
   endereco: z.string().optional(),
   departamento: z.string().optional(),
   garagem: z.string().optional().nullable(),
+  registro: z.string().optional(),
   ativo: z.boolean().default(true),
 })
 
@@ -67,6 +68,7 @@ export function EditarUsuarioModal({
       endereco: '',
       departamento: '',
       garagem: '',
+      registro: '',
       ativo: true,
     },
   })
@@ -80,6 +82,7 @@ export function EditarUsuarioModal({
         endereco: user.endereco || '',
         departamento: user.departamento || '',
         garagem: user.garagem || '',
+        registro: user.registro || '',
         ativo: user.ativo !== false,
       })
     }
@@ -124,6 +127,19 @@ export function EditarUsuarioModal({
         </DialogHeader>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+            <FormField
+              control={form.control}
+              name="registro"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Registro</FormLabel>
+                  <FormControl>
+                    <Input placeholder="Número de registro" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
             <FormField
               control={form.control}
               name="nome_completo"

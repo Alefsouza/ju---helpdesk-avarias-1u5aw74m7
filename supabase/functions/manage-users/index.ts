@@ -57,6 +57,7 @@ Deno.serve(async (req: Request) => {
         endereco,
         departamento,
         garagem,
+        registro,
       } = body
 
       const { data: newUser, error: createError } = await supabaseAdmin.auth.admin.createUser({
@@ -74,6 +75,7 @@ Deno.serve(async (req: Request) => {
       if (endereco !== undefined) updateData.endereco = endereco
       if (departamento !== undefined) updateData.departamento = departamento
       if (garagem !== undefined) updateData.garagem = garagem
+      if (registro !== undefined) updateData.registro = registro
 
       // Update profile created by the database trigger
       const { error: updateError } = await supabaseAdmin
@@ -98,6 +100,7 @@ Deno.serve(async (req: Request) => {
         endereco,
         departamento,
         garagem,
+        registro,
       } = body
 
       const updateData: any = {}
@@ -108,6 +111,7 @@ Deno.serve(async (req: Request) => {
       if (endereco !== undefined) updateData.endereco = endereco
       if (departamento !== undefined) updateData.departamento = departamento
       if (garagem !== undefined) updateData.garagem = garagem
+      if (registro !== undefined) updateData.registro = registro
 
       const { error: updateError } = await supabaseAdmin
         .from('perfil_usuario')

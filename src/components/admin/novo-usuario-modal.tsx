@@ -39,6 +39,7 @@ const formSchema = z.object({
   endereco: z.string().optional(),
   departamento: z.string().optional(),
   garagem: z.string().optional().nullable(),
+  registro: z.string().optional(),
 })
 
 type FormValues = z.infer<typeof formSchema>
@@ -65,6 +66,7 @@ export function NovoUsuarioModal({
       endereco: '',
       departamento: '',
       garagem: '',
+      registro: '',
     },
   })
 
@@ -115,6 +117,19 @@ export function NovoUsuarioModal({
                   <FormLabel>E-mail *</FormLabel>
                   <FormControl>
                     <Input placeholder="email@exemplo.com" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="registro"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Registro</FormLabel>
+                  <FormControl>
+                    <Input placeholder="Número de registro" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>

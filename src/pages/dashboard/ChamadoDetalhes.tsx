@@ -629,6 +629,8 @@ export default function ChamadoDetalhes() {
 
   const [pia, setPia] = useState('')
   const [savingPia, setSavingPia] = useState(false)
+  const [registro, setRegistro] = useState('')
+  const [savingRegistro, setSavingRegistro] = useState(false)
   const [prioridade, setPrioridade] = useState('')
   const [savingPrioridade, setSavingPrioridade] = useState(false)
   const [tipoChamado, setTipoChamado] = useState('')
@@ -678,6 +680,7 @@ export default function ChamadoDetalhes() {
     }
     setChamado(chamadoData)
     setPia(chamadoData.pia || '')
+    setRegistro(chamadoData.registro || '')
     setPrioridade(chamadoData.prioridade || '')
     setTipoChamado(chamadoData.tipo_chamado || '')
 
@@ -911,6 +914,9 @@ export default function ChamadoDetalhes() {
           setChamado(payload.new as any)
           if (payload.new.pia !== undefined) {
             setPia(payload.new.pia || '')
+          }
+          if (payload.new.registro !== undefined) {
+            setRegistro(payload.new.registro || '')
           }
           if (payload.new.prioridade !== undefined) {
             setPrioridade(payload.new.prioridade || '')
@@ -1920,6 +1926,29 @@ export default function ChamadoDetalhes() {
     }
   }
 
+  const handleSalvarRegistro = async () => {
+    const isSupportUser =
+      currentUserProfile?.tipo_usuario === 'responsavel' ||
+      currentUserProfile?.tipo_usuario === 'sinistro' ||
+      currentUserProfile?.tipo_usuario === 'admin'
+
+    if (!isSupportUser) return
+
+    setSavingRegistro(true)
+    setChamado((prev: any) => (prev ? { ...prev, registro } : prev))
+    const { error } = await supabase
+      .from('chamados')
+      .update({ registro: registro || null })
+      .eq('id', id as string)
+
+    setSavingRegistro(false)
+    if (error) {
+      toast.error('Erro ao salvar Registro. Tente novamente')
+    } else {
+      toast.success('Registro salvo com sucesso')
+    }
+  }
+
   const handleCopiarLinkIdo = async () => {
     try {
       const url = `${window.location.origin}/ido/${id}`
@@ -2239,7 +2268,9 @@ export default function ChamadoDetalhes() {
           </div>
         </div>
 
-        {(isSupport || (chamado.pia && chamado.pia.trim() !== '')) && (
+        {(isSupport ||
+          (chamado.pia && chamado.pia.trim() !== '') ||
+          (chamado.registro && chamado.registro.trim() !== '')) && (
           <div className="pt-4 border-t">
             <div className="flex flex-col gap-4">
               {isSupport && (
@@ -2304,42 +2335,82 @@ export default function ChamadoDetalhes() {
                 </div>
               )}
 
-              <div className="border-2 border-green-700 bg-[rgba(200,230,201,0.1)] rounded-xl shadow-sm p-4 sm:p-6 space-y-4 flex flex-col justify-between">
-                <div>
-                  <div className="flex items-center gap-2 mb-2">
-                    <AlertCircle className="h-5 w-5 text-green-800" />
-                    <h3 className="text-base font-bold text-green-800 uppercase tracking-wider">
-                      R.A.
-                    </h3>
-                  </div>
-                  <Input
-                    type="text"
-                    placeholder="Informe o número de R.A."
-                    value={pia}
-                    onChange={(e) => setPia(e.target.value)}
-                    className={cn(
-                      'bg-white border-green-300 focus-visible:ring-green-700',
-                      !canEditRA && 'opacity-70 disabled:cursor-default',
-                    )}
-                    disabled={savingPia || !canEditRA}
-                  />
-                </div>
-                {canEditRA && (
-                  <div className="flex justify-end mt-4">
-                    <Button
-                      onClick={handleSalvarPia}
-                      disabled={savingPia}
-                      className="bg-green-700 hover:bg-green-800 text-white w-full sm:w-auto"
-                    >
-                      {savingPia ? (
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      ) : (
-                        <CheckCircle2 className="mr-2 h-4 w-4" />
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="border-2 border-green-700 bg-[rgba(200,230,201,0.1)] rounded-xl shadow-sm p-4 sm:p-6 space-y-4 flex flex-col justify-between">
+                  <div>
+                    <div className="flex items-center gap-2 mb-2">
+                      <AlertCircle className="h-5 w-5 text-green-800" />
+                      <h3 className="text-base font-bold text-green-800 uppercase tracking-wider">
+                        R.A.
+                      </h3>
+                    </div>
+                    <Input
+                      type="text"
+                      placeholder="Informe o número de R.A."
+                      value={pia}
+                      onChange={(e) => setPia(e.target.value)}
+                      className={cn(
+                        'bg-white border-green-300 focus-visible:ring-green-700',
+                        !canEditRA && 'opacity-70 disabled:cursor-default',
                       )}
-                      {savingPia ? 'Salvando...' : 'Salvar R.A.'}
-                    </Button>
+                      disabled={savingPia || !canEditRA}
+                    />
                   </div>
-                )}
+                  {canEditRA && (
+                    <div className="flex justify-end mt-4">
+                      <Button
+                        onClick={handleSalvarPia}
+                        disabled={savingPia}
+                        className="bg-green-700 hover:bg-green-800 text-white w-full sm:w-auto"
+                      >
+                        {savingPia ? (
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        ) : (
+                          <CheckCircle2 className="mr-2 h-4 w-4" />
+                        )}
+                        {savingPia ? 'Salvando...' : 'Salvar R.A.'}
+                      </Button>
+                    </div>
+                  )}
+                </div>
+
+                <div className="border-2 border-blue-700 bg-[rgba(200,230,240,0.1)] rounded-xl shadow-sm p-4 sm:p-6 space-y-4 flex flex-col justify-between">
+                  <div>
+                    <div className="flex items-center gap-2 mb-2">
+                      <FileText className="h-5 w-5 text-blue-800" />
+                      <h3 className="text-base font-bold text-blue-800 uppercase tracking-wider">
+                        Registro
+                      </h3>
+                    </div>
+                    <Input
+                      type="text"
+                      placeholder="Informe o número do Registro"
+                      value={registro}
+                      onChange={(e) => setRegistro(e.target.value)}
+                      className={cn(
+                        'bg-white border-blue-300 focus-visible:ring-blue-700',
+                        !canEditRA && 'opacity-70 disabled:cursor-default',
+                      )}
+                      disabled={savingRegistro || !canEditRA}
+                    />
+                  </div>
+                  {canEditRA && (
+                    <div className="flex justify-end mt-4">
+                      <Button
+                        onClick={handleSalvarRegistro}
+                        disabled={savingRegistro}
+                        className="bg-blue-700 hover:bg-blue-800 text-white w-full sm:w-auto"
+                      >
+                        {savingRegistro ? (
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        ) : (
+                          <CheckCircle2 className="mr-2 h-4 w-4" />
+                        )}
+                        {savingRegistro ? 'Salvando...' : 'Salvar Registro'}
+                      </Button>
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
           </div>

@@ -47,6 +47,7 @@ const formSchema = z.object({
   whatsapp: z.string().optional(),
   endereco: z.string().optional(),
   garagem: z.string().optional(),
+  registro: z.string().optional(),
 })
 
 type FormValues = z.infer<typeof formSchema>
@@ -91,6 +92,7 @@ export default function Perfil() {
       whatsapp: '',
       endereco: '',
       garagem: '',
+      registro: '',
     },
   })
 
@@ -158,7 +160,7 @@ export default function Perfil() {
       try {
         const { data, error } = await supabase
           .from('perfil_usuario')
-          .select('nome_completo, whatsapp, endereco, email, foto_url, garagem')
+          .select('nome_completo, whatsapp, endereco, email, foto_url, garagem, registro')
           .eq('id', user.id)
           .single()
 
@@ -172,6 +174,7 @@ export default function Perfil() {
             whatsapp: data.whatsapp || '',
             endereco: data.endereco || '',
             garagem: data.garagem || '',
+            registro: data.registro || '',
           })
         }
       } catch (error) {
@@ -304,6 +307,7 @@ export default function Perfil() {
           whatsapp: values.whatsapp || null,
           endereco: values.endereco || null,
           garagem: values.garagem || null,
+          registro: values.registro || null,
           atualizado_em: new Date().toISOString(),
         })
         .eq('id', user.id)
@@ -442,6 +446,20 @@ export default function Perfil() {
                     <FormLabel>Nome Completo *</FormLabel>
                     <FormControl>
                       <Input placeholder="Seu nome completo" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="registro"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Registro</FormLabel>
+                    <FormControl>
+                      <Input placeholder="Seu número de registro" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>

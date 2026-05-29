@@ -240,7 +240,7 @@ export default function SecretariaTecnica() {
           .maybeSingle()
         ticketData = data
       } else if (selectedDoc.numero_os || selectedDoc.chamados?.numero_os) {
-        const docOs = (selectedDoc.numero_os || selectedDoc.chamados?.numero_os).trim()
+        const docOs = (selectedDoc.numero_os || selectedDoc.chamados?.numero_os)?.trim() || ''
         const { data } = await supabase
           .from('chamados')
           .select('id, numero_os, carro, pia, status')

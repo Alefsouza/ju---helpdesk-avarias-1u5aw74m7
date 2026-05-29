@@ -171,16 +171,10 @@ Deno.serve(async (req: Request) => {
       atualizado_em: new Date().toISOString(),
     }
 
-    // Migrate PIA to preserve RA values during unification
+    // Migrate PIA to preserve RA values during unification (Option A)
+    // We only adopt origin PIA if destination has no PIA. We DO NOT concatenate.
     if (!destino.pia && origem.pia) {
       destinoUpdates.pia = origem.pia
-    } else if (
-      destino.pia &&
-      origem.pia &&
-      destino.pia !== origem.pia &&
-      !destino.pia.includes(origem.pia)
-    ) {
-      destinoUpdates.pia = `${destino.pia} / ${origem.pia}`
     }
 
     await supabaseAdmin.from('chamados').update(destinoUpdates).eq('id', destino_id)
@@ -191,7 +185,7 @@ Deno.serve(async (req: Request) => {
         chamado_id: destino_id,
         acao: 'transferido',
         usuario_id: user.id,
-        detalhes: `O chamado "${origem.titulo}" (ID: ${origem_id.substring(0, 8)}) foi unificado a este chamado por ${profile.nome_completo}. Documentação e anexos migrados do chamado unificado ${origem_id.substring(0, 8)}.`,
+        detalhes: `O chamado "${origem.titulo}" (ID: ${origem_id.substring(0, 8)}) foi unificado a este chamado por ${profile.nome_completo}. Documentação e anexos migrados do chamado unificado ${origem_id.substring(0, 8)}. O RA (PIA) do chamado destino foi preservado (Opção A).`,
       },
       {
         chamado_id: destino_id,

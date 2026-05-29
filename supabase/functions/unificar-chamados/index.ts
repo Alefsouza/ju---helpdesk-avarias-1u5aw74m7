@@ -179,16 +179,11 @@ Deno.serve(async (req: Request) => {
       atualizado_em: new Date().toISOString(),
     }
 
-    // Migrate PIA to preserve RA values during unification (Option A)
-    // We only adopt origin PIA if destination has no PIA. We DO NOT concatenate.
-    if (!destino.pia && origem.pia) {
-      destinoUpdates.pia = origem.pia
-    }
-
+    // Ensure we only preserve the destination's PIA. No concatenation or adoption.
     await supabaseAdmin.from('chamados').update(destinoUpdates).eq('id', destino_id)
 
     // Add history records to destination
-    const destinationPiaStr = destino.pia || destinoUpdates.pia || 'N/A'
+    const destinationPiaStr = destino.pia || 'N/A'
     await supabaseAdmin.from('historico_chamado').insert([
       {
         chamado_id: destino_id,

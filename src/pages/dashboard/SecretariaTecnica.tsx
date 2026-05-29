@@ -75,6 +75,31 @@ export default function SecretariaTecnica() {
           return hasPhotos && !hasOrcamento
         }) || []
 
+      // Fetch PIA for documents without chamado_id but with numero_os
+      const osToFetch = pendingDocuments
+        .filter((doc) => !doc.chamado_id && doc.numero_os)
+        .map((doc) => doc.numero_os)
+
+      if (osToFetch.length > 0) {
+        const { data: chamadosByOs } = await supabase
+          .from('chamados')
+          .select('id, numero_os, pia')
+          .in('numero_os', osToFetch)
+
+        if (chamadosByOs && chamadosByOs.length > 0) {
+          pendingDocuments.forEach((doc) => {
+            if (!doc.chamado_id && doc.numero_os) {
+              const matchedChamado = chamadosByOs.find((c) => c.numero_os === doc.numero_os)
+              if (matchedChamado) {
+                doc.chamados = doc.chamados || {}
+                doc.chamados.pia = matchedChamado.pia
+                doc.chamados.id = matchedChamado.id
+              }
+            }
+          })
+        }
+      }
+
       setDocumentos(pendingDocuments)
     } catch (err: any) {
       toast({ title: 'Erro', description: 'Erro ao carregar documentos', variant: 'destructive' })

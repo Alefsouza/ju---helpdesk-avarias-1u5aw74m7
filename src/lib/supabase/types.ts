@@ -963,7 +963,7 @@ export const Constants = {
 //   PRIMARY KEY chamados_pkey: PRIMARY KEY (id)
 //   CHECK chamados_prioridade_check: CHECK (((prioridade IS NULL) OR (prioridade = ANY (ARRAY['baixa'::text, 'media'::text, 'alta'::text, 'urgente'::text]))))
 //   FOREIGN KEY chamados_responsavel_id_fkey: FOREIGN KEY (responsavel_id) REFERENCES auth.users(id) ON DELETE SET NULL
-//   CHECK chamados_status_check: CHECK ((status = ANY (ARRAY['aberto'::text, 'em_atendimento'::text, 'finalizado'::text, 'Pendente'::text, 'pendente'::text, 'operacao'::text])))
+//   CHECK chamados_status_check: CHECK ((status = ANY (ARRAY['aberto'::text, 'em_atendimento'::text, 'finalizado'::text, 'Pendente'::text, 'pendente'::text, 'operacao'::text, 'unificado'::text])))
 //   FOREIGN KEY chamados_usuario_id_fkey: FOREIGN KEY (usuario_id) REFERENCES auth.users(id) ON DELETE CASCADE
 // Table: documentos
 //   FOREIGN KEY documentos_chamado_id_fkey: FOREIGN KEY (chamado_id) REFERENCES chamados(id) ON DELETE SET NULL

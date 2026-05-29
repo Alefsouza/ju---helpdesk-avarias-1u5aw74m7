@@ -75,9 +75,9 @@ export default function SecretariaTecnica() {
           return hasPhotos && !hasOrcamento
         }) || []
 
-      // Fetch PIA for documents without chamado_id but with numero_os
+      // Fetch PIA for documents without matching chamado but with numero_os
       const osToFetch = pendingDocuments
-        .filter((doc) => !doc.chamado_id && doc.numero_os)
+        .filter((doc) => !doc.chamados && doc.numero_os)
         .map((doc) => doc.numero_os)
 
       if (osToFetch.length > 0) {
@@ -85,15 +85,18 @@ export default function SecretariaTecnica() {
           .from('chamados')
           .select('id, numero_os, pia')
           .in('numero_os', osToFetch)
+          .order('criado_em', { ascending: false })
 
         if (chamadosByOs && chamadosByOs.length > 0) {
           pendingDocuments.forEach((doc) => {
-            if (!doc.chamado_id && doc.numero_os) {
+            if (!doc.chamados && doc.numero_os) {
               const matchedChamado = chamadosByOs.find((c) => c.numero_os === doc.numero_os)
               if (matchedChamado) {
-                doc.chamados = doc.chamados || {}
-                doc.chamados.pia = matchedChamado.pia
-                doc.chamados.id = matchedChamado.id
+                doc.chamados = {
+                  ...doc.chamados,
+                  pia: matchedChamado.pia,
+                  id: matchedChamado.id,
+                }
               }
             }
           })

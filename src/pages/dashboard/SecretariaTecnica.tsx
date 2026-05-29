@@ -57,7 +57,8 @@ export default function SecretariaTecnica() {
             responsavel_id,
             tipo_chamado,
             carro,
-            status
+            status,
+            numero_os
           ),
           formularios_espelho_danos(*)
         `)
@@ -79,34 +80,43 @@ export default function SecretariaTecnica() {
       // Identify which OS numbers need a fresh lookup
       const osToFetch = pendingDocuments
         .filter((doc) => {
-          if (!doc.chamados && doc.numero_os) return true
-          if (doc.chamados && ['finalizado', 'operacao', 'unificado'].includes(doc.chamados.status))
-            return true
-          return false
+          const cStatus = doc.chamados?.status?.toLowerCase() || ''
+          const isExcluded =
+            doc.chamados && ['finalizado', 'operacao', 'unificado'].includes(cStatus)
+          const docOs = (doc.numero_os || doc.chamados?.numero_os)?.trim()
+          return (!doc.chamados || isExcluded) && !!docOs
         })
-        .map((doc) => doc.numero_os)
+        .map((doc) => (doc.numero_os || doc.chamados?.numero_os)?.trim())
+        .filter(Boolean)
 
       if (osToFetch.length > 0) {
+        const uniqueOsToFetch = [...new Set(osToFetch)]
         const { data: chamadosByOs } = await supabase
           .from('chamados')
-          .select('id, numero_os, pia, status')
-          .in('numero_os', osToFetch)
+          .select('id, numero_os, pia, status, criado_em')
+          .in('numero_os', uniqueOsToFetch)
           .order('criado_em', { ascending: false })
 
         pendingDocuments.forEach((doc) => {
-          const needsLookup =
-            (!doc.chamados && doc.numero_os) ||
-            (doc.chamados && ['finalizado', 'operacao', 'unificado'].includes(doc.chamados.status))
+          const cStatus = doc.chamados?.status?.toLowerCase() || ''
+          const isExcluded =
+            doc.chamados && ['finalizado', 'operacao', 'unificado'].includes(cStatus)
+          const docOs = (doc.numero_os || doc.chamados?.numero_os)?.trim()
+          const needsLookup = (!doc.chamados || isExcluded) && !!docOs
 
           if (needsLookup) {
-            const matchedChamados = (chamadosByOs || []).filter(
-              (c) =>
-                c.numero_os === doc.numero_os &&
-                !['finalizado', 'operacao', 'unificado'].includes(c.status),
-            )
+            const matchedChamados = (chamadosByOs || []).filter((c) => {
+              const matchedCStatus = c.status?.toLowerCase() || ''
+              return (
+                c.numero_os?.trim() === docOs &&
+                !['finalizado', 'operacao', 'unificado'].includes(matchedCStatus)
+              )
+            })
 
             if (matchedChamados.length > 0) {
-              const emAtendimento = matchedChamados.find((c) => c.status === 'em_atendimento')
+              const emAtendimento = matchedChamados.find(
+                (c) => c.status?.toLowerCase() === 'em_atendimento',
+              )
               const selectedChamado = emAtendimento || matchedChamados[0]
 
               doc.chamados = {
@@ -114,13 +124,22 @@ export default function SecretariaTecnica() {
                 pia: selectedChamado.pia,
                 id: selectedChamado.id,
                 status: selectedChamado.status,
+                numero_os: selectedChamado.numero_os,
               }
-            } else if (
-              doc.chamados &&
-              ['finalizado', 'operacao', 'unificado'].includes(doc.chamados.status)
-            ) {
+            } else if (doc.chamados && isExcluded) {
               doc.chamados.pia = null
             }
+          } else if (doc.chamados && isExcluded) {
+            doc.chamados.pia = null
+          }
+        })
+      } else {
+        pendingDocuments.forEach((doc) => {
+          const cStatus = doc.chamados?.status?.toLowerCase() || ''
+          const isExcluded =
+            doc.chamados && ['finalizado', 'operacao', 'unificado'].includes(cStatus)
+          if (doc.chamados && isExcluded) {
+            doc.chamados.pia = null
           }
         })
       }
@@ -209,7 +228,8 @@ export default function SecretariaTecnica() {
       } = await supabase.auth.getUser()
       if (!user) throw new Error('Usuário não autenticado.')
 
-      let chamadoId = selectedDoc.chamado_id
+      // Use the resolved active ticket ID if available, fallback to the original DB field
+      let chamadoId = selectedDoc.chamados?.id || selectedDoc.chamado_id
       let ticketData = null
 
       if (chamadoId) {
@@ -219,20 +239,24 @@ export default function SecretariaTecnica() {
           .eq('id', chamadoId)
           .maybeSingle()
         ticketData = data
-      } else if (selectedDoc.numero_os) {
+      } else if (selectedDoc.numero_os || selectedDoc.chamados?.numero_os) {
+        const docOs = (selectedDoc.numero_os || selectedDoc.chamados?.numero_os).trim()
         const { data } = await supabase
           .from('chamados')
-          .select('id, numero_os, carro, pia')
-          .eq('numero_os', selectedDoc.numero_os)
-          .limit(1)
-          .maybeSingle()
-        if (data) {
-          ticketData = data
-          chamadoId = data.id
+          .select('id, numero_os, carro, pia, status')
+          .eq('numero_os', docOs)
+          .not('status', 'in', '("finalizado","operacao","unificado")')
+          .order('criado_em', { ascending: false })
+
+        if (data && data.length > 0) {
+          const emAtendimento = data.find((c) => c.status?.toLowerCase() === 'em_atendimento')
+          ticketData = emAtendimento || data[0]
+          chamadoId = ticketData.id
         }
       }
 
-      const osNumber = ticketData?.numero_os || selectedDoc.numero_os || 'N/A'
+      const osNumber =
+        ticketData?.numero_os || selectedDoc.numero_os || selectedDoc.chamados?.numero_os || 'N/A'
       const carNumber =
         ticketData?.carro || selectedDoc.chamados?.carro || selectedDoc.numero_carro || 'N/A'
 
@@ -255,7 +279,8 @@ export default function SecretariaTecnica() {
       const orcamento_url = publicUrlData.publicUrl
 
       const docUpdateData: any = { orcamento_url }
-      if (chamadoId && !selectedDoc.chamado_id) {
+      if (chamadoId && selectedDoc.chamado_id !== chamadoId) {
+        // Automatically link the document to the active ticket if it wasn't already
         docUpdateData.chamado_id = chamadoId
       }
 
@@ -357,7 +382,7 @@ export default function SecretariaTecnica() {
                       {doc.chamados?.pia || '-'}
                     </TableCell>
                     <TableCell className="font-semibold text-slate-800">
-                      {doc.numero_os || '-'}
+                      {doc.numero_os || doc.chamados?.numero_os || '-'}
                     </TableCell>
                     <TableCell>
                       <Badge variant="outline" className="font-mono bg-slate-50">
@@ -540,7 +565,9 @@ export default function SecretariaTecnica() {
                 </div>
                 <div>
                   <p className="text-[#333333] font-bold mb-1">Número da OS</p>
-                  <p className="text-[#333333]">{viewDoc.numero_os || '-'}</p>
+                  <p className="text-[#333333]">
+                    {viewDoc.numero_os || viewDoc.chamados?.numero_os || '-'}
+                  </p>
                 </div>
                 <div>
                   <p className="text-[#333333] font-bold mb-1">Garagem</p>

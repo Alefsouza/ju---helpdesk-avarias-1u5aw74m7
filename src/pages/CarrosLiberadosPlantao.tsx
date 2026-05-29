@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase/client'
+import { useAuth } from '@/hooks/use-auth'
 import { format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 import { Check, Search, Bus } from 'lucide-react'
@@ -35,6 +36,7 @@ export default function CarrosLiberadosPlantao({
   garagemFilter = 'Cursino',
   title = 'Carros Liberados - Plantão',
 }: CarrosLiberadosProps) {
+  const { user } = useAuth()
   const [documentos, setDocumentos] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
@@ -83,7 +85,7 @@ export default function CarrosLiberadosPlantao({
     try {
       const { data, error } = await supabase
         .from('documentos')
-        .select('*, chamados(id, status)')
+        .select('*, chamados(id, status, tipo_chamado, operacao)')
         .in('tipo_documento', ['Vistoria', 'Espelho de Danos'])
         .not('numero_os', 'is', null)
         .neq('numero_os', '')
@@ -93,10 +95,11 @@ export default function CarrosLiberadosPlantao({
 
       const validDocs = (data || []).filter((d) => {
         if (d.chamados && Array.isArray(d.chamados)) {
-          return !d.chamados.some((c: any) => c.status === 'operacao')
+          return !d.chamados.some((c: any) => c.status === 'operacao' || c.operacao === 'Enviado')
         }
         if (d.chamados && !Array.isArray(d.chamados)) {
-          return (d.chamados as any).status !== 'operacao'
+          const c = d.chamados as any
+          return c.status !== 'operacao' && c.operacao !== 'Enviado'
         }
         return true
       })
@@ -113,11 +116,39 @@ export default function CarrosLiberadosPlantao({
   const handleEnviarOperacao = async (docId: string, chamadoId: string | null) => {
     try {
       if (chamadoId) {
-        const { error } = await supabase
+        const { data: chamado, error: fetchError } = await supabase
           .from('chamados')
-          .update({ status: 'operacao', atualizado_em: new Date().toISOString() })
+          .select('tipo_chamado, titulo')
           .eq('id', chamadoId)
+          .single()
+
+        if (fetchError) throw fetchError
+
+        const isManutencao = chamado?.tipo_chamado === 'OS de Manutenção'
+        const updateData: any = {
+          atualizado_em: new Date().toISOString(),
+          operacao: 'Enviado',
+        }
+
+        if (isManutencao) {
+          updateData.status = 'operacao'
+        }
+
+        const { error } = await supabase.from('chamados').update(updateData).eq('id', chamadoId)
+
         if (error) throw error
+
+        const currentUser = user?.id || (await supabase.auth.getUser()).data.user?.id
+        if (currentUser) {
+          await supabase.from('historico_chamado').insert({
+            chamado_id: chamadoId,
+            acao: 'respondido',
+            usuario_id: currentUser,
+            detalhes: isManutencao
+              ? 'Carro liberado e enviado para operação. Status do chamado atualizado para operação.'
+              : 'Carro liberado e enviado para operação. Status do chamado administrativo mantido.',
+          })
+        }
       }
       toast.success('Carro enviado para operação com sucesso')
       setDocumentos((prev) => prev.filter((d) => d.id !== docId))

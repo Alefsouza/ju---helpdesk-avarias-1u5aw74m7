@@ -1624,6 +1624,7 @@ export const Constants = {
 // Table: chamados
 //   CREATE INDEX idx_chamados_carro ON public.chamados USING btree (carro)
 //   CREATE INDEX idx_chamados_data_ocorrencia ON public.chamados USING btree (data_ocorrencia)
+//   CREATE INDEX idx_chamados_numero_os ON public.chamados USING btree (numero_os)
 //   CREATE INDEX idx_chamados_status ON public.chamados USING btree (status)
 // Table: documentos
 //   CREATE INDEX documentos_chamado_id_idx ON public.documentos USING btree (chamado_id)
@@ -1631,6 +1632,7 @@ export const Constants = {
 //   CREATE UNIQUE INDEX documentos_formulario_id_key ON public.documentos USING btree (formulario_id)
 //   CREATE INDEX documentos_registro_responsavel_idx ON public.documentos USING btree (registro_responsavel)
 //   CREATE INDEX documentos_tipo_documento_idx ON public.documentos USING btree (tipo_documento)
+//   CREATE INDEX idx_documentos_numero_os ON public.documentos USING btree (numero_os)
 // Table: formularios_espelho_danos
 //   CREATE INDEX formularios_espelho_danos_chamado_id_idx ON public.formularios_espelho_danos USING btree (chamado_id)
 // Table: formularios_ido

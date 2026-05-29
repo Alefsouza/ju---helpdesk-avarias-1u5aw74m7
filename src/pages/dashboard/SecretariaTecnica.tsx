@@ -56,7 +56,8 @@ export default function SecretariaTecnica() {
             nome_motorista, 
             responsavel_id,
             tipo_chamado,
-            carro
+            carro,
+            status
           ),
           formularios_espelho_danos(*)
         `)
@@ -75,32 +76,53 @@ export default function SecretariaTecnica() {
           return hasPhotos && !hasOrcamento
         }) || []
 
-      // Fetch PIA for documents without matching chamado but with numero_os
+      // Identify which OS numbers need a fresh lookup
       const osToFetch = pendingDocuments
-        .filter((doc) => !doc.chamados && doc.numero_os)
+        .filter((doc) => {
+          if (!doc.chamados && doc.numero_os) return true
+          if (doc.chamados && ['finalizado', 'operacao', 'unificado'].includes(doc.chamados.status))
+            return true
+          return false
+        })
         .map((doc) => doc.numero_os)
 
       if (osToFetch.length > 0) {
         const { data: chamadosByOs } = await supabase
           .from('chamados')
-          .select('id, numero_os, pia')
+          .select('id, numero_os, pia, status')
           .in('numero_os', osToFetch)
           .order('criado_em', { ascending: false })
 
-        if (chamadosByOs && chamadosByOs.length > 0) {
-          pendingDocuments.forEach((doc) => {
-            if (!doc.chamados && doc.numero_os) {
-              const matchedChamado = chamadosByOs.find((c) => c.numero_os === doc.numero_os)
-              if (matchedChamado) {
-                doc.chamados = {
-                  ...doc.chamados,
-                  pia: matchedChamado.pia,
-                  id: matchedChamado.id,
-                }
+        pendingDocuments.forEach((doc) => {
+          const needsLookup =
+            (!doc.chamados && doc.numero_os) ||
+            (doc.chamados && ['finalizado', 'operacao', 'unificado'].includes(doc.chamados.status))
+
+          if (needsLookup) {
+            const matchedChamados = (chamadosByOs || []).filter(
+              (c) =>
+                c.numero_os === doc.numero_os &&
+                !['finalizado', 'operacao', 'unificado'].includes(c.status),
+            )
+
+            if (matchedChamados.length > 0) {
+              const emAtendimento = matchedChamados.find((c) => c.status === 'em_atendimento')
+              const selectedChamado = emAtendimento || matchedChamados[0]
+
+              doc.chamados = {
+                ...doc.chamados,
+                pia: selectedChamado.pia,
+                id: selectedChamado.id,
+                status: selectedChamado.status,
               }
+            } else if (
+              doc.chamados &&
+              ['finalizado', 'operacao', 'unificado'].includes(doc.chamados.status)
+            ) {
+              doc.chamados.pia = null
             }
-          })
-        }
+          }
+        })
       }
 
       setDocumentos(pendingDocuments)

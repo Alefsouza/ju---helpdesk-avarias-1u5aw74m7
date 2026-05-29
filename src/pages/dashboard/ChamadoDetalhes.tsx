@@ -629,8 +629,6 @@ export default function ChamadoDetalhes() {
 
   const [pia, setPia] = useState('')
   const [savingPia, setSavingPia] = useState(false)
-  const [registro, setRegistro] = useState('')
-  const [savingRegistro, setSavingRegistro] = useState(false)
   const [prioridade, setPrioridade] = useState('')
   const [savingPrioridade, setSavingPrioridade] = useState(false)
   const [tipoChamado, setTipoChamado] = useState('')
@@ -658,6 +656,11 @@ export default function ChamadoDetalhes() {
   const [duplicateAlertOpen, setDuplicateAlertOpen] = useState(false)
   const [duplicateSubmitAction, setDuplicateSubmitAction] = useState<(() => void) | null>(null)
 
+  const [numeroOrcamento, setNumeroOrcamento] = useState('')
+  const [obsOrcamento, setObsOrcamento] = useState('')
+  const [fileOrcamento, setFileOrcamento] = useState<File | null>(null)
+  const [savingOrcamento, setSavingOrcamento] = useState(false)
+
   const { handleDocumentAction, loadingAction } = useDocumentAction()
 
   const fileInputRef = useRef<HTMLInputElement>(null)
@@ -680,7 +683,6 @@ export default function ChamadoDetalhes() {
     }
     setChamado(chamadoData)
     setPia(chamadoData.pia || '')
-    setRegistro(chamadoData.registro || '')
     setPrioridade(chamadoData.prioridade || '')
     setTipoChamado(chamadoData.tipo_chamado || '')
 
@@ -713,7 +715,9 @@ export default function ChamadoDetalhes() {
       currUser &&
       (currUser.tipo_usuario === 'responsavel' ||
         currUser.tipo_usuario === 'sinistro' ||
-        currUser.tipo_usuario === 'admin')
+        currUser.tipo_usuario === 'admin' ||
+        currUser.tipo_usuario === 'juridico' ||
+        currUser.tipo_usuario === 'secretaria_tecnica')
     ) {
       const { data: anexosInt } = await supabase
         .from('anexos_chamado_interno')
@@ -914,9 +918,6 @@ export default function ChamadoDetalhes() {
           setChamado(payload.new as any)
           if (payload.new.pia !== undefined) {
             setPia(payload.new.pia || '')
-          }
-          if (payload.new.registro !== undefined) {
-            setRegistro(payload.new.registro || '')
           }
           if (payload.new.prioridade !== undefined) {
             setPrioridade(payload.new.prioridade || '')
@@ -1383,6 +1384,9 @@ export default function ChamadoDetalhes() {
 
         let pdfDataResult = null
         try {
+          const { data: sessionData } = await supabase.auth.getSession()
+          const token = sessionData.session?.access_token
+
           const { data: pdfData, error: pdfError } = await supabase.functions.invoke('gerar-pdf', {
             body: {
               tipo_documento: 'espelho_danos',
@@ -1390,6 +1394,9 @@ export default function ChamadoDetalhes() {
               ...updateDataLimpa,
               fotos,
               espelho_id: finalFormId || undefined,
+            },
+            headers: {
+              Authorization: `Bearer ${token}`,
             },
           })
           if (pdfError || !pdfData?.success) throw new Error('Erro ao gerar novo PDF')
@@ -1504,11 +1511,17 @@ export default function ChamadoDetalhes() {
 
         let pdfDataResult = null
         try {
+          const { data: sessionData } = await supabase.auth.getSession()
+          const token = sessionData.session?.access_token
+
           const { data: pdfData, error: pdfError } = await supabase.functions.invoke('gerar-pdf', {
             body: {
               tipo_documento: 'IDO',
               id: id,
               ...updateData,
+            },
+            headers: {
+              Authorization: `Bearer ${token}`,
             },
           })
           if (pdfError || !pdfData?.success) throw new Error('Erro ao gerar novo PDF IDO')
@@ -1827,7 +1840,9 @@ export default function ChamadoDetalhes() {
     const isSupportUser =
       currentUserProfile?.tipo_usuario === 'responsavel' ||
       currentUserProfile?.tipo_usuario === 'sinistro' ||
-      currentUserProfile?.tipo_usuario === 'admin'
+      currentUserProfile?.tipo_usuario === 'admin' ||
+      currentUserProfile?.tipo_usuario === 'juridico' ||
+      currentUserProfile?.tipo_usuario === 'secretaria_tecnica'
 
     if (!isSupportUser && chamado?.status === 'em_atendimento') {
       await supabase
@@ -1852,7 +1867,8 @@ export default function ChamadoDetalhes() {
     const isSupportUser =
       currentUserProfile?.tipo_usuario === 'responsavel' ||
       currentUserProfile?.tipo_usuario === 'sinistro' ||
-      currentUserProfile?.tipo_usuario === 'admin'
+      currentUserProfile?.tipo_usuario === 'admin' ||
+      currentUserProfile?.tipo_usuario === 'secretaria_tecnica'
 
     if (!isSupportUser) return
 
@@ -1877,7 +1893,8 @@ export default function ChamadoDetalhes() {
     const isSupportUser =
       currentUserProfile?.tipo_usuario === 'responsavel' ||
       currentUserProfile?.tipo_usuario === 'sinistro' ||
-      currentUserProfile?.tipo_usuario === 'admin'
+      currentUserProfile?.tipo_usuario === 'admin' ||
+      currentUserProfile?.tipo_usuario === 'secretaria_tecnica'
 
     if (!isSupportUser) return
 
@@ -1902,7 +1919,8 @@ export default function ChamadoDetalhes() {
     const isSupportUser =
       currentUserProfile?.tipo_usuario === 'responsavel' ||
       currentUserProfile?.tipo_usuario === 'sinistro' ||
-      currentUserProfile?.tipo_usuario === 'admin'
+      currentUserProfile?.tipo_usuario === 'admin' ||
+      currentUserProfile?.tipo_usuario === 'secretaria_tecnica'
 
     if (!isSupportUser) return
 
@@ -1926,26 +1944,60 @@ export default function ChamadoDetalhes() {
     }
   }
 
-  const handleSalvarRegistro = async () => {
-    const isSupportUser =
-      currentUserProfile?.tipo_usuario === 'responsavel' ||
-      currentUserProfile?.tipo_usuario === 'sinistro' ||
-      currentUserProfile?.tipo_usuario === 'admin'
+  const handleUploadOrcamento = async () => {
+    if (!numeroOrcamento || !fileOrcamento) return
+    setSavingOrcamento(true)
 
-    if (!isSupportUser) return
+    try {
+      const ext = fileOrcamento.name.split('.').pop()
+      const nomeCarro = chamado?.carro || chamado?.numero_carro || 'S/N'
+      const numOS = chamado?.numero_os || 'S/N'
+      const novoNome = `Orçamento ${numeroOrcamento} - Carro: ${nomeCarro} - OS: ${numOS}.${ext}`
 
-    setSavingRegistro(true)
-    setChamado((prev: any) => (prev ? { ...prev, registro } : prev))
-    const { error } = await supabase
-      .from('chamados')
-      .update({ registro: registro || null })
-      .eq('id', id as string)
+      const uuid = crypto.randomUUID()
+      const filePath = `${id}/${uuid}_${novoNome}`
 
-    setSavingRegistro(false)
-    if (error) {
-      toast.error('Erro ao salvar Registro. Tente novamente')
-    } else {
-      toast.success('Registro salvo com sucesso')
+      const { error: uploadError } = await supabase.storage
+        .from('anexos_chamados_interno')
+        .upload(filePath, fileOrcamento)
+
+      if (uploadError) throw uploadError
+
+      const {
+        data: { publicUrl },
+      } = supabase.storage.from('anexos_chamados_interno').getPublicUrl(filePath)
+
+      const { data: newAnexo, error: dbError } = await supabase
+        .from('anexos_chamado_interno')
+        .insert({
+          chamado_id: id as string,
+          usuario_id: user?.id as string,
+          arquivo_url: publicUrl,
+          nome_arquivo: novoNome,
+          tamanho_bytes: fileOrcamento.size,
+          tipo_arquivo: fileOrcamento.type || 'application/octet-stream',
+        })
+        .select()
+        .single()
+
+      if (dbError) throw dbError
+
+      await supabase.from('historico_chamado').insert({
+        chamado_id: id as string,
+        acao: 'respondido',
+        usuario_id: user?.id as string,
+        detalhes: `Orçamento ${numeroOrcamento} anexado com sucesso. Obs: ${obsOrcamento || 'Nenhuma'}`,
+      })
+
+      toast.success('Orçamento anexado com sucesso!')
+      setNumeroOrcamento('')
+      setObsOrcamento('')
+      setFileOrcamento(null)
+    } catch (error: any) {
+      console.error(error)
+      toast.error('Erro ao anexar orçamento.')
+    } finally {
+      setSavingOrcamento(false)
     }
   }
 
@@ -2098,11 +2150,13 @@ export default function ChamadoDetalhes() {
     )
   }
 
+  const isSecretariaTecnica = currentUserProfile?.tipo_usuario === 'secretaria_tecnica'
   const isSupport =
     currentUserProfile?.tipo_usuario === 'responsavel' ||
     currentUserProfile?.tipo_usuario === 'sinistro' ||
     currentUserProfile?.tipo_usuario === 'admin' ||
-    currentUserProfile?.tipo_usuario === 'juridico'
+    currentUserProfile?.tipo_usuario === 'juridico' ||
+    currentUserProfile?.tipo_usuario === 'secretaria_tecnica'
   const isResponsible = chamado.responsavel_id === user?.id
   const isSolicitante = chamado.usuario_id === user?.id
 
@@ -2268,9 +2322,7 @@ export default function ChamadoDetalhes() {
           </div>
         </div>
 
-        {(isSupport ||
-          (chamado.pia && chamado.pia.trim() !== '') ||
-          (chamado.registro && chamado.registro.trim() !== '')) && (
+        {(isSupport || (chamado.pia && chamado.pia.trim() !== '')) && (
           <div className="pt-4 border-t">
             <div className="flex flex-col gap-4">
               {isSupport && (
@@ -2335,7 +2387,7 @@ export default function ChamadoDetalhes() {
                 </div>
               )}
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 gap-4">
                 <div className="border-2 border-green-700 bg-[rgba(200,230,201,0.1)] rounded-xl shadow-sm p-4 sm:p-6 space-y-4 flex flex-col justify-between">
                   <div>
                     <div className="flex items-center gap-2 mb-2">
@@ -2373,44 +2425,65 @@ export default function ChamadoDetalhes() {
                     </div>
                   )}
                 </div>
+              </div>
+            </div>
+          </div>
+        )}
 
-                <div className="border-2 border-blue-700 bg-[rgba(200,230,240,0.1)] rounded-xl shadow-sm p-4 sm:p-6 space-y-4 flex flex-col justify-between">
-                  <div>
-                    <div className="flex items-center gap-2 mb-2">
-                      <FileText className="h-5 w-5 text-blue-800" />
-                      <h3 className="text-base font-bold text-blue-800 uppercase tracking-wider">
-                        Registro
-                      </h3>
-                    </div>
-                    <Input
-                      type="text"
-                      placeholder="Informe o número do Registro"
-                      value={registro}
-                      onChange={(e) => setRegistro(e.target.value)}
-                      className={cn(
-                        'bg-white border-blue-300 focus-visible:ring-blue-700',
-                        !canEditRA && 'opacity-70 disabled:cursor-default',
-                      )}
-                      disabled={savingRegistro || !canEditRA}
-                    />
-                  </div>
-                  {canEditRA && (
-                    <div className="flex justify-end mt-4">
-                      <Button
-                        onClick={handleSalvarRegistro}
-                        disabled={savingRegistro}
-                        className="bg-blue-700 hover:bg-blue-800 text-white w-full sm:w-auto"
-                      >
-                        {savingRegistro ? (
-                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        ) : (
-                          <CheckCircle2 className="mr-2 h-4 w-4" />
-                        )}
-                        {savingRegistro ? 'Salvando...' : 'Salvar Registro'}
-                      </Button>
-                    </div>
-                  )}
+        {isSecretariaTecnica && (
+          <div className="pt-4 border-t">
+            <div className="border-2 border-purple-700 bg-[rgba(230,200,240,0.1)] rounded-xl shadow-sm p-4 sm:p-6 space-y-4">
+              <div className="flex items-center gap-2 mb-2">
+                <FileText className="h-5 w-5 text-purple-800" />
+                <h3 className="text-base font-bold text-purple-800 uppercase tracking-wider">
+                  Anexar Orçamento
+                </h3>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>Número do Orçamento</Label>
+                  <Input
+                    value={numeroOrcamento}
+                    onChange={(e) => setNumeroOrcamento(e.target.value)}
+                    placeholder="Ex: 12345"
+                    disabled={savingOrcamento}
+                    className="bg-white border-purple-300 focus-visible:ring-purple-700"
+                  />
                 </div>
+                <div className="space-y-2">
+                  <Label>Arquivo</Label>
+                  <Input
+                    type="file"
+                    onChange={(e) => setFileOrcamento(e.target.files?.[0] || null)}
+                    accept=".pdf,image/jpeg,image/png,image/gif"
+                    disabled={savingOrcamento}
+                    className="bg-white border-purple-300 focus-visible:ring-purple-700 cursor-pointer"
+                  />
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label>Observações</Label>
+                <Textarea
+                  value={obsOrcamento}
+                  onChange={(e) => setObsOrcamento(e.target.value)}
+                  placeholder="Observações do orçamento..."
+                  disabled={savingOrcamento}
+                  className="bg-white border-purple-300 focus-visible:ring-purple-700"
+                />
+              </div>
+              <div className="flex justify-end mt-4">
+                <Button
+                  onClick={handleUploadOrcamento}
+                  disabled={savingOrcamento || !numeroOrcamento || !fileOrcamento}
+                  className="bg-purple-700 hover:bg-purple-800 text-white w-full sm:w-auto"
+                >
+                  {savingOrcamento ? (
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  ) : (
+                    <Paperclip className="mr-2 h-4 w-4" />
+                  )}
+                  {savingOrcamento ? 'Enviando...' : 'Anexar Orçamento'}
+                </Button>
               </div>
             </div>
           </div>

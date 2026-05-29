@@ -16,7 +16,7 @@ Deno.serve(async (req: Request) => {
 
   try {
     const authHeader = req.headers.get('Authorization')
-    if (!authHeader) throw new Error('Missing Authorization header')
+    if (!authHeader) throw new Error('Falha na autenticação: Authorization header ausente.')
 
     const supabaseClient = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
@@ -28,18 +28,33 @@ Deno.serve(async (req: Request) => {
       data: { user },
       error: authError,
     } = await supabaseClient.auth.getUser()
-    if (authError || !user) throw new Error('Unauthorized')
 
-    const body = await req.json()
+    if (authError || !user) {
+      console.error('Auth Error:', authError)
+      throw new Error('Falha na autenticação: Token JWT inválido ou expirado.')
+    }
+
+    let body
+    try {
+      body = await req.json()
+    } catch (e) {
+      console.error('JSON Parse Error:', e)
+      throw new Error('Payload JSON inválido')
+    }
+
+    if (!body || typeof body !== 'object') {
+      throw new Error('Payload body deve ser um objeto JSON')
+    }
+
     const {
       tipo_documento = 'espelho_danos',
       id,
+      espelho_id,
       garagem,
       linha,
       numero_carro,
       data,
       horario,
-      ocorrencia,
       descricao_danos,
       numero_os,
       nome_vistoriador,
@@ -63,6 +78,36 @@ Deno.serve(async (req: Request) => {
       testemunha_3_sg,
       testemunha_3_telefone,
     } = body
+
+    let final_nome_vistoriador = nome_vistoriador
+    let final_registro_vistoriador = registro_vistoriador
+
+    // Automated Inspector Data Fallback
+    if (!final_nome_vistoriador || !final_registro_vistoriador) {
+      try {
+        const supabaseAdmin = createClient(
+          Deno.env.get('SUPABASE_URL') ?? '',
+          Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
+        )
+        const { data: profile, error: profileError } = await supabaseAdmin
+          .from('perfil_usuario')
+          .select('nome_completo, registro')
+          .eq('id', user.id)
+          .single()
+
+        if (profileError) {
+          console.error('Error fetching user profile for fallback:', profileError)
+          throw new Error('Erro ao buscar dados do perfil do usuário para o PDF.')
+        } else if (profile) {
+          console.log('Profile fetched successfully for fallback.')
+          if (!final_nome_vistoriador) final_nome_vistoriador = profile.nome_completo
+          if (!final_registro_vistoriador) final_registro_vistoriador = profile.registro
+        }
+      } catch (err: any) {
+        console.error('Exception while fetching user profile:', err)
+        throw new Error(err.message || 'Falha ao recuperar os dados do vistoriador.')
+      }
+    }
 
     // Generate PDF
     const pdfDoc = await PDFDocument.create()
@@ -169,18 +214,20 @@ Deno.serve(async (req: Request) => {
     } else {
       drawText('Espelho de Danos - Vistoria', true, 20)
       y -= 10
-      drawText(`Numero da OS: ${numero_os || '-'}`, true, 14)
+      drawText(`Número da OS: ${numero_os || '-'}`, true, 14)
       y -= 10
       drawText(`Garagem: ${garagem || '-'}`)
       drawText(`Linha: ${linha || '-'} / Carro: ${numero_carro || '-'}`)
-      drawText(`Data/Horario: ${data || '-'} ${horario || '-'}`)
-      drawText(`Vistoriador: ${nome_vistoriador || '-'} (Registro: ${registro_vistoriador || '-'})`)
+      drawText(`Data/Horário: ${data || '-'} ${horario || '-'}`)
+      drawText(
+        `Vistoriador: ${final_nome_vistoriador || '-'} (Registro: ${final_registro_vistoriador || '-'})`,
+      )
       drawText(`Motorista: ${nome_motorista || '-'} (Registro: ${registro_motorista || '-'})`)
-      drawText(`Ocorrencia Confirmada: ${ocorrencia || '-'}`)
-      y -= 15
-      drawText('Descricao dos Danos:', true, 14)
 
-      const desc = descricao_danos || 'Nenhuma descricao fornecida.'
+      y -= 15
+      drawText('Descrição dos Danos:', true, 14)
+
+      const desc = descricao_danos || 'Nenhuma descrição fornecida.'
       drawMultilineText(desc, false, 12)
 
       // Add Photos
@@ -192,7 +239,10 @@ Deno.serve(async (req: Request) => {
           const fotoUrl = fotos[i]
           try {
             const imgRes = await fetch(fotoUrl)
-            if (!imgRes.ok) continue
+            if (!imgRes.ok) {
+              console.error(`Failed to fetch image: ${imgRes.status} ${imgRes.statusText}`)
+              continue
+            }
             const imgBytes = await imgRes.arrayBuffer()
 
             let pdfImage
@@ -228,10 +278,16 @@ Deno.serve(async (req: Request) => {
 
       const numCarro = numero_carro || 'S-N'
       const numOS = numero_os || 'S-N'
-      fileName = `Espelho de Danos - Carro: ${numCarro} - OS: ${numOS} - ${timestamp}.pdf`
+      fileName = `Espelho_Danos_Carro_${numCarro}_OS_${numOS}_${timestamp}.pdf`
     }
 
-    const pdfBytes = await pdfDoc.save()
+    let pdfBytes
+    try {
+      pdfBytes = await pdfDoc.save()
+    } catch (err) {
+      console.error('PDF Generation Error:', err)
+      throw new Error('Falha ao gerar o arquivo PDF.')
+    }
 
     // Upload to Supabase Storage
     const supabaseAdmin = createClient(
@@ -254,24 +310,28 @@ Deno.serve(async (req: Request) => {
 
     if (uploadError) {
       console.error('Upload Error:', uploadError)
-      throw uploadError
+      throw new Error(`Upload failed: ${uploadError.message}`)
     }
 
     const {
       data: { publicUrl },
     } = supabaseAdmin.storage.from(bucket).getPublicUrl(filePath)
 
-    if (body.espelho_id) {
-      await supabaseAdmin
+    if (espelho_id) {
+      const { error: updateError } = await supabaseAdmin
         .from('documentos')
         .update({
           arquivo_url: publicUrl,
           nome_arquivo: fileName,
           atualizado_em: new Date().toISOString(),
         })
-        .eq('formulario_id', body.espelho_id)
+        .eq('formulario_id', espelho_id)
+
+      if (updateError) {
+        console.error('Failed to update documentos for espelho_id', updateError)
+      }
     } else if (tipo_documento === 'IDO' && id) {
-      await supabaseAdmin
+      const { error: updateError } = await supabaseAdmin
         .from('documentos')
         .update({
           arquivo_url: publicUrl,
@@ -280,6 +340,10 @@ Deno.serve(async (req: Request) => {
         })
         .eq('chamado_id', id)
         .eq('tipo_documento', 'IDO')
+
+      if (updateError) {
+        console.error('Failed to update documentos for IDO', updateError)
+      }
     }
 
     return new Response(JSON.stringify({ success: true, url: publicUrl, nome_arquivo: fileName }), {
@@ -287,8 +351,9 @@ Deno.serve(async (req: Request) => {
     })
   } catch (error: any) {
     console.error('gerar-pdf Error:', error)
+    const status = error.message && error.message.includes('autenticação') ? 401 : 400
     return new Response(JSON.stringify({ error: error.message }), {
-      status: 400,
+      status,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     })
   }

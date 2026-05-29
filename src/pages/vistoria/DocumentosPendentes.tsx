@@ -279,6 +279,9 @@ export default function DocumentosPendentes() {
       }
 
       // 1. Gerar PDF via Edge Function
+      const { data: sessionData } = await supabase.auth.getSession()
+      const token = sessionData.session?.access_token
+
       const { data: pdfData, error: pdfError } = await supabase.functions.invoke('gerar-pdf', {
         body: {
           id: selectedDoc.chamado_id || selectedDoc.id,
@@ -296,6 +299,9 @@ export default function DocumentosPendentes() {
           nome_motorista: selectedDoc.nome_motorista,
           registro_motorista: selectedDoc.registro_motorista,
           fotos: selectedDoc.fotos_urls || (selectedDoc.foto_url ? [selectedDoc.foto_url] : []),
+        },
+        headers: {
+          Authorization: `Bearer ${token}`,
         },
       })
 

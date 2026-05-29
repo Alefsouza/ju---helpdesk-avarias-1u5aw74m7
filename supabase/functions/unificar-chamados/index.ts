@@ -165,6 +165,14 @@ Deno.serve(async (req: Request) => {
       })
       .eq('id', origem_id)
 
+    // Add history record for the source ticket AFTER moving old history to the destination ticket
+    await supabaseAdmin.from('historico_chamado').insert({
+      chamado_id: origem_id,
+      acao: 'finalizado',
+      usuario_id: user.id,
+      detalhes: `Chamado unificado com o destino #${destino_id.substring(0, 8)} e encerrado. Todos os registros anteriores foram migrados.`,
+    })
+
     // Update destination ticket status to 'em_atendimento' and update timestamp
     const destinoUpdates: any = {
       status: 'em_atendimento',
@@ -180,12 +188,13 @@ Deno.serve(async (req: Request) => {
     await supabaseAdmin.from('chamados').update(destinoUpdates).eq('id', destino_id)
 
     // Add history records to destination
+    const destinationPiaStr = destino.pia || destinoUpdates.pia || 'N/A'
     await supabaseAdmin.from('historico_chamado').insert([
       {
         chamado_id: destino_id,
         acao: 'transferido',
         usuario_id: user.id,
-        detalhes: `O chamado "${origem.titulo}" (ID: ${origem_id.substring(0, 8)}) foi unificado a este chamado por ${profile.nome_completo}. Documentação e anexos migrados do chamado unificado ${origem_id.substring(0, 8)}. O RA (PIA) do chamado destino foi preservado (Opção A).`,
+        detalhes: `O chamado "${origem.titulo}" (ID: ${origem_id.substring(0, 8)}) foi unificado a este chamado por ${profile.nome_completo}. Documentação e anexos migrados. O RA (PIA) do chamado destino (${destinationPiaStr}) foi mantido exclusivamente.`,
       },
       {
         chamado_id: destino_id,

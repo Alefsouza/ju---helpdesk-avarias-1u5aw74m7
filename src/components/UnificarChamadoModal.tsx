@@ -127,10 +127,13 @@ export function UnificarChamadoModal({
         <div className="space-y-4 py-4">
           <div className="bg-slate-50 p-3 rounded-lg border text-sm">
             <span className="font-semibold text-slate-700 block mb-1">
-              Chamado Atual (Destino):
+              Chamado Atual (Destino - O RA será mantido):
             </span>
             <div className="font-medium">{targetChamado?.titulo}</div>
-            <div className="text-slate-500 text-xs mt-1">ID: {targetChamado?.id}</div>
+            <div className="text-slate-500 text-xs mt-1 flex gap-3">
+              <span>ID: {targetChamado?.id?.substring(0, 8)}</span>
+              {targetChamado?.pia && <span>RA: {targetChamado.pia}</span>}
+            </div>
           </div>
 
           <div className="relative">

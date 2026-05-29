@@ -20,7 +20,8 @@ import {
 } from '@/components/ui/dropdown-menu'
 import { Skeleton } from '@/components/ui/skeleton'
 import { useGestaoEquipe } from '@/hooks/use-gestao-equipe'
-import { GestaoEquipeModal } from './gestao-equipe-modal'
+import { NovoUsuarioModal } from './novo-usuario-modal'
+import { EditarUsuarioModal } from './editar-usuario-modal'
 
 const getBadgeStyles = (tipo: string) => {
   switch (tipo) {
@@ -108,6 +109,7 @@ export function GestaoEquipe() {
                 <TableHeader>
                   <TableRow>
                     <TableHead>Nome</TableHead>
+                    <TableHead>Registro</TableHead>
                     <TableHead>E-mail</TableHead>
                     <TableHead>Departamento</TableHead>
                     <TableHead>Garagem</TableHead>
@@ -120,6 +122,7 @@ export function GestaoEquipe() {
                   {users.map((u) => (
                     <TableRow key={u.id}>
                       <TableCell className="font-medium">{u.nome_completo}</TableCell>
+                      <TableCell>{u.registro || '-'}</TableCell>
                       <TableCell>{u.email}</TableCell>
                       <TableCell>{u.departamento || '-'}</TableCell>
                       <TableCell>{u.garagem || '-'}</TableCell>
@@ -195,6 +198,7 @@ export function GestaoEquipe() {
                       </DropdownMenu>
                     </div>
                     <CardDescription>
+                      {u.registro && `${u.registro} • `}
                       {u.email} {u.departamento && ` • ${u.departamento}`}{' '}
                       {u.garagem && ` • ${u.garagem}`}
                     </CardDescription>
@@ -219,9 +223,19 @@ export function GestaoEquipe() {
         )}
       </CardContent>
 
-      <GestaoEquipeModal
-        open={modalOpen}
-        setOpen={setModalOpen}
+      <NovoUsuarioModal
+        open={modalOpen && !editingUser}
+        setOpen={(open) => {
+          if (!open) setModalOpen(false)
+        }}
+        onSuccess={loadUsers}
+      />
+
+      <EditarUsuarioModal
+        open={modalOpen && !!editingUser}
+        setOpen={(open) => {
+          if (!open) setModalOpen(false)
+        }}
         user={editingUser}
         onSuccess={loadUsers}
       />

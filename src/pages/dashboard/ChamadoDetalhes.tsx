@@ -2152,7 +2152,6 @@ export default function ChamadoDetalhes() {
 
   const canAnexarOrcamento =
     currentUserProfile?.tipo_usuario === 'secretaria_tecnica' ||
-    currentUserProfile?.tipo_usuario === 'admin' ||
     currentUserProfile?.tipo_usuario === 'responsavel'
   const isSupport =
     currentUserProfile?.tipo_usuario === 'responsavel' ||

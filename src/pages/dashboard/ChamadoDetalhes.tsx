@@ -2359,6 +2359,7 @@ export default function ChamadoDetalhes() {
                             <SelectItem value="Vandalismo sem vítima">
                               Vandalismo sem vítima
                             </SelectItem>
+                            <SelectItem value="Seguradora">Seguradora</SelectItem>
                           </SelectContent>
                         </Select>
                       </div>

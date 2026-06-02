@@ -40,6 +40,41 @@ type FileCategory =
   | 'documento_veiculo'
   | 'fotos_videos'
   | 'anexo_lesao'
+  | 'apolice'
+  | 'valor_acordo'
+
+const SEGURADORA_CATEGORIES = [
+  {
+    id: 'boletim' as const,
+    title: 'Boletim de Ocorrência',
+    description: 'Anexe o boletim de ocorrência do sinistro',
+    required: true,
+    min: 1,
+    max: 1,
+    accept: '.pdf,image/*',
+    allowedPrefixes: ['application/pdf', 'image/'],
+  },
+  {
+    id: 'apolice' as const,
+    title: 'Apólice',
+    description: 'Anexe a apólice do seguro',
+    required: true,
+    min: 1,
+    max: 1,
+    accept: '.pdf,image/*',
+    allowedPrefixes: ['application/pdf', 'image/'],
+  },
+  {
+    id: 'valor_acordo' as const,
+    title: 'Valor do acordo',
+    description: 'Anexe o documento com o valor do acordo',
+    required: true,
+    min: 1,
+    max: 1,
+    accept: '.pdf,image/*',
+    allowedPrefixes: ['application/pdf', 'image/'],
+  },
+]
 
 const ATTACHMENT_CATEGORIES = [
   {
@@ -134,7 +169,9 @@ export default function NovoChamado() {
   const { user, profile } = useAuth()
   const navigate = useNavigate()
 
-  const [tipoChamado, setTipoChamado] = useState<'Colisão' | 'Lesão Corporal' | ''>('')
+  const [tipoChamado, setTipoChamado] = useState<'Colisão' | 'Lesão Corporal' | 'Seguradora' | ''>(
+    '',
+  )
   const [titulo, setTitulo] = useState('')
   const [dataOcorrencia, setDataOcorrencia] = useState<Date | undefined>(undefined)
   const [descricao, setDescricao] = useState('')
@@ -148,11 +185,15 @@ export default function NovoChamado() {
   const [isSubmitting, setIsSubmitting] = useState(false)
 
   const categoriesToRender =
-    tipoChamado === 'Lesão Corporal' ? [LESAO_ATTACHMENT] : ATTACHMENT_CATEGORIES
+    tipoChamado === 'Lesão Corporal'
+      ? [LESAO_ATTACHMENT]
+      : tipoChamado === 'Seguradora'
+        ? SEGURADORA_CATEGORIES
+        : ATTACHMENT_CATEGORIES
 
   const getCategoryInfo = (id: FileCategory) => {
     if (id === 'anexo_lesao') return LESAO_ATTACHMENT
-    return ATTACHMENT_CATEGORIES.find((c) => c.id === id)!
+    return [...ATTACHMENT_CATEGORIES, ...SEGURADORA_CATEGORIES].find((c) => c.id === id)!
   }
 
   const processFiles = (newFiles: File[], categoryId: FileCategory) => {
@@ -396,8 +437,10 @@ export default function NovoChamado() {
       return
     }
 
-    if (tipoChamado === 'Colisão') {
-      const missingRequired = ATTACHMENT_CATEGORIES.some(
+    if (tipoChamado === 'Colisão' || tipoChamado === 'Seguradora') {
+      const catsToCheck =
+        tipoChamado === 'Seguradora' ? SEGURADORA_CATEGORIES : ATTACHMENT_CATEGORIES
+      const missingRequired = catsToCheck.some(
         (cat) => cat.required && files.filter((f) => f.category === cat.id).length === 0,
       )
       if (missingRequired) {
@@ -405,7 +448,7 @@ export default function NovoChamado() {
         return
       }
 
-      const wrongQuantity = ATTACHMENT_CATEGORIES.find((cat) => {
+      const wrongQuantity = catsToCheck.find((cat) => {
         const count = files.filter((f) => f.category === cat.id).length
         return count > 0 && count < cat.min
       })
@@ -431,6 +474,11 @@ export default function NovoChamado() {
         finalTitulo = `${titulo} - Carro: ${identifiedPrefixo}`
       }
 
+      if (tipoChamado === 'Seguradora') {
+        const carroText = identifiedPrefixo || placaOnibus
+        finalTitulo = `${titulo} - Carro: ${carroText}`
+      }
+
       const { data: chamado, error: chamadoError } = await supabase
         .from('chamados')
         .insert({
@@ -452,39 +500,57 @@ export default function NovoChamado() {
       if (chamadoError) throw chamadoError
 
       if (files.length > 0) {
-        let orcamentoCount = 1
-        const anexosData = files.map((f) => {
-          let categoryTitle = 'Anexo'
+        if (tipoChamado === 'Seguradora') {
+          const documentosData = files.map((f) => {
+            let tipo_doc = 'Boletim de Ocorrência'
+            if (f.category === 'apolice') tipo_doc = 'Apólice'
+            if (f.category === 'valor_acordo') tipo_doc = 'Valor do acordo'
 
-          if (tipoChamado === 'Lesão Corporal') {
-            categoryTitle = 'Anexo Lesão Corporal'
-          } else {
-            categoryTitle = ATTACHMENT_CATEGORIES.find((c) => c.id === f.category)?.title || 'Anexo'
-
-            if (f.category === 'orcamento_confianca') {
-              categoryTitle = `Orçamento ${orcamentoCount}`
-              orcamentoCount++
-            } else if (f.category === 'orcamento_carmg') {
-              categoryTitle = 'Orçamento CARMG'
-            } else if (f.category === 'fotos_videos') {
-              categoryTitle = 'Fotos/Vídeos'
-            } else if (f.category === 'documento_veiculo') {
-              categoryTitle = 'Documento do Veículo'
-            } else if (f.category === 'boletim') {
-              categoryTitle = 'Boletim de Ocorrência'
+            return {
+              chamado_id: chamado.id,
+              tipo_documento: tipo_doc,
+              nome_arquivo: f.file.name,
+              arquivo_url: f.url!,
             }
-          }
+          })
+          const { error: docError } = await supabase.from('documentos').insert(documentosData)
+          if (docError) throw docError
+        } else {
+          let orcamentoCount = 1
+          const anexosData = files.map((f) => {
+            let categoryTitle = 'Anexo'
 
-          return {
-            chamado_id: chamado.id,
-            url_arquivo: f.url!,
-            nome_arquivo: `[${categoryTitle}] - ${f.file.name}`,
-            tipo_arquivo: getTipoArquivo(f.file.type),
-            tamanho_mb: Number((f.file.size / (1024 * 1024)).toFixed(2)),
-          }
-        })
-        const { error: anexosError } = await supabase.from('anexos_chamado').insert(anexosData)
-        if (anexosError) throw anexosError
+            if (tipoChamado === 'Lesão Corporal') {
+              categoryTitle = 'Anexo Lesão Corporal'
+            } else {
+              categoryTitle =
+                ATTACHMENT_CATEGORIES.find((c) => c.id === f.category)?.title || 'Anexo'
+
+              if (f.category === 'orcamento_confianca') {
+                categoryTitle = `Orçamento ${orcamentoCount}`
+                orcamentoCount++
+              } else if (f.category === 'orcamento_carmg') {
+                categoryTitle = 'Orçamento CARMG'
+              } else if (f.category === 'fotos_videos') {
+                categoryTitle = 'Fotos/Vídeos'
+              } else if (f.category === 'documento_veiculo') {
+                categoryTitle = 'Documento do Veículo'
+              } else if (f.category === 'boletim') {
+                categoryTitle = 'Boletim de Ocorrência'
+              }
+            }
+
+            return {
+              chamado_id: chamado.id,
+              url_arquivo: f.url!,
+              nome_arquivo: `[${categoryTitle}] - ${f.file.name}`,
+              tipo_arquivo: getTipoArquivo(f.file.type),
+              tamanho_mb: Number((f.file.size / (1024 * 1024)).toFixed(2)),
+            }
+          })
+          const { error: anexosError } = await supabase.from('anexos_chamado').insert(anexosData)
+          if (anexosError) throw anexosError
+        }
       }
 
       await supabase.from('historico_chamado').insert({
@@ -529,7 +595,7 @@ export default function NovoChamado() {
                 <Label htmlFor="tipoChamado">Tipo de Ocorrência *</Label>
                 <Select
                   value={tipoChamado}
-                  onValueChange={(val: 'Colisão' | 'Lesão Corporal') => {
+                  onValueChange={(val: 'Colisão' | 'Lesão Corporal' | 'Seguradora') => {
                     setTipoChamado(val)
                     setFiles([])
                     setTitulo('')
@@ -546,6 +612,7 @@ export default function NovoChamado() {
                   <SelectContent>
                     <SelectItem value="Colisão">Colisão (Danos ao veículo)</SelectItem>
                     <SelectItem value="Lesão Corporal">Lesão Corporal (Física)</SelectItem>
+                    <SelectItem value="Seguradora">Seguradora</SelectItem>
                   </SelectContent>
                 </Select>
               </div>

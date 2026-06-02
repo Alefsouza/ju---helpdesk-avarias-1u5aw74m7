@@ -129,7 +129,6 @@ export type Database = {
           operacao: string | null
           pia: string | null
           prioridade: string | null
-          registro: string | null
           registro_cobrador: string | null
           registro_motorista: string | null
           responsavel_id: string | null
@@ -155,7 +154,6 @@ export type Database = {
           operacao?: string | null
           pia?: string | null
           prioridade?: string | null
-          registro?: string | null
           registro_cobrador?: string | null
           registro_motorista?: string | null
           responsavel_id?: string | null
@@ -181,7 +179,6 @@ export type Database = {
           operacao?: string | null
           pia?: string | null
           prioridade?: string | null
-          registro?: string | null
           registro_cobrador?: string | null
           registro_motorista?: string | null
           responsavel_id?: string | null
@@ -849,7 +846,6 @@ export const Constants = {
 //   status_interno: text (nullable)
 //   garagem: text (nullable)
 //   data_ocorrencia: date (nullable)
-//   registro: text (nullable)
 // Table: documentos
 //   id: uuid (not null, default: gen_random_uuid())
 //   tipo_documento: text (not null)

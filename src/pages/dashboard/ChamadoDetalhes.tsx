@@ -1986,7 +1986,7 @@ export default function ChamadoDetalhes() {
         chamado_id: id as string,
         acao: 'respondido',
         usuario_id: user?.id as string,
-        detalhes: `Orçamento ${numeroOrcamento} anexado com sucesso. Obs: ${obsOrcamento || 'Nenhuma'}`,
+        detalhes: `Orçamento ${numeroOrcamento} anexado com sucesso.`,
       })
 
       toast.success('Orçamento anexado com sucesso!')
@@ -2150,7 +2150,10 @@ export default function ChamadoDetalhes() {
     )
   }
 
-  const isSecretariaTecnica = currentUserProfile?.tipo_usuario === 'secretaria_tecnica'
+  const canAnexarOrcamento =
+    currentUserProfile?.tipo_usuario === 'secretaria_tecnica' ||
+    currentUserProfile?.tipo_usuario === 'admin' ||
+    currentUserProfile?.tipo_usuario === 'responsavel'
   const isSupport =
     currentUserProfile?.tipo_usuario === 'responsavel' ||
     currentUserProfile?.tipo_usuario === 'sinistro' ||
@@ -2430,7 +2433,7 @@ export default function ChamadoDetalhes() {
           </div>
         )}
 
-        {isSecretariaTecnica && (
+        {canAnexarOrcamento && (
           <div className="pt-4 border-t">
             <div className="border-2 border-purple-700 bg-[rgba(230,200,240,0.1)] rounded-xl shadow-sm p-4 sm:p-6 space-y-4">
               <div className="flex items-center gap-2 mb-2">

@@ -139,7 +139,6 @@ export default function NovoChamado() {
   const [dataOcorrencia, setDataOcorrencia] = useState<Date | undefined>(undefined)
   const [descricao, setDescricao] = useState('')
   const [placaOnibus, setPlacaOnibus] = useState('')
-  const [registro, setRegistro] = useState('')
   const [identifiedGaragem, setIdentifiedGaragem] = useState<string | null>(null)
   const [identifiedPrefixo, setIdentifiedPrefixo] = useState<string | null>(null)
   const [isSearchingPlaca, setIsSearchingPlaca] = useState(false)
@@ -445,7 +444,6 @@ export default function NovoChamado() {
           garagem: identifiedGaragem !== 'NOT_FOUND' ? identifiedGaragem : null,
           carro: placaOnibus,
           data_ocorrencia: format(dataOcorrencia, 'yyyy-MM-dd'),
-          registro: registro || null,
           criado_em: new Date().toISOString(),
         } as any)
         .select()
@@ -538,7 +536,6 @@ export default function NovoChamado() {
                     setDataOcorrencia(undefined)
                     setDescricao('')
                     setPlacaOnibus('')
-                    setRegistro('')
                     setIdentifiedGaragem(null)
                     setIdentifiedPrefixo(null)
                   }}
@@ -600,16 +597,6 @@ export default function NovoChamado() {
                       value={titulo}
                       onChange={(e) => setTitulo(e.target.value)}
                       required
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="registro">Registro (Opcional)</Label>
-                    <Input
-                      id="registro"
-                      placeholder="Ex: 12345"
-                      value={registro}
-                      onChange={(e) => setRegistro(e.target.value)}
                     />
                   </div>
 

@@ -722,16 +722,6 @@ export default function OsManutencao({
             >
               Fechar
             </Button>
-            {viewDoc && (
-              <Button
-                onClick={() => {
-                  handleOpenModal(viewDoc)
-                }}
-                className="bg-[#1A522E] hover:bg-[#154224] text-white"
-              >
-                Preencher OS
-              </Button>
-            )}
           </DialogFooter>
         </DialogContent>
       </Dialog>

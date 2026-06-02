@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { useChamadosDashboard } from '@/hooks/use-chamados-dashboard'
 import { DashboardCards } from './dashboard-cards'
 import { DashboardCharts } from './dashboard-charts'
@@ -9,6 +10,23 @@ import { AlertCircle } from 'lucide-react'
 export function VisaoGeral() {
   const { chamados, responsaveis, loading, error, refetch } = useChamadosDashboard()
 
+  const [chartFilters, setChartFilters] = useState<{
+    status?: string
+    prioridade?: string
+    garagem?: string
+  }>({})
+
+  const handleChartClick = (type: 'status' | 'prioridade' | 'garagem', value: string) => {
+    setChartFilters((prev) => ({
+      ...prev,
+      [type]: prev[type] === value ? undefined : value,
+    }))
+  }
+
+  const handleClearFilters = () => {
+    setChartFilters({})
+  }
+
   if (loading) {
     return (
       <div className="space-y-6">
@@ -17,7 +35,8 @@ export function VisaoGeral() {
             <Skeleton key={i} className="h-32" />
           ))}
         </div>
-        <div className="grid md:grid-cols-2 gap-4">
+        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+          <Skeleton className="h-[380px]" />
           <Skeleton className="h-[380px]" />
           <Skeleton className="h-[380px]" />
         </div>
@@ -42,8 +61,13 @@ export function VisaoGeral() {
   return (
     <div className="space-y-6 animate-fade-in">
       <DashboardCards chamados={chamados} />
-      <DashboardCharts chamados={chamados} />
-      <DashboardTable chamados={chamados} responsaveis={responsaveis} />
+      <DashboardCharts
+        chamados={chamados}
+        chartFilters={chartFilters}
+        onChartClick={handleChartClick}
+        onClearFilters={handleClearFilters}
+      />
+      <DashboardTable chamados={chamados} responsaveis={responsaveis} chartFilters={chartFilters} />
     </div>
   )
 }

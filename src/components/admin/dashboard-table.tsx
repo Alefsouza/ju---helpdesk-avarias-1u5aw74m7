@@ -29,9 +29,11 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 export function DashboardTable({
   chamados,
   responsaveis,
+  chartFilters,
 }: {
   chamados: any[]
   responsaveis: any[]
+  chartFilters?: { status?: string; prioridade?: string; garagem?: string }
 }) {
   const [search, setSearch] = useState('')
   const [debouncedSearch, setDebouncedSearch] = useState('')
@@ -71,9 +73,25 @@ export function DashboardTable({
         if (isBefore(d, startOfDay(dateRange.from))) return false
         if (dateRange.to && isAfter(d, endOfDay(dateRange.to))) return false
       }
+
+      if (chartFilters?.status && c.status !== chartFilters.status) return false
+      if (chartFilters?.prioridade && c.prioridade !== chartFilters.prioridade) return false
+      if (chartFilters?.garagem && (c.garagem || 'Não Informada') !== chartFilters.garagem)
+        return false
+
       return true
     })
-  }, [chamados, debouncedSearch, status, prioridade, statusInterno, resp, period, dateRange])
+  }, [
+    chamados,
+    debouncedSearch,
+    status,
+    prioridade,
+    statusInterno,
+    resp,
+    period,
+    dateRange,
+    chartFilters,
+  ])
 
   const uniqueStatusInterno = useMemo(() => {
     const statuses = new Set<string>()

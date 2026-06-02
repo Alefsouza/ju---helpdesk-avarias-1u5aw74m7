@@ -18,6 +18,7 @@ import {
   Camera,
   Loader2,
   AlertCircle,
+  Trash2,
 } from 'lucide-react'
 import { format, parseISO } from 'date-fns'
 import { Input } from '@/components/ui/input'
@@ -59,6 +60,10 @@ export default function OsManutencao({
   const [duplicateAlertOpen, setDuplicateAlertOpen] = useState(false)
   const [duplicateSubmitAction, setDuplicateSubmitAction] = useState<(() => void) | null>(null)
   const [uploadingPhotoId, setUploadingPhotoId] = useState<string | null>(null)
+  const [isPhotoManagerOpen, setIsPhotoManagerOpen] = useState(false)
+  const [photoManagerDoc, setPhotoManagerDoc] = useState<any>(null)
+  const [deletingPhotoUrl, setDeletingPhotoUrl] = useState<string | null>(null)
+
   const fileInputRef = useRef<HTMLInputElement>(null)
   const uploadTargetDoc = useRef<any>(null)
   const { toast } = useToast()
@@ -123,10 +128,70 @@ export default function OsManutencao({
     window.open(downloadUrl, '_blank')
   }
 
+  const handleOpenPhotoManager = (doc: any) => {
+    setPhotoManagerDoc(doc)
+    setIsPhotoManagerOpen(true)
+  }
+
   const handleCameraClick = (doc: any) => {
     uploadTargetDoc.current = doc
     if (fileInputRef.current) {
       fileInputRef.current.click()
+    }
+  }
+
+  const handleDeletePhoto = async (url: string) => {
+    if (!photoManagerDoc) return
+    if (!window.confirm('Tem certeza que deseja remover esta foto?')) return
+
+    setDeletingPhotoUrl(url)
+    try {
+      const { data: userData } = await supabase.auth.getUser()
+      const userId = userData?.user?.id || null
+
+      const { error } = await supabase.rpc('remover_foto_manutencao' as any, {
+        p_documento_id: photoManagerDoc.id,
+        p_foto_url: url,
+        p_usuario_id: userId,
+      })
+
+      if (error) throw error
+
+      try {
+        const pathParts = url.split('/public/documentos/')
+        if (pathParts.length > 1) {
+          const filePath = pathParts[1]
+          await supabase.storage.from('documentos').remove([filePath])
+        }
+      } catch (e) {
+        console.error('Failed to delete from storage', e)
+      }
+
+      const currentFotos = Array.isArray(photoManagerDoc.fotos_manutencao)
+        ? photoManagerDoc.fotos_manutencao
+        : []
+      const updatedFotos = currentFotos.filter((f: string) => f !== url)
+
+      setPhotoManagerDoc({ ...photoManagerDoc, fotos_manutencao: updatedFotos })
+      setDocumentos((docs) =>
+        docs.map((d) =>
+          d.id === photoManagerDoc.id ? { ...d, fotos_manutencao: updatedFotos } : d,
+        ),
+      )
+
+      toast({
+        title: 'Sucesso',
+        description: 'Foto removida com sucesso.',
+      })
+    } catch (error: any) {
+      console.error('Erro ao remover foto:', error)
+      toast({
+        title: 'Erro',
+        description: error.message || 'Erro ao remover foto.',
+        variant: 'destructive',
+      })
+    } finally {
+      setDeletingPhotoUrl(null)
     }
   }
 
@@ -182,6 +247,10 @@ export default function OsManutencao({
 
       setDocumentos((docs) =>
         docs.map((d) => (d.id === targetDoc.id ? { ...d, fotos_manutencao: newFotosUrls } : d)),
+      )
+
+      setPhotoManagerDoc((prev: any) =>
+        prev && prev.id === targetDoc.id ? { ...prev, fotos_manutencao: newFotosUrls } : prev,
       )
     } catch (error: any) {
       console.error('Erro ao fazer upload da(s) foto(s):', error)
@@ -503,15 +572,10 @@ export default function OsManutencao({
                                   variant="ghost"
                                   size="icon"
                                   className="h-8 w-8 text-slate-500 hover:text-blue-600 hover:bg-blue-50"
-                                  onClick={() => handleCameraClick(doc)}
-                                  disabled={uploadingPhotoId === doc.id}
-                                  title="Anexar Foto"
+                                  onClick={() => handleOpenPhotoManager(doc)}
+                                  title="Gerenciar Fotos de Manutenção"
                                 >
-                                  {uploadingPhotoId === doc.id ? (
-                                    <Loader2 className="h-4 w-4 animate-spin" />
-                                  ) : (
-                                    <Camera className="h-4 w-4" />
-                                  )}
+                                  <Camera className="h-4 w-4" />
                                 </Button>
                                 {Array.isArray(doc.fotos_manutencao) &&
                                   doc.fotos_manutencao.length > 0 && (
@@ -852,6 +916,101 @@ export default function OsManutencao({
               Cancelar
             </Button>
           </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={isPhotoManagerOpen} onOpenChange={setIsPhotoManagerOpen}>
+        <DialogContent className="sm:max-w-[700px] max-h-[85vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Gerenciar Fotos de Manutenção</DialogTitle>
+            <DialogDescription>
+              Adicione ou remova fotos de evidência de manutenção para esta OS.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 py-4">
+            <div className="flex justify-between items-center bg-slate-50 p-3 rounded-md border">
+              <div>
+                <p className="text-sm font-medium text-slate-900">
+                  OS: {photoManagerDoc?.numero_os || '-'}
+                </p>
+                <p className="text-xs text-slate-500">
+                  Carro: {photoManagerDoc?.numero_carro || '-'}
+                </p>
+              </div>
+              <Button
+                onClick={() => handleCameraClick(photoManagerDoc)}
+                disabled={uploadingPhotoId === photoManagerDoc?.id}
+              >
+                {uploadingPhotoId === photoManagerDoc?.id ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Enviando...
+                  </>
+                ) : (
+                  <>
+                    <Camera className="mr-2 h-4 w-4" /> Adicionar Fotos
+                  </>
+                )}
+              </Button>
+            </div>
+
+            {(() => {
+              const fotos = Array.isArray(photoManagerDoc?.fotos_manutencao)
+                ? photoManagerDoc.fotos_manutencao
+                : []
+
+              if (fotos.length === 0) {
+                return (
+                  <div className="text-center py-12 text-slate-500 bg-slate-50/50 rounded-lg border border-dashed">
+                    <Camera className="mx-auto h-8 w-8 text-slate-300 mb-2" />
+                    <p>Nenhuma foto de manutenção anexada.</p>
+                  </div>
+                )
+              }
+
+              return (
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+                  {fotos.map((url: string, idx: number) => (
+                    <div
+                      key={idx}
+                      className="relative group aspect-square rounded-md overflow-hidden bg-slate-100 border"
+                    >
+                      <a
+                        href={url}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="block w-full h-full"
+                      >
+                        <img
+                          src={url}
+                          alt={`Evidência ${idx + 1}`}
+                          className="object-cover w-full h-full"
+                        />
+                      </a>
+                      <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center pointer-events-none">
+                        <Button
+                          variant="destructive"
+                          size="icon"
+                          className="pointer-events-auto"
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            handleDeletePhoto(url)
+                          }}
+                          disabled={deletingPhotoUrl === url}
+                        >
+                          {deletingPhotoUrl === url ? (
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                          ) : (
+                            <Trash2 className="h-4 w-4" />
+                          )}
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )
+            })()}
+          </div>
         </DialogContent>
       </Dialog>
     </div>

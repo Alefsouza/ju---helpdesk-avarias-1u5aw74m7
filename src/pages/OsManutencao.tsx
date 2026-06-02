@@ -59,13 +59,15 @@ export default function OsManutencao({
   const [isSaving, setIsSaving] = useState(false)
   const [duplicateAlertOpen, setDuplicateAlertOpen] = useState(false)
   const [duplicateSubmitAction, setDuplicateSubmitAction] = useState<(() => void) | null>(null)
-  const [uploadingPhotoId, setUploadingPhotoId] = useState<string | null>(null)
   const [isPhotoManagerOpen, setIsPhotoManagerOpen] = useState(false)
   const [photoManagerDoc, setPhotoManagerDoc] = useState<any>(null)
-  const [deletingPhotoUrl, setDeletingPhotoUrl] = useState<string | null>(null)
+
+  const [stagedNewPhotos, setStagedNewPhotos] = useState<File[]>([])
+  const [stagedNewPhotoUrls, setStagedNewPhotoUrls] = useState<string[]>([])
+  const [stagedDeletedPhotos, setStagedDeletedPhotos] = useState<string[]>([])
+  const [isSavingPhotos, setIsSavingPhotos] = useState(false)
 
   const fileInputRef = useRef<HTMLInputElement>(null)
-  const uploadTargetDoc = useRef<any>(null)
   const { toast } = useToast()
 
   const fetchDocumentos = async () => {
@@ -130,88 +132,62 @@ export default function OsManutencao({
 
   const handleOpenPhotoManager = (doc: any) => {
     setPhotoManagerDoc(doc)
+    setStagedNewPhotos([])
+    setStagedNewPhotoUrls([])
+    setStagedDeletedPhotos([])
     setIsPhotoManagerOpen(true)
   }
 
-  const handleCameraClick = (doc: any) => {
-    uploadTargetDoc.current = doc
-    if (fileInputRef.current) {
-      fileInputRef.current.click()
-    }
+  const handleClosePhotoManager = () => {
+    if (isSavingPhotos) return
+    setIsPhotoManagerOpen(false)
+    setPhotoManagerDoc(null)
+    setStagedNewPhotos([])
+    stagedNewPhotoUrls.forEach((url) => URL.revokeObjectURL(url))
+    setStagedNewPhotoUrls([])
+    setStagedDeletedPhotos([])
   }
 
-  const handleDeletePhoto = async (url: string) => {
-    if (!photoManagerDoc) return
-    if (!window.confirm('Tem certeza que deseja remover esta foto?')) return
+  const handlePhotoSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files
+    if (!files || files.length === 0) return
 
-    setDeletingPhotoUrl(url)
+    const newFiles = Array.from(files)
+    const newUrls = newFiles.map((file) => URL.createObjectURL(file))
+
+    setStagedNewPhotos((prev) => [...prev, ...newFiles])
+    setStagedNewPhotoUrls((prev) => [...prev, ...newUrls])
+
+    if (e.target) e.target.value = ''
+  }
+
+  const handleRemoveStagedNew = (index: number) => {
+    setStagedNewPhotos((prev) => prev.filter((_, i) => i !== index))
+    setStagedNewPhotoUrls((prev) => {
+      const updated = [...prev]
+      URL.revokeObjectURL(updated[index])
+      updated.splice(index, 1)
+      return updated
+    })
+  }
+
+  const handleStageDeleteExisting = (url: string) => {
+    setStagedDeletedPhotos((prev) => [...prev, url])
+  }
+
+  const handleSavePhotos = async () => {
+    if (!photoManagerDoc) return
+
+    setIsSavingPhotos(true)
     try {
       const { data: userData } = await supabase.auth.getUser()
       const userId = userData?.user?.id || null
 
-      const { error } = await supabase.rpc('remover_foto_manutencao' as any, {
-        p_documento_id: photoManagerDoc.id,
-        p_foto_url: url,
-        p_usuario_id: userId,
-      })
-
-      if (error) throw error
-
-      try {
-        const pathParts = url.split('/public/documentos/')
-        if (pathParts.length > 1) {
-          const filePath = pathParts[1]
-          await supabase.storage.from('documentos').remove([filePath])
-        }
-      } catch (e) {
-        console.error('Failed to delete from storage', e)
-      }
-
-      const currentFotos = Array.isArray(photoManagerDoc.fotos_manutencao)
-        ? photoManagerDoc.fotos_manutencao
-        : []
-      const updatedFotos = currentFotos.filter((f: string) => f !== url)
-
-      setPhotoManagerDoc({ ...photoManagerDoc, fotos_manutencao: updatedFotos })
-      setDocumentos((docs) =>
-        docs.map((d) =>
-          d.id === photoManagerDoc.id ? { ...d, fotos_manutencao: updatedFotos } : d,
-        ),
-      )
-
-      toast({
-        title: 'Sucesso',
-        description: 'Foto removida com sucesso.',
-      })
-    } catch (error: any) {
-      console.error('Erro ao remover foto:', error)
-      toast({
-        title: 'Erro',
-        description: error.message || 'Erro ao remover foto.',
-        variant: 'destructive',
-      })
-    } finally {
-      setDeletingPhotoUrl(null)
-    }
-  }
-
-  const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = e.target.files
-    const targetDoc = uploadTargetDoc.current
-
-    if (!files || files.length === 0 || !targetDoc) {
-      if (e.target) e.target.value = ''
-      return
-    }
-
-    try {
-      setUploadingPhotoId(targetDoc.id)
-      const newUrls: string[] = []
-
-      for (let i = 0; i < files.length; i++) {
-        const file = files[i]
+      const uploadedUrls: string[] = []
+      for (let i = 0; i < stagedNewPhotos.length; i++) {
+        const file = stagedNewPhotos[i]
         const fileExt = file.name.split('.').pop()
-        const fileName = `os_foto_${targetDoc.id}_${Date.now()}_${i}.${fileExt}`
+        const fileName = `os_foto_${photoManagerDoc.id}_${Date.now()}_${i}.${fileExt}`
 
         const { error: uploadError } = await supabase.storage
           .from('documentos')
@@ -220,49 +196,69 @@ export default function OsManutencao({
         if (uploadError) throw uploadError
 
         const { data: publicUrlData } = supabase.storage.from('documentos').getPublicUrl(fileName)
-        newUrls.push(publicUrlData.publicUrl)
+        uploadedUrls.push(publicUrlData.publicUrl)
       }
 
-      const { data: userData } = await supabase.auth.getUser()
-      const userId = userData?.user?.id || null
-
-      for (const newUrl of newUrls) {
-        const { error: updateError } = await supabase.rpc('anexar_foto_manutencao' as any, {
-          p_documento_id: targetDoc.id,
-          p_foto_url: newUrl,
-          p_usuario_id: userId,
-        })
-        if (updateError) throw updateError
+      for (const url of stagedDeletedPhotos) {
+        try {
+          const pathParts = url.split('/public/documentos/')
+          if (pathParts.length > 1) {
+            const filePath = pathParts[1]
+            await supabase.storage.from('documentos').remove([filePath])
+          }
+        } catch (e) {
+          console.error('Failed to delete from storage', e)
+        }
       }
 
-      const currentFotos = Array.isArray(targetDoc.fotos_manutencao)
-        ? targetDoc.fotos_manutencao
+      const existingFotos = Array.isArray(photoManagerDoc.fotos_manutencao)
+        ? photoManagerDoc.fotos_manutencao
         : []
-      const newFotosUrls = [...currentFotos, ...newUrls]
+      const keptFotos = existingFotos.filter((url: string) => !stagedDeletedPhotos.includes(url))
+      const finalFotos = [...keptFotos, ...uploadedUrls]
+
+      const { error: updateError } = await supabase
+        .from('documentos')
+        .update({
+          fotos_manutencao: finalFotos,
+          atualizado_em: new Date().toISOString(),
+        })
+        .eq('id', photoManagerDoc.id)
+
+      if (updateError) throw updateError
+
+      if (
+        photoManagerDoc.chamado_id &&
+        userId &&
+        (uploadedUrls.length > 0 || stagedDeletedPhotos.length > 0)
+      ) {
+        await supabase.from('historico_chamado').insert({
+          chamado_id: photoManagerDoc.chamado_id,
+          acao: 'respondido',
+          usuario_id: userId,
+          detalhes: 'Evidências de manutenção atualizadas.',
+        })
+      }
 
       toast({
         title: 'Sucesso',
-        description: `${newUrls.length > 1 ? newUrls.length + ' fotos anexadas' : 'Foto anexada'} com sucesso!`,
+        description: 'Fotos de manutenção salvas com sucesso.',
       })
 
       setDocumentos((docs) =>
-        docs.map((d) => (d.id === targetDoc.id ? { ...d, fotos_manutencao: newFotosUrls } : d)),
+        docs.map((d) => (d.id === photoManagerDoc.id ? { ...d, fotos_manutencao: finalFotos } : d)),
       )
 
-      setPhotoManagerDoc((prev: any) =>
-        prev && prev.id === targetDoc.id ? { ...prev, fotos_manutencao: newFotosUrls } : prev,
-      )
+      handleClosePhotoManager()
     } catch (error: any) {
-      console.error('Erro ao fazer upload da(s) foto(s):', error)
+      console.error('Erro ao salvar fotos:', error)
       toast({
         title: 'Erro',
-        description: error.message || 'Erro ao fazer upload da(s) foto(s).',
+        description: error.message || 'Erro ao salvar fotos.',
         variant: 'destructive',
       })
     } finally {
-      setUploadingPhotoId(null)
-      uploadTargetDoc.current = null
-      if (e.target) e.target.value = ''
+      setIsSavingPhotos(false)
     }
   }
 
@@ -628,7 +624,7 @@ export default function OsManutencao({
           multiple
           ref={fileInputRef}
           style={{ display: 'none' }}
-          onChange={handlePhotoUpload}
+          onChange={handlePhotoSelect}
         />
       </main>
 
@@ -919,16 +915,17 @@ export default function OsManutencao({
         </DialogContent>
       </Dialog>
 
-      <Dialog open={isPhotoManagerOpen} onOpenChange={setIsPhotoManagerOpen}>
-        <DialogContent className="sm:max-w-[700px] max-h-[85vh] overflow-y-auto">
+      <Dialog open={isPhotoManagerOpen} onOpenChange={(open) => !open && handleClosePhotoManager()}>
+        <DialogContent className="sm:max-w-[700px] max-h-[85vh] flex flex-col">
           <DialogHeader>
             <DialogTitle>Gerenciar Fotos de Manutenção</DialogTitle>
             <DialogDescription>
-              Adicione ou remova fotos de evidência de manutenção para esta OS.
+              Adicione ou remova fotos de evidência de manutenção para esta OS. Clique em "Salvar"
+              para confirmar as alterações.
             </DialogDescription>
           </DialogHeader>
 
-          <div className="space-y-4 py-4">
+          <div className="flex-1 overflow-y-auto space-y-4 py-4 pr-1">
             <div className="flex justify-between items-center bg-slate-50 p-3 rounded-md border">
               <div>
                 <p className="text-sm font-medium text-slate-900">
@@ -938,72 +935,85 @@ export default function OsManutencao({
                   Carro: {photoManagerDoc?.numero_carro || '-'}
                 </p>
               </div>
-              <Button
-                onClick={() => handleCameraClick(photoManagerDoc)}
-                disabled={uploadingPhotoId === photoManagerDoc?.id}
-              >
-                {uploadingPhotoId === photoManagerDoc?.id ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Enviando...
-                  </>
-                ) : (
-                  <>
-                    <Camera className="mr-2 h-4 w-4" /> Adicionar Fotos
-                  </>
-                )}
+              <Button onClick={() => fileInputRef.current?.click()} disabled={isSavingPhotos}>
+                <Camera className="mr-2 h-4 w-4" /> Adicionar Fotos
               </Button>
             </div>
 
             {(() => {
-              const fotos = Array.isArray(photoManagerDoc?.fotos_manutencao)
+              const existingFotos = Array.isArray(photoManagerDoc?.fotos_manutencao)
                 ? photoManagerDoc.fotos_manutencao
                 : []
+              const activeExistingFotos = existingFotos.filter(
+                (url: string) => !stagedDeletedPhotos.includes(url),
+              )
 
-              if (fotos.length === 0) {
+              if (activeExistingFotos.length === 0 && stagedNewPhotoUrls.length === 0) {
                 return (
                   <div className="text-center py-12 text-slate-500 bg-slate-50/50 rounded-lg border border-dashed">
                     <Camera className="mx-auto h-8 w-8 text-slate-300 mb-2" />
-                    <p>Nenhuma foto de manutenção anexada.</p>
+                    <p>Nenhuma foto de manutenção para exibir.</p>
                   </div>
                 )
               }
 
               return (
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
-                  {fotos.map((url: string, idx: number) => (
+                  {activeExistingFotos.map((url: string, idx: number) => (
                     <div
-                      key={idx}
+                      key={`existing-${idx}`}
                       className="relative group aspect-square rounded-md overflow-hidden bg-slate-100 border"
                     >
-                      <a
-                        href={url}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="block w-full h-full"
-                      >
-                        <img
-                          src={url}
-                          alt={`Evidência ${idx + 1}`}
-                          className="object-cover w-full h-full"
-                        />
-                      </a>
-                      <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center pointer-events-none">
+                      <img
+                        src={url}
+                        alt={`Evidência Existente ${idx + 1}`}
+                        className="object-cover w-full h-full"
+                      />
+                      <div className="absolute top-2 right-2 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
                         <Button
                           variant="destructive"
                           size="icon"
-                          className="pointer-events-auto"
+                          className="h-8 w-8"
                           onClick={(e) => {
                             e.stopPropagation()
-                            handleDeletePhoto(url)
+                            handleStageDeleteExisting(url)
                           }}
-                          disabled={deletingPhotoUrl === url}
+                          disabled={isSavingPhotos}
+                          title="Remover foto"
                         >
-                          {deletingPhotoUrl === url ? (
-                            <Loader2 className="h-4 w-4 animate-spin" />
-                          ) : (
-                            <Trash2 className="h-4 w-4" />
-                          )}
+                          <Trash2 className="h-4 w-4" />
                         </Button>
+                      </div>
+                    </div>
+                  ))}
+
+                  {stagedNewPhotoUrls.map((url: string, idx: number) => (
+                    <div
+                      key={`new-${idx}`}
+                      className="relative group aspect-square rounded-md overflow-hidden bg-blue-50 border-2 border-blue-200 border-dashed"
+                    >
+                      <img
+                        src={url}
+                        alt={`Nova Evidência ${idx + 1}`}
+                        className="object-cover w-full h-full opacity-90"
+                      />
+                      <div className="absolute top-2 right-2 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                        <Button
+                          variant="destructive"
+                          size="icon"
+                          className="h-8 w-8"
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            handleRemoveStagedNew(idx)
+                          }}
+                          disabled={isSavingPhotos}
+                          title="Descartar nova foto"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                      <div className="absolute bottom-2 left-2 bg-blue-600 text-white text-[10px] px-2 py-0.5 rounded font-medium">
+                        Nova
                       </div>
                     </div>
                   ))}
@@ -1011,6 +1021,25 @@ export default function OsManutencao({
               )
             })()}
           </div>
+
+          <DialogFooter className="mt-4 pt-4 border-t gap-2 sm:gap-0">
+            <Button variant="outline" onClick={handleClosePhotoManager} disabled={isSavingPhotos}>
+              Cancelar
+            </Button>
+            <Button
+              onClick={handleSavePhotos}
+              disabled={isSavingPhotos}
+              className="bg-primary text-primary-foreground"
+            >
+              {isSavingPhotos ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Salvando...
+                </>
+              ) : (
+                'Salvar Alterações'
+              )}
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>

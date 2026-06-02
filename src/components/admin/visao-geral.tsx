@@ -14,9 +14,13 @@ export function VisaoGeral() {
     status?: string
     prioridade?: string
     garagem?: string
+    responsavel?: string
   }>({})
 
-  const handleChartClick = (type: 'status' | 'prioridade' | 'garagem', value: string) => {
+  const handleChartClick = (
+    type: 'status' | 'prioridade' | 'garagem' | 'responsavel',
+    value: string,
+  ) => {
     setChartFilters((prev) => ({
       ...prev,
       [type]: prev[type] === value ? undefined : value,

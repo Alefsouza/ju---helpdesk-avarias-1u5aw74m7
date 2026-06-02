@@ -19,9 +19,8 @@ const statusColors = {
 }
 
 const priorityColors = {
-  baixa: '#808080', // cinza médio
   media: '#c8e6c9', // verde claro
-  alta: '#225f3d', // verde escuro
+  urgente: '#ef4444', // vermelho
 }
 
 export function DashboardCharts({ chamados }: { chamados: any[] }) {
@@ -45,19 +44,14 @@ export function DashboardCharts({ chamados }: { chamados: any[] }) {
 
   const prioData = [
     {
-      name: 'Baixa',
-      value: chamados.filter((c) => c.prioridade === 'baixa').length,
-      fill: priorityColors.baixa,
-    },
-    {
       name: 'Média',
       value: chamados.filter((c) => c.prioridade === 'media').length,
       fill: priorityColors.media,
     },
     {
-      name: 'Alta',
-      value: chamados.filter((c) => c.prioridade === 'alta').length,
-      fill: priorityColors.alta,
+      name: 'Urgente',
+      value: chamados.filter((c) => c.prioridade === 'urgente').length,
+      fill: priorityColors.urgente,
     },
   ]
 
@@ -68,9 +62,8 @@ export function DashboardCharts({ chamados }: { chamados: any[] }) {
   }
 
   const prioConfig = {
-    baixa: { label: 'Baixa', color: priorityColors.baixa },
     media: { label: 'Média', color: priorityColors.media },
-    alta: { label: 'Alta', color: priorityColors.alta },
+    urgente: { label: 'Urgente', color: priorityColors.urgente },
   }
 
   return (

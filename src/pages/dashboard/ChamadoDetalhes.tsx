@@ -656,6 +656,11 @@ export default function ChamadoDetalhes() {
   const [duplicateAlertOpen, setDuplicateAlertOpen] = useState(false)
   const [duplicateSubmitAction, setDuplicateSubmitAction] = useState<(() => void) | null>(null)
 
+  const [anexoInternoToDelete, setAnexoInternoToDelete] = useState<{
+    id: string
+    url: string
+  } | null>(null)
+
   const [numeroOrcamento, setNumeroOrcamento] = useState('')
   const [obsOrcamento, setObsOrcamento] = useState('')
   const [fileOrcamento, setFileOrcamento] = useState<File | null>(null)
@@ -1654,10 +1659,11 @@ export default function ChamadoDetalhes() {
     }
   }
 
-  const handleDeleteInternal = async (anexoId: string, url: string) => {
-    if (!window.confirm('Tem certeza que deseja deletar este anexo interno?')) return
+  const confirmDeleteInternal = async () => {
+    if (!anexoInternoToDelete) return
 
     try {
+      const { id: anexoId, url } = anexoInternoToDelete
       const urlWithoutQuery = url.split('?')[0]
       const urlParts = urlWithoutQuery.split('/')
       const fileName = urlParts[urlParts.length - 1]
@@ -1673,6 +1679,8 @@ export default function ChamadoDetalhes() {
       toast.success('Anexo interno deletado')
     } catch (error) {
       toast.error('Erro ao deletar anexo interno')
+    } finally {
+      setAnexoInternoToDelete(null)
     }
   }
 
@@ -2699,12 +2707,16 @@ export default function ChamadoDetalhes() {
                           <Eye className="h-4 w-4" />
                         )}
                       </Button>
-                      {user?.id === anexo.usuario_id && (
+                      {(user?.id === anexo.usuario_id ||
+                        user?.id === chamado.responsavel_id ||
+                        currentUserProfile?.tipo_usuario === 'admin') && (
                         <Button
                           size="icon"
                           variant="ghost"
                           className="h-8 w-8 text-slate-500 hover:text-red-600"
-                          onClick={() => handleDeleteInternal(anexo.id, anexo.arquivo_url)}
+                          onClick={() =>
+                            setAnexoInternoToDelete({ id: anexo.id, url: anexo.arquivo_url })
+                          }
                           disabled={
                             loadingAction === `${anexo.id}-download` ||
                             loadingAction === `${anexo.id}-view` ||
@@ -3127,6 +3139,29 @@ export default function ChamadoDetalhes() {
         duplicateSubmitAction={duplicateSubmitAction}
         setDuplicateSubmitAction={setDuplicateSubmitAction}
       />
+
+      <AlertDialog
+        open={!!anexoInternoToDelete}
+        onOpenChange={(open) => !open && setAnexoInternoToDelete(null)}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Tem certeza que deseja excluir este anexo?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Esta ação não pode ser desfeita. O arquivo será removido permanentemente.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={confirmDeleteInternal}
+              className="bg-red-600 hover:bg-red-700 text-white"
+            >
+              Excluir
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   )
 }

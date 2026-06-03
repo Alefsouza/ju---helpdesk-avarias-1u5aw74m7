@@ -67,6 +67,13 @@ export default function OsManutencao({
   const [stagedDeletedPhotos, setStagedDeletedPhotos] = useState<string[]>([])
   const [isSavingPhotos, setIsSavingPhotos] = useState(false)
 
+  const [isStandaloneUploadOpen, setIsStandaloneUploadOpen] = useState(false)
+  const [standaloneOS, setStandaloneOS] = useState('')
+  const [standalonePhotos, setStandalonePhotos] = useState<File[]>([])
+  const [standalonePhotoUrls, setStandalonePhotoUrls] = useState<string[]>([])
+  const [isUploadingStandalone, setIsUploadingStandalone] = useState(false)
+  const standaloneFileInputRef = useRef<HTMLInputElement>(null)
+
   const fileInputRef = useRef<HTMLInputElement>(null)
   const { toast } = useToast()
 
@@ -76,7 +83,7 @@ export default function OsManutencao({
       const { data, error } = await supabase
         .from('documentos')
         .select('*, chamados(carro)')
-        .in('tipo_documento', ['Vistoria', 'Espelho de Danos'])
+        .in('tipo_documento', ['Vistoria', 'Espelho de Danos', 'OS de Manutenção'])
         .not('numero_os', 'is', null)
         .neq('numero_os', '')
         .neq('excluido_manutencao' as any, true)
@@ -91,6 +98,86 @@ export default function OsManutencao({
       console.error('Erro ao buscar documentos:', error)
     } finally {
       setLoading(false)
+    }
+  }
+
+  const handleCloseStandalone = () => {
+    setIsStandaloneUploadOpen(false)
+    setStandaloneOS('')
+    setStandalonePhotos([])
+    standalonePhotoUrls.forEach((url) => URL.revokeObjectURL(url))
+    setStandalonePhotoUrls([])
+  }
+
+  const handleStandalonePhotoSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files
+    if (!files || files.length === 0) return
+    const newFiles = Array.from(files)
+    const newUrls = newFiles.map((file) => URL.createObjectURL(file))
+    setStandalonePhotos((prev) => [...prev, ...newFiles])
+    setStandalonePhotoUrls((prev) => [...prev, ...newUrls])
+    if (e.target) e.target.value = ''
+  }
+
+  const handleRemoveStandalonePhoto = (index: number) => {
+    setStandalonePhotos((prev) => prev.filter((_, i) => i !== index))
+    setStandalonePhotoUrls((prev) => {
+      const updated = [...prev]
+      URL.revokeObjectURL(updated[index])
+      updated.splice(index, 1)
+      return updated
+    })
+  }
+
+  const handleSubmitStandalone = async () => {
+    if (!standaloneOS.trim() || standalonePhotos.length === 0) return
+
+    setIsUploadingStandalone(true)
+    try {
+      const uploadedUrls: string[] = []
+
+      for (let i = 0; i < standalonePhotos.length; i++) {
+        const file = standalonePhotos[i]
+        const fileExt = file.name.split('.').pop()
+        const fileName = `os_avulsa_${standaloneOS}_${Date.now()}_${i}.${fileExt}`
+
+        const { error: uploadError } = await supabase.storage
+          .from('documentos')
+          .upload(fileName, file, { upsert: false })
+
+        if (uploadError) throw uploadError
+
+        const { data: publicUrlData } = supabase.storage.from('documentos').getPublicUrl(fileName)
+        uploadedUrls.push(publicUrlData.publicUrl)
+      }
+
+      const { error: insertError } = await supabase.from('documentos').insert({
+        numero_os: standaloneOS.trim(),
+        tipo_documento: 'OS de Manutenção',
+        nome_arquivo: `Evidencia_OS_${standaloneOS.trim()}`,
+        arquivo_url: uploadedUrls[0],
+        fotos_manutencao: uploadedUrls,
+        garagem: garagemFilter,
+      })
+
+      if (insertError) throw insertError
+
+      toast({
+        title: 'Sucesso',
+        description: 'Fotos enviadas com sucesso. Sincronização em andamento.',
+      })
+
+      handleCloseStandalone()
+      fetchDocumentos()
+    } catch (error: any) {
+      console.error('Erro ao enviar fotos avulsas:', error)
+      toast({
+        title: 'Erro',
+        description: error.message || 'Ocorreu um erro ao enviar as fotos.',
+        variant: 'destructive',
+      })
+    } finally {
+      setIsUploadingStandalone(false)
     }
   }
 
@@ -351,7 +438,7 @@ export default function OsManutencao({
           .select('id')
           .eq('numero_carro', selectedDoc.numero_carro)
           .eq('excluido_manutencao', false)
-          .in('tipo_documento', ['Espelho de Danos', 'Vistoria'])
+          .in('tipo_documento', ['Espelho de Danos', 'Vistoria', 'OS de Manutenção'])
           .neq('id', selectedDoc.id)
 
         if (duplicates && duplicates.length > 0) {
@@ -450,14 +537,22 @@ export default function OsManutencao({
               </p>
             </div>
 
-            <div className="relative w-full md:w-80">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-              <Input
-                placeholder="Buscar OS, carro, vistoriador..."
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                className="pl-9 bg-white"
-              />
+            <div className="flex flex-col sm:flex-row gap-3 w-full md:w-auto">
+              <Button
+                onClick={() => setIsStandaloneUploadOpen(true)}
+                className="bg-[#1A522E] hover:bg-[#154224] text-white shrink-0"
+              >
+                <Camera className="mr-2 h-4 w-4" /> Anexar Fotos por OS
+              </Button>
+              <div className="relative w-full sm:w-64">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+                <Input
+                  placeholder="Buscar OS, carro, vistoriador..."
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  className="pl-9 bg-white"
+                />
+              </div>
             </div>
           </div>
 
@@ -627,7 +722,117 @@ export default function OsManutencao({
           style={{ display: 'none' }}
           onChange={handlePhotoSelect}
         />
+
+        <input
+          type="file"
+          accept="image/*"
+          multiple
+          ref={standaloneFileInputRef}
+          style={{ display: 'none' }}
+          onChange={handleStandalonePhotoSelect}
+        />
       </main>
+
+      <Dialog
+        open={isStandaloneUploadOpen}
+        onOpenChange={(open) => !open && !isUploadingStandalone && handleCloseStandalone()}
+      >
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Anexar Fotos Avulsas por OS</DialogTitle>
+            <DialogDescription>
+              Insira o número da Ordem de Serviço e anexe as fotos de manutenção. Elas serão
+              vinculadas automaticamente.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="grid gap-4 py-4">
+            <div className="grid gap-2">
+              <Label htmlFor="standalone-os">
+                Número da OS <span className="text-red-500">*</span>
+              </Label>
+              <Input
+                id="standalone-os"
+                value={standaloneOS}
+                onChange={(e) => setStandaloneOS(e.target.value)}
+                placeholder="Ex: 12345"
+                disabled={isUploadingStandalone}
+              />
+            </div>
+
+            <div className="grid gap-2">
+              <div className="flex justify-between items-center">
+                <Label>
+                  Fotos <span className="text-red-500">*</span>
+                </Label>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => standaloneFileInputRef.current?.click()}
+                  disabled={isUploadingStandalone}
+                >
+                  <Camera className="mr-2 h-4 w-4" /> Selecionar
+                </Button>
+              </div>
+
+              {standalonePhotoUrls.length > 0 ? (
+                <div className="grid grid-cols-3 gap-2 mt-2">
+                  {standalonePhotoUrls.map((url, idx) => (
+                    <div
+                      key={idx}
+                      className="relative aspect-square rounded-md overflow-hidden bg-slate-100 border group"
+                    >
+                      <img
+                        src={url}
+                        alt={`Foto ${idx + 1}`}
+                        className="object-cover w-full h-full"
+                      />
+                      <Button
+                        variant="destructive"
+                        size="icon"
+                        className="absolute top-1 right-1 h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity"
+                        onClick={() => handleRemoveStandalonePhoto(idx)}
+                        disabled={isUploadingStandalone}
+                      >
+                        <Trash2 className="h-3 w-3" />
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-6 text-slate-500 bg-slate-50 rounded-lg border border-dashed mt-2">
+                  <p className="text-sm">Nenhuma foto selecionada</p>
+                </div>
+              )}
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={handleCloseStandalone}
+              disabled={isUploadingStandalone}
+            >
+              Cancelar
+            </Button>
+            <Button
+              onClick={handleSubmitStandalone}
+              disabled={
+                isUploadingStandalone || !standaloneOS.trim() || standalonePhotos.length === 0
+              }
+              className="bg-[#1A522E] hover:bg-[#154224] text-white"
+            >
+              {isUploadingStandalone ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Enviando...
+                </>
+              ) : (
+                'Enviar Fotos'
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Modal Visualizar Detalhes */}
       <Dialog open={!!viewDoc} onOpenChange={(open) => !open && setViewDoc(null)}>

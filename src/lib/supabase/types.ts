@@ -1686,14 +1686,39 @@ export const Constants = {
 //     v_next_seq int;
 //     v_inserted boolean := false;
 //     v_nome_arquivo text;
+//     v_chamado_id uuid;
+//     v_linked_by_os boolean := false;
 //   BEGIN
 //     -- Only proceed for specific document types
 //     IF NEW.tipo_documento NOT IN ('Vistoria', 'Espelho de Danos', 'OS de Manutenção') THEN
 //       RETURN NEW;
 //     END IF;
 //
-//     -- Only proceed if there's a chamado_id and photos exist
-//     IF NEW.chamado_id IS NULL OR NEW.fotos_manutencao IS NULL OR jsonb_typeof(NEW.fotos_manutencao) != 'array' THEN
+//     -- Only proceed if there are photos
+//     IF NEW.fotos_manutencao IS NULL OR jsonb_typeof(NEW.fotos_manutencao) != 'array' THEN
+//       RETURN NEW;
+//     END IF;
+//
+//     v_chamado_id := NEW.chamado_id;
+//
+//     -- Attempt correlation via numero_os if chamado_id is null
+//     IF v_chamado_id IS NULL AND NEW.numero_os IS NOT NULL AND NEW.numero_os != '' THEN
+//       SELECT id INTO v_chamado_id
+//       FROM public.chamados
+//       WHERE numero_os = NEW.numero_os
+//       LIMIT 1;
+//
+//       IF v_chamado_id IS NOT NULL THEN
+//         v_linked_by_os := true;
+//         -- Update the current document's chamado_id to preserve the link.
+//         -- This won't fire this trigger recursively because it only fires OF fotos_manutencao.
+//         UPDATE public.documentos
+//         SET chamado_id = v_chamado_id
+//         WHERE id = NEW.id;
+//       END IF;
+//     END IF;
+//
+//     IF v_chamado_id IS NULL THEN
 //       RETURN NEW;
 //     END IF;
 //
@@ -1702,7 +1727,7 @@ export const Constants = {
 //
 //     -- Get context from the ticket
 //     SELECT responsavel_id, usuario_id, carro INTO v_responsavel_id, v_criador_id, v_carro
-//     FROM public.chamados WHERE id = NEW.chamado_id;
+//     FROM public.chamados WHERE id = v_chamado_id;
 //
 //     -- User ID Fallback
 //     IF v_usuario_id IS NULL THEN
@@ -1711,7 +1736,7 @@ export const Constants = {
 //         v_usuario_id := v_criador_id;
 //       END IF;
 //       IF v_usuario_id IS NULL THEN
-//         SELECT id INTO v_usuario_id FROM public.perfil_usuario WHERE tipo_usuario = 'admin' LIMIT 1;
+//         SELECT id INTO v_usuario_id FROM public.perfil_usuario WHERE tipo_usuario = 'admin' ORDER BY criado_em ASC LIMIT 1;
 //       END IF;
 //     END IF;
 //
@@ -1723,7 +1748,7 @@ export const Constants = {
 //     -- Get current count for sequence
 //     SELECT COUNT(*) INTO v_count
 //     FROM public.anexos_chamado_interno
-//     WHERE chamado_id = NEW.chamado_id AND nome_arquivo ILIKE 'Foto Conserto %';
+//     WHERE chamado_id = v_chamado_id AND nome_arquivo ILIKE 'Foto Conserto %';
 //
 //     v_next_seq := v_count + 1;
 //
@@ -1733,7 +1758,7 @@ export const Constants = {
 //       -- Check for duplicates
 //       IF NOT EXISTS (
 //         SELECT 1 FROM public.anexos_chamado_interno
-//         WHERE chamado_id = NEW.chamado_id AND arquivo_url = v_url
+//         WHERE chamado_id = v_chamado_id AND arquivo_url = v_url
 //       ) THEN
 //         -- Create internal attachment
 //         v_nome_arquivo := 'Foto Conserto ' || LPAD(v_next_seq::text, 2, '0') || ' - Carro: ' || COALESCE(NEW.numero_carro, v_carro, 'N/A');
@@ -1747,7 +1772,7 @@ export const Constants = {
 //           tipo_arquivo
 //         )
 //         VALUES (
-//           NEW.chamado_id,
+//           v_chamado_id,
 //           v_usuario_id,
 //           v_url,
 //           v_nome_arquivo,
@@ -1762,18 +1787,33 @@ export const Constants = {
 //
 //     -- Add history if at least one photo was inserted
 //     IF v_inserted THEN
-//       INSERT INTO public.historico_chamado (
-//         chamado_id,
-//         acao,
-//         usuario_id,
-//         detalhes
-//       )
-//       VALUES (
-//         NEW.chamado_id,
-//         'respondido',
-//         v_usuario_id,
-//         'Evidência de manutenção sincronizada automaticamente da OS.'
-//       );
+//       IF v_linked_by_os THEN
+//         INSERT INTO public.historico_chamado (
+//           chamado_id,
+//           acao,
+//           usuario_id,
+//           detalhes
+//         )
+//         VALUES (
+//           v_chamado_id,
+//           'respondido',
+//           v_usuario_id,
+//           'Evidência de manutenção vinculada automaticamente via Número de OS: ' || NEW.numero_os
+//         );
+//       ELSE
+//         INSERT INTO public.historico_chamado (
+//           chamado_id,
+//           acao,
+//           usuario_id,
+//           detalhes
+//         )
+//         VALUES (
+//           v_chamado_id,
+//           'respondido',
+//           v_usuario_id,
+//           'Evidência de manutenção sincronizada automaticamente da OS.'
+//         );
+//       END IF;
 //     END IF;
 //
 //     RETURN NEW;

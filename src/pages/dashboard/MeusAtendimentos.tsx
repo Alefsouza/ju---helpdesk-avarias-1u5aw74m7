@@ -49,7 +49,7 @@ import {
 } from '@/components/ui/select'
 
 export default function MeusAtendimentos() {
-  const { user } = useAuth()
+  const { user, profile } = useAuth()
   const { toast } = useToast()
   const navigate = useNavigate()
   const [searchParams, setSearchParams] = useSearchParams()
@@ -67,29 +67,15 @@ export default function MeusAtendimentos() {
   const [completingId, setCompletingId] = useState<string | null>(null)
   const [confirmFinalizarId, setConfirmFinalizarId] = useState<string | null>(null)
   const [confirmReabrirId, setConfirmReabrirId] = useState<string | null>(null)
-  const [currentUserProfile, setCurrentUserProfile] = useState<any>(null)
   const [sortConfig, setSortConfig] = useState<{ key: string; direction: 'asc' | 'desc' } | null>(
     null,
   )
 
-  useEffect(() => {
-    if (user) {
-      supabase
-        .from('perfil_usuario')
-        .select('*')
-        .eq('id', user.id)
-        .single()
-        .then(({ data }) => {
-          setCurrentUserProfile(data)
-        })
-    }
-  }, [user])
-
   const isSupport =
-    currentUserProfile?.tipo_usuario === 'responsavel' ||
-    currentUserProfile?.tipo_usuario === 'sinistro' ||
-    currentUserProfile?.tipo_usuario === 'admin' ||
-    currentUserProfile?.tipo_usuario === 'juridico'
+    profile?.tipo_usuario === 'responsavel' ||
+    profile?.tipo_usuario === 'sinistro' ||
+    profile?.tipo_usuario === 'admin' ||
+    profile?.tipo_usuario === 'juridico'
 
   const defaultWidths: Record<string, number> = {
     pia: 120,
@@ -156,15 +142,21 @@ export default function MeusAtendimentos() {
   }, [searchTerm])
 
   const fetchChamados = async () => {
-    if (!user) return
+    if (!user || !profile) return
     setLoading(true)
     setError(false)
     try {
-      const { data, error: err } = await supabase
+      let query = supabase
         .from('chamados')
         .select('*')
         .in('status', ['em_atendimento', 'aberto'])
         .order('criado_em', { ascending: false })
+
+      if (profile.tipo_usuario === 'juridico') {
+        query = query.eq('responsavel_id', user.id)
+      }
+
+      const { data, error: err } = await query
 
       if (err) throw err
 
@@ -214,6 +206,7 @@ export default function MeusAtendimentos() {
   }
 
   useEffect(() => {
+    if (!profile) return
     fetchChamados()
 
     const channel = supabase
@@ -226,7 +219,7 @@ export default function MeusAtendimentos() {
     return () => {
       supabase.removeChannel(channel)
     }
-  }, [user])
+  }, [user, profile?.tipo_usuario])
 
   const handleReabrir = async (chamadoId: string) => {
     setCompletingId(chamadoId)

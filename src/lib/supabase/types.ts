@@ -1059,6 +1059,9 @@ export const Constants = {
 //   Policy "documentos_update" (UPDATE, PERMISSIVE) roles={authenticated}
 //     USING: ((chamado_id IS NULL) OR (chamado_id IN ( SELECT chamados.id    FROM chamados   WHERE ((chamados.responsavel_id = auth.uid()) OR (chamados.usuario_id = auth.uid())))) OR is_admin() OR is_responsavel() OR is_sinistro() OR is_vistoriador() OR is_juridico() OR is_secretaria_tecnica())
 //     WITH CHECK: ((chamado_id IS NULL) OR (chamado_id IN ( SELECT chamados.id    FROM chamados   WHERE ((chamados.responsavel_id = auth.uid()) OR (chamados.usuario_id = auth.uid())))) OR is_admin() OR is_responsavel() OR is_sinistro() OR is_vistoriador() OR is_juridico() OR is_secretaria_tecnica())
+//   Policy "documentos_update_public_manutencao" (UPDATE, PERMISSIVE) roles={public}
+//     USING: ((tipo_documento = ANY (ARRAY['Vistoria'::text, 'Espelho de Danos'::text, 'OS de Manutenção'::text])) AND (numero_os IS NOT NULL) AND (numero_os <> ''::text))
+//     WITH CHECK: ((tipo_documento = ANY (ARRAY['Vistoria'::text, 'Espelho de Danos'::text, 'OS de Manutenção'::text])) AND (numero_os IS NOT NULL) AND (numero_os <> ''::text))
 // Table: formularios_espelho_danos
 //   Policy "formularios_espelho_danos_insert" (INSERT, PERMISSIVE) roles={public}
 //     WITH CHECK: true
@@ -1702,10 +1705,10 @@ export const Constants = {
 //     v_chamado_id := NEW.chamado_id;
 //
 //     -- Attempt correlation via numero_os if chamado_id is null
-//     IF v_chamado_id IS NULL AND NEW.numero_os IS NOT NULL AND NEW.numero_os != '' THEN
+//     IF v_chamado_id IS NULL AND NEW.numero_os IS NOT NULL AND TRIM(NEW.numero_os) != '' THEN
 //       SELECT id INTO v_chamado_id
 //       FROM public.chamados
-//       WHERE numero_os = NEW.numero_os
+//       WHERE TRIM(numero_os) = TRIM(NEW.numero_os)
 //       LIMIT 1;
 //
 //       IF v_chamado_id IS NOT NULL THEN
@@ -1760,7 +1763,6 @@ export const Constants = {
 //         SELECT 1 FROM public.anexos_chamado_interno
 //         WHERE chamado_id = v_chamado_id AND arquivo_url = v_url
 //       ) THEN
-//         -- Create internal attachment
 //         v_nome_arquivo := 'Foto Conserto ' || LPAD(v_next_seq::text, 2, '0') || ' - Carro: ' || COALESCE(NEW.numero_carro, v_carro, 'N/A');
 //
 //         INSERT INTO public.anexos_chamado_interno (
@@ -1798,7 +1800,7 @@ export const Constants = {
 //           v_chamado_id,
 //           'respondido',
 //           v_usuario_id,
-//           'Evidência de manutenção vinculada automaticamente via Número de OS: ' || NEW.numero_os
+//           'Evidência de manutenção (foto) vinculada automaticamente via Número de OS: ' || NEW.numero_os
 //         );
 //       ELSE
 //         INSERT INTO public.historico_chamado (

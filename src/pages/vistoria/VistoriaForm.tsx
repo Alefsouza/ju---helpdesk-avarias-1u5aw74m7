@@ -27,23 +27,12 @@ import {
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
 import logoColorido from '@/assets/whatsapp-image-2023-08-10-at-16.17.31-0b937.jpeg'
 
 const formSchema = z.object({
-  ocorrencia: z.enum(['Sim', 'Não'], { required_error: 'Campo obrigatório' }),
   linha: z.string().min(1, 'Campo obrigatório'),
   numero_carro: z.string().min(1, 'Campo obrigatório'),
   descricao_danos: z.string().min(1, 'Campo obrigatório'),
-  registro_vistoriador: z.string().min(1, 'Campo obrigatório'),
-  nome_vistoriador: z.string().min(1, 'Campo obrigatório'),
   registro_motorista: z.string().min(1, 'Campo obrigatório'),
   nome_motorista: z.string().min(1, 'Campo obrigatório'),
 })
@@ -63,12 +52,9 @@ export default function VistoriaForm() {
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      ocorrencia: 'Não',
       linha: '',
       numero_carro: '',
       descricao_danos: '',
-      registro_vistoriador: '',
-      nome_vistoriador: '',
       registro_motorista: '',
       nome_motorista: '',
     },
@@ -96,6 +82,11 @@ export default function VistoriaForm() {
   const onSubmit = async (values: FormValues) => {
     if (photos.length === 0) {
       toast.error('Adicione ao menos uma foto do dano.')
+      return
+    }
+
+    if (!profile?.registro || !profile?.nome_completo) {
+      toast.error('Seu perfil está incompleto (falta Nome ou Registro).')
       return
     }
 
@@ -144,8 +135,8 @@ export default function VistoriaForm() {
         arquivo_url: '', // Initially empty, will be filled with PDF url when OS is linked
         fotos_urls: uploadedUrls,
         chamado_id: chamadoId || null,
-        registro_responsavel: values.registro_vistoriador,
-        nome_responsavel: values.nome_vistoriador,
+        registro_responsavel: profile.registro,
+        nome_responsavel: profile.nome_completo,
         registro_motorista: values.registro_motorista,
         nome_motorista: values.nome_motorista,
       } as any
@@ -153,7 +144,6 @@ export default function VistoriaForm() {
       docData.garagem = profile?.garagem || ''
       docData.data = currentDate
       docData.horario = currentTime
-      docData.ocorrencia = values.ocorrencia
       docData.linha = values.linha
       docData.numero_carro = values.numero_carro
       docData.descricao_danos = values.descricao_danos
@@ -192,6 +182,19 @@ export default function VistoriaForm() {
           <p className="mt-2 text-sm">
             Você não possui uma garagem vinculada ao seu perfil. É necessário que um administrador
             defina sua garagem antes que você possa preencher o formulário de vistoria.
+          </p>
+        </div>
+      ) : null}
+
+      {!profile?.registro || !profile?.nome_completo ? (
+        <div className="mb-6 rounded-lg border border-red-200 bg-red-50 p-4 text-red-800">
+          <div className="flex items-center gap-3">
+            <AlertCircle className="h-5 w-5 text-red-600" />
+            <h3 className="font-semibold text-red-800">Atenção: Perfil Incompleto</h3>
+          </div>
+          <p className="mt-2 text-sm">
+            Seu perfil não possui Nome ou Registro (Matrícula) definidos. Você não poderá enviar
+            vistorias até que um administrador atualize seu perfil.
           </p>
         </div>
       ) : null}
@@ -240,37 +243,6 @@ export default function VistoriaForm() {
 
               <FormField
                 control={form.control}
-                name="ocorrencia"
-                render={({ field }) => (
-                  <FormItem className="space-y-3">
-                    <FormLabel>Ocorrência Confirmada?</FormLabel>
-                    <FormControl>
-                      <RadioGroup
-                        onValueChange={field.onChange}
-                        defaultValue={field.value}
-                        className="flex flex-row space-x-4"
-                      >
-                        <FormItem className="flex items-center space-x-2 space-y-0">
-                          <FormControl>
-                            <RadioGroupItem value="Sim" />
-                          </FormControl>
-                          <FormLabel className="font-normal cursor-pointer">Sim</FormLabel>
-                        </FormItem>
-                        <FormItem className="flex items-center space-x-2 space-y-0">
-                          <FormControl>
-                            <RadioGroupItem value="Não" />
-                          </FormControl>
-                          <FormLabel className="font-normal cursor-pointer">Não</FormLabel>
-                        </FormItem>
-                      </RadioGroup>
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
                 name="descricao_danos"
                 render={({ field }) => (
                   <FormItem>
@@ -288,32 +260,6 @@ export default function VistoriaForm() {
               />
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <FormField
-                  control={form.control}
-                  name="registro_vistoriador"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Registro do Vistoriador</FormLabel>
-                      <FormControl>
-                        <Input placeholder="Matrícula / Registro" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="nome_vistoriador"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Nome do Vistoriador</FormLabel>
-                      <FormControl>
-                        <Input placeholder="Nome completo" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
                 <FormField
                   control={form.control}
                   name="registro_motorista"
@@ -409,7 +355,9 @@ export default function VistoriaForm() {
               <Button
                 type="submit"
                 className="bg-[#225f3d] hover:bg-[#1a472d] text-white px-8"
-                disabled={isSubmitting || !profile?.garagem}
+                disabled={
+                  isSubmitting || !profile?.garagem || !profile?.registro || !profile?.nome_completo
+                }
               >
                 {isSubmitting ? (
                   <>

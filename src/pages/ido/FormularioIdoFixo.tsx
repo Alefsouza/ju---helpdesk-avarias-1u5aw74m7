@@ -127,6 +127,7 @@ export default function FormularioIdoFixo() {
   const navigate = useNavigate()
   const { toast } = useToast()
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [relatoFile, setRelatoFile] = useState<File | null>(null)
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
@@ -341,6 +342,42 @@ export default function FormularioIdoFixo() {
         throw new Error('Erro ao registrar documento.')
       }
 
+      if (relatoFile) {
+        const ext = relatoFile.name.split('.').pop() || 'pdf'
+        const relatoFileName = `Relato Manuscrito - ${data.colaborador_nome.replace(/[^a-zA-Z0-9\s]/g, '')}_${Date.now()}.${ext}`
+
+        const { error: relatoUploadError } = await supabase.storage
+          .from('documentos')
+          .upload(relatoFileName, relatoFile, {
+            upsert: false,
+          })
+
+        if (relatoUploadError) {
+          console.error(relatoUploadError)
+          throw new Error('Erro ao salvar relato manuscrito. Tente novamente')
+        }
+
+        const { data: relatoUrlData } = supabase.storage
+          .from('documentos')
+          .getPublicUrl(relatoFileName)
+
+        const { error: relatoDbError } = await supabase.from('documentos').insert({
+          tipo_documento: 'Boletim de Ocorrência',
+          nome_arquivo: relatoFileName,
+          arquivo_url: relatoUrlData.publicUrl,
+          registro_responsavel: data.colaborador_registro,
+          nome_responsavel: data.colaborador_nome,
+          registro_motorista: null,
+          numero_os: null,
+          chamado_id: null,
+        } as any)
+
+        if (relatoDbError) {
+          console.error(relatoDbError)
+          throw new Error('Erro ao registrar relato manuscrito.')
+        }
+      }
+
       toast({
         title: 'Sucesso',
         description: 'Formulário enviado com sucesso!',
@@ -476,8 +513,22 @@ export default function FormularioIdoFixo() {
             <Separator />
 
             <div className="space-y-4">
+              <h3 className="text-lg font-medium">Relato manuscrito do motorista (Opcional)</h3>
+              <p className="text-sm text-muted-foreground">
+                Anexe uma foto ou documento com o relato manuscrito.
+              </p>
+              <Input
+                type="file"
+                accept="image/*,application/pdf"
+                onChange={(e) => setRelatoFile(e.target.files?.[0] || null)}
+              />
+            </div>
+
+            <Separator />
+
+            <div className="space-y-4">
               <h3 className="text-lg font-medium">
-                Assinatura Digital <span className="text-destructive">*</span>
+                Assinatura Digital <span className="text-destructive">*</span>{' '}
               </h3>
               <p className="text-sm text-muted-foreground">
                 Assine no quadro abaixo usando o mouse ou o dedo.

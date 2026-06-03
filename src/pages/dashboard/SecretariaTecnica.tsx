@@ -218,7 +218,7 @@ export default function SecretariaTecnica() {
 
   const handleUploadSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!file || !selectedDoc || !numeroOrcamento || !detalhesOrcamento) return
+    if (!file || !selectedDoc || !numeroOrcamento) return
 
     try {
       setUploading(true)
@@ -307,7 +307,7 @@ export default function SecretariaTecnica() {
           chamado_id: chamadoId,
           usuario_id: user.id,
           acao: 'respondido',
-          detalhes: detalhesOrcamento,
+          detalhes: detalhesOrcamento || 'Orçamento anexado.',
         })
 
         if (histError) throw histError
@@ -499,13 +499,12 @@ export default function SecretariaTecnica() {
               />
             </div>
             <div className="space-y-2">
-              <Label>Detalhes do Orçamento</Label>
+              <Label>Detalhes do Orçamento (Opcional)</Label>
               <Textarea
                 value={detalhesOrcamento}
                 onChange={(e) => setDetalhesOrcamento(e.target.value)}
                 placeholder="Descreva os detalhes..."
                 disabled={uploading}
-                required
               />
             </div>
             <div className="space-y-2">
@@ -527,10 +526,7 @@ export default function SecretariaTecnica() {
               >
                 Cancelar
               </Button>
-              <Button
-                type="submit"
-                disabled={!file || !numeroOrcamento || !detalhesOrcamento || uploading}
-              >
+              <Button type="submit" disabled={!file || !numeroOrcamento || uploading}>
                 {uploading ? (
                   <>
                     <Loader2 className="w-4 h-4 mr-2 animate-spin" />

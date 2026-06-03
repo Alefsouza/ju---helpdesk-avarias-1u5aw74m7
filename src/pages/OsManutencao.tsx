@@ -70,12 +70,77 @@ export default function OsManutencao({
   const fileInputRef = useRef<HTMLInputElement>(null)
   const { toast } = useToast()
 
+  const autoSyncPhotos = async (docs: any[]) => {
+    try {
+      const { data: userData } = await supabase.auth.getUser()
+      const userId = userData?.user?.id
+      if (!userId) return
+
+      const docsWithFotos = docs.filter(
+        (d) => d.chamado_id && Array.isArray(d.fotos_manutencao) && d.fotos_manutencao.length > 0,
+      )
+
+      if (docsWithFotos.length === 0) return
+
+      const chamadoIds = docsWithFotos.map((d) => d.chamado_id)
+
+      const { data: existingAnexos } = await supabase
+        .from('anexos_chamado_interno')
+        .select('chamado_id, arquivo_url')
+        .in('chamado_id', chamadoIds)
+        .ilike('nome_arquivo', 'Foto Conserto %')
+
+      for (const doc of docsWithFotos) {
+        const docAnexos = existingAnexos?.filter((a) => a.chamado_id === doc.chamado_id) || []
+        const existingUrls = docAnexos.map((a) => a.arquivo_url)
+
+        let nextSequence = docAnexos.length + 1
+        const anexosToInsert = []
+
+        for (const fotoUrl of doc.fotos_manutencao) {
+          if (!existingUrls.includes(fotoUrl)) {
+            const seqStr = nextSequence.toString().padStart(2, '0')
+            const numCarro = doc.chamados?.carro || doc.numero_carro || 'N/A'
+            const anexoName = `Foto Conserto ${seqStr} - Carro: ${numCarro}`
+
+            anexosToInsert.push({
+              chamado_id: doc.chamado_id,
+              usuario_id: userId,
+              arquivo_url: fotoUrl,
+              nome_arquivo: anexoName,
+              tamanho_bytes: 0,
+              tipo_arquivo: 'image/jpeg',
+            })
+            existingUrls.push(fotoUrl)
+            nextSequence++
+          }
+        }
+
+        if (anexosToInsert.length > 0) {
+          const { error: insertError } = await supabase
+            .from('anexos_chamado_interno')
+            .insert(anexosToInsert)
+          if (!insertError) {
+            await supabase.from('historico_chamado').insert({
+              chamado_id: doc.chamado_id,
+              acao: 'respondido',
+              usuario_id: userId,
+              detalhes: 'Evidência de manutenção (foto) sincronizada com os anexos internos.',
+            })
+          }
+        }
+      }
+    } catch (error) {
+      console.error('Erro na sincronização automática:', error)
+    }
+  }
+
   const fetchDocumentos = async () => {
     try {
       setLoading(true)
       const { data, error } = await supabase
         .from('documentos')
-        .select('*')
+        .select('*, chamados(carro)')
         .in('tipo_documento', ['Vistoria', 'Espelho de Danos'])
         .not('numero_os', 'is', null)
         .neq('numero_os', '')
@@ -84,7 +149,13 @@ export default function OsManutencao({
         .order('criado_em', { ascending: false })
 
       if (error) throw error
-      setDocumentos(data || [])
+
+      const fetchedDocs = data || []
+      setDocumentos(fetchedDocs)
+
+      if (fetchedDocs.length > 0) {
+        autoSyncPhotos(fetchedDocs)
+      }
     } catch (error) {
       console.error('Erro ao buscar documentos:', error)
     } finally {
@@ -183,23 +254,7 @@ export default function OsManutencao({
       const { data: userData } = await supabase.auth.getUser()
       const userId = userData?.user?.id || null
 
-      let nextSequence = 1
-      if (photoManagerDoc.chamado_id) {
-        const { count } = await supabase
-          .from('anexos_chamado_interno')
-          .select('id', { count: 'exact', head: true })
-          .eq('chamado_id', photoManagerDoc.chamado_id)
-          .ilike('nome_arquivo', 'Foto Conserto %')
-
-        if (count !== null) {
-          nextSequence = count + 1
-        }
-      } else {
-        nextSequence = (photoManagerDoc.fotos_manutencao?.length || 0) + 1
-      }
-
       const uploadedUrls: string[] = []
-      const anexosInternosToInsert = []
 
       for (let i = 0; i < stagedNewPhotos.length; i++) {
         const file = stagedNewPhotos[i]
@@ -213,24 +268,7 @@ export default function OsManutencao({
         if (uploadError) throw uploadError
 
         const { data: publicUrlData } = supabase.storage.from('documentos').getPublicUrl(fileName)
-        const publicUrl = publicUrlData.publicUrl
-        uploadedUrls.push(publicUrl)
-
-        if (photoManagerDoc.chamado_id && userId) {
-          const seqStr = nextSequence.toString().padStart(2, '0')
-          const numCarro = photoManagerDoc.numero_carro || 'N/A'
-          const anexoName = `Foto Conserto ${seqStr} - Carro: ${numCarro}`
-
-          anexosInternosToInsert.push({
-            chamado_id: photoManagerDoc.chamado_id,
-            usuario_id: userId,
-            arquivo_url: publicUrl,
-            nome_arquivo: anexoName,
-            tamanho_bytes: file.size,
-            tipo_arquivo: file.type || 'image/jpeg',
-          })
-          nextSequence++
-        }
+        uploadedUrls.push(publicUrlData.publicUrl)
       }
 
       for (const url of stagedDeletedPhotos) {
@@ -242,16 +280,6 @@ export default function OsManutencao({
           }
         } catch (e) {
           console.error('Failed to delete from storage', e)
-        }
-      }
-
-      if (anexosInternosToInsert.length > 0) {
-        const { error: insertAnexosError } = await supabase
-          .from('anexos_chamado_interno')
-          .insert(anexosInternosToInsert)
-
-        if (insertAnexosError) {
-          console.error('Erro ao inserir anexos internos:', insertAnexosError)
         }
       }
 
@@ -272,15 +300,7 @@ export default function OsManutencao({
       if (updateError) throw updateError
 
       if (photoManagerDoc.chamado_id && userId) {
-        if (uploadedUrls.length > 0) {
-          const numCarro = photoManagerDoc.numero_carro || 'N/A'
-          await supabase.from('historico_chamado').insert({
-            chamado_id: photoManagerDoc.chamado_id,
-            acao: 'respondido',
-            usuario_id: userId,
-            detalhes: `Evidência de manutenção (fotos) anexada ao chamado para o carro ${numCarro}.`,
-          })
-        } else if (stagedDeletedPhotos.length > 0) {
+        if (stagedDeletedPhotos.length > 0 && uploadedUrls.length === 0) {
           await supabase.from('historico_chamado').insert({
             chamado_id: photoManagerDoc.chamado_id,
             acao: 'respondido',
@@ -292,7 +312,7 @@ export default function OsManutencao({
 
       toast({
         title: 'Sucesso',
-        description: 'Fotos de manutenção salvas com sucesso.',
+        description: 'Fotos de manutenção salvas com sucesso. Sincronização em andamento...',
       })
 
       setDocumentos((docs) =>

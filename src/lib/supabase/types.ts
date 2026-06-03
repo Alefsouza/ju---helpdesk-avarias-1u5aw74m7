@@ -1019,7 +1019,7 @@ export const Constants = {
 //     USING: (chamado_id IN ( SELECT chamados.id    FROM chamados))
 // Table: anexos_chamado_interno
 //   Policy "anexos_internos_delete" (DELETE, PERMISSIVE) roles={authenticated}
-//     USING: (is_responsavel() OR is_sinistro() OR is_admin() OR is_juridico() OR is_secretaria_tecnica() OR (usuario_id = auth.uid()))
+//     USING: (is_admin() OR is_sinistro() OR is_juridico() OR is_secretaria_tecnica() OR (usuario_id = auth.uid()) OR (chamado_id IN ( SELECT chamados.id    FROM chamados   WHERE (chamados.responsavel_id = auth.uid()))))
 //   Policy "anexos_internos_insert" (INSERT, PERMISSIVE) roles={authenticated}
 //     WITH CHECK: (is_responsavel() OR is_sinistro() OR is_admin() OR is_juridico() OR is_secretaria_tecnica() OR is_coc())
 //   Policy "anexos_internos_select" (SELECT, PERMISSIVE) roles={authenticated}

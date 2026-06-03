@@ -640,6 +640,17 @@ export type Database = {
         Args: { p_id: string }
         Returns: undefined
       }
+      registrar_anexo_interno_publico: {
+        Args: {
+          p_arquivo_url: string
+          p_chamado_id: string
+          p_detalhes_historico?: string
+          p_nome_arquivo: string
+          p_tamanho_bytes: number
+          p_tipo_arquivo?: string
+        }
+        Returns: undefined
+      }
       registrar_boletim_ido: {
         Args: {
           p_arquivo_url: string
@@ -1429,6 +1440,57 @@ export const Constants = {
 //     UPDATE public.documentos
 //     SET excluido_manutencao = TRUE
 //     WHERE id = p_id;
+//   END;
+//   $function$
+//
+// FUNCTION registrar_anexo_interno_publico(uuid, text, text, integer, text, text)
+//   CREATE OR REPLACE FUNCTION public.registrar_anexo_interno_publico(p_chamado_id uuid, p_nome_arquivo text, p_arquivo_url text, p_tamanho_bytes integer, p_tipo_arquivo text DEFAULT 'application/pdf'::text, p_detalhes_historico text DEFAULT 'Anexo incluído com sucesso.'::text)
+//    RETURNS void
+//    LANGUAGE plpgsql
+//    SECURITY DEFINER
+//   AS $function$
+//   DECLARE
+//     v_responsavel_id uuid;
+//     v_usuario_id uuid;
+//     v_alvo_id uuid;
+//   BEGIN
+//     SELECT responsavel_id, usuario_id INTO v_responsavel_id, v_usuario_id
+//     FROM public.chamados
+//     WHERE id = p_chamado_id;
+//
+//     v_alvo_id := COALESCE(v_responsavel_id, v_usuario_id);
+//
+//     IF v_alvo_id IS NULL THEN
+//       RAISE EXCEPTION 'Chamado não encontrado ou sem usuários vinculados';
+//     END IF;
+//
+//     INSERT INTO public.anexos_chamado_interno (
+//       chamado_id,
+//       usuario_id,
+//       nome_arquivo,
+//       arquivo_url,
+//       tipo_arquivo,
+//       tamanho_bytes
+//     ) VALUES (
+//       p_chamado_id,
+//       v_alvo_id,
+//       p_nome_arquivo,
+//       p_arquivo_url,
+//       p_tipo_arquivo,
+//       p_tamanho_bytes
+//     );
+//
+//     INSERT INTO public.historico_chamado (
+//       chamado_id,
+//       usuario_id,
+//       acao,
+//       detalhes
+//     ) VALUES (
+//       p_chamado_id,
+//       v_alvo_id,
+//       'respondido',
+//       p_detalhes_historico
+//     );
 //   END;
 //   $function$
 //

@@ -128,6 +128,7 @@ export default function FormularioIdoFixo() {
   const { toast } = useToast()
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [relatoFile, setRelatoFile] = useState<File | null>(null)
+  const [relatoFileError, setRelatoFileError] = useState<string | null>(null)
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
@@ -298,6 +299,11 @@ export default function FormularioIdoFixo() {
   }
 
   const onSubmit = async (data: FormValues) => {
+    if (!relatoFile) {
+      setRelatoFileError('O relato manuscrito do motorista é obrigatório.')
+      return
+    }
+
     setIsSubmitting(true)
 
     try {
@@ -362,7 +368,7 @@ export default function FormularioIdoFixo() {
           .getPublicUrl(relatoFileName)
 
         const { error: relatoDbError } = await supabase.from('documentos').insert({
-          tipo_documento: 'Boletim de Ocorrência',
+          tipo_documento: 'Relato manuscrito',
           nome_arquivo: relatoFileName,
           arquivo_url: relatoUrlData.publicUrl,
           registro_responsavel: data.colaborador_registro,
@@ -513,15 +519,21 @@ export default function FormularioIdoFixo() {
             <Separator />
 
             <div className="space-y-4">
-              <h3 className="text-lg font-medium">Relato manuscrito do motorista (Opcional)</h3>
+              <h3 className="text-lg font-medium">
+                Relato manuscrito do motorista <span className="text-destructive">*</span>
+              </h3>
               <p className="text-sm text-muted-foreground">
                 Anexe uma foto ou documento com o relato manuscrito.
               </p>
               <Input
                 type="file"
                 accept="image/*,application/pdf"
-                onChange={(e) => setRelatoFile(e.target.files?.[0] || null)}
+                onChange={(e) => {
+                  setRelatoFile(e.target.files?.[0] || null)
+                  if (e.target.files?.[0]) setRelatoFileError(null)
+                }}
               />
+              {relatoFileError && <p className="text-sm text-destructive">{relatoFileError}</p>}
             </div>
 
             <Separator />

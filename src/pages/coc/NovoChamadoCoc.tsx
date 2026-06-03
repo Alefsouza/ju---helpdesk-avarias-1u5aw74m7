@@ -17,6 +17,7 @@ import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
+import { useDraft } from '@/hooks/use-draft'
 import {
   Select,
   SelectContent,
@@ -64,6 +65,9 @@ export default function NovoChamadoCoc() {
       colisao: undefined as unknown as 'Sim' | 'Não',
     },
   })
+
+  const draftKey = 'draft-novo-chamado-coc'
+  const { draftRestored, clearDraft, setDraftRestored } = useDraft(form, draftKey)
 
   const carro = form.watch('carro')
   const [garagemIdentificada, setGaragemIdentificada] = useState<string | null>(null)
@@ -185,6 +189,7 @@ export default function NovoChamadoCoc() {
         if (anexoError) throw anexoError
       }
 
+      clearDraft()
       toast.success('Chamado enviado com sucesso!')
       form.reset()
       setFiles([])
@@ -198,6 +203,28 @@ export default function NovoChamadoCoc() {
 
   return (
     <div className="max-w-3xl mx-auto py-6">
+      {draftRestored && (
+        <div className="mb-6 rounded-lg border border-blue-200 bg-blue-50 p-4 text-blue-800 flex items-start justify-between">
+          <div className="flex items-start gap-3">
+            <AlertCircle className="h-5 w-5 text-blue-600 mt-0.5" />
+            <div>
+              <h3 className="font-semibold text-blue-800">Rascunho Restaurado</h3>
+              <p className="mt-1 text-sm">
+                Encontramos dados preenchidos anteriormente. Por questões de segurança,{' '}
+                <strong>anexos</strong> precisam ser adicionados novamente.
+              </p>
+            </div>
+          </div>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setDraftRestored(false)}
+            className="-mt-2 -mr-2 text-blue-600 hover:text-blue-800 hover:bg-blue-100"
+          >
+            <X className="h-4 w-4" />
+          </Button>
+        </div>
+      )}
       <Card>
         <CardHeader className="border-b bg-slate-50/50">
           <CardTitle className="text-2xl text-[#225f3d]">Abrir Chamado</CardTitle>

@@ -7,6 +7,7 @@ import { supabase } from '@/lib/supabase/client'
 import { toast } from 'sonner'
 import { Camera, X, Loader2, ImagePlus, AlertCircle } from 'lucide-react'
 import { useAuth } from '@/hooks/use-auth'
+import { useDraft } from '@/hooks/use-draft'
 
 import {
   Card,
@@ -59,6 +60,9 @@ export default function VistoriaForm() {
       nome_motorista: '',
     },
   })
+
+  const draftKey = `draft-vistoria-${chamadoId || 'new'}`
+  const { draftRestored, clearDraft, setDraftRestored } = useDraft(form, draftKey)
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!e.target.files) return
@@ -152,6 +156,7 @@ export default function VistoriaForm() {
 
       if (dbError) throw dbError
 
+      clearDraft()
       toast.success('Vistoria registrada com sucesso!')
       form.reset()
       setPhotos([])
@@ -172,6 +177,29 @@ export default function VistoriaForm() {
           className="h-20 w-auto object-contain rounded-xl shadow-sm"
         />
       </div>
+
+      {draftRestored && (
+        <div className="mb-6 rounded-lg border border-blue-200 bg-blue-50 p-4 text-blue-800 flex items-start justify-between">
+          <div className="flex items-start gap-3">
+            <AlertCircle className="h-5 w-5 text-blue-600 mt-0.5" />
+            <div>
+              <h3 className="font-semibold text-blue-800">Rascunho Restaurado</h3>
+              <p className="mt-1 text-sm">
+                Encontramos dados preenchidos anteriormente. Por questões de segurança,{' '}
+                <strong>fotos</strong> precisam ser adicionadas novamente.
+              </p>
+            </div>
+          </div>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setDraftRestored(false)}
+            className="-mt-2 -mr-2 text-blue-600 hover:text-blue-800 hover:bg-blue-100"
+          >
+            <X className="h-4 w-4" />
+          </Button>
+        </div>
+      )}
 
       {!profile?.garagem ? (
         <div className="mb-6 rounded-lg border border-yellow-200 bg-yellow-50 p-4 text-yellow-800">

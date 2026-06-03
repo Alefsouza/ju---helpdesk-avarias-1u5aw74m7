@@ -184,6 +184,48 @@ export default function NovoChamado() {
   const [dragActiveId, setDragActiveId] = useState<FileCategory | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
 
+  const DRAFT_KEY = 'draft-novo-chamado'
+  const [draftRestored, setDraftRestored] = useState(false)
+
+  useEffect(() => {
+    const saved = localStorage.getItem(DRAFT_KEY)
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved)
+        if (parsed.tipoChamado) setTipoChamado(parsed.tipoChamado)
+        if (parsed.titulo) setTitulo(parsed.titulo)
+        if (parsed.dataOcorrencia) setDataOcorrencia(new Date(parsed.dataOcorrencia))
+        if (parsed.descricao) setDescricao(parsed.descricao)
+        if (parsed.placaOnibus) setPlacaOnibus(parsed.placaOnibus)
+        setDraftRestored(true)
+      } catch (e) {
+        console.error('Failed to parse draft', e)
+      }
+    }
+  }, [])
+
+  useEffect(() => {
+    const isCompletelyEmpty =
+      !tipoChamado && !titulo && !dataOcorrencia && !descricao && !placaOnibus
+    if (isCompletelyEmpty) {
+      localStorage.removeItem(DRAFT_KEY)
+    } else {
+      const toSave = {
+        tipoChamado,
+        titulo,
+        dataOcorrencia: dataOcorrencia?.toISOString(),
+        descricao,
+        placaOnibus,
+      }
+      localStorage.setItem(DRAFT_KEY, JSON.stringify(toSave))
+    }
+  }, [tipoChamado, titulo, dataOcorrencia, descricao, placaOnibus])
+
+  const clearDraft = () => {
+    localStorage.removeItem(DRAFT_KEY)
+    setDraftRestored(false)
+  }
+
   const categoriesToRender =
     tipoChamado === 'Lesão Corporal'
       ? [LESAO_ATTACHMENT]
@@ -559,6 +601,7 @@ export default function NovoChamado() {
         usuario_id: user.id,
       })
 
+      clearDraft()
       toast.success('Chamado aberto com sucesso')
       navigate(`/dashboard/chamados/${chamado.id}`)
     } catch (error) {
@@ -580,6 +623,29 @@ export default function NovoChamado() {
 
   return (
     <div className="max-w-3xl mx-auto space-y-6 animate-fade-in-up p-4 mb-20">
+      {draftRestored && (
+        <div className="mb-2 rounded-lg border border-blue-200 bg-blue-50 p-4 text-blue-800 flex items-start justify-between">
+          <div className="flex items-start gap-3">
+            <AlertCircle className="h-5 w-5 text-blue-600 mt-0.5" />
+            <div>
+              <h3 className="font-semibold text-blue-800">Rascunho Restaurado</h3>
+              <p className="mt-1 text-sm">
+                Encontramos dados preenchidos anteriormente. Por questões de segurança,{' '}
+                <strong>anexos e fotos</strong> precisam ser adicionados novamente.
+              </p>
+            </div>
+          </div>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setDraftRestored(false)}
+            className="-mt-2 -mr-2 text-blue-600 hover:text-blue-800 hover:bg-blue-100"
+          >
+            <X className="h-4 w-4" />
+          </Button>
+        </div>
+      )}
+
       <div>
         <h1 className="text-3xl font-bold tracking-tight">Abrir Novo Chamado</h1>
         <p className="text-muted-foreground mt-2">

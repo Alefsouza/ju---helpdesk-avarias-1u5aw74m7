@@ -12,6 +12,8 @@ import { Separator } from '@/components/ui/separator'
 import { useToast } from '@/hooks/use-toast'
 import { SignaturePad } from '@/components/SignaturePad'
 import { jsPDF } from 'jspdf'
+import { useDraft } from '@/hooks/use-draft'
+import { AlertCircle, X } from 'lucide-react'
 
 const testemunhaSchema = z
   .object({
@@ -65,6 +67,9 @@ export default function FormularioIdo() {
       testemunha_3: { nome: '', endereco: '', rg: '', telefone: '' },
     },
   })
+
+  const draftKey = `draft-ido-${id || 'new'}`
+  const { draftRestored, clearDraft, setDraftRestored } = useDraft(form, draftKey)
 
   const generatePDFDoc = async (data: FormValues) => {
     const doc = new jsPDF()
@@ -368,6 +373,7 @@ export default function FormularioIdo() {
         }
       }
 
+      clearDraft()
       toast({
         title: 'Sucesso',
         description: 'Documento salvo com sucesso!',
@@ -387,6 +393,28 @@ export default function FormularioIdo() {
 
   return (
     <div className="container max-w-3xl py-8 md:py-12 mx-auto px-4">
+      {draftRestored && (
+        <div className="mb-6 rounded-lg border border-blue-200 bg-blue-50 p-4 text-blue-800 flex items-start justify-between">
+          <div className="flex items-start gap-3">
+            <AlertCircle className="h-5 w-5 text-blue-600 mt-0.5" />
+            <div>
+              <h3 className="font-semibold text-blue-800">Rascunho Restaurado</h3>
+              <p className="mt-1 text-sm">
+                Encontramos dados preenchidos anteriormente. Por questões de segurança,{' '}
+                <strong>arquivos, fotos e assinaturas</strong> precisam ser adicionados novamente.
+              </p>
+            </div>
+          </div>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setDraftRestored(false)}
+            className="-mt-2 -mr-2 text-blue-600 hover:text-blue-800 hover:bg-blue-100"
+          >
+            <X className="h-4 w-4" />
+          </Button>
+        </div>
+      )}
       <Card>
         <CardHeader>
           <CardTitle>DADOS DO BOLETIM DE OCORRENCIA&nbsp;</CardTitle>

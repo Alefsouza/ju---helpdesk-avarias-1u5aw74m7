@@ -8,6 +8,7 @@ import { supabase } from '@/lib/supabase/client'
 import { useToast } from '@/hooks/use-toast'
 import { format } from 'date-fns'
 import { useAuth } from '@/hooks/use-auth'
+import { useDraft } from '@/hooks/use-draft'
 import {
   Form,
   FormControl,
@@ -106,6 +107,9 @@ export default function FormularioEspelhoDanosFixo() {
       fotos_dano: [],
     },
   })
+
+  const draftKey = `draft-espelho-fixo`
+  const { draftRestored, clearDraft, setDraftRestored } = useDraft(form, draftKey)
 
   useEffect(() => {
     if (profile?.garagem) {
@@ -222,6 +226,7 @@ export default function FormularioEspelhoDanosFixo() {
         throw new Error('Erro ao registrar documento.')
       }
 
+      clearDraft()
       toast({ title: 'Sucesso', description: 'Formulário enviado com sucesso' })
       navigate('/espelho-danos-fixo/sucesso', {
         state: { fileName, tipo: 'Espelho de Danos' },
@@ -241,6 +246,29 @@ export default function FormularioEspelhoDanosFixo() {
 
   return (
     <div className="min-h-screen bg-gray-50 py-12 px-4 flex flex-col items-center">
+      {draftRestored && (
+        <div className="w-full max-w-2xl mb-6 rounded-lg border border-blue-200 bg-blue-50 p-4 text-blue-800 flex items-start justify-between">
+          <div className="flex items-start gap-3">
+            <AlertCircle className="h-5 w-5 text-blue-600 mt-0.5" />
+            <div>
+              <h3 className="font-semibold text-blue-800">Rascunho Restaurado</h3>
+              <p className="mt-1 text-sm">
+                Encontramos dados preenchidos anteriormente. Por questões de segurança,{' '}
+                <strong>fotos</strong> precisam ser adicionadas novamente.
+              </p>
+            </div>
+          </div>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setDraftRestored(false)}
+            className="-mt-2 -mr-2 text-blue-600 hover:text-blue-800 hover:bg-blue-100"
+          >
+            <X className="h-4 w-4" />
+          </Button>
+        </div>
+      )}
+
       {isVistoriadorWithoutGaragem && (
         <div className="w-full max-w-2xl mb-6 rounded-lg border border-yellow-200 bg-yellow-50 p-4 text-yellow-800">
           <div className="flex items-center gap-3">

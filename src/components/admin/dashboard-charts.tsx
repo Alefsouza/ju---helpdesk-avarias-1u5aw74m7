@@ -147,10 +147,7 @@ export function DashboardCharts({
 
     filtered.forEach((c) => {
       if (!c.criado_em) return
-      const date = new Date(c.criado_em)
-      const day = String(date.getDate()).padStart(2, '0')
-      const month = String(date.getMonth() + 1).padStart(2, '0')
-      const sortKey = `${date.getFullYear()}-${month}-${day}`
+      const sortKey = c.criado_em.substring(0, 10)
 
       if (!counts[sortKey]) {
         counts[sortKey] = 0
@@ -161,7 +158,7 @@ export function DashboardCharts({
     return Object.entries(counts)
       .sort(([keyA], [keyB]) => keyA.localeCompare(keyB))
       .map(([sortKey, value]) => {
-        const [, mm, dd] = sortKey.split('-')
+        const [yy, mm, dd] = sortKey.split('-')
         return {
           date: `${dd}/${mm}`,
           fullDate: sortKey,
@@ -525,12 +522,24 @@ export function DashboardCharts({
                       />
                     )
                   }}
-                  activeDot={{
-                    r: 6,
-                    fill: '#225f3d',
-                    strokeWidth: 2,
-                    stroke: '#fff',
-                    className: 'cursor-pointer',
+                  activeDot={(props: any) => {
+                    const { cx, cy, payload } = props
+                    return (
+                      <circle
+                        key={`active-dot-${payload.fullDate}`}
+                        cx={cx}
+                        cy={cy}
+                        r={6}
+                        fill="#225f3d"
+                        stroke="#fff"
+                        strokeWidth={2}
+                        className="cursor-pointer"
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          onChartClick('data', payload.fullDate)
+                        }}
+                      />
+                    )
                   }}
                 />
               </LineChart>

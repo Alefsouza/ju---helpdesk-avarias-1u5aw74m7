@@ -36,27 +36,43 @@ export function DashboardCharts({
   onClearFilters,
 }: {
   chamados: any[]
-  chartFilters: { status?: string; prioridade?: string; garagem?: string; responsavel?: string }
-  onChartClick: (type: 'status' | 'prioridade' | 'garagem' | 'responsavel', value: string) => void
+  chartFilters: {
+    status?: string
+    prioridade?: string
+    garagem?: string
+    responsavel?: string
+    data?: string
+  }
+  onChartClick: (
+    type: 'status' | 'prioridade' | 'garagem' | 'responsavel' | 'data',
+    value: string,
+  ) => void
   onClearFilters: () => void
 }) {
+  const baseChamados = useMemo(() => {
+    if (!chartFilters.data) return chamados
+    return chamados.filter(
+      (c) => c.criado_em && c.criado_em.startsWith(chartFilters.data as string),
+    )
+  }, [chamados, chartFilters.data])
+
   const statusData = [
     {
       id: 'aberto',
       name: 'Aberto',
-      value: chamados.filter((c) => c.status === 'aberto').length,
+      value: baseChamados.filter((c) => c.status === 'aberto').length,
       fill: statusColors.aberto,
     },
     {
       id: 'em_atendimento',
       name: 'Em Atendimento',
-      value: chamados.filter((c) => c.status === 'em_atendimento').length,
+      value: baseChamados.filter((c) => c.status === 'em_atendimento').length,
       fill: statusColors.em_atendimento,
     },
     {
       id: 'finalizado',
       name: 'Finalizado',
-      value: chamados.filter((c) => c.status === 'finalizado').length,
+      value: baseChamados.filter((c) => c.status === 'finalizado').length,
       fill: statusColors.finalizado,
     },
   ]
@@ -65,20 +81,20 @@ export function DashboardCharts({
     {
       id: 'media',
       name: 'Média',
-      value: chamados.filter((c) => c.prioridade === 'media').length,
+      value: baseChamados.filter((c) => c.prioridade === 'media').length,
       fill: priorityColors.media,
     },
     {
       id: 'urgente',
       name: 'Urgente',
-      value: chamados.filter((c) => c.prioridade === 'urgente').length,
+      value: baseChamados.filter((c) => c.prioridade === 'urgente').length,
       fill: priorityColors.urgente,
     },
   ]
 
   const garageData = useMemo(() => {
     const counts: Record<string, number> = {}
-    chamados.forEach((c) => {
+    baseChamados.forEach((c) => {
       const g = c.garagem || 'Não Informada'
       counts[g] = (counts[g] || 0) + 1
     })
@@ -96,11 +112,11 @@ export function DashboardCharts({
     return Object.entries(counts)
       .map(([name, value], idx) => ({ id: name, name, value, fill: colors[idx % colors.length] }))
       .sort((a, b) => b.value - a.value)
-  }, [chamados])
+  }, [baseChamados])
 
   const respData = useMemo(() => {
     const counts: Record<string, { name: string; value: number; id: string }> = {}
-    chamados.forEach((c) => {
+    baseChamados.forEach((c) => {
       const respId = c.responsavel?.id || 'unassigned'
       const respName = c.responsavel?.nome_completo || 'Sem Responsável'
       if (!counts[respId]) {
@@ -111,7 +127,7 @@ export function DashboardCharts({
     return Object.values(counts)
       .sort((a, b) => b.value - a.value)
       .map((d) => ({ ...d, fill: '#225f3d' }))
-  }, [chamados])
+  }, [baseChamados])
 
   const timelineData = useMemo(() => {
     const counts: Record<string, number> = {}
@@ -124,6 +140,8 @@ export function DashboardCharts({
         const respId = c.responsavel?.id || 'unassigned'
         if (respId !== chartFilters.responsavel) return false
       }
+      // Note: We deliberately DO NOT filter by chartFilters.data here
+      // so the line chart continues to show the full timeline history
       return true
     })
 
@@ -146,6 +164,7 @@ export function DashboardCharts({
         const [, mm, dd] = sortKey.split('-')
         return {
           date: `${dd}/${mm}`,
+          fullDate: sortKey,
           value,
         }
       })
@@ -165,6 +184,11 @@ export function DashboardCharts({
   const hasActiveFilters = Object.values(chartFilters).some(Boolean)
 
   const formatFilterValue = (type: string, value: string) => {
+    if (type === 'data') {
+      const parts = value.split('-')
+      if (parts.length === 3) return `${parts[2]}/${parts[1]}/${parts[0]}`
+      return value
+    }
     if (type === 'responsavel' && value === 'unassigned') return 'Sem Responsável'
     if (type === 'responsavel') return respData.find((r) => r.id === value)?.name || value
     if (type === 'prioridade') return value === 'media' ? 'Média' : 'Urgente'
@@ -187,7 +211,9 @@ export function DashboardCharts({
               return (
                 <div
                   key={key}
-                  className="bg-[#225f3d]/10 text-[#225f3d] px-2.5 py-1 rounded-full text-xs font-medium border border-[#225f3d]/20"
+                  className="bg-[#225f3d]/10 text-[#225f3d] px-2.5 py-1 rounded-full text-xs font-medium border border-[#225f3d]/20 flex items-center gap-1 cursor-pointer hover:bg-[#225f3d]/20 transition-colors"
+                  onClick={() => onChartClick(key as any, value as string)}
+                  title="Clique para remover o filtro"
                 >
                   {key === 'status'
                     ? 'Status: '
@@ -195,8 +221,11 @@ export function DashboardCharts({
                       ? 'Prioridade: '
                       : key === 'garagem'
                         ? 'Garagem: '
-                        : 'Resp: '}
+                        : key === 'data'
+                          ? 'Data: '
+                          : 'Resp: '}
                   {formatFilterValue(key, value as string)}
+                  <FilterX className="h-3 w-3 ml-1 opacity-70" />
                 </div>
               )
             })}
@@ -444,7 +473,16 @@ export function DashboardCharts({
             className="h-[350px] w-full"
           >
             <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={timelineData} margin={{ top: 20, right: 20, bottom: 20, left: 0 }}>
+              <LineChart
+                data={timelineData}
+                margin={{ top: 20, right: 20, bottom: 20, left: 0 }}
+                onClick={(data: any) => {
+                  if (data?.activePayload?.[0]?.payload?.fullDate) {
+                    onChartClick('data', data.activePayload[0].payload.fullDate)
+                  }
+                }}
+                style={{ cursor: 'pointer' }}
+              >
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e5e7eb" />
                 <XAxis
                   dataKey="date"
@@ -467,8 +505,33 @@ export function DashboardCharts({
                   dataKey="value"
                   stroke="#225f3d"
                   strokeWidth={3}
-                  dot={{ r: 4, fill: '#225f3d', strokeWidth: 2, stroke: '#fff' }}
-                  activeDot={{ r: 6, fill: '#225f3d', strokeWidth: 2, stroke: '#fff' }}
+                  dot={(props: any) => {
+                    const { cx, cy, payload } = props
+                    const isSelected = chartFilters.data === payload.fullDate
+                    return (
+                      <circle
+                        key={`dot-${payload.fullDate}`}
+                        cx={cx}
+                        cy={cy}
+                        r={isSelected ? 6 : 4}
+                        fill={isSelected ? '#c8e6c9' : '#225f3d'}
+                        stroke={isSelected ? '#225f3d' : '#fff'}
+                        strokeWidth={2}
+                        className="transition-all duration-200 cursor-pointer"
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          onChartClick('data', payload.fullDate)
+                        }}
+                      />
+                    )
+                  }}
+                  activeDot={{
+                    r: 6,
+                    fill: '#225f3d',
+                    strokeWidth: 2,
+                    stroke: '#fff',
+                    className: 'cursor-pointer',
+                  }}
                 />
               </LineChart>
             </ResponsiveContainer>

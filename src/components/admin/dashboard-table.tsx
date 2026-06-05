@@ -33,7 +33,13 @@ export function DashboardTable({
 }: {
   chamados: any[]
   responsaveis: any[]
-  chartFilters?: { status?: string; prioridade?: string; garagem?: string; responsavel?: string }
+  chartFilters?: {
+    status?: string
+    prioridade?: string
+    garagem?: string
+    responsavel?: string
+    data?: string
+  }
 }) {
   const [search, setSearch] = useState('')
   const [debouncedSearch, setDebouncedSearch] = useState('')
@@ -82,6 +88,8 @@ export function DashboardTable({
         const respId = c.responsavel?.id || 'unassigned'
         if (respId !== chartFilters.responsavel) return false
       }
+      if (chartFilters?.data && (!c.criado_em || !c.criado_em.startsWith(chartFilters.data)))
+        return false
 
       return true
     })

@@ -15,10 +15,11 @@ export function VisaoGeral() {
     prioridade?: string
     garagem?: string
     responsavel?: string
+    data?: string
   }>({})
 
   const handleChartClick = (
-    type: 'status' | 'prioridade' | 'garagem' | 'responsavel',
+    type: 'status' | 'prioridade' | 'garagem' | 'responsavel' | 'data',
     value: string,
   ) => {
     setChartFilters((prev) => ({
@@ -64,7 +65,7 @@ export function VisaoGeral() {
 
   return (
     <div className="space-y-6 animate-fade-in">
-      <DashboardCards chamados={chamados} />
+      <DashboardCards chamados={chamados} chartFilters={chartFilters} />
       <DashboardCharts
         chamados={chamados}
         chartFilters={chartFilters}

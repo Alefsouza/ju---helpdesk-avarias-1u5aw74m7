@@ -3,21 +3,52 @@ import { Ticket, Activity, CheckCircle, Clock, TrendingUp, TrendingDown, Minus }
 import { cn } from '@/lib/utils'
 import { subDays, isAfter, isBefore } from 'date-fns'
 
-export function DashboardCards({ chamados }: { chamados: any[] }) {
-  const total = chamados.length
-  const abertos = chamados.filter((c) => c.status === 'aberto').length
-  const emAtendimento = chamados.filter((c) => c.status === 'em_atendimento').length
-  const finalizados = chamados.filter((c) => c.status === 'finalizado').length
+import { useMemo } from 'react'
+
+export function DashboardCards({
+  chamados,
+  chartFilters,
+}: {
+  chamados: any[]
+  chartFilters?: {
+    status?: string
+    prioridade?: string
+    garagem?: string
+    responsavel?: string
+    data?: string
+  }
+}) {
+  const filtered = useMemo(() => {
+    if (!chartFilters) return chamados
+    return chamados.filter((c) => {
+      if (chartFilters.data && (!c.criado_em || !c.criado_em.startsWith(chartFilters.data)))
+        return false
+      if (chartFilters.status && c.status !== chartFilters.status) return false
+      if (chartFilters.prioridade && c.prioridade !== chartFilters.prioridade) return false
+      if (chartFilters.garagem && (c.garagem || 'Não Informada') !== chartFilters.garagem)
+        return false
+      if (chartFilters.responsavel) {
+        const respId = c.responsavel?.id || 'unassigned'
+        if (respId !== chartFilters.responsavel) return false
+      }
+      return true
+    })
+  }, [chamados, chartFilters])
+
+  const total = filtered.length
+  const abertos = filtered.filter((c) => c.status === 'aberto').length
+  const emAtendimento = filtered.filter((c) => c.status === 'em_atendimento').length
+  const finalizados = filtered.filter((c) => c.status === 'finalizado').length
 
   const now = new Date()
   const thirtyDaysAgo = subDays(now, 30)
   const sixtyDaysAgo = subDays(now, 60)
 
   const calcTrend = (status?: string) => {
-    const current = chamados.filter(
+    const current = filtered.filter(
       (c) => isAfter(new Date(c.criado_em), thirtyDaysAgo) && (status ? c.status === status : true),
     ).length
-    const previous = chamados.filter(
+    const previous = filtered.filter(
       (c) =>
         isAfter(new Date(c.criado_em), sixtyDaysAgo) &&
         isBefore(new Date(c.criado_em), thirtyDaysAgo) &&

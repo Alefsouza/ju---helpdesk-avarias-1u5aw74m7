@@ -17,6 +17,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart'
 import { Button } from '@/components/ui/button'
 import { FilterX } from 'lucide-react'
+import { format } from 'date-fns'
 
 const statusColors = {
   aberto: '#225f3d', // verde escuro
@@ -52,7 +53,7 @@ export function DashboardCharts({
   const baseChamados = useMemo(() => {
     if (!chartFilters.data) return chamados
     return chamados.filter(
-      (c) => c.criado_em && c.criado_em.startsWith(chartFilters.data as string),
+      (c) => c.criado_em && format(new Date(c.criado_em), 'yyyy-MM-dd') === chartFilters.data,
     )
   }, [chamados, chartFilters.data])
 
@@ -147,7 +148,7 @@ export function DashboardCharts({
 
     filtered.forEach((c) => {
       if (!c.criado_em) return
-      const sortKey = c.criado_em.substring(0, 10)
+      const sortKey = format(new Date(c.criado_em), 'yyyy-MM-dd')
 
       if (!counts[sortKey]) {
         counts[sortKey] = 0

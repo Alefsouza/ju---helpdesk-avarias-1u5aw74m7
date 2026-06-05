@@ -88,8 +88,11 @@ export function DashboardTable({
         const respId = c.responsavel?.id || 'unassigned'
         if (respId !== chartFilters.responsavel) return false
       }
-      if (chartFilters?.data && (!c.criado_em || !c.criado_em.startsWith(chartFilters.data)))
-        return false
+      if (chartFilters?.data) {
+        if (!c.criado_em) return false
+        const localDate = format(new Date(c.criado_em), 'yyyy-MM-dd')
+        if (localDate !== chartFilters.data) return false
+      }
 
       return true
     })

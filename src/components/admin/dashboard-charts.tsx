@@ -5,6 +5,9 @@ import {
   Cell,
   Bar,
   BarChart,
+  Line,
+  LineChart,
+  CartesianGrid,
   XAxis,
   YAxis,
   ResponsiveContainer,
@@ -109,6 +112,44 @@ export function DashboardCharts({
       .sort((a, b) => b.value - a.value)
       .map((d) => ({ ...d, fill: '#225f3d' }))
   }, [chamados])
+
+  const timelineData = useMemo(() => {
+    const counts: Record<string, number> = {}
+
+    const filtered = chamados.filter((c) => {
+      if (chartFilters.status && c.status !== chartFilters.status) return false
+      if (chartFilters.prioridade && c.prioridade !== chartFilters.prioridade) return false
+      if (chartFilters.garagem && c.garagem !== chartFilters.garagem) return false
+      if (chartFilters.responsavel) {
+        const respId = c.responsavel?.id || 'unassigned'
+        if (respId !== chartFilters.responsavel) return false
+      }
+      return true
+    })
+
+    filtered.forEach((c) => {
+      if (!c.criado_em) return
+      const date = new Date(c.criado_em)
+      const day = String(date.getDate()).padStart(2, '0')
+      const month = String(date.getMonth() + 1).padStart(2, '0')
+      const sortKey = `${date.getFullYear()}-${month}-${day}`
+
+      if (!counts[sortKey]) {
+        counts[sortKey] = 0
+      }
+      counts[sortKey] += 1
+    })
+
+    return Object.entries(counts)
+      .sort(([keyA], [keyB]) => keyA.localeCompare(keyB))
+      .map(([sortKey, value]) => {
+        const [, mm, dd] = sortKey.split('-')
+        return {
+          date: `${dd}/${mm}`,
+          value,
+        }
+      })
+  }, [chamados, chartFilters])
 
   const statusConfig = {
     aberto: { label: 'Aberto', color: statusColors.aberto },
@@ -390,6 +431,50 @@ export function DashboardCharts({
           </CardContent>
         </Card>
       </div>
+
+      <Card className="border-[#f0f0f0] transition-all duration-200 hover:shadow-subtle mt-4">
+        <CardHeader className="p-6 pb-2">
+          <CardTitle className="text-[24px] font-semibold text-[#225f3d]">
+            Evolução de Chamados
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <ChartContainer
+            config={{ value: { label: 'Chamados', color: '#225f3d' } }}
+            className="h-[350px] w-full"
+          >
+            <ResponsiveContainer width="100%" height="100%">
+              <LineChart data={timelineData} margin={{ top: 20, right: 20, bottom: 20, left: 0 }}>
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e5e7eb" />
+                <XAxis
+                  dataKey="date"
+                  fontSize={12}
+                  tickLine={false}
+                  axisLine={false}
+                  tick={{ fill: '#212121' }}
+                  dy={10}
+                />
+                <YAxis
+                  fontSize={12}
+                  tickLine={false}
+                  axisLine={false}
+                  tick={{ fill: '#212121' }}
+                  dx={-10}
+                />
+                <ChartTooltip content={<ChartTooltipContent />} />
+                <Line
+                  type="monotone"
+                  dataKey="value"
+                  stroke="#225f3d"
+                  strokeWidth={3}
+                  dot={{ r: 4, fill: '#225f3d', strokeWidth: 2, stroke: '#fff' }}
+                  activeDot={{ r: 6, fill: '#225f3d', strokeWidth: 2, stroke: '#fff' }}
+                />
+              </LineChart>
+            </ResponsiveContainer>
+          </ChartContainer>
+        </CardContent>
+      </Card>
     </div>
   )
 }

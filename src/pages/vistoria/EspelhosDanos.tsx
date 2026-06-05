@@ -18,7 +18,7 @@ import {
 } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { ScrollArea } from '@/components/ui/scroll-area'
+import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area'
 import { useAuth } from '@/hooks/use-auth'
 import {
   Select,
@@ -185,91 +185,94 @@ export default function EspelhosDanos() {
       </div>
 
       <div className="bg-white rounded-md border shadow-sm flex-1 overflow-hidden flex flex-col">
-        <ScrollArea className="flex-1">
-          <Table>
-            <TableHeader className="sticky top-0 bg-white z-10 shadow-sm">
-              <TableRow>
-                <TableHead>Data</TableHead>
-                <TableHead>Garagem</TableHead>
-                <TableHead>Linha</TableHead>
-                <TableHead>Carro</TableHead>
-                <TableHead>OS</TableHead>
-                <TableHead className="w-[140px] text-right">Ações</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filteredDocumentos.length === 0 ? (
+        <ScrollArea className="flex-1 max-w-full">
+          <div className="min-w-[800px]">
+            <Table>
+              <TableHeader className="sticky top-0 bg-white z-10 shadow-sm">
                 <TableRow>
-                  <TableCell colSpan={6} className="text-center py-8 text-slate-500">
-                    Nenhum Espelho de Danos encontrado
-                  </TableCell>
+                  <TableHead className="min-w-[100px]">Data</TableHead>
+                  <TableHead className="min-w-[150px]">Garagem</TableHead>
+                  <TableHead className="min-w-[100px]">Linha</TableHead>
+                  <TableHead className="min-w-[100px]">Carro</TableHead>
+                  <TableHead className="min-w-[120px]">OS</TableHead>
+                  <TableHead className="w-[140px] min-w-[140px] text-right">Ações</TableHead>
                 </TableRow>
-              ) : (
-                filteredDocumentos.map((doc) => (
-                  <TableRow key={doc.id}>
-                    <TableCell>
-                      {doc.data ? doc.data.split('-').reverse().join('/') : '-'}
-                    </TableCell>
-                    <TableCell>{doc.garagem || '-'}</TableCell>
-                    <TableCell>{doc.linha || '-'}</TableCell>
-                    <TableCell>{doc.numero_carro || '-'}</TableCell>
-                    <TableCell>
-                      {doc.numero_os ? (
-                        <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                          {doc.numero_os}
-                        </span>
-                      ) : (
-                        <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-slate-100 text-slate-800">
-                          Pendente
-                        </span>
-                      )}
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <div className="flex items-center justify-end gap-1">
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => setViewDoc(doc)}
-                          title="Visualizar"
-                          className="h-8 w-8 text-slate-500 hover:text-slate-900"
-                        >
-                          <Eye className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          asChild
-                          title="Baixar PDF"
-                          className="h-8 w-8 text-slate-500 hover:text-slate-900"
-                        >
-                          <a
-                            href={doc.arquivo_url}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            download
-                          >
-                            <Download className="h-4 w-4" />
-                          </a>
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => {
-                            setEditOsDoc(doc)
-                            setOsInput(doc.numero_os || '')
-                          }}
-                          title="Editar OS"
-                          className="h-8 w-8 text-slate-500 hover:text-slate-900"
-                        >
-                          <Pencil className="h-4 w-4" />
-                        </Button>
-                      </div>
+              </TableHeader>
+              <TableBody>
+                {filteredDocumentos.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={6} className="text-center py-8 text-slate-500">
+                      Nenhum Espelho de Danos encontrado
                     </TableCell>
                   </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
+                ) : (
+                  filteredDocumentos.map((doc) => (
+                    <TableRow key={doc.id}>
+                      <TableCell>
+                        {doc.data ? doc.data.split('-').reverse().join('/') : '-'}
+                      </TableCell>
+                      <TableCell>{doc.garagem || '-'}</TableCell>
+                      <TableCell>{doc.linha || '-'}</TableCell>
+                      <TableCell>{doc.numero_carro || '-'}</TableCell>
+                      <TableCell>
+                        {doc.numero_os ? (
+                          <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                            {doc.numero_os}
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-slate-100 text-slate-800">
+                            Pendente
+                          </span>
+                        )}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <div className="flex items-center justify-end gap-1">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => setViewDoc(doc)}
+                            title="Visualizar"
+                            className="h-8 w-8 text-slate-500 hover:text-slate-900"
+                          >
+                            <Eye className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            asChild
+                            title="Baixar PDF"
+                            className="h-8 w-8 text-slate-500 hover:text-slate-900"
+                          >
+                            <a
+                              href={doc.arquivo_url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              download
+                            >
+                              <Download className="h-4 w-4" />
+                            </a>
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => {
+                              setEditOsDoc(doc)
+                              setOsInput(doc.numero_os || '')
+                            }}
+                            title="Editar OS"
+                            className="h-8 w-8 text-slate-500 hover:text-slate-900"
+                          >
+                            <Pencil className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
+              </TableBody>
+            </Table>
+          </div>
+          <ScrollBar orientation="horizontal" />
         </ScrollArea>
       </div>
 

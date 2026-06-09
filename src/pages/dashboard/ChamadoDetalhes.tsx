@@ -2172,7 +2172,13 @@ export default function ChamadoDetalhes() {
 
   const canReply = isSolicitante || isResponsible || isSupport || isParticipant
   const canFinalize = isSupport && chamado.status !== 'finalizado'
-  const canTransfer = isSupport && isResponsible && chamado.status !== 'finalizado'
+
+  const isPrivilegedTransfer =
+    currentUserProfile?.tipo_usuario === 'admin' ||
+    currentUserProfile?.tipo_usuario === 'sinistro' ||
+    currentUserProfile?.tipo_usuario === 'juridico'
+  const canTransfer = (isResponsible || isPrivilegedTransfer) && chamado.status !== 'finalizado'
+
   const canEditRA = isSupport
   const canUnify = isSupport && chamado.status !== 'finalizado'
 

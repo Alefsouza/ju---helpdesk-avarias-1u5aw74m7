@@ -19,6 +19,7 @@ import {
   Loader2,
   AlertCircle,
   Trash2,
+  FileText,
 } from 'lucide-react'
 import { format, parseISO } from 'date-fns'
 import { Input } from '@/components/ui/input'
@@ -65,6 +66,11 @@ export default function OsManutencao({
   const [stagedNewPhotos, setStagedNewPhotos] = useState<File[]>([])
   const [stagedNewPhotoUrls, setStagedNewPhotoUrls] = useState<string[]>([])
   const [stagedDeletedPhotos, setStagedDeletedPhotos] = useState<string[]>([])
+
+  const [stagedNewPhotosReq, setStagedNewPhotosReq] = useState<File[]>([])
+  const [stagedNewPhotoUrlsReq, setStagedNewPhotoUrlsReq] = useState<string[]>([])
+  const [stagedDeletedPhotosReq, setStagedDeletedPhotosReq] = useState<string[]>([])
+
   const [isSavingPhotos, setIsSavingPhotos] = useState(false)
 
   const [isStandaloneUploadOpen, setIsStandaloneUploadOpen] = useState(false)
@@ -224,6 +230,9 @@ export default function OsManutencao({
     setStagedNewPhotos([])
     setStagedNewPhotoUrls([])
     setStagedDeletedPhotos([])
+    setStagedNewPhotosReq([])
+    setStagedNewPhotoUrlsReq([])
+    setStagedDeletedPhotosReq([])
     setIsPhotoManagerOpen(true)
   }
 
@@ -235,6 +244,10 @@ export default function OsManutencao({
     stagedNewPhotoUrls.forEach((url) => URL.revokeObjectURL(url))
     setStagedNewPhotoUrls([])
     setStagedDeletedPhotos([])
+    setStagedNewPhotosReq([])
+    stagedNewPhotoUrlsReq.forEach((url) => URL.revokeObjectURL(url))
+    setStagedNewPhotoUrlsReq([])
+    setStagedDeletedPhotosReq([])
   }
 
   const handlePhotoSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -250,9 +263,32 @@ export default function OsManutencao({
     if (e.target) e.target.value = ''
   }
 
+  const handlePhotoSelectReq = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files
+    if (!files || files.length === 0) return
+
+    const newFiles = Array.from(files)
+    const newUrls = newFiles.map((file) => URL.createObjectURL(file))
+
+    setStagedNewPhotosReq((prev) => [...prev, ...newFiles])
+    setStagedNewPhotoUrlsReq((prev) => [...prev, ...newUrls])
+
+    if (e.target) e.target.value = ''
+  }
+
   const handleRemoveStagedNew = (index: number) => {
     setStagedNewPhotos((prev) => prev.filter((_, i) => i !== index))
     setStagedNewPhotoUrls((prev) => {
+      const updated = [...prev]
+      URL.revokeObjectURL(updated[index])
+      updated.splice(index, 1)
+      return updated
+    })
+  }
+
+  const handleRemoveStagedNewReq = (index: number) => {
+    setStagedNewPhotosReq((prev) => prev.filter((_, i) => i !== index))
+    setStagedNewPhotoUrlsReq((prev) => {
       const updated = [...prev]
       URL.revokeObjectURL(updated[index])
       updated.splice(index, 1)
@@ -264,6 +300,10 @@ export default function OsManutencao({
     setStagedDeletedPhotos((prev) => [...prev, url])
   }
 
+  const handleStageDeleteExistingReq = (url: string) => {
+    setStagedDeletedPhotosReq((prev) => [...prev, url])
+  }
+
   const handleSavePhotos = async () => {
     if (!photoManagerDoc) return
 
@@ -272,8 +312,7 @@ export default function OsManutencao({
       const { data: userData } = await supabase.auth.getUser()
       const userId = userData?.user?.id || null
 
-      const uploadedUrls: string[] = []
-
+      const uploadedUrlsManutencao: string[] = []
       for (let i = 0; i < stagedNewPhotos.length; i++) {
         const file = stagedNewPhotos[i]
         const fileExt = file.name.split('.').pop()
@@ -286,10 +325,27 @@ export default function OsManutencao({
         if (uploadError) throw uploadError
 
         const { data: publicUrlData } = supabase.storage.from('documentos').getPublicUrl(fileName)
-        uploadedUrls.push(publicUrlData.publicUrl)
+        uploadedUrlsManutencao.push(publicUrlData.publicUrl)
       }
 
-      for (const url of stagedDeletedPhotos) {
+      const uploadedUrlsReq: string[] = []
+      for (let i = 0; i < stagedNewPhotosReq.length; i++) {
+        const file = stagedNewPhotosReq[i]
+        const fileExt = file.name.split('.').pop()
+        const fileName = `os_req_${photoManagerDoc.id}_${Date.now()}_${i}.${fileExt}`
+
+        const { error: uploadError } = await supabase.storage
+          .from('documentos')
+          .upload(fileName, file, { upsert: false })
+
+        if (uploadError) throw uploadError
+
+        const { data: publicUrlData } = supabase.storage.from('documentos').getPublicUrl(fileName)
+        uploadedUrlsReq.push(publicUrlData.publicUrl)
+      }
+
+      const allDeletions = [...stagedDeletedPhotos, ...stagedDeletedPhotosReq]
+      for (const url of allDeletions) {
         try {
           const pathParts = url.split('/public/documentos/')
           if (pathParts.length > 1) {
@@ -305,12 +361,19 @@ export default function OsManutencao({
         ? photoManagerDoc.fotos_manutencao
         : []
       const keptFotos = existingFotos.filter((url: string) => !stagedDeletedPhotos.includes(url))
-      const finalFotos = [...keptFotos, ...uploadedUrls]
+      const finalFotosManutencao = [...keptFotos, ...uploadedUrlsManutencao]
+
+      const existingReq = Array.isArray(photoManagerDoc.fotos_requisicao)
+        ? photoManagerDoc.fotos_requisicao
+        : []
+      const keptReq = existingReq.filter((url: string) => !stagedDeletedPhotosReq.includes(url))
+      const finalFotosReq = [...keptReq, ...uploadedUrlsReq]
 
       const { error: updateError } = await supabase
         .from('documentos')
         .update({
-          fotos_manutencao: finalFotos,
+          fotos_manutencao: finalFotosManutencao,
+          fotos_requisicao: finalFotosReq,
           atualizado_em: new Date().toISOString(),
         })
         .eq('id', photoManagerDoc.id)
@@ -318,31 +381,38 @@ export default function OsManutencao({
       if (updateError) throw updateError
 
       if (photoManagerDoc.chamado_id && userId) {
-        if (stagedDeletedPhotos.length > 0 && uploadedUrls.length === 0) {
+        if (
+          (stagedDeletedPhotos.length > 0 && uploadedUrlsManutencao.length === 0) ||
+          (stagedDeletedPhotosReq.length > 0 && uploadedUrlsReq.length === 0)
+        ) {
           await supabase.from('historico_chamado').insert({
             chamado_id: photoManagerDoc.chamado_id,
             acao: 'respondido',
             usuario_id: userId,
-            detalhes: 'Evidências de manutenção removidas.',
+            detalhes: 'Arquivos/Evidências removidas do espelho de danos.',
           })
         }
       }
 
       toast({
         title: 'Sucesso',
-        description: 'Fotos de manutenção salvas com sucesso. Sincronização em andamento...',
+        description: 'Arquivos salvos com sucesso.',
       })
 
       setDocumentos((docs) =>
-        docs.map((d) => (d.id === photoManagerDoc.id ? { ...d, fotos_manutencao: finalFotos } : d)),
+        docs.map((d) =>
+          d.id === photoManagerDoc.id
+            ? { ...d, fotos_manutencao: finalFotosManutencao, fotos_requisicao: finalFotosReq }
+            : d,
+        ),
       )
 
       handleClosePhotoManager()
     } catch (error: any) {
-      console.error('Erro ao salvar fotos:', error)
+      console.error('Erro ao salvar arquivos:', error)
       toast({
         title: 'Erro',
-        description: error.message || 'Erro ao salvar fotos.',
+        description: error.message || 'Erro ao salvar arquivos.',
         variant: 'destructive',
       })
     } finally {
@@ -710,7 +780,7 @@ export default function OsManutencao({
 
         <input
           type="file"
-          accept="image/*"
+          accept="image/*,application/pdf"
           multiple
           ref={fileInputRef}
           style={{ display: 'none' }}
@@ -718,8 +788,17 @@ export default function OsManutencao({
         />
 
         <input
+          id="req-file-input"
           type="file"
-          accept="image/*"
+          accept="image/*,application/pdf"
+          multiple
+          style={{ display: 'none' }}
+          onChange={handlePhotoSelectReq}
+        />
+
+        <input
+          type="file"
+          accept="image/*,application/pdf"
           multiple
           ref={standaloneFileInputRef}
           style={{ display: 'none' }}
@@ -957,11 +1036,17 @@ export default function OsManutencao({
                             rel="noreferrer"
                             className="block relative aspect-video bg-slate-100 rounded-md overflow-hidden border group"
                           >
-                            <img
-                              src={url}
-                              alt={`Evidência Manutenção ${idx + 1}`}
-                              className="object-cover w-full h-full transition-transform duration-300 group-hover:scale-105"
-                            />
+                            {url.toLowerCase().endsWith('.pdf') ? (
+                              <div className="flex items-center justify-center w-full h-full bg-slate-200">
+                                <span className="text-xs font-bold text-slate-500">PDF</span>
+                              </div>
+                            ) : (
+                              <img
+                                src={url}
+                                alt={`Evidência Manutenção ${idx + 1}`}
+                                className="object-cover w-full h-full transition-transform duration-300 group-hover:scale-105"
+                              />
+                            )}
                             <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors flex items-center justify-center">
                               <Eye className="text-white opacity-0 group-hover:opacity-100 transition-opacity" />
                             </div>
@@ -971,6 +1056,40 @@ export default function OsManutencao({
                     )
                   })()}
                 </div>
+
+                {Array.isArray(viewDoc.fotos_requisicao) && viewDoc.fotos_requisicao.length > 0 && (
+                  <div>
+                    <p className="text-[#333333] font-bold mb-3 text-sm border-b pb-1 mt-4">
+                      Requisições Anexadas
+                    </p>
+                    <div className="grid grid-cols-2 gap-4">
+                      {viewDoc.fotos_requisicao.map((url: string, idx: number) => (
+                        <a
+                          key={`req-${idx}`}
+                          href={url}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="block relative aspect-video bg-slate-100 rounded-md overflow-hidden border group"
+                        >
+                          {url.toLowerCase().endsWith('.pdf') ? (
+                            <div className="flex items-center justify-center w-full h-full bg-slate-200">
+                              <span className="text-xs font-bold text-slate-500">PDF</span>
+                            </div>
+                          ) : (
+                            <img
+                              src={url}
+                              alt={`Requisição ${idx + 1}`}
+                              className="object-cover w-full h-full transition-transform duration-300 group-hover:scale-105"
+                            />
+                          )}
+                          <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors flex items-center justify-center">
+                            <Eye className="text-white opacity-0 group-hover:opacity-100 transition-opacity" />
+                          </div>
+                        </a>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           )}
@@ -1125,7 +1244,7 @@ export default function OsManutencao({
             </DialogDescription>
           </DialogHeader>
 
-          <div className="flex-1 overflow-y-auto space-y-4 py-4 pr-1">
+          <div className="flex-1 overflow-y-auto space-y-8 py-4 pr-1">
             <div className="flex justify-between items-center bg-slate-50 p-3 rounded-md border">
               <div>
                 <p className="text-sm font-medium text-slate-900">
@@ -1135,91 +1254,219 @@ export default function OsManutencao({
                   Carro: {photoManagerDoc?.numero_carro || '-'}
                 </p>
               </div>
-              <Button onClick={() => fileInputRef.current?.click()} disabled={isSavingPhotos}>
-                <Camera className="mr-2 h-4 w-4" /> Adicionar Fotos
-              </Button>
             </div>
 
-            {(() => {
-              const existingFotos = Array.isArray(photoManagerDoc?.fotos_manutencao)
-                ? photoManagerDoc.fotos_manutencao
-                : []
-              const activeExistingFotos = existingFotos.filter(
-                (url: string) => !stagedDeletedPhotos.includes(url),
-              )
+            {/* SEÇÃO 1: Fotos do Carro (Manutenção) */}
+            <div className="space-y-4">
+              <div className="flex items-center justify-between border-b pb-2">
+                <div>
+                  <h3 className="font-bold text-slate-800">Fotos do Carro</h3>
+                  <p className="text-xs text-slate-500">Fotos anexadas sincronizam com o chamado</p>
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={isSavingPhotos}
+                >
+                  <Camera className="mr-2 h-4 w-4" /> Adicionar Fotos
+                </Button>
+              </div>
 
-              if (activeExistingFotos.length === 0 && stagedNewPhotoUrls.length === 0) {
+              {(() => {
+                const existingFotos = Array.isArray(photoManagerDoc?.fotos_manutencao)
+                  ? photoManagerDoc.fotos_manutencao
+                  : []
+                const activeExistingFotos = existingFotos.filter(
+                  (url: string) => !stagedDeletedPhotos.includes(url),
+                )
+
+                if (activeExistingFotos.length === 0 && stagedNewPhotoUrls.length === 0) {
+                  return (
+                    <div className="text-center py-6 text-slate-500 bg-slate-50/50 rounded-lg border border-dashed">
+                      <Camera className="mx-auto h-6 w-6 text-slate-300 mb-2" />
+                      <p className="text-sm">Nenhuma foto de manutenção para exibir.</p>
+                    </div>
+                  )
+                }
+
                 return (
-                  <div className="text-center py-12 text-slate-500 bg-slate-50/50 rounded-lg border border-dashed">
-                    <Camera className="mx-auto h-8 w-8 text-slate-300 mb-2" />
-                    <p>Nenhuma foto de manutenção para exibir.</p>
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                    {activeExistingFotos.map((url: string, idx: number) => (
+                      <div
+                        key={`existing-${idx}`}
+                        className="relative group aspect-square rounded-md overflow-hidden bg-slate-100 border"
+                      >
+                        {url.toLowerCase().endsWith('.pdf') ? (
+                          <div className="flex items-center justify-center w-full h-full bg-slate-200">
+                            <span className="text-xs font-bold text-slate-500">PDF</span>
+                          </div>
+                        ) : (
+                          <img
+                            src={url}
+                            alt={`Evidência Existente ${idx + 1}`}
+                            className="object-cover w-full h-full"
+                          />
+                        )}
+                        <div className="absolute top-2 right-2 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                          <Button
+                            variant="destructive"
+                            size="icon"
+                            className="h-8 w-8"
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              handleStageDeleteExisting(url)
+                            }}
+                            disabled={isSavingPhotos}
+                            title="Remover foto"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </div>
+                    ))}
+
+                    {stagedNewPhotoUrls.map((url: string, idx: number) => (
+                      <div
+                        key={`new-${idx}`}
+                        className="relative group aspect-square rounded-md overflow-hidden bg-blue-50 border-2 border-blue-200 border-dashed"
+                      >
+                        <img
+                          src={url}
+                          alt={`Nova Evidência ${idx + 1}`}
+                          className="object-cover w-full h-full opacity-90"
+                        />
+                        <div className="absolute top-2 right-2 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                          <Button
+                            variant="destructive"
+                            size="icon"
+                            className="h-8 w-8"
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              handleRemoveStagedNew(idx)
+                            }}
+                            disabled={isSavingPhotos}
+                            title="Descartar nova foto"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                        <div className="absolute bottom-2 left-2 bg-blue-600 text-white text-[10px] px-2 py-0.5 rounded font-medium">
+                          Nova
+                        </div>
+                      </div>
+                    ))}
                   </div>
                 )
-              }
+              })()}
+            </div>
 
-              return (
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
-                  {activeExistingFotos.map((url: string, idx: number) => (
-                    <div
-                      key={`existing-${idx}`}
-                      className="relative group aspect-square rounded-md overflow-hidden bg-slate-100 border"
-                    >
-                      <img
-                        src={url}
-                        alt={`Evidência Existente ${idx + 1}`}
-                        className="object-cover w-full h-full"
-                      />
-                      <div className="absolute top-2 right-2 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                        <Button
-                          variant="destructive"
-                          size="icon"
-                          className="h-8 w-8"
-                          onClick={(e) => {
-                            e.stopPropagation()
-                            handleStageDeleteExisting(url)
-                          }}
-                          disabled={isSavingPhotos}
-                          title="Remover foto"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    </div>
-                  ))}
-
-                  {stagedNewPhotoUrls.map((url: string, idx: number) => (
-                    <div
-                      key={`new-${idx}`}
-                      className="relative group aspect-square rounded-md overflow-hidden bg-blue-50 border-2 border-blue-200 border-dashed"
-                    >
-                      <img
-                        src={url}
-                        alt={`Nova Evidência ${idx + 1}`}
-                        className="object-cover w-full h-full opacity-90"
-                      />
-                      <div className="absolute top-2 right-2 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                        <Button
-                          variant="destructive"
-                          size="icon"
-                          className="h-8 w-8"
-                          onClick={(e) => {
-                            e.stopPropagation()
-                            handleRemoveStagedNew(idx)
-                          }}
-                          disabled={isSavingPhotos}
-                          title="Descartar nova foto"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </div>
-                      <div className="absolute bottom-2 left-2 bg-blue-600 text-white text-[10px] px-2 py-0.5 rounded font-medium">
-                        Nova
-                      </div>
-                    </div>
-                  ))}
+            {/* SEÇÃO 2: Requisições */}
+            <div className="space-y-4">
+              <div className="flex items-center justify-between border-b pb-2">
+                <div>
+                  <h3 className="font-bold text-slate-800">Anexar Requisição</h3>
+                  <p className="text-xs text-slate-500">
+                    Requisões internas (não sincronizam com o chamado)
+                  </p>
                 </div>
-              )
-            })()}
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => document.getElementById('req-file-input')?.click()}
+                  disabled={isSavingPhotos}
+                >
+                  <Camera className="mr-2 h-4 w-4" /> Adicionar Requisição
+                </Button>
+              </div>
+
+              {(() => {
+                const existingReq = Array.isArray(photoManagerDoc?.fotos_requisicao)
+                  ? photoManagerDoc.fotos_requisicao
+                  : []
+                const activeExistingReq = existingReq.filter(
+                  (url: string) => !stagedDeletedPhotosReq.includes(url),
+                )
+
+                if (activeExistingReq.length === 0 && stagedNewPhotoUrlsReq.length === 0) {
+                  return (
+                    <div className="text-center py-6 text-slate-500 bg-slate-50/50 rounded-lg border border-dashed">
+                      <FileText className="mx-auto h-6 w-6 text-slate-300 mb-2" />
+                      <p className="text-sm">Nenhuma requisição anexada.</p>
+                    </div>
+                  )
+                }
+
+                return (
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                    {activeExistingReq.map((url: string, idx: number) => (
+                      <div
+                        key={`req-existing-${idx}`}
+                        className="relative group aspect-square rounded-md overflow-hidden bg-slate-100 border"
+                      >
+                        {url.toLowerCase().endsWith('.pdf') ? (
+                          <div className="flex items-center justify-center w-full h-full bg-slate-200">
+                            <span className="text-xs font-bold text-slate-500">PDF</span>
+                          </div>
+                        ) : (
+                          <img
+                            src={url}
+                            alt={`Requisição Existente ${idx + 1}`}
+                            className="object-cover w-full h-full"
+                          />
+                        )}
+                        <div className="absolute top-2 right-2 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                          <Button
+                            variant="destructive"
+                            size="icon"
+                            className="h-8 w-8"
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              handleStageDeleteExistingReq(url)
+                            }}
+                            disabled={isSavingPhotos}
+                            title="Remover requisição"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </div>
+                    ))}
+
+                    {stagedNewPhotoUrlsReq.map((url: string, idx: number) => (
+                      <div
+                        key={`req-new-${idx}`}
+                        className="relative group aspect-square rounded-md overflow-hidden bg-purple-50 border-2 border-purple-200 border-dashed"
+                      >
+                        <img
+                          src={url}
+                          alt={`Nova Requisição ${idx + 1}`}
+                          className="object-cover w-full h-full opacity-90"
+                        />
+                        <div className="absolute top-2 right-2 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                          <Button
+                            variant="destructive"
+                            size="icon"
+                            className="h-8 w-8"
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              handleRemoveStagedNewReq(idx)
+                            }}
+                            disabled={isSavingPhotos}
+                            title="Descartar nova requisição"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                        <div className="absolute bottom-2 left-2 bg-purple-600 text-white text-[10px] px-2 py-0.5 rounded font-medium">
+                          Nova
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )
+              })()}
+            </div>
           </div>
 
           <DialogFooter className="mt-4 pt-4 border-t gap-2 sm:gap-0">

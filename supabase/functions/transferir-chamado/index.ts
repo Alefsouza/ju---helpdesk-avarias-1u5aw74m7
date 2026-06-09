@@ -47,12 +47,12 @@ Deno.serve(async (req: Request) => {
       .eq('id', user.id)
       .single()
 
-    if (
-      profile?.tipo_usuario !== 'admin' &&
-      profile?.tipo_usuario !== 'responsavel' &&
-      profile?.tipo_usuario !== 'sinistro' &&
-      profile?.tipo_usuario !== 'juridico'
-    ) {
+    const isPrivileged =
+      profile?.tipo_usuario === 'admin' ||
+      profile?.tipo_usuario === 'sinistro' ||
+      profile?.tipo_usuario === 'juridico'
+
+    if (!isPrivileged && profile?.tipo_usuario !== 'responsavel') {
       throw new Error(
         'Forbidden: Only admin, responsavel, sinistro, or juridico can perform this action',
       )
@@ -69,8 +69,8 @@ Deno.serve(async (req: Request) => {
       throw new Error('Chamado not found')
     }
 
-    // Check if the caller is the specific person responsible for the ticket
-    if (chamado.responsavel_id !== user.id) {
+    // Check if the caller is the specific person responsible for the ticket (bypass for privileged users)
+    if (!isPrivileged && chamado.responsavel_id !== user.id) {
       throw new Error('Forbidden: You are not the responsible for this ticket')
     }
 

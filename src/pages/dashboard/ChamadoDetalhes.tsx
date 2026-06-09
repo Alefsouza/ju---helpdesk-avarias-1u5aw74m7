@@ -1797,7 +1797,15 @@ export default function ChamadoDetalhes() {
       return
     }
 
-    setChamado((prev: any) => (prev ? { ...prev, responsavel_id: selectedResponsavel } : prev))
+    setChamado((prev: any) =>
+      prev
+        ? {
+            ...prev,
+            responsavel_id: selectedResponsavel,
+            status_interno: novoResponsavel?.departamento || null,
+          }
+        : prev,
+    )
     toast.success(`Chamado transferido com sucesso para ${novoResponsavel?.nome_completo}`)
     setTransferLoading(false)
     setTransferModalOpen(false)

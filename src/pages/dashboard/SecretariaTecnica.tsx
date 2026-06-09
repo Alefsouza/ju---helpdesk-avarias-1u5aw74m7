@@ -188,11 +188,21 @@ export default function SecretariaTecnica() {
   }, [])
 
   const handleOpenPhotos = (doc: any) => {
-    const photos: { url: string; type: 'photo' | 'pdf' }[] = []
+    const photos: { url: string; type: 'manutencao' | 'requisicao' | 'orcamento' | 'pdf' }[] = []
+
     if (Array.isArray(doc.fotos_manutencao)) {
       doc.fotos_manutencao.forEach((url: string) => {
         if (url && !photos.some((p) => p.url === url)) {
-          photos.push({ url, type: 'photo' })
+          photos.push({ url, type: 'manutencao' })
+        }
+      })
+    }
+
+    if (Array.isArray(doc.fotos_requisicao)) {
+      doc.fotos_requisicao.forEach((url: string) => {
+        if (url && !photos.some((p) => p.url === url)) {
+          const isPdf = url.toLowerCase().split('?')[0].endsWith('.pdf')
+          photos.push({ url, type: isPdf ? 'pdf' : 'requisicao' })
         }
       })
     }
@@ -200,7 +210,7 @@ export default function SecretariaTecnica() {
     if (doc.orcamento_url) {
       if (!photos.some((p) => p.url === doc.orcamento_url)) {
         const isPdf = doc.orcamento_url.toLowerCase().split('?')[0].endsWith('.pdf')
-        photos.push({ url: doc.orcamento_url, type: isPdf ? 'pdf' : 'photo' })
+        photos.push({ url: doc.orcamento_url, type: isPdf ? 'pdf' : 'orcamento' })
       }
     }
 
@@ -440,42 +450,135 @@ export default function SecretariaTecnica() {
       </Card>
 
       <Dialog open={photosModalOpen} onOpenChange={setPhotosModalOpen}>
-        <DialogContent className="max-w-3xl">
+        <DialogContent className="max-w-4xl max-h-[90vh] flex flex-col">
           <DialogHeader>
-            <DialogTitle>Evidências Fotográficas</DialogTitle>
+            <DialogTitle>Evidências e Documentos</DialogTitle>
           </DialogHeader>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-4 max-h-[70vh] overflow-y-auto p-1">
+          <div className="flex-1 overflow-y-auto p-1 space-y-8">
             {selectedPhotos.length === 0 ? (
               <p className="text-slate-500">Nenhuma evidência disponível.</p>
             ) : (
-              selectedPhotos.map((item, i) => (
-                <a
-                  key={i}
-                  href={item.url}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="block relative aspect-video bg-slate-100 rounded-lg overflow-hidden border hover:ring-2 ring-primary transition-all flex items-center justify-center"
-                >
-                  {item.type === 'pdf' ? (
-                    <div className="flex flex-col items-center justify-center p-4">
-                      <FileText className="w-12 h-12 text-slate-400 mb-2" />
-                      <span className="text-sm font-medium text-slate-600 text-center">
-                        Orçamento (PDF)
-                        <br />
-                        Clique para abrir
-                      </span>
+              <>
+                {selectedPhotos.some((p) => p.type === 'manutencao') && (
+                  <div>
+                    <h3 className="text-sm font-bold text-slate-900 mb-3 uppercase border-b pb-1">
+                      Fotos da Manutenção
+                    </h3>
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                      {selectedPhotos
+                        .filter((p) => p.type === 'manutencao')
+                        .map((item, i) => (
+                          <a
+                            key={i}
+                            href={item.url}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="block relative aspect-video bg-slate-100 rounded-lg overflow-hidden border hover:ring-2 ring-primary transition-all flex items-center justify-center"
+                          >
+                            <img
+                              src={item.url}
+                              alt={`Evidência Manutenção ${i + 1}`}
+                              className="object-cover w-full h-full"
+                            />
+                          </a>
+                        ))}
                     </div>
-                  ) : (
-                    <img
-                      src={item.url}
-                      alt={`Evidência ${i + 1}`}
-                      className="object-cover w-full h-full"
-                    />
-                  )}
-                </a>
-              ))
+                  </div>
+                )}
+
+                {selectedPhotos.some(
+                  (p) =>
+                    p.type === 'requisicao' || (p.type === 'pdf' && !p.url.includes('orcamento')),
+                ) && (
+                  <div>
+                    <h3 className="text-sm font-bold text-slate-900 mb-3 uppercase border-b pb-1 mt-4">
+                      Requisições
+                    </h3>
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                      {selectedPhotos
+                        .filter(
+                          (p) =>
+                            p.type === 'requisicao' ||
+                            (p.type === 'pdf' && !p.url.includes('orcamento')),
+                        )
+                        .map((item, i) => (
+                          <a
+                            key={i}
+                            href={item.url}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="block relative aspect-video bg-slate-100 rounded-lg overflow-hidden border hover:ring-2 ring-primary transition-all flex items-center justify-center"
+                          >
+                            {item.type === 'pdf' ? (
+                              <div className="flex flex-col items-center justify-center p-4">
+                                <FileText className="w-8 h-8 text-slate-400 mb-2" />
+                                <span className="text-sm font-medium text-slate-600 text-center">
+                                  PDF
+                                </span>
+                              </div>
+                            ) : (
+                              <img
+                                src={item.url}
+                                alt={`Requisição ${i + 1}`}
+                                className="object-cover w-full h-full"
+                              />
+                            )}
+                          </a>
+                        ))}
+                    </div>
+                  </div>
+                )}
+
+                {selectedPhotos.some(
+                  (p) =>
+                    p.type === 'orcamento' || (p.type === 'pdf' && p.url.includes('orcamento')),
+                ) && (
+                  <div>
+                    <h3 className="text-sm font-bold text-slate-900 mb-3 uppercase border-b pb-1 mt-4">
+                      Orçamento
+                    </h3>
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                      {selectedPhotos
+                        .filter(
+                          (p) =>
+                            p.type === 'orcamento' ||
+                            (p.type === 'pdf' && p.url.includes('orcamento')),
+                        )
+                        .map((item, i) => (
+                          <a
+                            key={i}
+                            href={item.url}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="block relative aspect-video bg-purple-50 rounded-lg overflow-hidden border hover:ring-2 ring-primary transition-all flex items-center justify-center"
+                          >
+                            {item.type === 'pdf' ? (
+                              <div className="flex flex-col items-center justify-center p-4">
+                                <FileText className="w-8 h-8 text-purple-400 mb-2" />
+                                <span className="text-sm font-medium text-purple-600 text-center">
+                                  Orçamento PDF
+                                </span>
+                              </div>
+                            ) : (
+                              <img
+                                src={item.url}
+                                alt={`Orçamento ${i + 1}`}
+                                className="object-cover w-full h-full"
+                              />
+                            )}
+                          </a>
+                        ))}
+                    </div>
+                  </div>
+                )}
+              </>
             )}
           </div>
+          <DialogFooter className="mt-4 pt-4 border-t">
+            <Button variant="outline" onClick={() => setPhotosModalOpen(false)}>
+              Fechar
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
 
@@ -677,11 +780,17 @@ export default function SecretariaTecnica() {
                             rel="noreferrer"
                             className="block relative aspect-video bg-slate-100 rounded-md overflow-hidden border group"
                           >
-                            <img
-                              src={url}
-                              alt={`Evidência Manutenção ${idx + 1}`}
-                              className="object-cover w-full h-full transition-transform duration-300 group-hover:scale-105"
-                            />
+                            {url.toLowerCase().endsWith('.pdf') ? (
+                              <div className="flex items-center justify-center w-full h-full bg-slate-200">
+                                <span className="text-xs font-bold text-slate-500">PDF</span>
+                              </div>
+                            ) : (
+                              <img
+                                src={url}
+                                alt={`Evidência Manutenção ${idx + 1}`}
+                                className="object-cover w-full h-full transition-transform duration-300 group-hover:scale-105"
+                              />
+                            )}
                             <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors flex items-center justify-center">
                               <Eye className="text-white opacity-0 group-hover:opacity-100 transition-opacity" />
                             </div>
@@ -691,6 +800,40 @@ export default function SecretariaTecnica() {
                     )
                   })()}
                 </div>
+
+                {Array.isArray(viewDoc.fotos_requisicao) && viewDoc.fotos_requisicao.length > 0 && (
+                  <div>
+                    <p className="text-[#333333] font-bold mb-3 text-sm border-b pb-1 mt-4">
+                      Requisições Anexadas
+                    </p>
+                    <div className="grid grid-cols-2 gap-4">
+                      {viewDoc.fotos_requisicao.map((url: string, idx: number) => (
+                        <a
+                          key={`req-${idx}`}
+                          href={url}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="block relative aspect-video bg-slate-100 rounded-md overflow-hidden border group"
+                        >
+                          {url.toLowerCase().endsWith('.pdf') ? (
+                            <div className="flex items-center justify-center w-full h-full bg-slate-200">
+                              <span className="text-xs font-bold text-slate-500">PDF</span>
+                            </div>
+                          ) : (
+                            <img
+                              src={url}
+                              alt={`Requisição ${idx + 1}`}
+                              className="object-cover w-full h-full transition-transform duration-300 group-hover:scale-105"
+                            />
+                          )}
+                          <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors flex items-center justify-center">
+                            <Eye className="text-white opacity-0 group-hover:opacity-100 transition-opacity" />
+                          </div>
+                        </a>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           )}

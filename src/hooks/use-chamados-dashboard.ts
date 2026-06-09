@@ -13,10 +13,7 @@ export function useChamadosDashboard() {
       setLoading(true)
       const [chamadosRes, respRes, respostasRes, historicoRes] = await Promise.all([
         supabase.from('chamados').select('*').order('criado_em', { ascending: false }),
-        supabase
-          .from('perfil_usuario')
-          .select('id, nome_completo')
-          .in('tipo_usuario', ['responsavel', 'sinistro', 'admin']),
+        supabase.from('perfil_usuario').select('id, nome_completo, tipo_usuario'),
         supabase.from('respostas_chamado').select('id, chamado_id, criado_em'),
         supabase.from('historico_chamado').select('id, chamado_id, acao, criado_em'),
       ])
@@ -25,6 +22,7 @@ export function useChamadosDashboard() {
       if (respRes.error) throw respRes.error
 
       const allChamados = chamadosRes.data || []
+      const allUsers = respRes.data || []
       const activeChamados = allChamados.filter(
         (c) => c.status === 'aberto' || c.status === 'em_atendimento',
       )
@@ -34,15 +32,29 @@ export function useChamadosDashboard() {
 
         return {
           ...c,
-          responsavel: (respRes.data || []).find((r) => r.id === c.responsavel_id) || null,
+          responsavel: allUsers.find((r) => r.id === c.responsavel_id) || null,
           respostas: (respostasRes.data || []).filter((r) => r.chamado_id === c.id),
           historico: (historicoRes.data || []).filter((h) => h.chamado_id === c.id),
           is_duplicate,
         }
       })
 
+      const assignedIds = new Set(allChamados.map((c) => c.responsavel_id).filter(Boolean))
+      const filterRoles = [
+        'responsavel',
+        'sinistro',
+        'admin',
+        'juridico',
+        'secretaria_tecnica',
+        'coc',
+        'sos',
+      ]
+      const responsaveisDropdown = allUsers.filter(
+        (u) => assignedIds.has(u.id) || filterRoles.includes(u.tipo_usuario),
+      )
+
       setChamados(mapped)
-      setResponsaveis(respRes.data || [])
+      setResponsaveis(responsaveisDropdown)
       setError(false)
     } catch (err) {
       console.error(err)

@@ -1853,19 +1853,10 @@ export default function ChamadoDetalhes() {
       }
     }
 
-    const isSupportUser =
-      currentUserProfile?.tipo_usuario === 'responsavel' ||
-      currentUserProfile?.tipo_usuario === 'sinistro' ||
-      currentUserProfile?.tipo_usuario === 'admin' ||
-      currentUserProfile?.tipo_usuario === 'juridico' ||
-      currentUserProfile?.tipo_usuario === 'secretaria_tecnica'
-
-    if (!isSupportUser && chamado?.status === 'em_atendimento') {
-      await supabase
-        .from('chamados')
-        .update({ status: 'aberto', atualizado_em: new Date().toISOString() })
-        .eq('id', id as string)
-    }
+    await supabase
+      .from('chamados')
+      .update({ atualizado_em: new Date().toISOString() })
+      .eq('id', id as string)
 
     await supabase.from('historico_chamado').insert({
       chamado_id: id as string,

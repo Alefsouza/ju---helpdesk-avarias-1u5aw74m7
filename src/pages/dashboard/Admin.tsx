@@ -27,6 +27,22 @@ export default function AdminDashboard() {
       })
   }, [user])
 
+  useEffect(() => {
+    if (!user || isAdmin !== true) return
+
+    const channel = supabase.channel('dashboard_changes')
+
+    channel
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'chamados' }, (payload) => {
+        window.dispatchEvent(new CustomEvent('dashboard_realtime_update', { detail: payload }))
+      })
+      .subscribe()
+
+    return () => {
+      supabase.removeChannel(channel)
+    }
+  }, [user, isAdmin])
+
   if (isAdmin === null) {
     return (
       <div className="p-8 space-y-6 max-w-7xl mx-auto">

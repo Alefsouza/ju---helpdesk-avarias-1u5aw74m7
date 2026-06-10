@@ -185,8 +185,9 @@ export function useChamadosDashboard(filters: ChamadosFilters = {}) {
   useEffect(() => {
     fetchData()
 
+    const channelName = `dashboard_changes_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`
     const channel = supabase
-      .channel('dashboard_changes')
+      .channel(channelName)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'chamados' }, () =>
         fetchData(),
       )

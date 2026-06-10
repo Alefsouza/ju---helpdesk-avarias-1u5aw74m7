@@ -21,18 +21,28 @@ import { Badge } from '@/components/ui/badge'
 import { Card, CardContent } from '@/components/ui/card'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { Calendar } from '@/components/ui/calendar'
-import { Search, FilterX, ExternalLink, CalendarIcon, AlertTriangle } from 'lucide-react'
-import { format, isAfter, isBefore, subDays, startOfDay, endOfDay } from 'date-fns'
+import { Search, FilterX, ExternalLink, CalendarIcon, AlertTriangle, Loader2 } from 'lucide-react'
+import { format } from 'date-fns'
 import { cn } from '@/lib/utils'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
+import {
+  Pagination,
+  PaginationContent,
+  PaginationEllipsis,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+} from '@/components/ui/pagination'
+import { useChamadosDashboard } from '@/hooks/use-chamados-dashboard'
 
 export function DashboardTable({
-  chamados,
-  responsaveis,
+  chamados: allChamados,
+  responsaveis: allResponsaveis,
   chartFilters,
 }: {
-  chamados: any[]
-  responsaveis: any[]
+  chamados?: any[]
+  responsaveis?: any[]
   chartFilters?: {
     status?: string
     prioridade?: string
@@ -50,71 +60,48 @@ export function DashboardTable({
   const [statusInterno, setStatusInterno] = useState('all')
   const [resp, setResp] = useState('all')
 
+  const [page, setPage] = useState(1)
+  const limit = 20
+
   useEffect(() => {
     const timer = setTimeout(() => setDebouncedSearch(search), 300)
     return () => clearTimeout(timer)
   }, [search])
 
-  const filtered = useMemo(() => {
-    return chamados.filter((c) => {
-      if (
-        debouncedSearch &&
-        !c.id.includes(debouncedSearch) &&
-        !c.titulo.toLowerCase().includes(debouncedSearch.toLowerCase())
-      )
-        return false
-      if (status !== 'all' && c.status !== status) return false
-      if (prioridade !== 'all' && c.prioridade !== prioridade) return false
-      if (statusInterno !== 'all' && c.status_interno !== statusInterno) return false
-      if (resp !== 'all') {
-        if (resp === 'unassigned' && c.responsavel) return false
-        if (resp !== 'unassigned' && c.responsavel?.id !== resp) return false
-      }
-      if (period !== 'all' && period !== 'custom') {
-        const days = parseInt(period)
-        if (days && isAfter(subDays(new Date(), days), new Date(c.criado_em))) return false
-      }
-      if (period === 'custom' && dateRange?.from) {
-        const d = new Date(c.criado_em)
-        if (isBefore(d, startOfDay(dateRange.from))) return false
-        if (dateRange.to && isAfter(d, endOfDay(dateRange.to))) return false
-      }
+  useEffect(() => {
+    setPage(1)
+  }, [debouncedSearch, status, prioridade, statusInterno, resp, period, dateRange, chartFilters])
 
-      if (chartFilters?.status && c.status !== chartFilters.status) return false
-      if (chartFilters?.prioridade && c.prioridade !== chartFilters.prioridade) return false
-      if (chartFilters?.garagem && (c.garagem || 'Não Informada') !== chartFilters.garagem)
-        return false
-      if (chartFilters?.responsavel) {
-        const respId = c.responsavel?.id || 'unassigned'
-        if (respId !== chartFilters.responsavel) return false
-      }
-      if (chartFilters?.data) {
-        if (!c.criado_em) return false
-        const localDate = format(new Date(c.criado_em), 'yyyy-MM-dd')
-        if (localDate !== chartFilters.data) return false
-      }
-
-      return true
-    })
-  }, [
-    chamados,
-    debouncedSearch,
+  const {
+    chamados: paginatedChamados,
+    responsaveis: hookResponsaveis,
+    loading,
+    totalCount,
+  } = useChamadosDashboard({
+    page,
+    limit,
+    search: debouncedSearch,
     status,
     prioridade,
     statusInterno,
-    resp,
+    responsavel: resp,
     period,
     dateRange,
     chartFilters,
-  ])
+  })
+
+  const displayChamados = paginatedChamados || []
+  const displayResponsaveis =
+    allResponsaveis && allResponsaveis.length > 0 ? allResponsaveis : hookResponsaveis
 
   const uniqueStatusInterno = useMemo(() => {
     const statuses = new Set<string>()
-    chamados.forEach((c) => {
+    const source = allChamados && allChamados.length > 0 ? allChamados : paginatedChamados
+    source.forEach((c) => {
       if (c.status_interno) statuses.add(c.status_interno)
     })
     return Array.from(statuses).sort()
-  }, [chamados])
+  }, [allChamados, paginatedChamados])
 
   const statusColor: Record<string, string> = {
     aberto: 'bg-blue-100 text-blue-800 hover:bg-blue-100',
@@ -149,6 +136,108 @@ export function DashboardTable({
     setResp('all')
     setPeriod('all')
     setDateRange(undefined)
+    setPage(1)
+  }
+
+  const totalPages = Math.ceil(totalCount / limit)
+
+  const renderPagination = () => {
+    if (totalPages <= 1) return null
+
+    const maxPagesToShow = 5
+    let startPage = Math.max(1, page - 2)
+    let endPage = Math.min(totalPages, startPage + maxPagesToShow - 1)
+
+    if (endPage - startPage + 1 < maxPagesToShow) {
+      startPage = Math.max(1, endPage - maxPagesToShow + 1)
+    }
+
+    const pages = Array.from({ length: endPage - startPage + 1 }, (_, i) => startPage + i)
+
+    return (
+      <Pagination className="mt-6">
+        <PaginationContent>
+          <PaginationItem>
+            <PaginationPrevious
+              href="#"
+              onClick={(e) => {
+                e.preventDefault()
+                if (page > 1) setPage(page - 1)
+              }}
+              className={cn(page === 1 && 'pointer-events-none opacity-50')}
+            />
+          </PaginationItem>
+
+          {startPage > 1 && (
+            <>
+              <PaginationItem>
+                <PaginationLink
+                  href="#"
+                  onClick={(e) => {
+                    e.preventDefault()
+                    setPage(1)
+                  }}
+                >
+                  1
+                </PaginationLink>
+              </PaginationItem>
+              {startPage > 2 && (
+                <PaginationItem>
+                  <PaginationEllipsis />
+                </PaginationItem>
+              )}
+            </>
+          )}
+
+          {pages.map((p) => (
+            <PaginationItem key={p}>
+              <PaginationLink
+                href="#"
+                isActive={p === page}
+                onClick={(e) => {
+                  e.preventDefault()
+                  setPage(p)
+                }}
+              >
+                {p}
+              </PaginationLink>
+            </PaginationItem>
+          ))}
+
+          {endPage < totalPages && (
+            <>
+              {endPage < totalPages - 1 && (
+                <PaginationItem>
+                  <PaginationEllipsis />
+                </PaginationItem>
+              )}
+              <PaginationItem>
+                <PaginationLink
+                  href="#"
+                  onClick={(e) => {
+                    e.preventDefault()
+                    setPage(totalPages)
+                  }}
+                >
+                  {totalPages}
+                </PaginationLink>
+              </PaginationItem>
+            </>
+          )}
+
+          <PaginationItem>
+            <PaginationNext
+              href="#"
+              onClick={(e) => {
+                e.preventDefault()
+                if (page < totalPages) setPage(page + 1)
+              }}
+              className={cn(page === totalPages && 'pointer-events-none opacity-50')}
+            />
+          </PaginationItem>
+        </PaginationContent>
+      </Pagination>
+    )
   }
 
   return (
@@ -159,7 +248,7 @@ export function DashboardTable({
             <Search className="absolute left-3 top-3 h-4 w-4 text-slate-400" />
             <Input
               className="pl-9 bg-[#f0f0f0] border-[#f0f0f0] text-[#212121] placeholder:text-slate-500"
-              placeholder="Buscar por Título..."
+              placeholder="Buscar por Título ou ID..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
             />
@@ -255,7 +344,7 @@ export function DashboardTable({
             <SelectContent>
               <SelectItem value="all">Todos os Responsáveis</SelectItem>
               <SelectItem value="unassigned">Sem Responsável</SelectItem>
-              {responsaveis.map((r) => (
+              {displayResponsaveis.map((r) => (
                 <SelectItem key={r.id} value={r.id}>
                   {r.nome_completo}
                 </SelectItem>
@@ -264,7 +353,7 @@ export function DashboardTable({
           </Select>
         </div>
 
-        {filtered.length === 0 ? (
+        {displayChamados.length === 0 && !loading ? (
           <div className="flex flex-col items-center justify-center p-12 text-center border-[#f0f0f0] rounded-lg border-dashed">
             <FilterX className="h-10 w-10 text-slate-400 mb-3" />
             <h3 className="text-lg font-medium">Nenhum chamado encontrado</h3>
@@ -277,7 +366,12 @@ export function DashboardTable({
           </div>
         ) : (
           <>
-            <div className="hidden md:block rounded-md border border-[#f0f0f0] overflow-x-auto">
+            <div className="hidden md:block rounded-md border border-[#f0f0f0] overflow-x-auto relative min-h-[300px]">
+              {loading && (
+                <div className="absolute inset-0 bg-white/50 backdrop-blur-[1px] flex items-center justify-center z-10">
+                  <Loader2 className="h-8 w-8 animate-spin text-[#225f3d]" />
+                </div>
+              )}
               <Table>
                 <TableHeader>
                   <TableRow className="bg-[#c8e6c9] hover:bg-[#c8e6c9]/90 border-[#f0f0f0]">
@@ -305,7 +399,7 @@ export function DashboardTable({
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {filtered.map((c) => (
+                  {displayChamados.map((c) => (
                     <TableRow
                       key={c.id}
                       className="border-[#f0f0f0] odd:bg-white even:bg-[#fbfbfb] hover:bg-[#f0f0f0]/50 transition-colors"
@@ -371,8 +465,13 @@ export function DashboardTable({
               </Table>
             </div>
 
-            <div className="md:hidden space-y-4">
-              {filtered.map((c) => (
+            <div className="md:hidden space-y-4 relative min-h-[300px]">
+              {loading && (
+                <div className="absolute inset-0 bg-white/50 backdrop-blur-[1px] flex items-center justify-center z-10 rounded-lg">
+                  <Loader2 className="h-8 w-8 animate-spin text-[#225f3d]" />
+                </div>
+              )}
+              {displayChamados.map((c) => (
                 <Card
                   key={c.id}
                   className="border-[#f0f0f0] shadow-sm hover:shadow-subtle transition-all"
@@ -431,6 +530,8 @@ export function DashboardTable({
                 </Card>
               ))}
             </div>
+
+            {renderPagination()}
           </>
         )}
       </CardContent>

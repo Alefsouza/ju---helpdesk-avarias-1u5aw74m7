@@ -80,6 +80,36 @@ Deno.serve(async (req: Request) => {
 
     if (destinoError || !destino) throw new Error('Chamado de destino não encontrado')
 
+    async function getPrefix(chamado: any) {
+      const { data: userProfile } = await supabaseAdmin
+        .from('perfil_usuario')
+        .select('tipo_usuario')
+        .eq('id', chamado.usuario_id)
+        .single()
+
+      if (userProfile?.tipo_usuario === 'vistoriador') {
+        return 'Descrição do Vistoriador: '
+      } else if (userProfile?.tipo_usuario === 'coc') {
+        return 'Descrição do COC: '
+      } else {
+        return 'Descrição de Terceiro: '
+      }
+    }
+
+    const destinoPrefix = await getPrefix(destino)
+    const origemPrefix = await getPrefix(origem)
+
+    let novaDescricaoDestino = destino.descricao || ''
+    if (
+      !novaDescricaoDestino.includes('Descrição do Vistoriador:') &&
+      !novaDescricaoDestino.includes('Descrição do COC:') &&
+      !novaDescricaoDestino.includes('Descrição de Terceiro:')
+    ) {
+      novaDescricaoDestino = `${destinoPrefix}${novaDescricaoDestino}`
+    }
+
+    novaDescricaoDestino += `\n\n---\n\n${origemPrefix}${origem.descricao || ''}`
+
     // Data Integrity Protection: Safeguard specific fields
     // Ensure we do not overwrite the destination's primary context (pia, titulo, tipo_chamado, prioridade)
     // Only moving explicitly requested related tables.
@@ -176,6 +206,7 @@ Deno.serve(async (req: Request) => {
     // Update destination ticket status to 'em_atendimento' and update timestamp
     const destinoUpdates: any = {
       status: 'em_atendimento',
+      descricao: novaDescricaoDestino,
       atualizado_em: new Date().toISOString(),
     }
 

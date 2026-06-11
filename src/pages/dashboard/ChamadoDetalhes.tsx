@@ -1184,7 +1184,15 @@ export default function ChamadoDetalhes() {
             formattedDate === '11/06/2026 16:58' ||
             formattedDate === '11/06/2026 13:58' ||
             h.criado_em.includes('16:58') ||
-            h.criado_em.includes('13:58'))
+            h.criado_em.includes('13:58') ||
+            formattedDate === '11/06/2026 17:05' ||
+            formattedDate === '11/06/2026 14:05' ||
+            h.criado_em.includes('17:05') ||
+            h.criado_em.includes('14:05') ||
+            formattedDate === '11/06/2026 17:11' ||
+            formattedDate === '11/06/2026 14:11' ||
+            h.criado_em.includes('17:11') ||
+            h.criado_em.includes('14:11'))
         ) {
           return
         }
@@ -1356,7 +1364,15 @@ export default function ChamadoDetalhes() {
                 formattedDate === '11/06/2026 16:58' ||
                 formattedDate === '11/06/2026 13:58' ||
                 newHistory.criado_em.includes('16:58') ||
-                newHistory.criado_em.includes('13:58'))
+                newHistory.criado_em.includes('13:58') ||
+                formattedDate === '11/06/2026 17:05' ||
+                formattedDate === '11/06/2026 14:05' ||
+                newHistory.criado_em.includes('17:05') ||
+                newHistory.criado_em.includes('14:05') ||
+                formattedDate === '11/06/2026 17:11' ||
+                formattedDate === '11/06/2026 14:11' ||
+                newHistory.criado_em.includes('17:11') ||
+                newHistory.criado_em.includes('14:11'))
             ) {
               return
             }

@@ -154,6 +154,16 @@ Deno.serve(async (req: Request) => {
       const formatCurrency = (val: number) =>
         new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(val)
 
+      const createTextRow = (label: string, value: string) => {
+        return new Paragraph({
+          children: [
+            new TextRun({ text: `${label}: `, bold: true, size: 28 }),
+            new TextRun({ text: value, size: 28 }),
+          ],
+          spacing: { after: 120 },
+        })
+      }
+
       const doc = new Document({
         sections: [
           {
@@ -162,7 +172,9 @@ Deno.serve(async (req: Request) => {
               default: new Footer({
                 children: [
                   new Paragraph({
-                    children: [new TextRun(`Gerado em: ${dateStr} às ${timeStr}`)],
+                    children: [
+                      new TextRun({ text: `Gerado em: ${dateStr} às ${timeStr}`, size: 20 }),
+                    ],
                     alignment: AlignmentType.CENTER,
                   }),
                 ],
@@ -170,70 +182,92 @@ Deno.serve(async (req: Request) => {
             },
             children: [
               new Paragraph({
-                children: [new TextRun({ text: 'AUTORIZAÇÃO DE DESCONTO', bold: true, size: 32 })],
+                children: [new TextRun({ text: 'AUTORIZAÇÃO DE DESCONTO', bold: true, size: 44 })],
                 alignment: AlignmentType.CENTER,
-                spacing: { after: 400 },
+                spacing: { after: 600 },
               }),
               new Paragraph({
-                children: [new TextRun({ text: 'Informações do Chamado', bold: true, size: 28 })],
-                spacing: { after: 200 },
+                children: [new TextRun({ text: 'Informações do Sinistro', bold: true, size: 36 })],
+                spacing: { after: 300 },
               }),
-              new Paragraph({ text: `ID do Chamado: ${id || '-'}` }),
-              new Paragraph({ text: `Título: ${body.titulo || '-'}` }),
-              new Paragraph({ text: `Registro da Ocorrência (R.A.): ${body.pia || '-'}` }),
-              new Paragraph({ text: `Garagem: ${body.garagem || '-'}` }),
-              new Paragraph({ text: `Veículo: ${body.carro || '-'}` }),
-              new Paragraph({ text: `Placa: ${placa || '-'}` }),
-              new Paragraph({ text: `Nome: ${espelho?.nome_motorista || '-'}` }),
-              new Paragraph({ text: `Registro: ${espelho?.registro_motorista || '-'}` }),
+              createTextRow('Nome', espelho?.nome_motorista || '-'),
+              createTextRow('Registro', espelho?.registro_motorista || '-'),
+              createTextRow('Garagem', body.garagem || '-'),
+              createTextRow('Registro da Ocorrência', body.pia || '-'),
+              createTextRow('Veículo', body.carro || '-'),
+              createTextRow('Placa', placa || '-'),
 
               new Paragraph({
-                children: [new TextRun({ text: 'Informações Financeiras', bold: true, size: 28 })],
-                spacing: { before: 400, after: 200 },
+                children: [new TextRun({ text: 'Informações Financeiras', bold: true, size: 36 })],
+                spacing: { before: 500, after: 300 },
               }),
-              new Paragraph({ text: `Valor Original: ${formatCurrency(valorBase)}` }),
+              createTextRow('Valor Original', formatCurrency(valorBase)),
               ...(body.com_desconto
                 ? [
-                    new Paragraph({
-                      text: `Desconto Aplicado: 10% (-${formatCurrency(valorBase - valorFinal)})`,
-                    }),
+                    createTextRow(
+                      'Desconto Aplicado',
+                      `10% (-${formatCurrency(valorBase - valorFinal)})`,
+                    ),
                   ]
                 : []),
               new Paragraph({
                 children: [
-                  new TextRun({ text: `Valor Final: ${formatCurrency(valorFinal)}`, bold: true }),
+                  new TextRun({ text: 'Valor Final: ', bold: true, size: 28 }),
+                  new TextRun({ text: formatCurrency(valorFinal), bold: true, size: 28 }),
                 ],
+                spacing: { after: 120 },
               }),
 
               new Paragraph({
-                children: [new TextRun({ text: 'Plano de Pagamento', bold: true, size: 28 })],
-                spacing: { before: 400, after: 200 },
+                children: [new TextRun({ text: 'Plano de Pagamento', bold: true, size: 36 })],
+                spacing: { before: 500, after: 300 },
               }),
-              new Paragraph({ text: `Quantidade de Parcelas: ${parcelas}x` }),
+              createTextRow('Quantidade de Parcelas', `${parcelas}x`),
               ...Array.from(
                 { length: parcelas },
                 (_, i) =>
                   new Paragraph({
-                    text: `  Parcela ${i + 1}/${parcelas}: ${formatCurrency(valorFinal / parcelas)}`,
+                    children: [
+                      new TextRun({
+                        text: `  Parcela ${i + 1}/${parcelas}: ${formatCurrency(valorFinal / parcelas)}`,
+                        size: 28,
+                      }),
+                    ],
+                    spacing: { after: 120 },
                   }),
               ),
 
-              new Paragraph({ spacing: { before: 800 } }),
+              new Paragraph({ spacing: { before: 1200 } }),
               new Paragraph({
-                text: '___________________________________________________',
+                children: [
+                  new TextRun({
+                    text: '___________________________________________________',
+                    size: 28,
+                  }),
+                ],
                 alignment: AlignmentType.CENTER,
               }),
               new Paragraph({
-                text: 'Assinatura do Colaborador',
+                children: [
+                  new TextRun({ text: 'Assinatura do Colaborador', bold: true, size: 28 }),
+                ],
                 alignment: AlignmentType.CENTER,
-                spacing: { after: 800 },
+                spacing: { after: 1200 },
               }),
 
               new Paragraph({
-                text: '___________________________________________________',
+                children: [
+                  new TextRun({
+                    text: '___________________________________________________',
+                    size: 28,
+                  }),
+                ],
                 alignment: AlignmentType.CENTER,
               }),
-              new Paragraph({ text: 'Assinatura da Testemunha', alignment: AlignmentType.CENTER }),
+              new Paragraph({
+                children: [new TextRun({ text: 'Assinatura da Testemunha', bold: true, size: 28 })],
+                alignment: AlignmentType.CENTER,
+              }),
             ],
           },
         ],

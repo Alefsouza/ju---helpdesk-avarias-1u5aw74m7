@@ -130,6 +130,18 @@ Deno.serve(async (req: Request) => {
         Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
       )
 
+      const { data: chamado } = await supabaseAdmin
+        .from('chamados')
+        .select('numero_os, pia')
+        .eq('id', id)
+        .maybeSingle()
+
+      const { data: parcelasData } = await supabaseAdmin
+        .from('parcelas_vales')
+        .select('*')
+        .eq('chamado_id', id)
+        .order('data_referencia', { ascending: true })
+
       const { data: espelho } = await supabaseAdmin
         .from('formularios_espelho_danos')
         .select('nome_motorista, registro_motorista')
@@ -159,13 +171,17 @@ Deno.serve(async (req: Request) => {
       const valorBase = body.valor_base || 0
       const valorFinal = body.valor_final || body.valor_orcamento || 0
       const parcelas = parseInt(body.parcelas || '1', 10)
+      const numeroOsFinal = chamado?.numero_os || body.numero_os || '-'
+      const piaFinal = chamado?.pia || body.pia || '-'
 
       const formatCurrency = (val: number) =>
         new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(val)
 
       let logoBytes: ArrayBuffer | null = null
       try {
-        const logoRes = await fetch('https://img.usecurling.com/i?q=via%20sudeste&shape=outline')
+        const logoRes = await fetch(
+          'https://img.usecurling.com/i?q=via%20sudeste&color=solid-black&shape=fill',
+        )
         if (logoRes.ok) {
           logoBytes = await logoRes.arrayBuffer()
         }
@@ -202,10 +218,11 @@ Deno.serve(async (req: Request) => {
         )
       }
 
-      addRow('Nome', espelho?.nome_motorista || '-')
-      addRow('Registro', espelho?.registro_motorista || '-')
+      addRow('Nome', espelho?.nome_motorista || body.nome_motorista || '-')
+      addRow('Registro', espelho?.registro_motorista || body.registro_motorista || '-')
       addRow('Garagem', body.garagem || '-')
-      addRow('Registro da Ocorrência', body.pia || '-')
+      addRow('Número da OS', numeroOsFinal)
+      addRow('Registro da Ocorrência (R.A.)', piaFinal)
       addRow('Veículo', body.carro || '-')
       addRow('Placa', placa || '-')
 
@@ -220,7 +237,7 @@ Deno.serve(async (req: Request) => {
       if (body.com_desconto) {
         addRow('Desconto Aplicado', `10% (-${formatCurrency(valorBase - valorFinal)})`)
       }
-      addRow('Valor Final', formatCurrency(valorFinal))
+      addRow('Valor Final a Descontar', formatCurrency(valorFinal))
 
       children.push(
         new Paragraph({
@@ -229,19 +246,40 @@ Deno.serve(async (req: Request) => {
         }),
       )
 
-      addRow('Quantidade de Parcelas', `${parcelas}x`)
-      for (let i = 0; i < parcelas; i++) {
-        children.push(
-          new Paragraph({
-            children: [
-              new TextRun({
-                text: `  Parcela ${i + 1}/${parcelas}: ${formatCurrency(valorFinal / parcelas)}`,
-                size: 24,
-              }),
-            ],
-            spacing: { after: 120 },
-          }),
-        )
+      if (parcelasData && parcelasData.length > 0) {
+        addRow('Quantidade de Parcelas', `${parcelasData.length}x`)
+        for (let i = 0; i < parcelasData.length; i++) {
+          const p = parcelasData[i]
+          const dtRef = p.data_referencia
+            ? new Date(p.data_referencia + 'T12:00:00Z').toLocaleDateString('pt-BR')
+            : '-'
+          children.push(
+            new Paragraph({
+              children: [
+                new TextRun({
+                  text: `  Parcela ${i + 1}/${parcelasData.length}: ${formatCurrency(p.valor_parcela)} (Ref: ${dtRef})`,
+                  size: 24,
+                }),
+              ],
+              spacing: { after: 120 },
+            }),
+          )
+        }
+      } else {
+        addRow('Quantidade de Parcelas', `${parcelas}x`)
+        for (let i = 0; i < parcelas; i++) {
+          children.push(
+            new Paragraph({
+              children: [
+                new TextRun({
+                  text: `  Parcela ${i + 1}/${parcelas}: ${formatCurrency(valorFinal / parcelas)}`,
+                  size: 24,
+                }),
+              ],
+              spacing: { after: 120 },
+            }),
+          )
+        }
       }
 
       children.push(

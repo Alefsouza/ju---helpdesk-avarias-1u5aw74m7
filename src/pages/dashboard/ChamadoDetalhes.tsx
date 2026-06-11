@@ -378,39 +378,61 @@ function GerarValeModal({
         }
       }
 
-      try {
-        const { data: pdfData, error: pdfError } = await supabase.functions.invoke('gerar-pdf', {
-          body: {
-            tipo_documento: 'Vale',
-            id: chamadoId,
-            titulo: chamado?.titulo,
-            pia: chamado?.pia,
-            carro: chamado?.carro || chamado?.numero_carro,
-            garagem: chamado?.garagem,
-            nome_solicitante: solicitante?.nome_completo,
-            valor_base: valorBaseNum,
-            valor_final: valorFinal,
-            parcelas,
-            com_desconto: desconto,
-          },
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        })
+      // Inserir na tabela parcelas_vales
+      const qtyParcelas = parseInt(parcelas) || 1
+      const valorParcela = valorFinal / qtyParcelas
+      const parcelasToInsert = Array.from({ length: qtyParcelas }).map((_, idx) => {
+        const dataRef = new Date()
+        dataRef.setMonth(dataRef.getMonth() + idx + 1)
+        return {
+          chamado_id: chamadoId,
+          valor_parcela: valorParcela,
+          data_referencia: dataRef.toISOString().split('T')[0],
+        }
+      })
+      await supabase.from('parcelas_vales').delete().eq('chamado_id', chamadoId)
+      await supabase.from('parcelas_vales').insert(parcelasToInsert)
 
-        if (!pdfError && pdfData?.success) {
-          newUrl = `${pdfData.url}?t=${Date.now()}`
-          if (pdfData.nome_arquivo) {
-            newNomeArquivo = pdfData.nome_arquivo
+      try {
+        toast.info('Gerando autorização...', { id: 'gerar-vale-toast' })
+        const { data: docData, error: docDataError } = await supabase.functions.invoke(
+          'gerar-pdf',
+          {
+            body: {
+              tipo_documento: 'Vale',
+              id: chamadoId,
+              titulo: chamado?.titulo,
+              pia: chamado?.pia,
+              carro: chamado?.carro || chamado?.numero_carro,
+              garagem: chamado?.garagem,
+              nome_solicitante: solicitante?.nome_completo,
+              valor_base: valorBaseNum,
+              valor_final: valorFinal,
+              parcelas,
+              com_desconto: desconto,
+            },
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          },
+        )
+
+        if (!docDataError && docData?.success) {
+          newUrl = `${docData.url}?t=${Date.now()}`
+          if (docData.nome_arquivo) {
+            newNomeArquivo = docData.nome_arquivo
           }
+          toast.dismiss('gerar-vale-toast')
+        } else {
+          toast.error('Erro na geração pela Edge Function', { id: 'gerar-vale-toast' })
         }
       } catch (err) {
+        toast.error('Erro na chamada da Edge Function', { id: 'gerar-vale-toast' })
         console.warn(
           'Could not generate document via edge function, creating empty attachment',
           err,
         )
       }
-
       if (!newUrl) {
         newUrl = `https://example.com/dummy-autorizacao-${Date.now()}.docx`
         newNomeArquivo = `Autorizacao_Desconto_${format(new Date(), 'dd-MM-yyyy HHmm')}.docx`

@@ -192,7 +192,7 @@ Deno.serve(async (req: Request) => {
           font: isBold ? boldFont : font,
           color: rgb(0, 0, 0),
         })
-        y -= size + 10
+        y -= size + 6
       }
 
       const drawTextRow = (label: string, value: string) => {
@@ -212,15 +212,15 @@ Deno.serve(async (req: Request) => {
           font: font,
           color: rgb(0, 0, 0),
         })
-        y -= 14 + 10
+        y -= 14 + 6
       }
 
       y -= 20
       drawCenterText('AUTORIZAÇÃO DE DESCONTO', true, 20)
-      y -= 30
+      y -= 20
 
       drawText('Informações do Sinistro', true, 18)
-      y -= 15
+      y -= 5
 
       drawTextRow('Nome', espelho?.nome_motorista || '-')
       drawTextRow('Registro', espelho?.registro_motorista || '-')
@@ -229,10 +229,10 @@ Deno.serve(async (req: Request) => {
       drawTextRow('Veículo', body.carro || '-')
       drawTextRow('Placa', placa || '-')
 
-      y -= 25
+      y -= 15
 
       drawText('Informações Financeiras', true, 18)
-      y -= 15
+      y -= 5
 
       drawTextRow('Valor Original', formatCurrency(valorBase))
       if (body.com_desconto) {
@@ -240,10 +240,10 @@ Deno.serve(async (req: Request) => {
       }
       drawTextRow('Valor Final', formatCurrency(valorFinal))
 
-      y -= 25
+      y -= 15
 
       drawText('Plano de Pagamento', true, 18)
-      y -= 15
+      y -= 5
 
       drawTextRow('Quantidade de Parcelas', `${parcelas}x`)
       for (let i = 0; i < parcelas; i++) {
@@ -254,16 +254,16 @@ Deno.serve(async (req: Request) => {
         )
       }
 
-      y -= 60
+      y -= 40
 
       checkPage(100)
-      drawCenterText('___________________________________________________', false, 14)
-      drawCenterText('Assinatura do Colaborador', true, 14)
+      drawCenterText('___________________________________________________', false, 12)
+      drawCenterText('Assinatura do Colaborador', true, 12)
 
-      y -= 60
+      y -= 40
 
-      drawCenterText('___________________________________________________', false, 14)
-      drawCenterText('Assinatura da Testemunha', true, 14)
+      drawCenterText('___________________________________________________', false, 12)
+      drawCenterText('Assinatura da Testemunha', true, 12)
 
       const pages = pdfDoc.getPages()
       for (const p of pages) {

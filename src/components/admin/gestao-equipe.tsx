@@ -39,6 +39,8 @@ const getBadgeStyles = (tipo: string) => {
       return 'border-indigo-200 text-indigo-700 bg-indigo-50'
     case 'secretaria_tecnica':
       return 'border-emerald-200 text-emerald-700 bg-emerald-50'
+    case 'dp':
+      return 'border-pink-200 text-pink-700 bg-pink-50'
     case 'basico':
       return 'border-gray-200 text-gray-700 bg-gray-50'
     default:
@@ -62,6 +64,8 @@ const getRoleLabel = (tipo: string) => {
       return 'Sinistro'
     case 'secretaria_tecnica':
       return 'Sec. Técnica'
+    case 'dp':
+      return 'DP'
     case 'basico':
       return 'Básico'
     default:

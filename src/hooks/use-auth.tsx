@@ -16,6 +16,7 @@ export type UserProfile = {
     | 'juridico'
     | 'sinistro'
     | 'secretaria_tecnica'
+    | 'dp'
   foto_url?: string | null
   garagem?: string | null
 }

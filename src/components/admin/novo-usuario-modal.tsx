@@ -170,6 +170,7 @@ export function NovoUsuarioModal({
                       <SelectItem value="juridico">Jurídico</SelectItem>
                       <SelectItem value="sinistro">Sinistro</SelectItem>
                       <SelectItem value="secretaria_tecnica">Secretária Técnica</SelectItem>
+                      <SelectItem value="dp">Departamento Pessoal (DP)</SelectItem>
                     </SelectContent>
                   </Select>
                   <FormMessage />

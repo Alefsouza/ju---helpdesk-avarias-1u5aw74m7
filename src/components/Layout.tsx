@@ -593,6 +593,16 @@ export default function Layout() {
     return <Navigate to="/dashboard/meus-atendimentos" replace />
   }
 
+  // Prevent non-admin and non-dp from accessing /vales-aprovados
+  if (
+    user &&
+    location.pathname === '/vales-aprovados' &&
+    profile?.tipo_usuario !== 'dp' &&
+    profile?.tipo_usuario !== 'admin'
+  ) {
+    return <Navigate to="/dashboard" replace />
+  }
+
   // Redirect DP from other areas
   if (user && profile?.tipo_usuario === 'dp') {
     const isDpRoute = location.pathname === '/vales-aprovados'

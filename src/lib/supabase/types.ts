@@ -505,6 +505,38 @@ export type Database = {
           },
         ]
       }
+      parcelas_vales: {
+        Row: {
+          chamado_id: string
+          criado_em: string
+          data_referencia: string
+          id: string
+          valor_parcela: number
+        }
+        Insert: {
+          chamado_id: string
+          criado_em?: string
+          data_referencia: string
+          id?: string
+          valor_parcela: number
+        }
+        Update: {
+          chamado_id?: string
+          criado_em?: string
+          data_referencia?: string
+          id?: string
+          valor_parcela?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: 'parcelas_vales_chamado_id_fkey'
+            columns: ['chamado_id']
+            isOneToOne: false
+            referencedRelation: 'chamados'
+            referencedColumns: ['id']
+          },
+        ]
+      }
       participantes_chamado: {
         Row: {
           chamado_id: string
@@ -956,6 +988,12 @@ export const Constants = {
 //   usuario_id: uuid (not null)
 //   detalhes: text (nullable)
 //   criado_em: timestamp with time zone (not null, default: now())
+// Table: parcelas_vales
+//   id: uuid (not null, default: gen_random_uuid())
+//   chamado_id: uuid (not null)
+//   valor_parcela: numeric (not null)
+//   data_referencia: date (not null)
+//   criado_em: timestamp with time zone (not null, default: now())
 // Table: participantes_chamado
 //   id: uuid (not null, default: gen_random_uuid())
 //   chamado_id: uuid (not null)
@@ -1020,6 +1058,9 @@ export const Constants = {
 //   FOREIGN KEY historico_chamado_chamado_id_fkey: FOREIGN KEY (chamado_id) REFERENCES chamados(id) ON DELETE CASCADE
 //   PRIMARY KEY historico_chamado_pkey: PRIMARY KEY (id)
 //   FOREIGN KEY historico_chamado_usuario_id_fkey: FOREIGN KEY (usuario_id) REFERENCES auth.users(id) ON DELETE CASCADE
+// Table: parcelas_vales
+//   FOREIGN KEY parcelas_vales_chamado_id_fkey: FOREIGN KEY (chamado_id) REFERENCES chamados(id) ON DELETE CASCADE
+//   PRIMARY KEY parcelas_vales_pkey: PRIMARY KEY (id)
 // Table: participantes_chamado
 //   FOREIGN KEY participantes_chamado_chamado_id_fkey: FOREIGN KEY (chamado_id) REFERENCES chamados(id) ON DELETE CASCADE
 //   UNIQUE participantes_chamado_chamado_id_usuario_id_key: UNIQUE (chamado_id, usuario_id)
@@ -1028,7 +1069,7 @@ export const Constants = {
 // Table: perfil_usuario
 //   FOREIGN KEY perfil_usuario_id_fkey: FOREIGN KEY (id) REFERENCES auth.users(id) ON DELETE CASCADE
 //   PRIMARY KEY perfil_usuario_pkey: PRIMARY KEY (id)
-//   CHECK perfil_usuario_tipo_usuario_check: CHECK ((tipo_usuario = ANY (ARRAY['basico'::text, 'responsavel'::text, 'admin'::text, 'vistoriador'::text, 'coc'::text, 'sos'::text, 'juridico'::text, 'sinistro'::text, 'secretaria_tecnica'::text])))
+//   CHECK perfil_usuario_tipo_usuario_check: CHECK ((tipo_usuario = ANY (ARRAY['basico'::text, 'responsavel'::text, 'admin'::text, 'vistoriador'::text, 'coc'::text, 'sos'::text, 'juridico'::text, 'sinistro'::text, 'secretaria_tecnica'::text, 'dp'::text])))
 // Table: respostas_chamado
 //   FOREIGN KEY respostas_chamado_chamado_id_fkey: FOREIGN KEY (chamado_id) REFERENCES chamados(id) ON DELETE CASCADE
 //   PRIMARY KEY respostas_chamado_pkey: PRIMARY KEY (id)
@@ -1123,6 +1164,11 @@ export const Constants = {
 //     WITH CHECK: (auth.uid() IS NOT NULL)
 //   Policy "Permitir SELECT para admin e responsáveis" (SELECT, PERMISSIVE) roles={authenticated}
 //     USING: ((( SELECT perfil_usuario.tipo_usuario    FROM perfil_usuario   WHERE (perfil_usuario.id = auth.uid())) = ANY (ARRAY['admin'::text, 'responsavel'::text, 'sinistro'::text, 'juridico'::text])) OR (chamado_id IN ( SELECT chamados.id    FROM chamados   WHERE (chamados.usuario_id = auth.uid()))) OR (chamado_id IN ( SELECT participantes_chamado.chamado_id    FROM participantes_chamado   WHERE (participantes_chamado.usuario_id = auth.uid()))))
+// Table: parcelas_vales
+//   Policy "parcelas_vales_insert" (INSERT, PERMISSIVE) roles={authenticated}
+//     WITH CHECK: (is_admin() OR (( SELECT perfil_usuario.departamento    FROM perfil_usuario   WHERE (perfil_usuario.id = auth.uid())) = 'Diretoria'::text))
+//   Policy "parcelas_vales_select" (SELECT, PERMISSIVE) roles={authenticated}
+//     USING: (is_admin() OR (( SELECT perfil_usuario.departamento    FROM perfil_usuario   WHERE (perfil_usuario.id = auth.uid())) = 'Diretoria'::text) OR (( SELECT perfil_usuario.tipo_usuario    FROM perfil_usuario   WHERE (perfil_usuario.id = auth.uid())) = 'dp'::text))
 // Table: participantes_chamado
 //   Policy "participantes_select" (SELECT, PERMISSIVE) roles={authenticated}
 //     USING: ((usuario_id = auth.uid()) OR is_admin() OR is_responsavel() OR is_sinistro() OR is_juridico())

@@ -75,7 +75,7 @@ export function useDocumentAction() {
       } else {
         const link = document.createElement('a')
         link.href = blobUrl
-        link.download = nomeArquivo || 'documento.pdf'
+        link.download = nomeArquivo || 'documento'
         document.body.appendChild(link)
         link.click()
         document.body.removeChild(link)

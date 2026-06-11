@@ -1,7 +1,16 @@
 import 'jsr:@supabase/functions-js/edge-runtime.d.ts'
 import { createClient } from 'jsr:@supabase/supabase-js@2'
 import { PDFDocument, rgb, StandardFonts } from 'npm:pdf-lib@1.17.1'
-import { Document, Packer, Paragraph, TextRun, AlignmentType, Footer } from 'npm:docx@8.5.0'
+import {
+  Document,
+  Packer,
+  Paragraph,
+  TextRun,
+  AlignmentType,
+  Footer,
+  Header,
+  ImageRun,
+} from 'npm:docx@8.5.0'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -154,133 +163,156 @@ Deno.serve(async (req: Request) => {
       const formatCurrency = (val: number) =>
         new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(val)
 
-      const pdfDoc = await PDFDocument.create()
-      let page = pdfDoc.addPage()
-      const { width, height } = page.getSize()
-      const font = await pdfDoc.embedFont(StandardFonts.Helvetica)
-      const boldFont = await pdfDoc.embedFont(StandardFonts.HelveticaBold)
-
-      let y = height - 50
-      const marginX = 50
-
-      const checkPage = (needed: number) => {
-        if (y - needed < 50) {
-          page = pdfDoc.addPage()
-          y = height - 50
+      let logoBytes: ArrayBuffer | null = null
+      try {
+        const logoRes = await fetch('https://img.usecurling.com/i?q=via%20sudeste&shape=outline')
+        if (logoRes.ok) {
+          logoBytes = await logoRes.arrayBuffer()
         }
+      } catch (e) {
+        console.error('Error fetching logo', e)
       }
 
-      const drawCenterText = (text: string, isBold: boolean, size: number) => {
-        checkPage(size + 10)
-        const textWidth = (isBold ? boldFont : font).widthOfTextAtSize(text, size)
-        page.drawText(text, {
-          x: (width - textWidth) / 2,
-          y,
-          size,
-          font: isBold ? boldFont : font,
-          color: rgb(0, 0, 0),
-        })
-        y -= size + 10
-      }
+      const children: any[] = []
 
-      const drawText = (text: string, isBold: boolean, size: number) => {
-        checkPage(size + 10)
-        page.drawText(text, {
-          x: marginX,
-          y,
-          size,
-          font: isBold ? boldFont : font,
-          color: rgb(0, 0, 0),
-        })
-        y -= size + 6
-      }
+      children.push(
+        new Paragraph({
+          children: [new TextRun({ text: 'AUTORIZAÇÃO DE DESCONTO', bold: true, size: 36 })],
+          alignment: AlignmentType.CENTER,
+          spacing: { after: 400 },
+        }),
+      )
 
-      const drawTextRow = (label: string, value: string) => {
-        checkPage(14 + 10)
-        page.drawText(`${label}: `, {
-          x: marginX,
-          y,
-          size: 14,
-          font: boldFont,
-          color: rgb(0, 0, 0),
-        })
-        const labelWidth = boldFont.widthOfTextAtSize(`${label}: `, 14)
-        page.drawText(value, {
-          x: marginX + labelWidth,
-          y,
-          size: 14,
-          font: font,
-          color: rgb(0, 0, 0),
-        })
-        y -= 14 + 6
-      }
+      children.push(
+        new Paragraph({
+          children: [new TextRun({ text: 'Informações do Sinistro', bold: true, size: 28 })],
+          spacing: { after: 200 },
+        }),
+      )
 
-      y -= 20
-      drawCenterText('AUTORIZAÇÃO DE DESCONTO', true, 20)
-      y -= 20
-
-      drawText('Informações do Sinistro', true, 18)
-      y -= 5
-
-      drawTextRow('Nome', espelho?.nome_motorista || '-')
-      drawTextRow('Registro', espelho?.registro_motorista || '-')
-      drawTextRow('Garagem', body.garagem || '-')
-      drawTextRow('Registro da Ocorrência', body.pia || '-')
-      drawTextRow('Veículo', body.carro || '-')
-      drawTextRow('Placa', placa || '-')
-
-      y -= 15
-
-      drawText('Informações Financeiras', true, 18)
-      y -= 5
-
-      drawTextRow('Valor Original', formatCurrency(valorBase))
-      if (body.com_desconto) {
-        drawTextRow('Desconto Aplicado', `10% (-${formatCurrency(valorBase - valorFinal)})`)
-      }
-      drawTextRow('Valor Final', formatCurrency(valorFinal))
-
-      y -= 15
-
-      drawText('Plano de Pagamento', true, 18)
-      y -= 5
-
-      drawTextRow('Quantidade de Parcelas', `${parcelas}x`)
-      for (let i = 0; i < parcelas; i++) {
-        drawText(
-          `  Parcela ${i + 1}/${parcelas}: ${formatCurrency(valorFinal / parcelas)}`,
-          false,
-          14,
+      const addRow = (label: string, value: string) => {
+        children.push(
+          new Paragraph({
+            children: [
+              new TextRun({ text: `${label}: `, bold: true, size: 24 }),
+              new TextRun({ text: value, size: 24 }),
+            ],
+            spacing: { after: 120 },
+          }),
         )
       }
 
-      y -= 40
+      addRow('Nome', espelho?.nome_motorista || '-')
+      addRow('Registro', espelho?.registro_motorista || '-')
+      addRow('Garagem', body.garagem || '-')
+      addRow('Registro da Ocorrência', body.pia || '-')
+      addRow('Veículo', body.carro || '-')
+      addRow('Placa', placa || '-')
 
-      checkPage(100)
-      drawCenterText('___________________________________________________', false, 12)
-      drawCenterText('Assinatura do Colaborador', true, 12)
+      children.push(
+        new Paragraph({
+          children: [new TextRun({ text: 'Informações Financeiras', bold: true, size: 28 })],
+          spacing: { before: 300, after: 200 },
+        }),
+      )
 
-      y -= 40
+      addRow('Valor Original', formatCurrency(valorBase))
+      if (body.com_desconto) {
+        addRow('Desconto Aplicado', `10% (-${formatCurrency(valorBase - valorFinal)})`)
+      }
+      addRow('Valor Final', formatCurrency(valorFinal))
 
-      drawCenterText('___________________________________________________', false, 12)
-      drawCenterText('Assinatura da Testemunha', true, 12)
+      children.push(
+        new Paragraph({
+          children: [new TextRun({ text: 'Plano de Pagamento', bold: true, size: 28 })],
+          spacing: { before: 300, after: 200 },
+        }),
+      )
 
-      const pages = pdfDoc.getPages()
-      for (const p of pages) {
-        const text = `Gerado em: ${dateStr} às ${timeStr}`
-        const textWidth = font.widthOfTextAtSize(text, 10)
-        p.drawText(text, {
-          x: (width - textWidth) / 2,
-          y: 20,
-          size: 10,
-          font: font,
-          color: rgb(0, 0, 0),
-        })
+      addRow('Quantidade de Parcelas', `${parcelas}x`)
+      for (let i = 0; i < parcelas; i++) {
+        children.push(
+          new Paragraph({
+            children: [
+              new TextRun({
+                text: `  Parcela ${i + 1}/${parcelas}: ${formatCurrency(valorFinal / parcelas)}`,
+                size: 24,
+              }),
+            ],
+            spacing: { after: 120 },
+          }),
+        )
       }
 
-      fileBytes = await pdfDoc.save()
-      contentType = 'application/pdf'
-      fileName = `Autorizacao_Desconto_${id}_${timestamp}.pdf`
+      children.push(
+        new Paragraph({
+          children: [
+            new TextRun({ text: '___________________________________________________', size: 24 }),
+          ],
+          alignment: AlignmentType.CENTER,
+          spacing: { before: 800, after: 100 },
+        }),
+        new Paragraph({
+          children: [new TextRun({ text: 'Assinatura do Colaborador', bold: true, size: 24 })],
+          alignment: AlignmentType.CENTER,
+        }),
+        new Paragraph({
+          children: [
+            new TextRun({ text: '___________________________________________________', size: 24 }),
+          ],
+          alignment: AlignmentType.CENTER,
+          spacing: { before: 800, after: 100 },
+        }),
+        new Paragraph({
+          children: [new TextRun({ text: 'Assinatura da Testemunha', bold: true, size: 24 })],
+          alignment: AlignmentType.CENTER,
+        }),
+      )
+
+      const headerChildren: any[] = []
+      if (logoBytes) {
+        headerChildren.push(
+          new Paragraph({
+            children: [
+              new ImageRun({
+                data: logoBytes,
+                transformation: { width: 80, height: 80 },
+              }),
+            ],
+            alignment: AlignmentType.LEFT,
+          }),
+        )
+      }
+
+      const doc = new Document({
+        sections: [
+          {
+            headers: {
+              default: new Header({
+                children: headerChildren,
+              }),
+            },
+            footers: {
+              default: new Footer({
+                children: [
+                  new Paragraph({
+                    children: [
+                      new TextRun({ text: `Gerado em: ${dateStr} às ${timeStr}`, size: 20 }),
+                    ],
+                    alignment: AlignmentType.CENTER,
+                  }),
+                ],
+              }),
+            },
+            children: children,
+          },
+        ],
+      })
+
+      const b64string = await Packer.toBase64String(doc)
+      fileBytes = Uint8Array.from(atob(b64string), (c) => c.charCodeAt(0))
+      contentType = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+      fileName = `Autorizacao_Desconto_${id}_${timestamp}.docx`
     } else {
       const pdfDoc = await PDFDocument.create()
       let page = pdfDoc.addPage()

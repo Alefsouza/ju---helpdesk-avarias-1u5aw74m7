@@ -350,7 +350,7 @@ function GerarValeModal({
       const token = sessionData.session?.access_token
 
       let newUrl = ''
-      let newNomeArquivo = `Autorizacao_Desconto_${format(new Date(), 'dd-MM-yyyy HHmm')}.pdf`
+      let newNomeArquivo = `Autorizacao_Desconto_${format(new Date(), 'dd-MM-yyyy HHmm')}.docx`
 
       if (orcamentoDoc && orcamentoDoc.id) {
         await supabase
@@ -405,11 +405,15 @@ function GerarValeModal({
           }
         }
       } catch (err) {
-        console.warn('Could not generate PDF via edge function, creating empty attachment', err)
+        console.warn(
+          'Could not generate document via edge function, creating empty attachment',
+          err,
+        )
       }
 
       if (!newUrl) {
-        newUrl = `https://example.com/dummy-autorizacao-${Date.now()}.pdf`
+        newUrl = `https://example.com/dummy-autorizacao-${Date.now()}.docx`
+        newNomeArquivo = `Autorizacao_Desconto_${format(new Date(), 'dd-MM-yyyy HHmm')}.docx`
       }
 
       const { error: docError } = await supabase.from('documentos').insert({

@@ -180,7 +180,7 @@ Deno.serve(async (req: Request) => {
       let logoBytes: ArrayBuffer | null = null
       try {
         const logoRes = await fetch(
-          'https://img.usecurling.com/i?q=via%20sudeste&color=solid-black&shape=fill',
+          'https://helpdesk-cadastro-5422c--preview.goskip.app/assets/whatsapp-image-2023-08-10-at-16.17.31-0b937-DEVbArSW.jpeg',
         )
         if (logoRes.ok) {
           logoBytes = await logoRes.arrayBuffer()
@@ -447,8 +447,6 @@ Deno.serve(async (req: Request) => {
         fileName = `ido_${id}_${timestamp}.pdf`
       } else {
         drawText('Espelho de Danos - Vistoria', true, 20)
-        y -= 10
-        drawText(`Número da OS: ${numero_os || '-'}`, true, 14)
         y -= 10
         drawText(`Garagem: ${garagem || '-'}`)
         drawText(`Linha: ${linha || '-'} / Carro: ${numero_carro || '-'}`)

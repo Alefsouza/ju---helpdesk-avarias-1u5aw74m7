@@ -1,6 +1,7 @@
 import 'jsr:@supabase/functions-js/edge-runtime.d.ts'
 import { createClient } from 'jsr:@supabase/supabase-js@2'
 import { PDFDocument, rgb, StandardFonts } from 'npm:pdf-lib@1.17.1'
+import { Document, Packer, Paragraph, TextRun, AlignmentType, Footer } from 'npm:docx@8.5.0'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -97,55 +98,13 @@ Deno.serve(async (req: Request) => {
 
         if (profileError) {
           console.error('Error fetching user profile for fallback:', profileError)
-          throw new Error('Erro ao buscar dados do perfil do usuário para o PDF.')
         } else if (profile) {
-          console.log('Profile fetched successfully for fallback.')
           if (!final_nome_vistoriador) final_nome_vistoriador = profile.nome_completo
           if (!final_registro_vistoriador) final_registro_vistoriador = profile.registro
         }
       } catch (err: any) {
         console.error('Exception while fetching user profile:', err)
-        throw new Error(err.message || 'Falha ao recuperar os dados do vistoriador.')
       }
-    }
-
-    // Generate PDF
-    const pdfDoc = await PDFDocument.create()
-    let page = pdfDoc.addPage()
-    const { width, height } = page.getSize()
-    const font = await pdfDoc.embedFont(StandardFonts.Helvetica)
-    const boldFont = await pdfDoc.embedFont(StandardFonts.HelveticaBold)
-
-    let y = height - 50
-    const marginX = 50
-
-    const drawText = (text: string, isBold = false, size = 12) => {
-      if (y < 50) {
-        page = pdfDoc.addPage()
-        y = height - 50
-      }
-      page.drawText(text, {
-        x: marginX,
-        y,
-        size,
-        font: isBold ? boldFont : font,
-        color: rgb(0, 0, 0),
-      })
-      y -= size + 10
-    }
-
-    const drawMultilineText = (text: string, isBold = false, size = 12) => {
-      const words = text.split(' ')
-      let line = ''
-      for (const word of words) {
-        if ((line + word).length > 80) {
-          drawText(line, isBold, size)
-          line = word + ' '
-        } else {
-          line += word + ' '
-        }
-      }
-      if (line) drawText(line, isBold, size)
     }
 
     let fileName = ''
@@ -153,18 +112,26 @@ Deno.serve(async (req: Request) => {
       .toISOString()
       .replace(/[-:T.]/g, '')
       .substring(0, 14)
+    let fileBytes: Uint8Array
+    let contentType = 'application/pdf'
 
     if (tipo_documento === 'Vale') {
-      drawText('Vale Financeiro', true, 20)
-      y -= 10
+      const supabaseAdmin = createClient(
+        Deno.env.get('SUPABASE_URL') ?? '',
+        Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
+      )
+
+      const { data: espelho } = await supabaseAdmin
+        .from('formularios_espelho_danos')
+        .select('nome_motorista, registro_motorista')
+        .eq('chamado_id', id)
+        .order('criado_em', { ascending: false })
+        .limit(1)
+        .maybeSingle()
 
       let placa = body.placa
       if (!placa && body.carro) {
         try {
-          const supabaseAdmin = createClient(
-            Deno.env.get('SUPABASE_URL') ?? '',
-            Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
-          )
           const { data: frota } = await supabaseAdmin
             .from('frota_veiculos')
             .select('placa')
@@ -176,22 +143,9 @@ Deno.serve(async (req: Request) => {
         }
       }
 
-      drawText('Informações do Chamado', true, 14)
-      drawText(`ID do Chamado: ${id || '-'}`)
-      drawText(`Título: ${body.titulo || '-'}`)
-      drawText(`Protocolo / R.A. (PIA): ${body.pia || '-'}`)
-      drawText(`Garagem: ${body.garagem || '-'}`)
-      drawText(`Veículo (Prefixo): ${body.carro || '-'}`)
-      drawText(`Placa: ${placa || '-'}`)
-      drawText(`Solicitante / Responsável: ${body.nome_solicitante || '-'}`)
-
       const dt = new Date()
       const dateStr = dt.toLocaleDateString('pt-BR', { timeZone: 'America/Sao_Paulo' })
       const timeStr = dt.toLocaleTimeString('pt-BR', { timeZone: 'America/Sao_Paulo' })
-      drawText(`Data e Hora: ${dateStr} às ${timeStr}`)
-
-      y -= 10
-      drawText('Informações Financeiras', true, 14)
 
       const valorBase = body.valor_base || 0
       const valorFinal = body.valor_final || body.valor_orcamento || 0
@@ -200,163 +154,270 @@ Deno.serve(async (req: Request) => {
       const formatCurrency = (val: number) =>
         new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(val)
 
-      drawText(`Valor Original: ${formatCurrency(valorBase)}`)
-      if (body.com_desconto) {
-        drawText(`Desconto Aplicado: 10% (-${formatCurrency(valorBase - valorFinal)})`)
-      }
-      drawText(`Valor Final: ${formatCurrency(valorFinal)}`, true, 12)
+      const doc = new Document({
+        sections: [
+          {
+            properties: {},
+            footers: {
+              default: new Footer({
+                children: [
+                  new Paragraph({
+                    children: [new TextRun(`Gerado em: ${dateStr} às ${timeStr}`)],
+                    alignment: AlignmentType.CENTER,
+                  }),
+                ],
+              }),
+            },
+            children: [
+              new Paragraph({
+                children: [new TextRun({ text: 'AUTORIZAÇÃO DE DESCONTO', bold: true, size: 32 })],
+                alignment: AlignmentType.CENTER,
+                spacing: { after: 400 },
+              }),
+              new Paragraph({
+                children: [new TextRun({ text: 'Informações do Chamado', bold: true, size: 28 })],
+                spacing: { after: 200 },
+              }),
+              new Paragraph({ text: `ID do Chamado: ${id || '-'}` }),
+              new Paragraph({ text: `Título: ${body.titulo || '-'}` }),
+              new Paragraph({ text: `Registro da Ocorrência (R.A.): ${body.pia || '-'}` }),
+              new Paragraph({ text: `Garagem: ${body.garagem || '-'}` }),
+              new Paragraph({ text: `Veículo: ${body.carro || '-'}` }),
+              new Paragraph({ text: `Placa: ${placa || '-'}` }),
+              new Paragraph({ text: `Nome: ${espelho?.nome_motorista || '-'}` }),
+              new Paragraph({ text: `Registro: ${espelho?.registro_motorista || '-'}` }),
 
-      y -= 10
-      drawText('Plano de Pagamento', true, 14)
-      drawText(`Quantidade de Parcelas: ${parcelas}x`)
+              new Paragraph({
+                children: [new TextRun({ text: 'Informações Financeiras', bold: true, size: 28 })],
+                spacing: { before: 400, after: 200 },
+              }),
+              new Paragraph({ text: `Valor Original: ${formatCurrency(valorBase)}` }),
+              ...(body.com_desconto
+                ? [
+                    new Paragraph({
+                      text: `Desconto Aplicado: 10% (-${formatCurrency(valorBase - valorFinal)})`,
+                    }),
+                  ]
+                : []),
+              new Paragraph({
+                children: [
+                  new TextRun({ text: `Valor Final: ${formatCurrency(valorFinal)}`, bold: true }),
+                ],
+              }),
 
-      const valorParcela = valorFinal / parcelas
-      for (let p = 1; p <= parcelas; p++) {
-        drawText(`  Parcela ${p}/${parcelas}: ${formatCurrency(valorParcela)}`)
-      }
+              new Paragraph({
+                children: [new TextRun({ text: 'Plano de Pagamento', bold: true, size: 28 })],
+                spacing: { before: 400, after: 200 },
+              }),
+              new Paragraph({ text: `Quantidade de Parcelas: ${parcelas}x` }),
+              ...Array.from(
+                { length: parcelas },
+                (_, i) =>
+                  new Paragraph({
+                    text: `  Parcela ${i + 1}/${parcelas}: ${formatCurrency(valorFinal / parcelas)}`,
+                  }),
+              ),
 
-      y -= 60
-      drawText('___________________________________________________', false, 12)
-      drawText('Assinatura do Colaborador / Responsável', true, 12)
+              new Paragraph({ spacing: { before: 800 } }),
+              new Paragraph({
+                text: '___________________________________________________',
+                alignment: AlignmentType.CENTER,
+              }),
+              new Paragraph({
+                text: 'Assinatura do Colaborador',
+                alignment: AlignmentType.CENTER,
+                spacing: { after: 800 },
+              }),
 
-      y -= 60
-      drawText('___________________________________________________', false, 12)
-      drawText('Assinatura do Gestor', true, 12)
+              new Paragraph({
+                text: '___________________________________________________',
+                alignment: AlignmentType.CENTER,
+              }),
+              new Paragraph({ text: 'Assinatura da Testemunha', alignment: AlignmentType.CENTER }),
+            ],
+          },
+        ],
+      })
 
-      fileName = `Vale_${id}_${timestamp}.pdf`
-    } else if (tipo_documento === 'IDO') {
-      drawText('Boletim de Ocorrência (IDO)', true, 20)
-      y -= 10
-      drawText(`Protocolo: ${protocolo_ido || '-'}`, true, 14)
-      y -= 10
-      drawText(`Colaborador: ${colaborador_nome || '-'} (Registro: ${colaborador_registro || '-'})`)
-
-      y -= 15
-      drawText('Testemunha 1:', true, 14)
-      drawText(`Nome: ${testemunha_1_nome || '-'} - SG: ${testemunha_1_sg || '-'}`)
-      drawText(`Endereço: ${testemunha_1_endereco || '-'}`)
-      drawText(`Telefone: ${testemunha_1_telefone || '-'}`)
-
-      y -= 15
-      drawText('Testemunha 2:', true, 14)
-      drawText(`Nome: ${testemunha_2_nome || '-'} - SG: ${testemunha_2_sg || '-'}`)
-      drawText(`Endereço: ${testemunha_2_endereco || '-'}`)
-      drawText(`Telefone: ${testemunha_2_telefone || '-'}`)
-
-      y -= 15
-      drawText('Testemunha 3:', true, 14)
-      drawText(`Nome: ${testemunha_3_nome || '-'} - SG: ${testemunha_3_sg || '-'}`)
-      drawText(`Endereço: ${testemunha_3_endereco || '-'}`)
-      drawText(`Telefone: ${testemunha_3_telefone || '-'}`)
-
-      if (body.assinatura_base64) {
-        y -= 20
-        drawText('Assinatura Digital:', true, 12)
-        try {
-          const base64Data = body.assinatura_base64.split(',')[1] || body.assinatura_base64
-          const isPng = body.assinatura_base64.includes('png')
-          const imgBytes = Uint8Array.from(atob(base64Data), (c) => c.charCodeAt(0))
-          let pdfImage
-          if (isPng) {
-            pdfImage = await pdfDoc.embedPng(imgBytes)
-          } else {
-            pdfImage = await pdfDoc.embedJpg(imgBytes)
-          }
-          const imgDims = pdfImage.scaleToFit(150, 100)
-
-          if (y - imgDims.height < 50) {
-            page = pdfDoc.addPage()
-            y = height - 50
-          }
-          page.drawImage(pdfImage, {
-            x: marginX,
-            y: y - imgDims.height,
-            width: imgDims.width,
-            height: imgDims.height,
-          })
-          y -= imgDims.height + 10
-        } catch (err) {
-          console.error('Failed to embed signature', err)
-        }
-      }
-
-      fileName = `ido_${id}_${timestamp}.pdf`
+      const b64 = await Packer.toBase64String(doc)
+      fileBytes = Uint8Array.from(atob(b64), (c) => c.charCodeAt(0))
+      contentType = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+      fileName = `Autorizacao_Desconto_${id}_${timestamp}.docx`
     } else {
-      drawText('Espelho de Danos - Vistoria', true, 20)
-      y -= 10
-      drawText(`Número da OS: ${numero_os || '-'}`, true, 14)
-      y -= 10
-      drawText(`Garagem: ${garagem || '-'}`)
-      drawText(`Linha: ${linha || '-'} / Carro: ${numero_carro || '-'}`)
-      drawText(`Data/Horário: ${data || '-'} ${horario || '-'}`)
-      drawText(
-        `Vistoriador: ${final_nome_vistoriador || '-'} (Registro: ${final_registro_vistoriador || '-'})`,
-      )
-      drawText(`Motorista: ${nome_motorista || '-'} (Registro: ${registro_motorista || '-'})`)
+      const pdfDoc = await PDFDocument.create()
+      let page = pdfDoc.addPage()
+      const { width, height } = page.getSize()
+      const font = await pdfDoc.embedFont(StandardFonts.Helvetica)
+      const boldFont = await pdfDoc.embedFont(StandardFonts.HelveticaBold)
 
-      y -= 15
-      drawText('Descrição dos Danos:', true, 14)
+      let y = height - 50
+      const marginX = 50
 
-      const desc = descricao_danos || 'Nenhuma descrição fornecida.'
-      drawMultilineText(desc, false, 12)
+      const drawText = (text: string, isBold = false, size = 12) => {
+        if (y < 50) {
+          page = pdfDoc.addPage()
+          y = height - 50
+        }
+        page.drawText(text, {
+          x: marginX,
+          y,
+          size,
+          font: isBold ? boldFont : font,
+          color: rgb(0, 0, 0),
+        })
+        y -= size + 10
+      }
 
-      // Add Photos
-      if (fotos && Array.isArray(fotos) && fotos.length > 0) {
-        y -= 20
-        drawText('Fotos da Vistoria:', true, 14)
+      const drawMultilineText = (text: string, isBold = false, size = 12) => {
+        const words = text.split(' ')
+        let line = ''
+        for (const word of words) {
+          if ((line + word).length > 80) {
+            drawText(line, isBold, size)
+            line = word + ' '
+          } else {
+            line += word + ' '
+          }
+        }
+        if (line) drawText(line, isBold, size)
+      }
 
-        for (let i = 0; i < fotos.length; i++) {
-          const fotoUrl = fotos[i]
+      if (tipo_documento === 'IDO') {
+        drawText('Boletim de Ocorrência (IDO)', true, 20)
+        y -= 10
+        drawText(`Protocolo: ${protocolo_ido || '-'}`, true, 14)
+        y -= 10
+        drawText(
+          `Colaborador: ${colaborador_nome || '-'} (Registro: ${colaborador_registro || '-'})`,
+        )
+
+        y -= 15
+        drawText('Testemunha 1:', true, 14)
+        drawText(`Nome: ${testemunha_1_nome || '-'} - SG: ${testemunha_1_sg || '-'}`)
+        drawText(`Endereço: ${testemunha_1_endereco || '-'}`)
+        drawText(`Telefone: ${testemunha_1_telefone || '-'}`)
+
+        y -= 15
+        drawText('Testemunha 2:', true, 14)
+        drawText(`Nome: ${testemunha_2_nome || '-'} - SG: ${testemunha_2_sg || '-'}`)
+        drawText(`Endereço: ${testemunha_2_endereco || '-'}`)
+        drawText(`Telefone: ${testemunha_2_telefone || '-'}`)
+
+        y -= 15
+        drawText('Testemunha 3:', true, 14)
+        drawText(`Nome: ${testemunha_3_nome || '-'} - SG: ${testemunha_3_sg || '-'}`)
+        drawText(`Endereço: ${testemunha_3_endereco || '-'}`)
+        drawText(`Telefone: ${testemunha_3_telefone || '-'}`)
+
+        if (body.assinatura_base64) {
+          y -= 20
+          drawText('Assinatura Digital:', true, 12)
           try {
-            const imgRes = await fetch(fotoUrl)
-            if (!imgRes.ok) {
-              console.error(`Failed to fetch image: ${imgRes.status} ${imgRes.statusText}`)
-              continue
-            }
-            const imgBytes = await imgRes.arrayBuffer()
-
+            const base64Data = body.assinatura_base64.split(',')[1] || body.assinatura_base64
+            const isPng = body.assinatura_base64.includes('png')
+            const imgBytes = Uint8Array.from(atob(base64Data), (c) => c.charCodeAt(0))
             let pdfImage
-            const contentType = imgRes.headers.get('content-type') || ''
-            const isPng = fotoUrl.toLowerCase().includes('.png') || contentType.includes('png')
-
             if (isPng) {
               pdfImage = await pdfDoc.embedPng(imgBytes)
             } else {
               pdfImage = await pdfDoc.embedJpg(imgBytes)
             }
-
-            const imgDims = pdfImage.scaleToFit(width - marginX * 2, 250)
+            const imgDims = pdfImage.scaleToFit(150, 100)
 
             if (y - imgDims.height < 50) {
               page = pdfDoc.addPage()
               y = height - 50
             }
-
             page.drawImage(pdfImage, {
               x: marginX,
               y: y - imgDims.height,
               width: imgDims.width,
               height: imgDims.height,
             })
-
-            y -= imgDims.height + 20
+            y -= imgDims.height + 10
           } catch (err) {
-            console.error('Failed to embed image', fotoUrl, err)
+            console.error('Failed to embed signature', err)
           }
         }
+
+        fileName = `ido_${id}_${timestamp}.pdf`
+      } else {
+        drawText('Espelho de Danos - Vistoria', true, 20)
+        y -= 10
+        drawText(`Número da OS: ${numero_os || '-'}`, true, 14)
+        y -= 10
+        drawText(`Garagem: ${garagem || '-'}`)
+        drawText(`Linha: ${linha || '-'} / Carro: ${numero_carro || '-'}`)
+        drawText(`Data/Horário: ${data || '-'} ${horario || '-'}`)
+        drawText(
+          `Vistoriador: ${final_nome_vistoriador || '-'} (Registro: ${final_registro_vistoriador || '-'})`,
+        )
+        drawText(`Motorista: ${nome_motorista || '-'} (Registro: ${registro_motorista || '-'})`)
+
+        y -= 15
+        drawText('Descrição dos Danos:', true, 14)
+
+        const desc = descricao_danos || 'Nenhuma descrição fornecida.'
+        drawMultilineText(desc, false, 12)
+
+        // Add Photos
+        if (fotos && Array.isArray(fotos) && fotos.length > 0) {
+          y -= 20
+          drawText('Fotos da Vistoria:', true, 14)
+
+          for (let i = 0; i < fotos.length; i++) {
+            const fotoUrl = fotos[i]
+            try {
+              const imgRes = await fetch(fotoUrl)
+              if (!imgRes.ok) {
+                console.error(`Failed to fetch image: ${imgRes.status} ${imgRes.statusText}`)
+                continue
+              }
+              const imgBytes = await imgRes.arrayBuffer()
+
+              let pdfImage
+              const contentTypeHeader = imgRes.headers.get('content-type') || ''
+              const isPng =
+                fotoUrl.toLowerCase().includes('.png') || contentTypeHeader.includes('png')
+
+              if (isPng) {
+                pdfImage = await pdfDoc.embedPng(imgBytes)
+              } else {
+                pdfImage = await pdfDoc.embedJpg(imgBytes)
+              }
+
+              const imgDims = pdfImage.scaleToFit(width - marginX * 2, 250)
+
+              if (y - imgDims.height < 50) {
+                page = pdfDoc.addPage()
+                y = height - 50
+              }
+
+              page.drawImage(pdfImage, {
+                x: marginX,
+                y: y - imgDims.height,
+                width: imgDims.width,
+                height: imgDims.height,
+              })
+
+              y -= imgDims.height + 20
+            } catch (err) {
+              console.error('Failed to embed image', fotoUrl, err)
+            }
+          }
+        }
+
+        const numCarro = numero_carro || 'S-N'
+        const numOS = numero_os || 'S-N'
+        fileName = `Espelho_Danos_Carro_${numCarro}_OS_${numOS}_${timestamp}.pdf`
       }
 
-      const numCarro = numero_carro || 'S-N'
-      const numOS = numero_os || 'S-N'
-      fileName = `Espelho_Danos_Carro_${numCarro}_OS_${numOS}_${timestamp}.pdf`
-    }
-
-    let pdfBytes
-    try {
-      pdfBytes = await pdfDoc.save()
-    } catch (err) {
-      console.error('PDF Generation Error:', err)
-      throw new Error('Falha ao gerar o arquivo PDF.')
+      try {
+        fileBytes = await pdfDoc.save()
+      } catch (err) {
+        console.error('PDF Generation Error:', err)
+        throw new Error('Falha ao gerar o arquivo PDF.')
+      }
     }
 
     // Upload to Supabase Storage
@@ -373,8 +434,8 @@ Deno.serve(async (req: Request) => {
 
     const { error: uploadError } = await supabaseAdmin.storage
       .from(bucket)
-      .upload(filePath, pdfBytes, {
-        contentType: 'application/pdf',
+      .upload(filePath, fileBytes, {
+        contentType,
         upsert: true,
       })
 

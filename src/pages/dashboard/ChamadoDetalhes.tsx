@@ -350,7 +350,7 @@ function GerarValeModal({
       const token = sessionData.session?.access_token
 
       let newUrl = ''
-      let newNomeArquivo = `Vale Gerado - ${format(new Date(), 'dd-MM-yyyy HHmm')}.pdf`
+      let newNomeArquivo = `Autorizacao_Desconto_${format(new Date(), 'dd-MM-yyyy HHmm')}.docx`
 
       if (orcamentoDoc && orcamentoDoc.id) {
         await supabase
@@ -409,7 +409,7 @@ function GerarValeModal({
       }
 
       if (!newUrl) {
-        newUrl = `https://example.com/dummy-vale-${Date.now()}.pdf`
+        newUrl = `https://example.com/dummy-autorizacao-${Date.now()}.docx`
       }
 
       const { error: docError } = await supabase.from('documentos').insert({
@@ -427,10 +427,10 @@ function GerarValeModal({
         chamado_id: chamadoId,
         acao: 'respondido',
         usuario_id: userId,
-        detalhes: `Vale gerado com sucesso no valor de ${formattedFinal} parcelado em ${parcelas}x.`,
+        detalhes: `Autorização de Desconto gerada com sucesso no valor de ${formattedFinal} parcelada em ${parcelas}x.`,
       })
 
-      toast.success('Vale gerado com sucesso!')
+      toast.success('Autorização de Desconto gerada com sucesso!')
 
       if (onDownload && newUrl && !newUrl.includes('dummy')) {
         onDownload(newUrl, newNomeArquivo)
@@ -448,7 +448,7 @@ function GerarValeModal({
       setOpen(false)
     } catch (e: any) {
       console.error(e)
-      toast.error('Erro ao gerar vale: ' + e.message)
+      toast.error('Erro ao gerar autorização de desconto: ' + e.message)
     } finally {
       setLoading(false)
     }
@@ -458,7 +458,7 @@ function GerarValeModal({
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
-          <DialogTitle>Gerar Vale</DialogTitle>
+          <DialogTitle>Gerar Autorização de Desconto</DialogTitle>
         </DialogHeader>
         <div className="grid gap-4 py-4">
           <div className="space-y-2">
@@ -501,7 +501,7 @@ function GerarValeModal({
           </div>
 
           <div className="bg-emerald-50 text-emerald-800 p-4 rounded-lg border border-emerald-200 mt-2">
-            <div className="text-sm font-medium mb-1">Valor Final do Vale:</div>
+            <div className="text-sm font-medium mb-1">Valor Final a Descontar:</div>
             <div className="text-2xl font-bold">{formattedFinal}</div>
             {parseInt(parcelas) > 1 && (
               <div className="text-sm opacity-80 mt-1">
@@ -519,7 +519,7 @@ function GerarValeModal({
           </Button>
           <Button onClick={handleGerar} disabled={loading || valorFinal <= 0}>
             {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-            Confirmar e Gerar Vale
+            Confirmar e Gerar Documento
           </Button>
         </DialogFooter>
       </DialogContent>
@@ -3106,7 +3106,7 @@ export default function ChamadoDetalhes() {
                   className="bg-emerald-600 hover:bg-emerald-700 text-white"
                 >
                   <FileText className="mr-2 h-4 w-4" />
-                  Gerar Vale
+                  Gerar Autorização de Desconto
                 </Button>
               </div>
             )}

@@ -621,6 +621,7 @@ export default function ChamadoDetalhes() {
   const [anexos, setAnexos] = useState<Anexo[]>([])
   const [timeline, setTimeline] = useState<TimelineItem[]>([])
   const [anexosInternos, setAnexosInternos] = useState<AnexoInterno[]>([])
+  const [documentosChamado, setDocumentosChamado] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [mensagem, setMensagem] = useState('')
   const [submitting, setSubmitting] = useState(false)
@@ -745,6 +746,12 @@ export default function ChamadoDetalhes() {
       .from('historico_chamado')
       .select('*')
       .eq('chamado_id', id)
+
+    const { data: docsData } = await supabase
+      .from('documentos')
+      .select('id, orcamento_url, valor_orcamento')
+      .eq('chamado_id', id)
+    setDocumentosChamado(docsData || [])
 
     const userIds = new Set<string>()
     if (solicitanteData) userIds.add(solicitanteData.id)
@@ -912,6 +919,16 @@ export default function ChamadoDetalhes() {
           event: 'INSERT',
           schema: 'public',
           table: 'anexos_chamado',
+          filter: `chamado_id=eq.${id}`,
+        },
+        () => fetchChamadoData(),
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'documentos',
           filter: `chamado_id=eq.${id}`,
         },
         () => fetchChamadoData(),
@@ -2639,9 +2656,30 @@ export default function ChamadoDetalhes() {
                           {(anexo.tamanho_bytes / 1024 / 1024).toFixed(2)} MB •{' '}
                           {format(new Date(anexo.criado_em), 'dd/MM/yyyy HH:mm')}
                         </p>
+                        {(() => {
+                          const docRelacionado = documentosChamado.find(
+                            (d) => d.orcamento_url === anexo.arquivo_url,
+                          )
+                          if (docRelacionado && docRelacionado.valor_orcamento != null) {
+                            const formattedValue = new Intl.NumberFormat('pt-BR', {
+                              style: 'currency',
+                              currency: 'BRL',
+                            }).format(docRelacionado.valor_orcamento)
+                            return (
+                              <Badge
+                                variant="outline"
+                                className="mt-1 bg-purple-50 text-purple-700 border-purple-200"
+                              >
+                                Valor: {formattedValue}
+                              </Badge>
+                            )
+                          }
+                          return null
+                        })()}
                       </div>
                     </div>
                     <div className="flex items-center gap-2 shrink-0 ml-4">
+                      {' '}
                       {isSupport &&
                         (anexo.nome_arquivo.toLowerCase().includes('ido') ||
                           anexo.nome_arquivo.toLowerCase().includes('boletim')) && (

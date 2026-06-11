@@ -38,8 +38,21 @@ export default function SecretariaTecnica() {
   const [uploading, setUploading] = useState(false)
   const [file, setFile] = useState<File | null>(null)
   const [numeroOrcamento, setNumeroOrcamento] = useState('')
+  const [valorOrcamento, setValorOrcamento] = useState('')
   const [detalhesOrcamento, setDetalhesOrcamento] = useState('')
   const [viewDoc, setViewDoc] = useState<any>(null)
+
+  const handleValorChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    let value = e.target.value.replace(/\D/g, '')
+    if (value) {
+      value = (parseInt(value, 10) / 100).toFixed(2)
+      value = value.replace('.', ',')
+      value = value.replace(/(\d)(?=(\d{3})+(?!\d))/g, '$1.')
+      setValorOrcamento('R$ ' + value)
+    } else {
+      setValorOrcamento('')
+    }
+  }
 
   const fetchDocumentos = async () => {
     try {
@@ -222,13 +235,14 @@ export default function SecretariaTecnica() {
     setSelectedDoc(doc)
     setFile(null)
     setNumeroOrcamento('')
+    setValorOrcamento('')
     setDetalhesOrcamento('')
     setUploadModalOpen(true)
   }
 
   const handleUploadSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!file || !selectedDoc || !numeroOrcamento) return
+    if (!file || !selectedDoc || !numeroOrcamento || !valorOrcamento) return
 
     try {
       setUploading(true)
@@ -288,7 +302,10 @@ export default function SecretariaTecnica() {
 
       const orcamento_url = publicUrlData.publicUrl
 
-      const docUpdateData: any = { orcamento_url }
+      const parsedValor = parseFloat(
+        valorOrcamento.replace('R$ ', '').replace(/\./g, '').replace(',', '.'),
+      )
+      const docUpdateData: any = { orcamento_url, valor_orcamento: parsedValor }
       if (chamadoId && selectedDoc.chamado_id !== chamadoId) {
         // Automatically link the document to the active ticket if it wasn't already
         docUpdateData.chamado_id = chamadoId
@@ -602,6 +619,16 @@ export default function SecretariaTecnica() {
               />
             </div>
             <div className="space-y-2">
+              <Label>Valor do Orçamento</Label>
+              <Input
+                value={valorOrcamento}
+                onChange={handleValorChange}
+                placeholder="R$ 0,00"
+                disabled={uploading}
+                required
+              />
+            </div>
+            <div className="space-y-2">
               <Label>Detalhes do Orçamento (Opcional)</Label>
               <Textarea
                 value={detalhesOrcamento}
@@ -629,7 +656,10 @@ export default function SecretariaTecnica() {
               >
                 Cancelar
               </Button>
-              <Button type="submit" disabled={!file || !numeroOrcamento || uploading}>
+              <Button
+                type="submit"
+                disabled={!file || !numeroOrcamento || !valorOrcamento || uploading}
+              >
                 {uploading ? (
                   <>
                     <Loader2 className="w-4 h-4 mr-2 animate-spin" />

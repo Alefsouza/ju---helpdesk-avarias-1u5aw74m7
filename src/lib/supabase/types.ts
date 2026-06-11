@@ -219,6 +219,7 @@ export type Database = {
           registro_responsavel: string | null
           status_liberacao: string | null
           tipo_documento: string
+          valor_orcamento: number | null
         }
         Insert: {
           arquivo_url: string
@@ -248,6 +249,7 @@ export type Database = {
           registro_responsavel?: string | null
           status_liberacao?: string | null
           tipo_documento: string
+          valor_orcamento?: number | null
         }
         Update: {
           arquivo_url?: string
@@ -277,6 +279,7 @@ export type Database = {
           registro_responsavel?: string | null
           status_liberacao?: string | null
           tipo_documento?: string
+          valor_orcamento?: number | null
         }
         Relationships: [
           {

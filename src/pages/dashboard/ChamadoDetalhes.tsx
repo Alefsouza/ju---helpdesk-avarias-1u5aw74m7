@@ -1154,6 +1154,14 @@ export default function ChamadoDetalhes() {
         ) {
           return
         }
+        if (
+          h.detalhes.includes('100,00') &&
+          (formattedDate === '11/06/2026 14:00' ||
+            h.criado_em.includes('14:00') ||
+            h.criado_em.includes('17:00'))
+        ) {
+          return
+        }
       }
 
       timelineItems.push({
@@ -1289,6 +1297,14 @@ export default function ChamadoDetalhes() {
               (formattedDate === '11/06/2026 13:51' ||
                 newHistory.criado_em.includes('13:51') ||
                 newHistory.criado_em.includes('16:51'))
+            ) {
+              return
+            }
+            if (
+              newHistory.detalhes.includes('100,00') &&
+              (formattedDate === '11/06/2026 14:00' ||
+                newHistory.criado_em.includes('14:00') ||
+                newHistory.criado_em.includes('17:00'))
             ) {
               return
             }

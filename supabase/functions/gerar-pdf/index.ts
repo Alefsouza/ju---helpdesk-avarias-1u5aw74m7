@@ -221,7 +221,6 @@ Deno.serve(async (req: Request) => {
       addRow('Nome', espelho?.nome_motorista || body.nome_motorista || '-')
       addRow('Registro', espelho?.registro_motorista || body.registro_motorista || '-')
       addRow('Garagem', body.garagem || '-')
-      addRow('Número da OS', numeroOsFinal)
       addRow('Registro da Ocorrência (R.A.)', piaFinal)
       addRow('Veículo', body.carro || '-')
       addRow('Placa', placa || '-')
@@ -250,14 +249,11 @@ Deno.serve(async (req: Request) => {
         addRow('Quantidade de Parcelas', `${parcelasData.length}x`)
         for (let i = 0; i < parcelasData.length; i++) {
           const p = parcelasData[i]
-          const dtRef = p.data_referencia
-            ? new Date(p.data_referencia + 'T12:00:00Z').toLocaleDateString('pt-BR')
-            : '-'
           children.push(
             new Paragraph({
               children: [
                 new TextRun({
-                  text: `  Parcela ${i + 1}/${parcelasData.length}: ${formatCurrency(p.valor_parcela)} (Ref: ${dtRef})`,
+                  text: `  Parcela ${i + 1}/${parcelasData.length}: ${formatCurrency(p.valor_parcela)}`,
                   size: 24,
                 }),
               ],

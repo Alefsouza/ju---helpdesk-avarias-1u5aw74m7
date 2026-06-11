@@ -288,6 +288,7 @@ function GerarValeModal({
   onSuccess,
   userId,
   anexosInternos,
+  onDownload,
 }: any) {
   const [valorBaseStr, setValorBaseStr] = useState<string>('')
   const [desconto, setDesconto] = useState(false)
@@ -422,15 +423,6 @@ function GerarValeModal({
 
       if (docError) throw docError
 
-      await supabase.from('anexos_chamado_interno').insert({
-        chamado_id: chamadoId,
-        usuario_id: userId,
-        arquivo_url: newUrl,
-        nome_arquivo: newNomeArquivo,
-        tipo_arquivo: 'application/pdf',
-        tamanho_bytes: 0,
-      })
-
       await supabase.from('historico_chamado').insert({
         chamado_id: chamadoId,
         acao: 'respondido',
@@ -439,6 +431,19 @@ function GerarValeModal({
       })
 
       toast.success('Vale gerado com sucesso!')
+
+      if (onDownload && newUrl && !newUrl.includes('dummy')) {
+        onDownload(newUrl, newNomeArquivo)
+      } else {
+        const link = document.createElement('a')
+        link.href = newUrl
+        link.download = newNomeArquivo
+        link.target = '_blank'
+        document.body.appendChild(link)
+        link.click()
+        document.body.removeChild(link)
+      }
+
       onSuccess()
       setOpen(false)
     } catch (e: any) {
@@ -3495,6 +3500,9 @@ export default function ChamadoDetalhes() {
         userId={user?.id}
         anexosInternos={anexosInternos}
         onSuccess={() => fetchChamadoData()}
+        onDownload={(url: string, name: string) =>
+          handleDocumentAction('vale-' + Date.now(), url, name, 'download')
+        }
       />
 
       <AlertDialog

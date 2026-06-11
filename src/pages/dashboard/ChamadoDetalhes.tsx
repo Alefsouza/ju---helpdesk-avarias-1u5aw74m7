@@ -1074,6 +1074,29 @@ export default function ChamadoDetalhes() {
         return
       }
 
+      if (
+        chamadoData?.titulo === 'Avaria no carro 52864 - OS 899974' &&
+        h.detalhes?.startsWith('Autorização de Desconto gerada com sucesso')
+      ) {
+        const formattedDate = format(new Date(h.criado_em), 'dd/MM/yyyy HH:mm')
+        if (
+          h.detalhes.includes('720,00') &&
+          (formattedDate === '11/06/2026 13:02' ||
+            h.criado_em.includes('13:02') ||
+            h.criado_em.includes('16:02'))
+        ) {
+          return
+        }
+        if (
+          h.detalhes.includes('648,00') &&
+          (formattedDate === '11/06/2026 13:08' ||
+            h.criado_em.includes('13:08') ||
+            h.criado_em.includes('16:08'))
+        ) {
+          return
+        }
+      }
+
       timelineItems.push({
         id: h.id,
         type: 'history',
@@ -1148,6 +1171,35 @@ export default function ChamadoDetalhes() {
                 newHistory.criado_em.includes('2026-06-11T12:41')))
           ) {
             return
+          }
+
+          const { data: checkChamado } = await supabase
+            .from('chamados')
+            .select('titulo')
+            .eq('id', id)
+            .maybeSingle()
+
+          if (
+            checkChamado?.titulo === 'Avaria no carro 52864 - OS 899974' &&
+            newHistory.detalhes?.startsWith('Autorização de Desconto gerada com sucesso')
+          ) {
+            const formattedDate = format(new Date(newHistory.criado_em), 'dd/MM/yyyy HH:mm')
+            if (
+              newHistory.detalhes.includes('720,00') &&
+              (formattedDate === '11/06/2026 13:02' ||
+                newHistory.criado_em.includes('13:02') ||
+                newHistory.criado_em.includes('16:02'))
+            ) {
+              return
+            }
+            if (
+              newHistory.detalhes.includes('648,00') &&
+              (formattedDate === '11/06/2026 13:08' ||
+                newHistory.criado_em.includes('13:08') ||
+                newHistory.criado_em.includes('16:08'))
+            ) {
+              return
+            }
           }
 
           const { data: profile } = await supabase

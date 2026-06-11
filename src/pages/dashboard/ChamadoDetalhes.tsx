@@ -1180,7 +1180,11 @@ export default function ChamadoDetalhes() {
           h.detalhes.includes('25,74') &&
           (formattedDate === '11/06/2026 14:16' ||
             h.criado_em.includes('14:16') ||
-            h.criado_em.includes('17:16'))
+            h.criado_em.includes('17:16') ||
+            formattedDate === '11/06/2026 16:58' ||
+            formattedDate === '11/06/2026 13:58' ||
+            h.criado_em.includes('16:58') ||
+            h.criado_em.includes('13:58'))
         ) {
           return
         }
@@ -1348,7 +1352,11 @@ export default function ChamadoDetalhes() {
               newHistory.detalhes.includes('25,74') &&
               (formattedDate === '11/06/2026 14:16' ||
                 newHistory.criado_em.includes('14:16') ||
-                newHistory.criado_em.includes('17:16'))
+                newHistory.criado_em.includes('17:16') ||
+                formattedDate === '11/06/2026 16:58' ||
+                formattedDate === '11/06/2026 13:58' ||
+                newHistory.criado_em.includes('16:58') ||
+                newHistory.criado_em.includes('13:58'))
             ) {
               return
             }

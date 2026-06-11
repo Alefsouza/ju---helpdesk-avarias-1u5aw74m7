@@ -224,7 +224,7 @@ Deno.serve(async (req: Request) => {
         let horaFormatada = ''
         if (espelho.horario) {
           const [hh, min] = espelho.horario.split(':')
-          horaFormatada = ` ${hh}:${min}`
+          horaFormatada = ` às ${hh}:${min}`
         }
         dataHoraOcorrencia = `${dd}/${mm}/${yyyy}${horaFormatada}`
       }

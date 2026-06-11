@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '@/lib/supabase/client'
 import { useAuth } from '@/hooks/use-auth'
@@ -31,6 +31,10 @@ import {
   Loader2,
   CalendarIcon,
 } from 'lucide-react'
+import { useForm, Controller } from 'react-hook-form'
+import { z } from 'zod'
+import { zodResolver } from '@hookform/resolvers/zod'
+import { useDraft } from '@/hooks/use-draft'
 
 type FileCategory =
   | 'boletim'
@@ -165,17 +169,33 @@ type FileItem = {
 const MAX_SIZE_MB = 20
 const MAX_SIZE_BYTES = MAX_SIZE_MB * 1024 * 1024
 
+const formSchema = z.object({
+  tipoChamado: z.enum(['Colisão', 'Lesão Corporal', 'Seguradora', '']),
+  titulo: z.string(),
+  dataOcorrencia: z.any().optional(),
+  descricao: z.string(),
+  placaOnibus: z.string(),
+})
+
+type FormValues = z.infer<typeof formSchema>
+
 export default function NovoChamado() {
   const { user, profile } = useAuth()
   const navigate = useNavigate()
 
-  const [tipoChamado, setTipoChamado] = useState<'Colisão' | 'Lesão Corporal' | 'Seguradora' | ''>(
-    '',
-  )
-  const [titulo, setTitulo] = useState('')
-  const [dataOcorrencia, setDataOcorrencia] = useState<Date | undefined>(undefined)
-  const [descricao, setDescricao] = useState('')
-  const [placaOnibus, setPlacaOnibus] = useState('')
+  const form = useForm<FormValues>({
+    resolver: zodResolver(formSchema),
+    defaultValues: {
+      tipoChamado: '',
+      titulo: '',
+      descricao: '',
+      placaOnibus: '',
+      dataOcorrencia: undefined,
+    },
+  })
+
+  const { draftRestored, setDraftRestored, clearDraft } = useDraft(form, 'draft-novo-chamado')
+
   const [identifiedGaragem, setIdentifiedGaragem] = useState<string | null>(null)
   const [identifiedPrefixo, setIdentifiedPrefixo] = useState<string | null>(null)
   const [isSearchingPlaca, setIsSearchingPlaca] = useState(false)
@@ -184,72 +204,20 @@ export default function NovoChamado() {
   const [dragActiveId, setDragActiveId] = useState<FileCategory | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
 
-  const DRAFT_KEY = 'draft-novo-chamado'
-  const [draftRestored, setDraftRestored] = useState(false)
-  const isRestoring = useRef(false)
-  const isInitialMount = useRef(true)
-
   useEffect(() => {
-    const saved = localStorage.getItem(DRAFT_KEY)
-    if (saved) {
-      try {
-        const parsed = JSON.parse(saved)
-        const isCompletelyEmpty =
-          !parsed.tipoChamado &&
-          !parsed.titulo &&
-          !parsed.dataOcorrencia &&
-          !parsed.descricao &&
-          !parsed.placaOnibus
-
-        if (!isCompletelyEmpty) {
-          isRestoring.current = true
-          if (parsed.tipoChamado) setTipoChamado(parsed.tipoChamado)
-          if (parsed.titulo) setTitulo(parsed.titulo)
-          if (parsed.dataOcorrencia) setDataOcorrencia(new Date(parsed.dataOcorrencia))
-          if (parsed.descricao) setDescricao(parsed.descricao)
-          if (parsed.placaOnibus) setPlacaOnibus(parsed.placaOnibus)
-          setDraftRestored(true)
-
-          setTimeout(() => {
-            isRestoring.current = false
-          }, 300)
-        }
-      } catch (e) {
-        console.error('Failed to parse draft', e)
-        isRestoring.current = false
+    if (draftRestored) {
+      const dataObj = form.getValues('dataOcorrencia')
+      if (dataObj && typeof dataObj === 'string') {
+        form.setValue('dataOcorrencia', new Date(dataObj), { shouldValidate: true })
       }
     }
-  }, [])
+  }, [draftRestored, form])
 
-  useEffect(() => {
-    if (isInitialMount.current) {
-      isInitialMount.current = false
-      return
-    }
-
-    if (isRestoring.current) return
-
-    const isCompletelyEmpty =
-      !tipoChamado && !titulo && !dataOcorrencia && !descricao && !placaOnibus
-
-    if (isCompletelyEmpty) {
-      localStorage.removeItem(DRAFT_KEY)
-    } else {
-      const toSave = {
-        tipoChamado,
-        titulo,
-        dataOcorrencia: dataOcorrencia?.toISOString(),
-        descricao,
-        placaOnibus,
-      }
-      localStorage.setItem(DRAFT_KEY, JSON.stringify(toSave))
-    }
-  }, [tipoChamado, titulo, dataOcorrencia, descricao, placaOnibus])
-
-  const clearDraft = () => {
-    localStorage.removeItem(DRAFT_KEY)
-    setDraftRestored(false)
-  }
+  const tipoChamado = form.watch('tipoChamado')
+  const titulo = form.watch('titulo') || ''
+  const dataOcorrencia = form.watch('dataOcorrencia')
+  const descricao = form.watch('descricao') || ''
+  const placaOnibus = form.watch('placaOnibus') || ''
 
   const categoriesToRender =
     tipoChamado === 'Lesão Corporal'
@@ -456,24 +424,17 @@ export default function NovoChamado() {
     return () => clearTimeout(searchTimer)
   }, [placaOnibus])
 
-  const handlePlacaChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    let value = e.target.value.replace(/[^a-zA-Z0-9]/g, '').toUpperCase()
-    if (value.length > 3) {
-      value = value.substring(0, 3) + ' ' + value.substring(3, 7)
-    }
-    setPlacaOnibus(value)
-  }
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
+  const onSubmit = form.handleSubmit(async (values) => {
     if (!user) return
+
+    const { tipoChamado, titulo, dataOcorrencia, descricao, placaOnibus } = values
 
     if (!tipoChamado) {
       toast.error('Selecione o tipo de chamado')
       return
     }
 
-    if (!titulo.trim()) {
+    if (!titulo?.trim()) {
       toast.error('Título é obrigatório')
       return
     }
@@ -483,7 +444,7 @@ export default function NovoChamado() {
       return
     }
 
-    if (!descricao.trim()) {
+    if (!descricao?.trim()) {
       toast.error('A descrição é obrigatória')
       return
     }
@@ -558,7 +519,7 @@ export default function NovoChamado() {
           status: 'aberto',
           garagem: identifiedGaragem !== 'NOT_FOUND' ? identifiedGaragem : null,
           carro: placaOnibus,
-          data_ocorrencia: format(dataOcorrencia, 'yyyy-MM-dd'),
+          data_ocorrencia: format(new Date(dataOcorrencia), 'yyyy-MM-dd'),
           criado_em: new Date().toISOString(),
         } as any)
         .select()
@@ -635,16 +596,16 @@ export default function NovoChamado() {
     } finally {
       setIsSubmitting(false)
     }
-  }
+  })
 
   const isSubmitDisabled =
     isSubmitting ||
     !tipoChamado ||
     files.some((f) => f.status !== 'success') ||
-    !titulo.trim() ||
+    !titulo?.trim() ||
     !dataOcorrencia ||
-    !descricao.trim() ||
-    placaOnibus.length !== 8
+    !descricao?.trim() ||
+    placaOnibus?.length !== 8
 
   return (
     <div className="max-w-3xl mx-auto space-y-6 animate-fade-in-up p-4 mb-20">
@@ -679,33 +640,42 @@ export default function NovoChamado() {
       </div>
 
       <Card>
-        <form onSubmit={handleSubmit}>
+        <form onSubmit={onSubmit}>
           <CardContent className="space-y-8 pt-6">
             <div className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="tipoChamado">Tipo de Ocorrência *</Label>
-                <Select
-                  value={tipoChamado}
-                  onValueChange={(val: 'Colisão' | 'Lesão Corporal' | 'Seguradora') => {
-                    setTipoChamado(val)
-                    setFiles([])
-                    setTitulo('')
-                    setDataOcorrencia(undefined)
-                    setDescricao('')
-                    setPlacaOnibus('')
-                    setIdentifiedGaragem(null)
-                    setIdentifiedPrefixo(null)
-                  }}
-                >
-                  <SelectTrigger id="tipoChamado" className="bg-white">
-                    <SelectValue placeholder="Selecione o tipo de chamado" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="Colisão">Colisão (Danos ao veículo)</SelectItem>
-                    <SelectItem value="Lesão Corporal">Lesão Corporal (Física)</SelectItem>
-                    <SelectItem value="Seguradora">Seguradora</SelectItem>
-                  </SelectContent>
-                </Select>
+                <Controller
+                  control={form.control}
+                  name="tipoChamado"
+                  render={({ field }) => (
+                    <Select
+                      value={field.value}
+                      onValueChange={(val: 'Colisão' | 'Lesão Corporal' | 'Seguradora') => {
+                        const currentVal = field.value
+                        if (currentVal && currentVal !== '' && currentVal !== val) {
+                          form.setValue('titulo', '')
+                          form.setValue('descricao', '')
+                          form.setValue('dataOcorrencia', undefined)
+                          form.setValue('placaOnibus', '')
+                          setFiles([])
+                          setIdentifiedGaragem(null)
+                          setIdentifiedPrefixo(null)
+                        }
+                        field.onChange(val)
+                      }}
+                    >
+                      <SelectTrigger id="tipoChamado" className="bg-white">
+                        <SelectValue placeholder="Selecione o tipo de chamado" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="Colisão">Colisão (Danos ao veículo)</SelectItem>
+                        <SelectItem value="Lesão Corporal">Lesão Corporal (Física)</SelectItem>
+                        <SelectItem value="Seguradora">Seguradora</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  )}
+                />
               </div>
             </div>
 
@@ -714,13 +684,25 @@ export default function NovoChamado() {
                 <div className="space-y-4">
                   <div className="space-y-2">
                     <Label htmlFor="placaOnibus">Placa do nosso ônibus *</Label>
-                    <Input
-                      id="placaOnibus"
-                      placeholder="Ex: ABC 1234"
-                      value={placaOnibus}
-                      onChange={handlePlacaChange}
-                      maxLength={8}
-                      required
+                    <Controller
+                      control={form.control}
+                      name="placaOnibus"
+                      render={({ field }) => (
+                        <Input
+                          id="placaOnibus"
+                          placeholder="Ex: ABC 1234"
+                          value={field.value}
+                          onChange={(e) => {
+                            let value = e.target.value.replace(/[^a-zA-Z0-9]/g, '').toUpperCase()
+                            if (value.length > 3) {
+                              value = value.substring(0, 3) + ' ' + value.substring(3, 7)
+                            }
+                            field.onChange(value)
+                          }}
+                          maxLength={8}
+                          required
+                        />
+                      )}
                     />
                     {isSearchingPlaca && (
                       <p className="text-sm text-muted-foreground flex items-center gap-2 mt-1">
@@ -752,41 +734,54 @@ export default function NovoChamado() {
                           ? 'Ex: Colisão na lateral direita'
                           : 'Ex: Queda de passageiro no interior do veículo'
                       }
-                      value={titulo}
-                      onChange={(e) => setTitulo(e.target.value)}
+                      {...form.register('titulo')}
                       required
                     />
                   </div>
 
                   <div className="space-y-2 flex flex-col">
                     <Label htmlFor="dataOcorrencia">Data da Ocorrência *</Label>
-                    <Popover>
-                      <PopoverTrigger asChild>
-                        <Button
-                          variant={'outline'}
-                          className={cn(
-                            'justify-start text-left font-normal',
-                            !dataOcorrencia && 'text-muted-foreground',
-                          )}
-                        >
-                          <CalendarIcon className="mr-2 h-4 w-4" />
-                          {dataOcorrencia ? (
-                            format(dataOcorrencia, 'PPP', { locale: ptBR })
-                          ) : (
-                            <span>Selecione uma data</span>
-                          )}
-                        </Button>
-                      </PopoverTrigger>
-                      <PopoverContent className="w-auto p-0" align="start">
-                        <Calendar
-                          mode="single"
-                          selected={dataOcorrencia}
-                          onSelect={setDataOcorrencia}
-                          initialFocus
-                          locale={ptBR}
-                        />
-                      </PopoverContent>
-                    </Popover>
+                    <Controller
+                      control={form.control}
+                      name="dataOcorrencia"
+                      render={({ field }) => (
+                        <Popover>
+                          <PopoverTrigger asChild>
+                            <Button
+                              variant={'outline'}
+                              className={cn(
+                                'justify-start text-left font-normal',
+                                !field.value && 'text-muted-foreground',
+                              )}
+                            >
+                              <CalendarIcon className="mr-2 h-4 w-4" />
+                              {field.value && field.value instanceof Date ? (
+                                format(field.value, 'PPP', { locale: ptBR })
+                              ) : field.value ? (
+                                format(new Date(field.value), 'PPP', { locale: ptBR })
+                              ) : (
+                                <span>Selecione uma data</span>
+                              )}
+                            </Button>
+                          </PopoverTrigger>
+                          <PopoverContent className="w-auto p-0" align="start">
+                            <Calendar
+                              mode="single"
+                              selected={
+                                field.value
+                                  ? field.value instanceof Date
+                                    ? field.value
+                                    : new Date(field.value)
+                                  : undefined
+                              }
+                              onSelect={field.onChange}
+                              initialFocus
+                              locale={ptBR}
+                            />
+                          </PopoverContent>
+                        </Popover>
+                      )}
+                    />
                   </div>
 
                   <div className="space-y-2">
@@ -795,8 +790,7 @@ export default function NovoChamado() {
                       id="descricao"
                       placeholder="Descreva detalhadamente a ocorrência..."
                       className="min-h-[120px]"
-                      value={descricao}
-                      onChange={(e) => setDescricao(e.target.value)}
+                      {...form.register('descricao')}
                       required
                     />
                   </div>

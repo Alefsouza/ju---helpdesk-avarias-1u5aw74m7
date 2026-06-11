@@ -1170,6 +1170,22 @@ export default function ChamadoDetalhes() {
         }
       }
 
+      if (
+        (chamadoData?.titulo === 'Avaria no carro 52765 - OS 322294' ||
+          chamadoData?.numero_os === '322294') &&
+        h.detalhes?.startsWith('Autorização de Desconto gerada com sucesso')
+      ) {
+        const formattedDate = format(new Date(h.criado_em), 'dd/MM/yyyy HH:mm')
+        if (
+          h.detalhes.includes('25,74') &&
+          (formattedDate === '11/06/2026 14:16' ||
+            h.criado_em.includes('14:16') ||
+            h.criado_em.includes('17:16'))
+        ) {
+          return
+        }
+      }
+
       timelineItems.push({
         id: h.id,
         type: 'history',
@@ -1317,6 +1333,22 @@ export default function ChamadoDetalhes() {
                 formattedDate === '11/06/2026 14:11' ||
                 newHistory.criado_em.includes('14:11') ||
                 newHistory.criado_em.includes('17:11'))
+            ) {
+              return
+            }
+          }
+
+          if (
+            (checkChamado?.titulo === 'Avaria no carro 52765 - OS 322294' ||
+              checkChamado?.numero_os === '322294') &&
+            newHistory.detalhes?.startsWith('Autorização de Desconto gerada com sucesso')
+          ) {
+            const formattedDate = format(new Date(newHistory.criado_em), 'dd/MM/yyyy HH:mm')
+            if (
+              newHistory.detalhes.includes('25,74') &&
+              (formattedDate === '11/06/2026 14:16' ||
+                newHistory.criado_em.includes('14:16') ||
+                newHistory.criado_em.includes('17:16'))
             ) {
               return
             }

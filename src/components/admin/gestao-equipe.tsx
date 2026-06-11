@@ -1,7 +1,8 @@
 import { useState } from 'react'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { Plus, MoreVertical, Edit2, Power, Trash2 } from 'lucide-react'
+import { Plus, MoreVertical, Edit2, Power, Trash2, Search } from 'lucide-react'
+import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
 import {
   Table,
@@ -77,6 +78,12 @@ export function GestaoEquipe() {
   const { users, loading, loadUsers, toggleActive, handleDelete } = useGestaoEquipe()
   const [modalOpen, setModalOpen] = useState(false)
   const [editingUser, setEditingUser] = useState<any>(null)
+  const [searchTerm, setSearchTerm] = useState('')
+
+  const filteredUsers = users.filter((u) => {
+    const term = searchTerm.toLowerCase()
+    return u.nome_completo?.toLowerCase().includes(term) || u.email?.toLowerCase().includes(term)
+  })
 
   const openNewModal = () => {
     setEditingUser(null)
@@ -100,11 +107,27 @@ export function GestaoEquipe() {
         </Button>
       </CardHeader>
       <CardContent>
+        <div className="flex items-center mb-4">
+          <div className="relative flex-1 max-w-sm">
+            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Buscar por nome ou e-mail..."
+              className="pl-8"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
+          </div>
+        </div>
+
         {loading ? (
           <div className="space-y-3">
             {[1, 2, 3].map((i) => (
               <Skeleton key={i} className="h-16 w-full" />
             ))}
+          </div>
+        ) : filteredUsers.length === 0 ? (
+          <div className="text-center py-6 text-muted-foreground">
+            Nenhum funcionário encontrado.
           </div>
         ) : (
           <>
@@ -123,7 +146,7 @@ export function GestaoEquipe() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {users.map((u) => (
+                  {filteredUsers.map((u) => (
                     <TableRow key={u.id}>
                       <TableCell className="font-medium">{u.nome_completo}</TableCell>
                       <TableCell>{u.registro || '-'}</TableCell>
@@ -174,7 +197,7 @@ export function GestaoEquipe() {
             </div>
 
             <div className="grid gap-4 md:hidden">
-              {users.map((u) => (
+              {filteredUsers.map((u) => (
                 <Card key={u.id}>
                   <CardHeader className="pb-2">
                     <div className="flex justify-between items-start">

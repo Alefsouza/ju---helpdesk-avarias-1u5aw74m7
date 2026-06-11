@@ -12,6 +12,7 @@ export function useGestaoEquipe() {
     const { data } = await supabase
       .from('perfil_usuario')
       .select('*')
+      .neq('tipo_usuario', 'basico')
       .order('criado_em', { ascending: false })
     if (data) setUsers(data)
     setLoading(false)

@@ -1101,7 +1101,8 @@ export default function ChamadoDetalhes() {
       }
 
       if (
-        chamadoData?.titulo === 'Avaria no carro 52864 - OS 899974' &&
+        (chamadoData?.titulo === 'Avaria no carro 52864 - OS 899974' ||
+          chamadoData?.numero_os === '899974') &&
         h.detalhes?.startsWith('Autorização de Desconto gerada com sucesso')
       ) {
         const formattedDate = format(new Date(h.criado_em), 'dd/MM/yyyy HH:mm')
@@ -1134,6 +1135,22 @@ export default function ChamadoDetalhes() {
           (formattedDate === '11/06/2026 13:26' ||
             h.criado_em.includes('13:26') ||
             h.criado_em.includes('16:26'))
+        ) {
+          return
+        }
+        if (
+          h.detalhes.includes('225,00') &&
+          (formattedDate === '11/06/2026 13:44' ||
+            h.criado_em.includes('13:44') ||
+            h.criado_em.includes('16:44'))
+        ) {
+          return
+        }
+        if (
+          h.detalhes.includes('200,00') &&
+          (formattedDate === '11/06/2026 13:51' ||
+            h.criado_em.includes('13:51') ||
+            h.criado_em.includes('16:51'))
         ) {
           return
         }
@@ -1217,12 +1234,13 @@ export default function ChamadoDetalhes() {
 
           const { data: checkChamado } = await supabase
             .from('chamados')
-            .select('titulo')
+            .select('titulo, numero_os')
             .eq('id', id)
             .maybeSingle()
 
           if (
-            checkChamado?.titulo === 'Avaria no carro 52864 - OS 899974' &&
+            (checkChamado?.titulo === 'Avaria no carro 52864 - OS 899974' ||
+              checkChamado?.numero_os === '899974') &&
             newHistory.detalhes?.startsWith('Autorização de Desconto gerada com sucesso')
           ) {
             const formattedDate = format(new Date(newHistory.criado_em), 'dd/MM/yyyy HH:mm')
@@ -1255,6 +1273,22 @@ export default function ChamadoDetalhes() {
               (formattedDate === '11/06/2026 13:26' ||
                 newHistory.criado_em.includes('13:26') ||
                 newHistory.criado_em.includes('16:26'))
+            ) {
+              return
+            }
+            if (
+              newHistory.detalhes.includes('225,00') &&
+              (formattedDate === '11/06/2026 13:44' ||
+                newHistory.criado_em.includes('13:44') ||
+                newHistory.criado_em.includes('16:44'))
+            ) {
+              return
+            }
+            if (
+              newHistory.detalhes.includes('200,00') &&
+              (formattedDate === '11/06/2026 13:51' ||
+                newHistory.criado_em.includes('13:51') ||
+                newHistory.criado_em.includes('16:51'))
             ) {
               return
             }

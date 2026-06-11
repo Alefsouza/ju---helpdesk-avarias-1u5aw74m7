@@ -133,12 +133,12 @@ export default function ValesAprovadosDP() {
             Acompanhe as parcelas de vales e gere o relatório de descontos.
           </p>
         </div>
-        <div className="flex items-center gap-2 bg-white p-2 rounded-lg border shadow-sm">
+        <div className="flex items-center gap-4">
           <Input
             type="month"
             value={downloadMonth}
             onChange={(e) => setDownloadMonth(e.target.value)}
-            className="w-40 border-none shadow-none focus-visible:ring-0"
+            className="w-48 bg-white border-slate-200"
           />
           <Button onClick={handleDownload} className="bg-[#225f3d] hover:bg-[#1a4a2f]">
             <Download className="w-4 h-4 mr-2" /> Exportar CSV

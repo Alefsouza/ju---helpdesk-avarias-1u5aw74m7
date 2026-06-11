@@ -14,6 +14,7 @@ import Finalizados from './pages/dashboard/Finalizados'
 import AdminDashboard from './pages/dashboard/Admin'
 import Relatorios from './pages/dashboard/Relatorios'
 import Documentos from './pages/dashboard/Documentos'
+import ValesAprovacao from './pages/dashboard/ValesAprovacao'
 import Perfil from './pages/dashboard/Perfil'
 import ChamadoDetalhes from './pages/dashboard/ChamadoDetalhes'
 import VistoriaForm from './pages/vistoria/VistoriaForm'
@@ -83,6 +84,7 @@ const App = () => (
             <Route path="/dashboard/documentos" element={<Documentos />} />
             <Route path="/dashboard/perfil" element={<Perfil />} />
             <Route path="/dashboard/secretaria-tecnica" element={<SecretariaTecnica />} />
+            <Route path="/dashboard/vales-aprovacao" element={<ValesAprovacao />} />
             <Route path="/vistoria/novo" element={<VistoriaForm />} />
             <Route path="/vistoria/pendentes" element={<DocumentosPendentes />} />
             <Route path="/espelhos-danos" element={<EspelhosDanos />} />

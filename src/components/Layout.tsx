@@ -51,6 +51,7 @@ function AppSidebar() {
   const isSos = tipo === 'sos'
   const isJuridico = tipo === 'juridico'
   const isSecretariaTecnica = tipo === 'secretaria_tecnica'
+  const isDiretoria = profile?.departamento === 'Diretoria'
 
   return (
     <Sidebar className="border-r-0">
@@ -190,6 +191,21 @@ function AppSidebar() {
                     isActive={location.pathname === '/dashboard/secretaria-tecnica'}
                     className="data-[active=true]:bg-transparent data-[active=true]:text-[#c8e6c9] hover:bg-[#c8e6c9]/10 hover:text-[#c8e6c9] text-white transition-colors"
                   ></SidebarMenuButton>
+                </SidebarMenuItem>
+              )}
+
+              {isDiretoria && (
+                <SidebarMenuItem>
+                  <SidebarMenuButton
+                    asChild
+                    isActive={location.pathname === '/dashboard/vales-aprovacao'}
+                    className="data-[active=true]:bg-transparent data-[active=true]:text-[#c8e6c9] hover:bg-[#c8e6c9]/10 hover:text-[#c8e6c9] text-white transition-colors"
+                  >
+                    <Link to="/dashboard/vales-aprovacao">
+                      <CheckCircle />
+                      <span>Vales para aprovação</span>
+                    </Link>
+                  </SidebarMenuButton>
                 </SidebarMenuItem>
               )}
 

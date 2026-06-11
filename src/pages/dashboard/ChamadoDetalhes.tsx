@@ -2399,7 +2399,11 @@ export default function ChamadoDetalhes() {
   const canUnify = isSupport && chamado.status !== 'finalizado'
 
   const orcamentoDoc = documentosChamado.find((d) => d.tipo_documento === 'Orçamento')
-  const canGenerateVale = !!orcamentoDoc
+  const hasOrcamentoInterno = anexosInternos.some((a) => {
+    const nomeLower = a.nome_arquivo.toLowerCase()
+    return nomeLower.includes('orçamento') || nomeLower.includes('orcamento')
+  })
+  const canGenerateVale = !!orcamentoDoc || hasOrcamentoInterno
 
   const getAcaoText = (acao: string, userNome: string) => {
     switch (acao) {

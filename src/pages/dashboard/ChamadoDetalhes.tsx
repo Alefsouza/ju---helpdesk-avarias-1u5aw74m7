@@ -350,7 +350,7 @@ function GerarValeModal({
       const token = sessionData.session?.access_token
 
       let newUrl = ''
-      let newNomeArquivo = `Autorizacao_Desconto_${format(new Date(), 'dd-MM-yyyy HHmm')}.docx`
+      let newNomeArquivo = `Autorizacao_Desconto_${format(new Date(), 'dd-MM-yyyy HHmm')}.pdf`
 
       if (orcamentoDoc && orcamentoDoc.id) {
         await supabase
@@ -409,7 +409,7 @@ function GerarValeModal({
       }
 
       if (!newUrl) {
-        newUrl = `https://example.com/dummy-autorizacao-${Date.now()}.docx`
+        newUrl = `https://example.com/dummy-autorizacao-${Date.now()}.pdf`
       }
 
       const { error: docError } = await supabase.from('documentos').insert({

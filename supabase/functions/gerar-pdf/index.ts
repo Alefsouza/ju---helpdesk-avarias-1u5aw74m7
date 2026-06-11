@@ -154,129 +154,133 @@ Deno.serve(async (req: Request) => {
       const formatCurrency = (val: number) =>
         new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(val)
 
-      const createTextRow = (label: string, value: string) => {
-        return new Paragraph({
-          children: [
-            new TextRun({ text: `${label}: `, bold: true, size: 36 }),
-            new TextRun({ text: value, size: 36 }),
-          ],
-          spacing: { after: 200 },
+      const pdfDoc = await PDFDocument.create()
+      let page = pdfDoc.addPage()
+      const { width, height } = page.getSize()
+      const font = await pdfDoc.embedFont(StandardFonts.Helvetica)
+      const boldFont = await pdfDoc.embedFont(StandardFonts.HelveticaBold)
+
+      let y = height - 50
+      const marginX = 50
+
+      const checkPage = (needed: number) => {
+        if (y - needed < 50) {
+          page = pdfDoc.addPage()
+          y = height - 50
+        }
+      }
+
+      const drawCenterText = (text: string, isBold: boolean, size: number) => {
+        checkPage(size + 10)
+        const textWidth = (isBold ? boldFont : font).widthOfTextAtSize(text, size)
+        page.drawText(text, {
+          x: (width - textWidth) / 2,
+          y,
+          size,
+          font: isBold ? boldFont : font,
+          color: rgb(0, 0, 0),
+        })
+        y -= size + 10
+      }
+
+      const drawText = (text: string, isBold: boolean, size: number) => {
+        checkPage(size + 10)
+        page.drawText(text, {
+          x: marginX,
+          y,
+          size,
+          font: isBold ? boldFont : font,
+          color: rgb(0, 0, 0),
+        })
+        y -= size + 10
+      }
+
+      const drawTextRow = (label: string, value: string) => {
+        checkPage(14 + 10)
+        page.drawText(`${label}: `, {
+          x: marginX,
+          y,
+          size: 14,
+          font: boldFont,
+          color: rgb(0, 0, 0),
+        })
+        const labelWidth = boldFont.widthOfTextAtSize(`${label}: `, 14)
+        page.drawText(value, {
+          x: marginX + labelWidth,
+          y,
+          size: 14,
+          font: font,
+          color: rgb(0, 0, 0),
+        })
+        y -= 14 + 10
+      }
+
+      y -= 20
+      drawCenterText('AUTORIZAÇÃO DE DESCONTO', true, 20)
+      y -= 30
+
+      drawText('Informações do Sinistro', true, 18)
+      y -= 15
+
+      drawTextRow('Nome', espelho?.nome_motorista || '-')
+      drawTextRow('Registro', espelho?.registro_motorista || '-')
+      drawTextRow('Garagem', body.garagem || '-')
+      drawTextRow('Registro da Ocorrência', body.pia || '-')
+      drawTextRow('Veículo', body.carro || '-')
+      drawTextRow('Placa', placa || '-')
+
+      y -= 25
+
+      drawText('Informações Financeiras', true, 18)
+      y -= 15
+
+      drawTextRow('Valor Original', formatCurrency(valorBase))
+      if (body.com_desconto) {
+        drawTextRow('Desconto Aplicado', `10% (-${formatCurrency(valorBase - valorFinal)})`)
+      }
+      drawTextRow('Valor Final', formatCurrency(valorFinal))
+
+      y -= 25
+
+      drawText('Plano de Pagamento', true, 18)
+      y -= 15
+
+      drawTextRow('Quantidade de Parcelas', `${parcelas}x`)
+      for (let i = 0; i < parcelas; i++) {
+        drawText(
+          `  Parcela ${i + 1}/${parcelas}: ${formatCurrency(valorFinal / parcelas)}`,
+          false,
+          14,
+        )
+      }
+
+      y -= 60
+
+      checkPage(100)
+      drawCenterText('___________________________________________________', false, 14)
+      drawCenterText('Assinatura do Colaborador', true, 14)
+
+      y -= 60
+
+      drawCenterText('___________________________________________________', false, 14)
+      drawCenterText('Assinatura da Testemunha', true, 14)
+
+      const pages = pdfDoc.getPages()
+      for (const p of pages) {
+        const text = `Gerado em: ${dateStr} às ${timeStr}`
+        const textWidth = font.widthOfTextAtSize(text, 10)
+        p.drawText(text, {
+          x: (width - textWidth) / 2,
+          y: 20,
+          size: 10,
+          font: font,
+          color: rgb(0, 0, 0),
         })
       }
 
-      const doc = new Document({
-        sections: [
-          {
-            properties: {},
-            footers: {
-              default: new Footer({
-                children: [
-                  new Paragraph({
-                    children: [
-                      new TextRun({ text: `Gerado em: ${dateStr} às ${timeStr}`, size: 24 }),
-                    ],
-                    alignment: AlignmentType.CENTER,
-                  }),
-                ],
-              }),
-            },
-            children: [
-              new Paragraph({
-                children: [new TextRun({ text: 'AUTORIZAÇÃO DE DESCONTO', bold: true, size: 52 })],
-                alignment: AlignmentType.CENTER,
-                spacing: { after: 800 },
-              }),
-              new Paragraph({
-                children: [new TextRun({ text: 'Informações do Sinistro', bold: true, size: 44 })],
-                spacing: { after: 400 },
-              }),
-              createTextRow('Nome', espelho?.nome_motorista || '-'),
-              createTextRow('Registro', espelho?.registro_motorista || '-'),
-              createTextRow('Garagem', body.garagem || '-'),
-              createTextRow('Registro da Ocorrência', body.pia || '-'),
-              createTextRow('Veículo', body.carro || '-'),
-              createTextRow('Placa', placa || '-'),
-
-              new Paragraph({
-                children: [new TextRun({ text: 'Informações Financeiras', bold: true, size: 44 })],
-                spacing: { before: 600, after: 400 },
-              }),
-              createTextRow('Valor Original', formatCurrency(valorBase)),
-              ...(body.com_desconto
-                ? [
-                    createTextRow(
-                      'Desconto Aplicado',
-                      `10% (-${formatCurrency(valorBase - valorFinal)})`,
-                    ),
-                  ]
-                : []),
-              new Paragraph({
-                children: [
-                  new TextRun({ text: 'Valor Final: ', bold: true, size: 36 }),
-                  new TextRun({ text: formatCurrency(valorFinal), bold: true, size: 36 }),
-                ],
-                spacing: { after: 200 },
-              }),
-
-              new Paragraph({
-                children: [new TextRun({ text: 'Plano de Pagamento', bold: true, size: 44 })],
-                spacing: { before: 600, after: 400 },
-              }),
-              createTextRow('Quantidade de Parcelas', `${parcelas}x`),
-              ...Array.from(
-                { length: parcelas },
-                (_, i) =>
-                  new Paragraph({
-                    children: [
-                      new TextRun({
-                        text: `  Parcela ${i + 1}/${parcelas}: ${formatCurrency(valorFinal / parcelas)}`,
-                        size: 36,
-                      }),
-                    ],
-                    spacing: { after: 200 },
-                  }),
-              ),
-
-              new Paragraph({ spacing: { before: 1600 } }),
-              new Paragraph({
-                children: [
-                  new TextRun({
-                    text: '___________________________________________________',
-                    size: 36,
-                  }),
-                ],
-                alignment: AlignmentType.CENTER,
-              }),
-              new Paragraph({
-                children: [
-                  new TextRun({ text: 'Assinatura do Colaborador', bold: true, size: 32 }),
-                ],
-                alignment: AlignmentType.CENTER,
-                spacing: { after: 1600 },
-              }),
-
-              new Paragraph({
-                children: [
-                  new TextRun({
-                    text: '___________________________________________________',
-                    size: 36,
-                  }),
-                ],
-                alignment: AlignmentType.CENTER,
-              }),
-              new Paragraph({
-                children: [new TextRun({ text: 'Assinatura da Testemunha', bold: true, size: 32 })],
-                alignment: AlignmentType.CENTER,
-              }),
-            ],
-          },
-        ],
-      })
-
-      const b64 = await Packer.toBase64String(doc)
-      fileBytes = Uint8Array.from(atob(b64), (c) => c.charCodeAt(0))
-      contentType = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
-      fileName = `Autorizacao_Desconto_${id}_${timestamp}.docx`
+      fileBytes = await pdfDoc.save()
+      contentType = 'application/pdf'
+      fileName = `Autorizacao_Desconto_${id}_${timestamp}.pdf`
     } else {
       const pdfDoc = await PDFDocument.create()
       let page = pdfDoc.addPage()

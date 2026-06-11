@@ -15,6 +15,7 @@ import AdminDashboard from './pages/dashboard/Admin'
 import Relatorios from './pages/dashboard/Relatorios'
 import Documentos from './pages/dashboard/Documentos'
 import ValesAprovacao from './pages/dashboard/ValesAprovacao'
+import ValesAprovadosDP from './pages/dp/ValesAprovadosDP'
 import Perfil from './pages/dashboard/Perfil'
 import ChamadoDetalhes from './pages/dashboard/ChamadoDetalhes'
 import VistoriaForm from './pages/vistoria/VistoriaForm'
@@ -49,12 +50,16 @@ const DashboardRoute = () => {
     if (!loading && profile?.tipo_usuario === 'secretaria_tecnica') {
       navigate('/dashboard/secretaria-tecnica', { replace: true })
     }
+    if (!loading && profile?.tipo_usuario === 'dp') {
+      navigate('/vales-aprovados', { replace: true })
+    }
   }, [profile, loading, navigate])
 
   if (
     loading ||
     profile?.tipo_usuario === 'juridico' ||
-    profile?.tipo_usuario === 'secretaria_tecnica'
+    profile?.tipo_usuario === 'secretaria_tecnica' ||
+    profile?.tipo_usuario === 'dp'
   ) {
     return null
   }
@@ -85,6 +90,7 @@ const App = () => (
             <Route path="/dashboard/perfil" element={<Perfil />} />
             <Route path="/dashboard/secretaria-tecnica" element={<SecretariaTecnica />} />
             <Route path="/dashboard/vales-aprovacao" element={<ValesAprovacao />} />
+            <Route path="/vales-aprovados" element={<ValesAprovadosDP />} />
             <Route path="/vistoria/novo" element={<VistoriaForm />} />
             <Route path="/vistoria/pendentes" element={<DocumentosPendentes />} />
             <Route path="/espelhos-danos" element={<EspelhosDanos />} />

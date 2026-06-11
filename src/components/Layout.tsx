@@ -52,6 +52,9 @@ function AppSidebar() {
   const isJuridico = tipo === 'juridico'
   const isSecretariaTecnica = tipo === 'secretaria_tecnica'
   const isDiretoria = profile?.departamento === 'Diretoria'
+  const isDp = tipo === 'dp'
+
+  if (isDp) return null
 
   return (
     <Sidebar className="border-r-0">
@@ -590,6 +593,14 @@ export default function Layout() {
     return <Navigate to="/dashboard/meus-atendimentos" replace />
   }
 
+  // Redirect DP from other areas
+  if (user && profile?.tipo_usuario === 'dp') {
+    const isDpRoute = location.pathname === '/vales-aprovados'
+    if (!isDpRoute) {
+      return <Navigate to="/vales-aprovados" replace />
+    }
+  }
+
   // Auth Layout
   if (isAuthRoute) {
     return (
@@ -609,6 +620,38 @@ export default function Layout() {
   }
 
   // App Layout
+  if (profile?.tipo_usuario === 'dp') {
+    return (
+      <div className="flex flex-col min-h-screen bg-slate-50">
+        <header className="flex h-16 shrink-0 items-center justify-between px-4 sm:px-6 bg-[#225f3d] text-white sticky top-0 z-10 shadow-md">
+          <div className="flex items-center gap-4">
+            <img src={logoBranco} alt="Via Sudeste" className="h-8 w-auto object-contain" />
+            <span className="font-semibold text-lg hidden sm:block">Departamento Pessoal</span>
+          </div>
+          <div className="flex items-center gap-4">
+            <div className="text-sm font-medium hidden sm:flex items-center gap-2">
+              <span className="w-8 h-8 rounded-full bg-white/20 text-white flex items-center justify-center font-bold uppercase">
+                {(profile?.nome_completo || user?.email)?.[0]}
+              </span>
+              {profile?.nome_completo || user?.email}
+            </div>
+            <Button
+              variant="ghost"
+              className="text-white hover:text-white hover:bg-white/10"
+              onClick={signOut}
+            >
+              <LogOut className="h-4 w-4 sm:mr-2" />
+              <span className="hidden sm:inline">Sair</span>
+            </Button>
+          </div>
+        </header>
+        <main className="flex-1 p-4 sm:p-6 lg:p-8 overflow-auto animate-fade-in">
+          <Outlet />
+        </main>
+      </div>
+    )
+  }
+
   return (
     <SidebarProvider>
       <AppSidebar />

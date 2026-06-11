@@ -133,6 +133,7 @@ export type Database = {
           registro_motorista: string | null
           responsavel_id: string | null
           status: string
+          status_aprovacao: string | null
           status_interno: string | null
           tipo_chamado: string | null
           titulo: string
@@ -158,6 +159,7 @@ export type Database = {
           registro_motorista?: string | null
           responsavel_id?: string | null
           status?: string
+          status_aprovacao?: string | null
           status_interno?: string | null
           tipo_chamado?: string | null
           titulo: string
@@ -183,6 +185,7 @@ export type Database = {
           registro_motorista?: string | null
           responsavel_id?: string | null
           status?: string
+          status_aprovacao?: string | null
           status_interno?: string | null
           tipo_chamado?: string | null
           titulo?: string
@@ -871,6 +874,7 @@ export const Constants = {
 //   status_interno: text (nullable)
 //   garagem: text (nullable)
 //   data_ocorrencia: date (nullable)
+//   status_aprovacao: text (nullable)
 // Table: documentos
 //   id: uuid (not null, default: gen_random_uuid())
 //   tipo_documento: text (not null)
@@ -1046,6 +1050,8 @@ export const Constants = {
 //   Policy "anexos_internos_update" (UPDATE, PERMISSIVE) roles={authenticated}
 //     USING: (is_responsavel() OR is_sinistro() OR is_admin() OR is_juridico() OR is_secretaria_tecnica() OR (usuario_id = auth.uid()))
 //     WITH CHECK: (is_responsavel() OR is_sinistro() OR is_admin() OR is_juridico() OR is_secretaria_tecnica() OR (usuario_id = auth.uid()))
+//   Policy "diretoria_select_anexos_internos" (SELECT, PERMISSIVE) roles={authenticated}
+//     USING: (( SELECT perfil_usuario.departamento    FROM perfil_usuario   WHERE (perfil_usuario.id = auth.uid())) = 'Diretoria'::text)
 // Table: auditoria_admin
 //   Policy "admin_auditoria_insert" (INSERT, PERMISSIVE) roles={authenticated}
 //     WITH CHECK: is_admin()
@@ -1066,6 +1072,11 @@ export const Constants = {
 //   Policy "chamados_update_public_manutencao" (UPDATE, PERMISSIVE) roles={public}
 //     USING: (tipo_chamado = 'OS de Manutenção'::text)
 //     WITH CHECK: (tipo_chamado = 'OS de Manutenção'::text)
+//   Policy "diretoria_select_chamados" (SELECT, PERMISSIVE) roles={authenticated}
+//     USING: (( SELECT perfil_usuario.departamento    FROM perfil_usuario   WHERE (perfil_usuario.id = auth.uid())) = 'Diretoria'::text)
+//   Policy "diretoria_update_chamados" (UPDATE, PERMISSIVE) roles={authenticated}
+//     USING: (( SELECT perfil_usuario.departamento    FROM perfil_usuario   WHERE (perfil_usuario.id = auth.uid())) = 'Diretoria'::text)
+//     WITH CHECK: (( SELECT perfil_usuario.departamento    FROM perfil_usuario   WHERE (perfil_usuario.id = auth.uid())) = 'Diretoria'::text)
 // Table: documentos
 //   Policy "documentos_delete" (DELETE, PERMISSIVE) roles={authenticated}
 //     USING: (is_admin() OR is_responsavel() OR is_sinistro() OR is_juridico())

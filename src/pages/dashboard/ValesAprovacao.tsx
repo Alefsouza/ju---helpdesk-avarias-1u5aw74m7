@@ -3,6 +3,16 @@ import { supabase } from '@/lib/supabase/client'
 import { useAuth } from '@/hooks/use-auth'
 import { Card, CardHeader, CardTitle, CardContent, CardFooter } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+  DialogDescription,
+} from '@/components/ui/dialog'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
 import { Check, X, FileText, Loader2, AlertCircle } from 'lucide-react'
 import { toast } from 'sonner'
 
@@ -10,6 +20,11 @@ export default function ValesAprovacao() {
   const { user, profile } = useAuth()
   const [chamados, setChamados] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
+  const [isApproveOpen, setIsApproveOpen] = useState(false)
+  const [selectedChamadoId, setSelectedChamadoId] = useState<string | null>(null)
+  const [valorTotal, setValorTotal] = useState('')
+  const [numeroParcelas, setNumeroParcelas] = useState('1')
+  const [isSubmitting, setIsSubmitting] = useState(false)
 
   const fetchChamados = async () => {
     setLoading(true)
@@ -53,26 +68,73 @@ export default function ValesAprovacao() {
     }
   }, [profile])
 
-  const handleApprove = async (id: string) => {
+  const handleApproveClick = (id: string) => {
+    setSelectedChamadoId(id)
+    setValorTotal('')
+    setNumeroParcelas('1')
+    setIsApproveOpen(true)
+  }
+
+  const handleApproveSubmit = async () => {
+    if (!selectedChamadoId) return
+    const total = parseFloat(valorTotal.replace(',', '.'))
+    const parcelasCount = parseInt(numeroParcelas, 10)
+
+    if (isNaN(total) || total <= 0) return toast.error('Valor total inválido')
+    if (isNaN(parcelasCount) || parcelasCount <= 0)
+      return toast.error('Número de parcelas inválido')
+
+    setIsSubmitting(true)
+
+    const valorParcela = Math.floor((total / parcelasCount) * 100) / 100
+    const parcelas = []
+    let currentDate = new Date()
+    currentDate.setMonth(currentDate.getMonth() + 1)
+    currentDate.setDate(1)
+
+    for (let i = 0; i < parcelasCount; i++) {
+      const isLast = i === parcelasCount - 1
+      const parcelaValue = isLast
+        ? (total - valorParcela * (parcelasCount - 1)).toFixed(2)
+        : valorParcela.toFixed(2)
+
+      parcelas.push({
+        chamado_id: selectedChamadoId,
+        valor_parcela: parcelaValue,
+        data_referencia: currentDate.toISOString().split('T')[0],
+      })
+      currentDate.setMonth(currentDate.getMonth() + 1)
+    }
+
+    const { error: parcelasError } = await supabase.from('parcelas_vales').insert(parcelas)
+    if (parcelasError) {
+      toast.error('Erro ao gerar parcelas')
+      setIsSubmitting(false)
+      return
+    }
+
     const { error } = await supabase
       .from('chamados')
       .update({ status_aprovacao: 'aprovado' } as any)
-      .eq('id', id)
+      .eq('id', selectedChamadoId)
 
     if (error) {
       toast.error('Erro ao aprovar chamado')
+      setIsSubmitting(false)
       return
     }
 
     await supabase.from('historico_chamado').insert({
-      chamado_id: id,
+      chamado_id: selectedChamadoId,
       acao: 'respondido',
       usuario_id: user!.id,
-      detalhes: 'Aprovado pela Diretoria',
+      detalhes: `Vale aprovado pela Diretoria. Total: R$ ${total.toFixed(2)} em ${parcelasCount}x.`,
     })
 
     toast.success('Chamado aprovado com sucesso!')
-    setChamados((prev) => prev.filter((c) => c.id !== id))
+    setChamados((prev) => prev.filter((c) => c.id !== selectedChamadoId))
+    setIsApproveOpen(false)
+    setIsSubmitting(false)
   }
 
   const handleRefuse = async (id: string) => {
@@ -200,7 +262,7 @@ export default function ValesAprovacao() {
                   </Button>
                   <Button
                     className="bg-emerald-600 hover:bg-emerald-700 text-white"
-                    onClick={() => handleApprove(chamado.id)}
+                    onClick={() => handleApproveClick(chamado.id)}
                   >
                     <Check className="w-4 h-4 mr-1.5" />
                     Aprovar
@@ -211,6 +273,68 @@ export default function ValesAprovacao() {
           })}
         </div>
       )}
+
+      <Dialog open={isApproveOpen} onOpenChange={setIsApproveOpen}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Aprovar Vale</DialogTitle>
+            <DialogDescription>
+              Insira o valor total e em quantas parcelas o valor será descontado.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="valorTotal" className="text-right">
+                Valor Total (R$)
+              </Label>
+              <Input
+                id="valorTotal"
+                type="number"
+                step="0.01"
+                placeholder="Ex: 900.00"
+                value={valorTotal}
+                onChange={(e) => setValorTotal(e.target.value)}
+                className="col-span-3"
+              />
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="parcelas" className="text-right">
+                Nº de Parcelas
+              </Label>
+              <Input
+                id="parcelas"
+                type="number"
+                min="1"
+                step="1"
+                value={numeroParcelas}
+                onChange={(e) => setNumeroParcelas(e.target.value)}
+                className="col-span-3"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setIsApproveOpen(false)}
+              disabled={isSubmitting}
+            >
+              Cancelar
+            </Button>
+            <Button
+              onClick={handleApproveSubmit}
+              disabled={isSubmitting}
+              className="bg-emerald-600 hover:bg-emerald-700 text-white"
+            >
+              {isSubmitting ? (
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+              ) : (
+                <Check className="w-4 h-4 mr-2" />
+              )}
+              Confirmar e Aprovar
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

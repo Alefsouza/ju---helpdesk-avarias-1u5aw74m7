@@ -138,6 +138,7 @@ export type Database = {
           tipo_chamado: string | null
           titulo: string
           usuario_id: string
+          aprovacoes_diretoria?: Json | null
         }
         Insert: {
           atualizado_em?: string
@@ -164,6 +165,7 @@ export type Database = {
           tipo_chamado?: string | null
           titulo: string
           usuario_id: string
+          aprovacoes_diretoria?: Json | null
         }
         Update: {
           atualizado_em?: string
@@ -190,6 +192,7 @@ export type Database = {
           tipo_chamado?: string | null
           titulo?: string
           usuario_id?: string
+          aprovacoes_diretoria?: Json | null
         }
         Relationships: []
       }

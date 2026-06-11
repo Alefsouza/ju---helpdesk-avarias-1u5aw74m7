@@ -154,7 +154,24 @@ Deno.serve(async (req: Request) => {
       .replace(/[-:T.]/g, '')
       .substring(0, 14)
 
-    if (tipo_documento === 'IDO') {
+    if (tipo_documento === 'Vale') {
+      drawText('Vale Financeiro', true, 20)
+      y -= 10
+      drawText(`Chamado: ${id || '-'}`, true, 14)
+      y -= 10
+
+      const formattedValue = new Intl.NumberFormat('pt-BR', {
+        style: 'currency',
+        currency: 'BRL',
+      }).format(body.valor_orcamento || 0)
+      drawText(`Valor Final: ${formattedValue}`, true, 14)
+      drawText(`Parcelas: ${body.parcelas || '1'}x`)
+      if (body.com_desconto) {
+        drawText(`Desconto Aplicado: 10%`)
+      }
+
+      fileName = `Vale_${id}_${timestamp}.pdf`
+    } else if (tipo_documento === 'IDO') {
       drawText('Boletim de Ocorrência (IDO)', true, 20)
       y -= 10
       drawText(`Protocolo: ${protocolo_ido || '-'}`, true, 14)

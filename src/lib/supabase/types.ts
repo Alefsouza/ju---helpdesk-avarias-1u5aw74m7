@@ -899,6 +899,7 @@ export const Constants = {
 //   orcamento_url: text (nullable)
 //   fotos_manutencao: jsonb (nullable, default: '[]'::jsonb)
 //   fotos_requisicao: jsonb (nullable, default: '[]'::jsonb)
+//   valor_orcamento: numeric (nullable)
 // Table: formularios_espelho_danos
 //   id: uuid (not null, default: gen_random_uuid())
 //   chamado_id: uuid (nullable)

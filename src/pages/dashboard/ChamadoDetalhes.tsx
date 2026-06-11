@@ -71,6 +71,7 @@ import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
 import { UnificarChamadoModal } from '@/components/UnificarChamadoModal'
 import { useDocumentAction } from '@/hooks/use-document-action'
+import { Checkbox } from '@/components/ui/checkbox'
 
 type Chamado = any
 type Perfil = any
@@ -270,6 +271,173 @@ function TransferModal({
           <Button onClick={handleTransferir} disabled={!selectedResponsavel || transferLoading}>
             {transferLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
             {transferLoading ? 'Transferindo chamado...' : 'Transferir'}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  )
+}
+
+function GerarValeModal({ open, setOpen, orcamentoDoc, chamadoId, onSuccess, userId }: any) {
+  const [valorBaseStr, setValorBaseStr] = useState<string>('')
+  const [desconto, setDesconto] = useState(false)
+  const [parcelas, setParcelas] = useState('1')
+  const [loading, setLoading] = useState(false)
+
+  useEffect(() => {
+    if (open && orcamentoDoc?.valor_orcamento) {
+      setValorBaseStr(orcamentoDoc.valor_orcamento.toString())
+      setDesconto(false)
+      setParcelas('1')
+    } else if (open && !valorBaseStr) {
+      setValorBaseStr('0')
+    }
+  }, [open, orcamentoDoc])
+
+  const valorBaseNum = parseFloat(valorBaseStr) || 0
+  const valorFinal = desconto ? valorBaseNum * 0.9 : valorBaseNum
+  const maxParcelas = Math.max(1, Math.floor(valorFinal / 250))
+
+  useEffect(() => {
+    if (parseInt(parcelas) > maxParcelas) {
+      setParcelas(maxParcelas.toString())
+    }
+  }, [maxParcelas, parcelas])
+
+  const parcelasOptions = Array.from({ length: maxParcelas }, (_, i) => i + 1)
+
+  const formattedFinal = new Intl.NumberFormat('pt-BR', {
+    style: 'currency',
+    currency: 'BRL',
+  }).format(valorFinal)
+
+  const handleGerar = async () => {
+    setLoading(true)
+    try {
+      const { data: sessionData } = await supabase.auth.getSession()
+      const token = sessionData.session?.access_token
+
+      const { data: pdfData, error: pdfError } = await supabase.functions.invoke('gerar-pdf', {
+        body: {
+          tipo_documento: 'Vale',
+          id: chamadoId,
+          valor_orcamento: valorFinal,
+          parcelas,
+          com_desconto: desconto,
+        },
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      })
+
+      if (pdfError || !pdfData?.success) throw new Error('Erro ao gerar PDF do Vale')
+
+      const newUrl = `${pdfData.url}?t=${Date.now()}`
+      const newNomeArquivo = pdfData.nome_arquivo || `Vale - ${chamadoId}.pdf`
+
+      const { error: docError } = await supabase.from('documentos').insert({
+        chamado_id: chamadoId,
+        tipo_documento: 'Vale',
+        valor_orcamento: valorFinal,
+        nome_arquivo: newNomeArquivo,
+        arquivo_url: newUrl,
+      })
+
+      if (docError) throw docError
+
+      await supabase.from('anexos_chamado_interno').insert({
+        chamado_id: chamadoId,
+        usuario_id: userId,
+        arquivo_url: newUrl,
+        nome_arquivo: newNomeArquivo,
+        tipo_arquivo: 'application/pdf',
+        tamanho_bytes: 0,
+      })
+
+      await supabase.from('historico_chamado').insert({
+        chamado_id: chamadoId,
+        acao: 'respondido',
+        usuario_id: userId,
+        detalhes: `Vale gerado com sucesso. Valor: ${formattedFinal} (${parcelas}x)`,
+      })
+
+      toast.success('Vale gerado com sucesso!')
+      onSuccess()
+      setOpen(false)
+    } catch (e: any) {
+      console.error(e)
+      toast.error('Erro ao gerar vale: ' + e.message)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogContent className="sm:max-w-[425px]">
+        <DialogHeader>
+          <DialogTitle>Gerar Vale</DialogTitle>
+        </DialogHeader>
+        <div className="grid gap-4 py-4">
+          <div className="space-y-2">
+            <Label>Valor Base (R$)</Label>
+            <Input
+              type="number"
+              value={valorBaseStr}
+              onChange={(e) => setValorBaseStr(e.target.value)}
+              disabled={loading}
+              step="0.01"
+            />
+          </div>
+
+          <div className="flex items-center space-x-2 bg-slate-50 p-3 rounded-lg border">
+            <Checkbox
+              id="desconto"
+              checked={desconto}
+              onCheckedChange={(checked) => setDesconto(!!checked)}
+              disabled={loading}
+            />
+            <Label htmlFor="desconto" className="text-sm cursor-pointer leading-none">
+              Aplicar Desconto de 10%
+            </Label>
+          </div>
+
+          <div className="space-y-2">
+            <Label>Quantidade de Parcelas (Mín. R$ 250/parcela)</Label>
+            <Select value={parcelas} onValueChange={setParcelas} disabled={loading}>
+              <SelectTrigger>
+                <SelectValue placeholder="Selecione..." />
+              </SelectTrigger>
+              <SelectContent>
+                {parcelasOptions.map((p) => (
+                  <SelectItem key={p} value={p.toString()}>
+                    {p}x
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="bg-emerald-50 text-emerald-800 p-4 rounded-lg border border-emerald-200 mt-2">
+            <div className="text-sm font-medium mb-1">Valor Final do Vale:</div>
+            <div className="text-2xl font-bold">{formattedFinal}</div>
+            {parseInt(parcelas) > 1 && (
+              <div className="text-sm opacity-80 mt-1">
+                {parcelas} parcelas de{' '}
+                {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(
+                  valorFinal / parseInt(parcelas),
+                )}
+              </div>
+            )}
+          </div>
+        </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={() => setOpen(false)} disabled={loading}>
+            Cancelar
+          </Button>
+          <Button onClick={handleGerar} disabled={loading || valorFinal <= 0}>
+            {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+            Confirmar e Gerar Vale
           </Button>
         </DialogFooter>
       </DialogContent>
@@ -656,6 +824,8 @@ export default function ChamadoDetalhes() {
   const [savingDoc, setSavingDoc] = useState(false)
   const [duplicateAlertOpen, setDuplicateAlertOpen] = useState(false)
   const [duplicateSubmitAction, setDuplicateSubmitAction] = useState<(() => void) | null>(null)
+
+  const [gerarValeModalOpen, setGerarValeModalOpen] = useState(false)
 
   const [anexoInternoToDelete, setAnexoInternoToDelete] = useState<{
     id: string
@@ -2198,6 +2368,11 @@ export default function ChamadoDetalhes() {
   const canEditRA = isSupport
   const canUnify = isSupport && chamado.status !== 'finalizado'
 
+  const orcamentoDoc = documentosChamado.find(
+    (d) => d.valor_orcamento != null && d.valor_orcamento > 0,
+  )
+  const canGenerateVale = !!orcamentoDoc
+
   const getAcaoText = (acao: string, userNome: string) => {
     switch (acao) {
       case 'criado':
@@ -2605,178 +2780,196 @@ export default function ChamadoDetalhes() {
         )}
 
         {isSupport && (
-          <div className="pt-4 border-t" id="anexos-internos">
-            <div className="flex items-center justify-between mb-3">
-              <h3 className="text-sm font-bold text-slate-900 uppercase tracking-wider flex items-center gap-2">
-                Anexos Internos{' '}
-                <Badge variant="secondary" className="bg-amber-100 text-amber-800">
-                  {anexosInternos.length}
-                </Badge>
-              </h3>
-              <Button
-                size="sm"
-                variant="outline"
-                className="text-xs h-8 bg-amber-50 hover:bg-amber-100 text-amber-800 border-amber-200"
-                onClick={() => internalFileInputRef.current?.click()}
-                disabled={uploadingInternal}
-              >
-                {uploadingInternal ? (
-                  <Loader2 className="mr-2 h-3 w-3 animate-spin" />
-                ) : (
-                  <Paperclip className="mr-2 h-3 w-3" />
-                )}
-                Adicionar Anexo Interno
-              </Button>
-              <input
-                type="file"
-                ref={internalFileInputRef}
-                onChange={handleInternalFileChange}
-                className="hidden"
-                accept=".pdf,.doc,.docx,.xls,.xlsx,image/jpeg,image/png,image/gif"
-              />
-            </div>
+          <div className="pt-4 border-t flex flex-col gap-4" id="anexos-internos">
+            <div>
+              <div className="flex items-center justify-between mb-3">
+                <h3 className="text-sm font-bold text-slate-900 uppercase tracking-wider flex items-center gap-2">
+                  Anexos Internos{' '}
+                  <Badge variant="secondary" className="bg-amber-100 text-amber-800">
+                    {anexosInternos.length}
+                  </Badge>
+                </h3>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="text-xs h-8 bg-amber-50 hover:bg-amber-100 text-amber-800 border-amber-200"
+                  onClick={() => internalFileInputRef.current?.click()}
+                  disabled={uploadingInternal}
+                >
+                  {uploadingInternal ? (
+                    <Loader2 className="mr-2 h-3 w-3 animate-spin" />
+                  ) : (
+                    <Paperclip className="mr-2 h-3 w-3" />
+                  )}
+                  Adicionar Anexo Interno
+                </Button>
+                <input
+                  type="file"
+                  ref={internalFileInputRef}
+                  onChange={handleInternalFileChange}
+                  className="hidden"
+                  accept=".pdf,.doc,.docx,.xls,.xlsx,image/jpeg,image/png,image/gif"
+                />
+              </div>
 
-            {anexosInternos.length > 0 ? (
-              <div className="flex flex-col gap-2">
-                {anexosInternos.map((anexo) => (
-                  <div
-                    key={anexo.id}
-                    className="flex items-center justify-between p-3 rounded-lg border bg-amber-50/30"
-                  >
-                    <div className="flex items-center gap-3 min-w-0">
-                      <FileText className="h-5 w-5 text-amber-600 shrink-0" />
-                      <div className="min-w-0">
-                        <p
-                          className="text-sm font-medium text-slate-900 truncate"
-                          title={anexo.nome_arquivo}
-                        >
-                          {anexo.nome_arquivo}
-                        </p>
-                        <p className="text-xs text-slate-500">
-                          {(anexo.tamanho_bytes / 1024 / 1024).toFixed(2)} MB •{' '}
-                          {format(new Date(anexo.criado_em), 'dd/MM/yyyy HH:mm')}
-                        </p>
-                        {(() => {
-                          const docRelacionado = documentosChamado.find(
-                            (d) => d.orcamento_url === anexo.arquivo_url,
-                          )
-                          if (docRelacionado && docRelacionado.valor_orcamento != null) {
-                            const formattedValue = new Intl.NumberFormat('pt-BR', {
-                              style: 'currency',
-                              currency: 'BRL',
-                            }).format(docRelacionado.valor_orcamento)
-                            return (
-                              <Badge
-                                variant="outline"
-                                className="mt-1 bg-purple-50 text-purple-700 border-purple-200"
-                              >
-                                Valor: {formattedValue}
-                              </Badge>
+              {anexosInternos.length > 0 ? (
+                <div className="flex flex-col gap-2">
+                  {anexosInternos.map((anexo) => (
+                    <div
+                      key={anexo.id}
+                      className="flex items-center justify-between p-3 rounded-lg border bg-amber-50/30"
+                    >
+                      <div className="flex items-center gap-3 min-w-0">
+                        <FileText className="h-5 w-5 text-amber-600 shrink-0" />
+                        <div className="min-w-0">
+                          <p
+                            className="text-sm font-medium text-slate-900 truncate"
+                            title={anexo.nome_arquivo}
+                          >
+                            {anexo.nome_arquivo}
+                          </p>
+                          <p className="text-xs text-slate-500">
+                            {(anexo.tamanho_bytes / 1024 / 1024).toFixed(2)} MB •{' '}
+                            {format(new Date(anexo.criado_em), 'dd/MM/yyyy HH:mm')}
+                          </p>
+                          {(() => {
+                            const docRelacionado = documentosChamado.find(
+                              (d) => d.orcamento_url === anexo.arquivo_url,
                             )
-                          }
-                          return null
-                        })()}
+                            if (docRelacionado && docRelacionado.valor_orcamento != null) {
+                              const formattedValue = new Intl.NumberFormat('pt-BR', {
+                                style: 'currency',
+                                currency: 'BRL',
+                              }).format(docRelacionado.valor_orcamento)
+                              return (
+                                <Badge
+                                  variant="outline"
+                                  className="mt-1 bg-purple-50 text-purple-700 border-purple-200"
+                                >
+                                  Valor: {formattedValue}
+                                </Badge>
+                              )
+                            }
+                            return null
+                          })()}
+                        </div>
                       </div>
-                    </div>
-                    <div className="flex items-center gap-2 shrink-0 ml-4">
-                      {' '}
-                      {isSupport &&
-                        (anexo.nome_arquivo.toLowerCase().includes('ido') ||
-                          anexo.nome_arquivo.toLowerCase().includes('boletim')) && (
-                          <Button
-                            size="icon"
-                            variant="ghost"
-                            className="h-8 w-8 text-slate-500 hover:text-blue-600"
-                            onClick={() => handleEditInternalDoc(anexo, 'IDO')}
-                            disabled={
-                              editingDocLoading || (savingDoc && editingDoc?.anexo.id === anexo.id)
-                            }
-                            title="Editar IDO"
-                          >
-                            <Pencil className="h-4 w-4" />
-                          </Button>
-                        )}
-                      {isSupport &&
-                        (anexo.nome_arquivo.toLowerCase().includes('espelho') ||
-                          anexo.nome_arquivo.toLowerCase().includes('danos')) && (
-                          <Button
-                            size="icon"
-                            variant="ghost"
-                            className="h-8 w-8 text-slate-500 hover:text-blue-600"
-                            onClick={() => handleEditInternalDoc(anexo, 'Espelho')}
-                            disabled={
-                              editingDocLoading || (savingDoc && editingDoc?.anexo.id === anexo.id)
-                            }
-                            title="Editar Espelho de Danos"
-                          >
-                            <Pencil className="h-4 w-4" />
-                          </Button>
-                        )}
-                      <Button
-                        size="icon"
-                        variant="ghost"
-                        className="h-8 w-8 text-slate-500 hover:text-slate-900"
-                        onClick={() => handleDownloadInternal(anexo)}
-                        disabled={
-                          loadingAction === `${anexo.id}-download` ||
-                          loadingAction === `${anexo.id}-view` ||
-                          (savingDoc && editingDoc?.anexo.id === anexo.id)
-                        }
-                        title="Baixar anexo"
-                      >
-                        {loadingAction === `${anexo.id}-download` ||
-                        (savingDoc && editingDoc?.anexo.id === anexo.id) ? (
-                          <Loader2 className="h-4 w-4 animate-spin" />
-                        ) : (
-                          <Download className="h-4 w-4" />
-                        )}
-                      </Button>
-                      <Button
-                        size="icon"
-                        variant="ghost"
-                        className="h-8 w-8 text-slate-500 hover:text-slate-900"
-                        onClick={() => handleViewInternal(anexo)}
-                        disabled={
-                          loadingAction === `${anexo.id}-download` ||
-                          loadingAction === `${anexo.id}-view` ||
-                          (savingDoc && editingDoc?.anexo.id === anexo.id)
-                        }
-                        title="Visualizar anexo"
-                      >
-                        {loadingAction === `${anexo.id}-view` ||
-                        (savingDoc && editingDoc?.anexo.id === anexo.id) ? (
-                          <Loader2 className="h-4 w-4 animate-spin" />
-                        ) : (
-                          <Eye className="h-4 w-4" />
-                        )}
-                      </Button>
-                      {(user?.id === anexo.usuario_id ||
-                        user?.id === chamado.responsavel_id ||
-                        currentUserProfile?.tipo_usuario === 'admin') && (
+                      <div className="flex items-center gap-2 shrink-0 ml-4">
+                        {' '}
+                        {isSupport &&
+                          (anexo.nome_arquivo.toLowerCase().includes('ido') ||
+                            anexo.nome_arquivo.toLowerCase().includes('boletim')) && (
+                            <Button
+                              size="icon"
+                              variant="ghost"
+                              className="h-8 w-8 text-slate-500 hover:text-blue-600"
+                              onClick={() => handleEditInternalDoc(anexo, 'IDO')}
+                              disabled={
+                                editingDocLoading ||
+                                (savingDoc && editingDoc?.anexo.id === anexo.id)
+                              }
+                              title="Editar IDO"
+                            >
+                              <Pencil className="h-4 w-4" />
+                            </Button>
+                          )}
+                        {isSupport &&
+                          (anexo.nome_arquivo.toLowerCase().includes('espelho') ||
+                            anexo.nome_arquivo.toLowerCase().includes('danos')) && (
+                            <Button
+                              size="icon"
+                              variant="ghost"
+                              className="h-8 w-8 text-slate-500 hover:text-blue-600"
+                              onClick={() => handleEditInternalDoc(anexo, 'Espelho')}
+                              disabled={
+                                editingDocLoading ||
+                                (savingDoc && editingDoc?.anexo.id === anexo.id)
+                              }
+                              title="Editar Espelho de Danos"
+                            >
+                              <Pencil className="h-4 w-4" />
+                            </Button>
+                          )}
                         <Button
                           size="icon"
                           variant="ghost"
-                          className="h-8 w-8 text-slate-500 hover:text-red-600"
-                          onClick={() =>
-                            setAnexoInternoToDelete({ id: anexo.id, url: anexo.arquivo_url })
-                          }
+                          className="h-8 w-8 text-slate-500 hover:text-slate-900"
+                          onClick={() => handleDownloadInternal(anexo)}
                           disabled={
                             loadingAction === `${anexo.id}-download` ||
                             loadingAction === `${anexo.id}-view` ||
                             (savingDoc && editingDoc?.anexo.id === anexo.id)
                           }
-                          title="Excluir anexo"
+                          title="Baixar anexo"
                         >
-                          <Trash2 className="h-4 w-4" />
+                          {loadingAction === `${anexo.id}-download` ||
+                          (savingDoc && editingDoc?.anexo.id === anexo.id) ? (
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                          ) : (
+                            <Download className="h-4 w-4" />
+                          )}
                         </Button>
-                      )}
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          className="h-8 w-8 text-slate-500 hover:text-slate-900"
+                          onClick={() => handleViewInternal(anexo)}
+                          disabled={
+                            loadingAction === `${anexo.id}-download` ||
+                            loadingAction === `${anexo.id}-view` ||
+                            (savingDoc && editingDoc?.anexo.id === anexo.id)
+                          }
+                          title="Visualizar anexo"
+                        >
+                          {loadingAction === `${anexo.id}-view` ||
+                          (savingDoc && editingDoc?.anexo.id === anexo.id) ? (
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                          ) : (
+                            <Eye className="h-4 w-4" />
+                          )}
+                        </Button>
+                        {(user?.id === anexo.usuario_id ||
+                          user?.id === chamado.responsavel_id ||
+                          currentUserProfile?.tipo_usuario === 'admin') && (
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            className="h-8 w-8 text-slate-500 hover:text-red-600"
+                            onClick={() =>
+                              setAnexoInternoToDelete({ id: anexo.id, url: anexo.arquivo_url })
+                            }
+                            disabled={
+                              loadingAction === `${anexo.id}-download` ||
+                              loadingAction === `${anexo.id}-view` ||
+                              (savingDoc && editingDoc?.anexo.id === anexo.id)
+                            }
+                            title="Excluir anexo"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        )}
+                      </div>
                     </div>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div className="text-center p-6 border border-dashed rounded-lg bg-slate-50">
-                <p className="text-sm text-slate-500">Nenhum anexo interno registrado.</p>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center p-6 border border-dashed rounded-lg bg-slate-50">
+                  <p className="text-sm text-slate-500">Nenhum anexo interno registrado.</p>
+                </div>
+              )}
+            </div>
+
+            {(currentUserProfile?.tipo_usuario === 'secretaria_tecnica' ||
+              currentUserProfile?.tipo_usuario === 'admin') && (
+              <div className="flex justify-end pt-2">
+                <Button
+                  onClick={() => setGerarValeModalOpen(true)}
+                  disabled={!canGenerateVale || completing}
+                  className="bg-emerald-600 hover:bg-emerald-700 text-white"
+                >
+                  <FileText className="mr-2 h-4 w-4" />
+                  Gerar Vale
+                </Button>
               </div>
             )}
           </div>
@@ -3181,6 +3374,15 @@ export default function ChamadoDetalhes() {
         setDuplicateAlertOpen={setDuplicateAlertOpen}
         duplicateSubmitAction={duplicateSubmitAction}
         setDuplicateSubmitAction={setDuplicateSubmitAction}
+      />
+
+      <GerarValeModal
+        open={gerarValeModalOpen}
+        setOpen={setGerarValeModalOpen}
+        orcamentoDoc={orcamentoDoc}
+        chamadoId={id}
+        userId={user?.id}
+        onSuccess={() => fetchChamadoData()}
       />
 
       <AlertDialog

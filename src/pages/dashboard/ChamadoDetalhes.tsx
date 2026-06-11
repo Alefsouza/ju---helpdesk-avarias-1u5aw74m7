@@ -2853,11 +2853,7 @@ export default function ChamadoDetalhes() {
           <div className="text-xs text-slate-500 flex flex-col sm:items-end gap-0.5 bg-slate-50 p-2 rounded-md border">
             <div className="flex items-center gap-1">
               <Clock className="h-3.5 w-3.5" />
-              <span>
-                {format(new Date(chamado.criado_em), "dd 'de' MMM, yyyy 'às' HH:mm", {
-                  locale: ptBR,
-                })}
-              </span>
+              <span>{format(new Date(chamado.criado_em), "dd/MM/yyyy 'às' HH:mm")}</span>
             </div>
             <div className="flex items-center gap-1 mt-0.5">
               <User className="h-3.5 w-3.5" />
@@ -3195,7 +3191,7 @@ export default function ChamadoDetalhes() {
                           </p>
                           <p className="text-[10px] text-slate-500">
                             {(anexo.tamanho_bytes / 1024 / 1024).toFixed(2)} MB •{' '}
-                            {format(new Date(anexo.criado_em), 'dd/MM/yyyy HH:mm')}
+                            {format(new Date(anexo.criado_em), "dd/MM/yyyy 'às' HH:mm")}
                           </p>
                           {(() => {
                             const docRelacionado = documentosChamado.find(
@@ -3380,7 +3376,7 @@ export default function ChamadoDetalhes() {
                         </p>
                         <p className="text-[10px] text-slate-500">
                           {anexo.tamanho_mb} MB •{' '}
-                          {format(new Date(anexo.criado_em), 'dd/MM/yyyy HH:mm')}
+                          {format(new Date(anexo.criado_em), "dd/MM/yyyy 'às' HH:mm")}
                         </p>
                       </div>
                     </div>
@@ -3460,7 +3456,7 @@ export default function ChamadoDetalhes() {
                         <Clock className="h-3 w-3 shrink-0" />
                         <span>
                           {getAcaoText(item.acao!, item.usuario?.nome_completo || 'Sistema')} -{' '}
-                          {format(new Date(item.criado_em), 'dd/MM/yyyy HH:mm')}
+                          {format(new Date(item.criado_em), "dd/MM/yyyy 'às' HH:mm")}
                         </span>
                       </div>
                       {item.detalhes && (
@@ -3547,7 +3543,7 @@ export default function ChamadoDetalhes() {
                         isCurrentUser ? 'text-primary-foreground/90' : 'text-slate-500',
                       )}
                     >
-                      {format(new Date(item.criado_em), 'dd/MM/yyyy HH:mm')}
+                      {format(new Date(item.criado_em), "dd/MM/yyyy 'às' HH:mm")}
                     </div>
                   </div>
                 </div>

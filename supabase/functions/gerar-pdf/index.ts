@@ -257,37 +257,21 @@ Deno.serve(async (req: Request) => {
         }),
       )
 
-      if (parcelasData && parcelasData.length > 0) {
-        addRow('Quantidade de Parcelas', `${parcelasData.length}x`)
-        for (let i = 0; i < parcelasData.length; i++) {
-          const p = parcelasData[i]
-          children.push(
-            new Paragraph({
-              children: [
-                new TextRun({
-                  text: `  Parcela ${i + 1}/${parcelasData.length}: ${formatCurrency(p.valor_parcela)}`,
-                  size: 24,
-                }),
-              ],
-              spacing: { after: 120 },
-            }),
-          )
-        }
-      } else {
-        addRow('Quantidade de Parcelas', `${parcelas}x`)
-        for (let i = 0; i < parcelas; i++) {
-          children.push(
-            new Paragraph({
-              children: [
-                new TextRun({
-                  text: `  Parcela ${i + 1}/${parcelas}: ${formatCurrency(valorFinal / parcelas)}`,
-                  size: 24,
-                }),
-              ],
-              spacing: { after: 120 },
-            }),
-          )
-        }
+      const numParcelasRequested = parseInt(body.parcelas || '1', 10)
+      addRow('Quantidade de Parcelas', `${numParcelasRequested}x`)
+
+      for (let i = 0; i < numParcelasRequested; i++) {
+        children.push(
+          new Paragraph({
+            children: [
+              new TextRun({
+                text: `  Parcela ${i + 1}/${numParcelasRequested}: ${formatCurrency(valorFinal / numParcelasRequested)}`,
+                size: 24,
+              }),
+            ],
+            spacing: { after: 120 },
+          }),
+        )
       }
 
       children.push(

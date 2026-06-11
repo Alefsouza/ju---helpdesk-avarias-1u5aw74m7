@@ -47,8 +47,8 @@ export default function ValesAprovacao() {
 
     const filtered =
       data?.filter((c: any) => {
-        const aprovacoes = c.aprovacoes_diretoria || []
-        if (aprovacoes.includes(user!.id)) return false
+        const aprovacoes = Array.isArray(c.aprovacoes_diretoria) ? c.aprovacoes_diretoria : []
+        if (aprovacoes.some((a: any) => a.usuario_id === user!.id)) return false
 
         const anexos = c.anexos_chamado_interno || []
         const hasVale = anexos.some((a: any) => a.nome_arquivo.toLowerCase().includes('vale'))
@@ -74,7 +74,13 @@ export default function ValesAprovacao() {
 
   const handleApproveClick = (chamado: any) => {
     setSelectedChamado(chamado)
-    if (chamado.status_aprovacao === 'aprovacao_parcial') {
+    const currentAprovacoes = Array.isArray(chamado.aprovacoes_diretoria)
+      ? chamado.aprovacoes_diretoria
+      : []
+    const isSecondApproval =
+      currentAprovacoes.length >= 1 || chamado.status_aprovacao === 'aprovacao_parcial'
+
+    if (isSecondApproval) {
       const parcelas = chamado.parcelas_vales || []
       const total = parcelas.reduce((acc: number, p: any) => acc + Number(p.valor_parcela), 0)
       setValorTotal(total.toFixed(2))
@@ -90,10 +96,23 @@ export default function ValesAprovacao() {
     if (!selectedChamado) return
     setIsSubmitting(true)
 
-    const isSecondApproval = selectedChamado.status_aprovacao === 'aprovacao_parcial'
-    const newAprovacoes = [...(selectedChamado.aprovacoes_diretoria || []), user!.id]
-    const isFinalApproval = newAprovacoes.length >= 2
+    const currentAprovacoes = Array.isArray(selectedChamado.aprovacoes_diretoria)
+      ? selectedChamado.aprovacoes_diretoria
+      : []
+    const isSecondApproval =
+      currentAprovacoes.length >= 1 || selectedChamado.status_aprovacao === 'aprovacao_parcial'
 
+    const newAprovacoes = [
+      ...currentAprovacoes,
+      {
+        usuario_id: user!.id,
+        nome_diretor: profile?.nome_completo || 'Diretor',
+        aprovado: true,
+        data_aprovacao: new Date().toISOString(),
+      },
+    ]
+
+    const isFinalApproval = newAprovacoes.length >= 2
     const newStatus = isFinalApproval ? 'aprovado' : 'aprovacao_parcial'
 
     if (!isSecondApproval) {
@@ -239,7 +258,11 @@ export default function ValesAprovacao() {
                 a.nome_arquivo.toLowerCase().includes('orçamento') ||
                 a.nome_arquivo.toLowerCase().includes('orcamento'),
             )
-            const isSecondApproval = chamado.status_aprovacao === 'aprovacao_parcial'
+            const currentAprovacoes = Array.isArray(chamado.aprovacoes_diretoria)
+              ? chamado.aprovacoes_diretoria
+              : []
+            const isSecondApproval =
+              currentAprovacoes.length >= 1 || chamado.status_aprovacao === 'aprovacao_parcial'
 
             return (
               <Card
@@ -320,12 +343,16 @@ export default function ValesAprovacao() {
         <DialogContent className="sm:max-w-[425px]">
           <DialogHeader>
             <DialogTitle>
-              {selectedChamado?.status_aprovacao === 'aprovacao_parcial'
+              {(Array.isArray(selectedChamado?.aprovacoes_diretoria) &&
+                selectedChamado.aprovacoes_diretoria.length >= 1) ||
+              selectedChamado?.status_aprovacao === 'aprovacao_parcial'
                 ? 'Confirmar 2ª Aprovação'
                 : 'Aprovar Vale'}
             </DialogTitle>
             <DialogDescription>
-              {selectedChamado?.status_aprovacao === 'aprovacao_parcial'
+              {(Array.isArray(selectedChamado?.aprovacoes_diretoria) &&
+                selectedChamado.aprovacoes_diretoria.length >= 1) ||
+              selectedChamado?.status_aprovacao === 'aprovacao_parcial'
                 ? 'A primeira aprovação já foi registrada com os valores abaixo. Confirme para finalizar a aprovação e enviar ao DP.'
                 : 'Insira o valor total e em quantas parcelas o valor será descontado.'}
             </DialogDescription>
@@ -343,7 +370,11 @@ export default function ValesAprovacao() {
                 value={valorTotal}
                 onChange={(e) => setValorTotal(e.target.value)}
                 className="col-span-3 disabled:opacity-75 disabled:cursor-not-allowed disabled:bg-slate-50"
-                disabled={selectedChamado?.status_aprovacao === 'aprovacao_parcial'}
+                disabled={
+                  (Array.isArray(selectedChamado?.aprovacoes_diretoria) &&
+                    selectedChamado.aprovacoes_diretoria.length >= 1) ||
+                  selectedChamado?.status_aprovacao === 'aprovacao_parcial'
+                }
               />
             </div>
             <div className="grid grid-cols-4 items-center gap-4">
@@ -358,7 +389,11 @@ export default function ValesAprovacao() {
                 value={numeroParcelas}
                 onChange={(e) => setNumeroParcelas(e.target.value)}
                 className="col-span-3 disabled:opacity-75 disabled:cursor-not-allowed disabled:bg-slate-50"
-                disabled={selectedChamado?.status_aprovacao === 'aprovacao_parcial'}
+                disabled={
+                  (Array.isArray(selectedChamado?.aprovacoes_diretoria) &&
+                    selectedChamado.aprovacoes_diretoria.length >= 1) ||
+                  selectedChamado?.status_aprovacao === 'aprovacao_parcial'
+                }
               />
             </div>
           </div>

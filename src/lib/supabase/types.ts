@@ -114,6 +114,7 @@ export type Database = {
       }
       chamados: {
         Row: {
+          aprovacoes_diretoria: Json | null
           atualizado_em: string
           carro: string | null
           criado_em: string
@@ -138,9 +139,9 @@ export type Database = {
           tipo_chamado: string | null
           titulo: string
           usuario_id: string
-          aprovacoes_diretoria?: Json | null
         }
         Insert: {
+          aprovacoes_diretoria?: Json | null
           atualizado_em?: string
           carro?: string | null
           criado_em?: string
@@ -165,9 +166,9 @@ export type Database = {
           tipo_chamado?: string | null
           titulo: string
           usuario_id: string
-          aprovacoes_diretoria?: Json | null
         }
         Update: {
+          aprovacoes_diretoria?: Json | null
           atualizado_em?: string
           carro?: string | null
           criado_em?: string
@@ -192,7 +193,6 @@ export type Database = {
           tipo_chamado?: string | null
           titulo?: string
           usuario_id?: string
-          aprovacoes_diretoria?: Json | null
         }
         Relationships: []
       }
@@ -910,6 +910,7 @@ export const Constants = {
 //   garagem: text (nullable)
 //   data_ocorrencia: date (nullable)
 //   status_aprovacao: text (nullable)
+//   aprovacoes_diretoria: jsonb (nullable, default: '[]'::jsonb)
 // Table: documentos
 //   id: uuid (not null, default: gen_random_uuid())
 //   tipo_documento: text (not null)

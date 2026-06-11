@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '@/lib/supabase/client'
 import { useAuth } from '@/hooks/use-auth'
@@ -186,27 +186,52 @@ export default function NovoChamado() {
 
   const DRAFT_KEY = 'draft-novo-chamado'
   const [draftRestored, setDraftRestored] = useState(false)
+  const isRestoring = useRef(false)
+  const isInitialMount = useRef(true)
 
   useEffect(() => {
     const saved = localStorage.getItem(DRAFT_KEY)
     if (saved) {
       try {
         const parsed = JSON.parse(saved)
-        if (parsed.tipoChamado) setTipoChamado(parsed.tipoChamado)
-        if (parsed.titulo) setTitulo(parsed.titulo)
-        if (parsed.dataOcorrencia) setDataOcorrencia(new Date(parsed.dataOcorrencia))
-        if (parsed.descricao) setDescricao(parsed.descricao)
-        if (parsed.placaOnibus) setPlacaOnibus(parsed.placaOnibus)
-        setDraftRestored(true)
+        const isCompletelyEmpty =
+          !parsed.tipoChamado &&
+          !parsed.titulo &&
+          !parsed.dataOcorrencia &&
+          !parsed.descricao &&
+          !parsed.placaOnibus
+
+        if (!isCompletelyEmpty) {
+          isRestoring.current = true
+          if (parsed.tipoChamado) setTipoChamado(parsed.tipoChamado)
+          if (parsed.titulo) setTitulo(parsed.titulo)
+          if (parsed.dataOcorrencia) setDataOcorrencia(new Date(parsed.dataOcorrencia))
+          if (parsed.descricao) setDescricao(parsed.descricao)
+          if (parsed.placaOnibus) setPlacaOnibus(parsed.placaOnibus)
+          setDraftRestored(true)
+
+          setTimeout(() => {
+            isRestoring.current = false
+          }, 300)
+        }
       } catch (e) {
         console.error('Failed to parse draft', e)
+        isRestoring.current = false
       }
     }
   }, [])
 
   useEffect(() => {
+    if (isInitialMount.current) {
+      isInitialMount.current = false
+      return
+    }
+
+    if (isRestoring.current) return
+
     const isCompletelyEmpty =
       !tipoChamado && !titulo && !dataOcorrencia && !descricao && !placaOnibus
+
     if (isCompletelyEmpty) {
       localStorage.removeItem(DRAFT_KEY)
     } else {

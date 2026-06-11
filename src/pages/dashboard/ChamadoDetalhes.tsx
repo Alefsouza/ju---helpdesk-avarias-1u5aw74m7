@@ -278,7 +278,16 @@ function TransferModal({
   )
 }
 
-function GerarValeModal({ open, setOpen, orcamentoDoc, chamadoId, onSuccess, userId }: any) {
+function GerarValeModal({
+  open,
+  setOpen,
+  orcamentoDoc,
+  chamadoId,
+  chamado,
+  solicitante,
+  onSuccess,
+  userId,
+}: any) {
   const [valorBaseStr, setValorBaseStr] = useState<string>('')
   const [desconto, setDesconto] = useState(false)
   const [parcelas, setParcelas] = useState('1')
@@ -298,7 +307,7 @@ function GerarValeModal({ open, setOpen, orcamentoDoc, chamadoId, onSuccess, use
 
   const valorBaseNum = parseFloat(valorBaseStr) || 0
   const valorFinal = desconto ? valorBaseNum * 0.9 : valorBaseNum
-  const maxParcelas = Math.max(1, Math.floor(valorFinal / 250))
+  const maxParcelas = Math.min(6, Math.max(1, Math.floor(valorFinal / 250)))
 
   useEffect(() => {
     if (parseInt(parcelas) > maxParcelas) {
@@ -327,7 +336,11 @@ function GerarValeModal({ open, setOpen, orcamentoDoc, chamadoId, onSuccess, use
           body: {
             tipo_documento: 'Vale',
             id: chamadoId,
-            valor_orcamento: valorFinal,
+            pia: chamado?.pia,
+            carro: chamado?.carro || chamado?.numero_carro,
+            nome_solicitante: solicitante?.nome_completo,
+            valor_base: valorBaseNum,
+            valor_final: valorFinal,
             parcelas,
             com_desconto: desconto,
           },
@@ -3007,7 +3020,8 @@ export default function ChamadoDetalhes() {
 
             {(currentUserProfile?.tipo_usuario === 'secretaria_tecnica' ||
               currentUserProfile?.tipo_usuario === 'admin' ||
-              currentUserProfile?.tipo_usuario === 'sinistro') && (
+              currentUserProfile?.tipo_usuario === 'sinistro' ||
+              currentUserProfile?.tipo_usuario === 'responsavel') && (
               <div className="flex justify-end pt-2">
                 <Button
                   onClick={() => setGerarValeModalOpen(true)}
@@ -3428,6 +3442,8 @@ export default function ChamadoDetalhes() {
         setOpen={setGerarValeModalOpen}
         orcamentoDoc={orcamentoDoc}
         chamadoId={id}
+        chamado={chamado}
+        solicitante={solicitante}
         userId={user?.id}
         onSuccess={() => fetchChamadoData()}
       />

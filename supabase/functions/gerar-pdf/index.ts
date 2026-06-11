@@ -157,18 +157,46 @@ Deno.serve(async (req: Request) => {
     if (tipo_documento === 'Vale') {
       drawText('Vale Financeiro', true, 20)
       y -= 10
-      drawText(`Chamado: ${id || '-'}`, true, 14)
-      y -= 10
 
-      const formattedValue = new Intl.NumberFormat('pt-BR', {
-        style: 'currency',
-        currency: 'BRL',
-      }).format(body.valor_orcamento || 0)
-      drawText(`Valor Final: ${formattedValue}`, true, 14)
-      drawText(`Parcelas: ${body.parcelas || '1'}x`)
+      drawText('Informações do Chamado', true, 14)
+      drawText(`ID do Chamado: ${id || '-'}`)
+      drawText(`Protocolo / R.A. (PIA): ${body.pia || '-'}`)
+      drawText(`Veículo: ${body.carro || '-'}`)
+      drawText(`Solicitante / Responsável: ${body.nome_solicitante || '-'}`)
+
+      const dt = new Date()
+      const dateStr = dt.toLocaleDateString('pt-BR', { timeZone: 'America/Sao_Paulo' })
+      const timeStr = dt.toLocaleTimeString('pt-BR', { timeZone: 'America/Sao_Paulo' })
+      drawText(`Data de Geração: ${dateStr} às ${timeStr}`)
+
+      y -= 10
+      drawText('Informações Financeiras', true, 14)
+
+      const valorBase = body.valor_base || 0
+      const valorFinal = body.valor_final || body.valor_orcamento || 0
+      const parcelas = parseInt(body.parcelas || '1', 10)
+
+      const formatCurrency = (val: number) =>
+        new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(val)
+
+      drawText(`Valor Original: ${formatCurrency(valorBase)}`)
       if (body.com_desconto) {
-        drawText(`Desconto Aplicado: 10%`)
+        drawText(`Desconto Aplicado: 10% (-${formatCurrency(valorBase - valorFinal)})`)
       }
+      drawText(`Valor Final: ${formatCurrency(valorFinal)}`, true, 12)
+
+      y -= 10
+      drawText('Plano de Pagamento', true, 14)
+      drawText(`Quantidade de Parcelas: ${parcelas}x`)
+
+      const valorParcela = valorFinal / parcelas
+      for (let p = 1; p <= parcelas; p++) {
+        drawText(`  Parcela ${p}/${parcelas}: ${formatCurrency(valorParcela)}`)
+      }
+
+      y -= 60
+      drawText('___________________________________________________', false, 12)
+      drawText('Assinatura do Colaborador / Responsável', true, 12)
 
       fileName = `Vale_${id}_${timestamp}.pdf`
     } else if (tipo_documento === 'IDO') {

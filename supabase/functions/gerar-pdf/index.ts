@@ -144,7 +144,7 @@ Deno.serve(async (req: Request) => {
 
       const { data: espelho } = await supabaseAdmin
         .from('formularios_espelho_danos')
-        .select('nome_motorista, registro_motorista')
+        .select('nome_motorista, registro_motorista, data, horario')
         .eq('chamado_id', id)
         .order('criado_em', { ascending: false })
         .limit(1)
@@ -218,9 +218,21 @@ Deno.serve(async (req: Request) => {
         )
       }
 
+      let dataHoraOcorrencia = '-'
+      if (espelho?.data) {
+        const [yyyy, mm, dd] = espelho.data.split('-')
+        let horaFormatada = ''
+        if (espelho.horario) {
+          const [hh, min] = espelho.horario.split(':')
+          horaFormatada = ` ${hh}:${min}`
+        }
+        dataHoraOcorrencia = `${dd}/${mm}/${yyyy}${horaFormatada}`
+      }
+
       addRow('Nome', espelho?.nome_motorista || body.nome_motorista || '-')
       addRow('Registro', espelho?.registro_motorista || body.registro_motorista || '-')
       addRow('Garagem', body.garagem || '-')
+      addRow('Data/Hora da Ocorrência', dataHoraOcorrencia)
       addRow('Registro da Ocorrência (R.A.)', piaFinal)
       addRow('Veículo', body.carro || '-')
       addRow('Placa', placa || '-')
@@ -288,17 +300,6 @@ Deno.serve(async (req: Request) => {
         }),
         new Paragraph({
           children: [new TextRun({ text: 'Assinatura do Colaborador', bold: true, size: 24 })],
-          alignment: AlignmentType.CENTER,
-        }),
-        new Paragraph({
-          children: [
-            new TextRun({ text: '___________________________________________________', size: 24 }),
-          ],
-          alignment: AlignmentType.CENTER,
-          spacing: { before: 800, after: 100 },
-        }),
-        new Paragraph({
-          children: [new TextRun({ text: 'Assinatura da Testemunha', bold: true, size: 24 })],
           alignment: AlignmentType.CENTER,
         }),
       )

@@ -287,6 +287,7 @@ function GerarValeModal({
   solicitante,
   onSuccess,
   userId,
+  anexosInternos,
 }: any) {
   const [valorBaseStr, setValorBaseStr] = useState<string>('')
   const [desconto, setDesconto] = useState(false)
@@ -299,11 +300,30 @@ function GerarValeModal({
         setValorBaseStr(orcamentoDoc.valor_orcamento.toString())
       } else {
         setValorBaseStr('')
+
+        const findAndSet = async () => {
+          const orcInterno = anexosInternos?.find(
+            (a: any) =>
+              a.nome_arquivo.toLowerCase().includes('orçamento') ||
+              a.nome_arquivo.toLowerCase().includes('orcamento'),
+          )
+          if (orcInterno) {
+            const { data } = await supabase
+              .from('documentos')
+              .select('valor_orcamento')
+              .eq('arquivo_url', orcInterno.arquivo_url)
+              .maybeSingle()
+            if (data?.valor_orcamento) {
+              setValorBaseStr(data.valor_orcamento.toString())
+            }
+          }
+        }
+        findAndSet()
       }
       setDesconto(false)
       setParcelas('1')
     }
-  }, [open, orcamentoDoc])
+  }, [open, orcamentoDoc, anexosInternos])
 
   const valorBaseNum = parseFloat(valorBaseStr) || 0
   const valorFinal = desconto ? valorBaseNum * 0.9 : valorBaseNum
@@ -331,13 +351,41 @@ function GerarValeModal({
       let newUrl = ''
       let newNomeArquivo = `Vale Gerado - ${format(new Date(), 'dd-MM-yyyy HHmm')}.pdf`
 
+      if (orcamentoDoc && orcamentoDoc.id) {
+        await supabase
+          .from('documentos')
+          .update({ valor_orcamento: valorBaseNum })
+          .eq('id', orcamentoDoc.id)
+      } else if (anexosInternos) {
+        const orcInterno = anexosInternos.find(
+          (a: any) =>
+            a.nome_arquivo.toLowerCase().includes('orçamento') ||
+            a.nome_arquivo.toLowerCase().includes('orcamento'),
+        )
+        if (orcInterno) {
+          const { data: doc } = await supabase
+            .from('documentos')
+            .select('id')
+            .eq('arquivo_url', orcInterno.arquivo_url)
+            .maybeSingle()
+          if (doc) {
+            await supabase
+              .from('documentos')
+              .update({ valor_orcamento: valorBaseNum })
+              .eq('id', doc.id)
+          }
+        }
+      }
+
       try {
         const { data: pdfData, error: pdfError } = await supabase.functions.invoke('gerar-pdf', {
           body: {
             tipo_documento: 'Vale',
             id: chamadoId,
+            titulo: chamado?.titulo,
             pia: chamado?.pia,
             carro: chamado?.carro || chamado?.numero_carro,
+            garagem: chamado?.garagem,
             nome_solicitante: solicitante?.nome_completo,
             valor_base: valorBaseNum,
             valor_final: valorFinal,
@@ -387,7 +435,7 @@ function GerarValeModal({
         chamado_id: chamadoId,
         acao: 'respondido',
         usuario_id: userId,
-        detalhes: `Vale gerado no valor de ${formattedFinal} em ${parcelas}x.`,
+        detalhes: `Vale gerado com sucesso no valor de ${formattedFinal} parcelado em ${parcelas}x.`,
       })
 
       toast.success('Vale gerado com sucesso!')
@@ -3445,6 +3493,7 @@ export default function ChamadoDetalhes() {
         chamado={chamado}
         solicitante={solicitante}
         userId={user?.id}
+        anexosInternos={anexosInternos}
         onSuccess={() => fetchChamadoData()}
       />
 

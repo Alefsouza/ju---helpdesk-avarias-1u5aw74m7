@@ -158,16 +158,37 @@ Deno.serve(async (req: Request) => {
       drawText('Vale Financeiro', true, 20)
       y -= 10
 
+      let placa = body.placa
+      if (!placa && body.carro) {
+        try {
+          const supabaseAdmin = createClient(
+            Deno.env.get('SUPABASE_URL') ?? '',
+            Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
+          )
+          const { data: frota } = await supabaseAdmin
+            .from('frota_veiculos')
+            .select('placa')
+            .eq('prefixo', body.carro)
+            .maybeSingle()
+          if (frota?.placa) placa = frota.placa
+        } catch (e) {
+          console.error('Error fetching frota placa', e)
+        }
+      }
+
       drawText('Informações do Chamado', true, 14)
       drawText(`ID do Chamado: ${id || '-'}`)
+      drawText(`Título: ${body.titulo || '-'}`)
       drawText(`Protocolo / R.A. (PIA): ${body.pia || '-'}`)
-      drawText(`Veículo: ${body.carro || '-'}`)
+      drawText(`Garagem: ${body.garagem || '-'}`)
+      drawText(`Veículo (Prefixo): ${body.carro || '-'}`)
+      drawText(`Placa: ${placa || '-'}`)
       drawText(`Solicitante / Responsável: ${body.nome_solicitante || '-'}`)
 
       const dt = new Date()
       const dateStr = dt.toLocaleDateString('pt-BR', { timeZone: 'America/Sao_Paulo' })
       const timeStr = dt.toLocaleTimeString('pt-BR', { timeZone: 'America/Sao_Paulo' })
-      drawText(`Data de Geração: ${dateStr} às ${timeStr}`)
+      drawText(`Data e Hora: ${dateStr} às ${timeStr}`)
 
       y -= 10
       drawText('Informações Financeiras', true, 14)
@@ -197,6 +218,10 @@ Deno.serve(async (req: Request) => {
       y -= 60
       drawText('___________________________________________________', false, 12)
       drawText('Assinatura do Colaborador / Responsável', true, 12)
+
+      y -= 60
+      drawText('___________________________________________________', false, 12)
+      drawText('Assinatura do Gestor', true, 12)
 
       fileName = `Vale_${id}_${timestamp}.pdf`
     } else if (tipo_documento === 'IDO') {

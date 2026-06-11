@@ -1169,6 +1169,30 @@ export default function ChamadoDetalhes() {
       .on(
         'postgres_changes',
         {
+          event: 'DELETE',
+          schema: 'public',
+          table: 'historico_chamado',
+          filter: `chamado_id=eq.${id}`,
+        },
+        (payload) => {
+          setTimeline((prev) => prev.filter((item) => item.id !== payload.old.id))
+        },
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: 'DELETE',
+          schema: 'public',
+          table: 'respostas_chamado',
+          filter: `chamado_id=eq.${id}`,
+        },
+        (payload) => {
+          setTimeline((prev) => prev.filter((item) => item.id !== payload.old.id))
+        },
+      )
+      .on(
+        'postgres_changes',
+        {
           event: 'INSERT',
           schema: 'public',
           table: 'anexos_chamado',

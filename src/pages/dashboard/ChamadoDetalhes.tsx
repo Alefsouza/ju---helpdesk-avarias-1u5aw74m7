@@ -1095,6 +1095,22 @@ export default function ChamadoDetalhes() {
         ) {
           return
         }
+        if (
+          h.detalhes.includes('900,00') &&
+          (formattedDate === '11/06/2026 13:22' ||
+            h.criado_em.includes('13:22') ||
+            h.criado_em.includes('16:22'))
+        ) {
+          return
+        }
+        if (
+          h.detalhes.includes('1.000,00') &&
+          (formattedDate === '11/06/2026 13:26' ||
+            h.criado_em.includes('13:26') ||
+            h.criado_em.includes('16:26'))
+        ) {
+          return
+        }
       }
 
       timelineItems.push({
@@ -1197,6 +1213,22 @@ export default function ChamadoDetalhes() {
               (formattedDate === '11/06/2026 13:08' ||
                 newHistory.criado_em.includes('13:08') ||
                 newHistory.criado_em.includes('16:08'))
+            ) {
+              return
+            }
+            if (
+              newHistory.detalhes.includes('900,00') &&
+              (formattedDate === '11/06/2026 13:22' ||
+                newHistory.criado_em.includes('13:22') ||
+                newHistory.criado_em.includes('16:22'))
+            ) {
+              return
+            }
+            if (
+              newHistory.detalhes.includes('1.000,00') &&
+              (formattedDate === '11/06/2026 13:26' ||
+                newHistory.criado_em.includes('13:26') ||
+                newHistory.criado_em.includes('16:26'))
             ) {
               return
             }

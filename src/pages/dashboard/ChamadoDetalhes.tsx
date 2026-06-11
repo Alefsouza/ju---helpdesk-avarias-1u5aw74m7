@@ -1065,7 +1065,11 @@ export default function ChamadoDetalhes() {
       if (
         h.detalhes === 'Boletim de Ocorrência preenchido e anexado com sucesso.' ||
         h.detalhes === 'Espelho de Danos preenchido e anexado com sucesso.' ||
-        h.detalhes?.toLowerCase().includes('anexo interno')
+        h.detalhes?.toLowerCase().includes('anexo interno') ||
+        (h.detalhes?.startsWith('Autorização de Desconto gerada com sucesso') &&
+          (format(new Date(h.criado_em), 'dd/MM/yyyy HH:mm') === '11/06/2026 12:41' ||
+            h.criado_em.includes('2026-06-11T15:41') ||
+            h.criado_em.includes('2026-06-11T12:41')))
       ) {
         return
       }
@@ -1137,7 +1141,11 @@ export default function ChamadoDetalhes() {
           if (
             newHistory.detalhes === 'Boletim de Ocorrência preenchido e anexado com sucesso.' ||
             newHistory.detalhes === 'Espelho de Danos preenchido e anexado com sucesso.' ||
-            newHistory.detalhes?.toLowerCase().includes('anexo interno')
+            newHistory.detalhes?.toLowerCase().includes('anexo interno') ||
+            (newHistory.detalhes?.startsWith('Autorização de Desconto gerada com sucesso') &&
+              (format(new Date(newHistory.criado_em), 'dd/MM/yyyy HH:mm') === '11/06/2026 12:41' ||
+                newHistory.criado_em.includes('2026-06-11T15:41') ||
+                newHistory.criado_em.includes('2026-06-11T12:41')))
           ) {
             return
           }
@@ -2517,64 +2525,73 @@ export default function ChamadoDetalhes() {
   }
 
   return (
-    <div className="space-y-6 max-w-5xl mx-auto pb-12 p-4 animate-fade-in-up">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <Button variant="ghost" onClick={() => navigate(-1)} className="-ml-4 w-fit">
-          <ArrowLeft className="mr-2 h-4 w-4" />
+    <div className="space-y-3 max-w-5xl mx-auto pb-8 p-3 animate-fade-in-up">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => navigate(-1)}
+          className="-ml-2 w-fit h-8 text-xs"
+        >
+          <ArrowLeft className="mr-2 h-3.5 w-3.5" />
           Voltar
         </Button>
         <div className="flex flex-col sm:flex-row items-center gap-2 w-full sm:w-auto">
           {canUnify && (
             <Button
               variant="outline"
-              className="w-full sm:w-auto"
+              size="sm"
+              className="w-full sm:w-auto h-8 text-xs"
               onClick={() => setUnificarModalOpen(true)}
               disabled={completing || transferLoading}
             >
-              <LinkIcon className="mr-2 h-4 w-4" />
+              <LinkIcon className="mr-2 h-3.5 w-3.5" />
               Unificar Chamado
             </Button>
           )}
           {canTransfer && (
             <Button
               variant="outline"
-              className="w-full sm:w-auto"
+              size="sm"
+              className="w-full sm:w-auto h-8 text-xs"
               onClick={handleOpenTransferModal}
               disabled={completing || transferLoading}
             >
-              <ArrowRightLeft className="mr-2 h-4 w-4" />
+              <ArrowRightLeft className="mr-2 h-3.5 w-3.5" />
               Transferir Chamado
             </Button>
           )}
           {canFinalize && (
             <Button
               variant="outline"
-              className="text-green-600 border-green-200 hover:bg-green-50 w-full sm:w-auto"
+              size="sm"
+              className="text-green-600 border-green-200 hover:bg-green-50 w-full sm:w-auto h-8 text-xs"
               onClick={handleFinalizar}
               disabled={completing || transferLoading}
             >
-              <CheckCircle2 className="mr-2 h-4 w-4" />
+              <CheckCircle2 className="mr-2 h-3.5 w-3.5" />
               {completing ? 'Finalizando...' : 'Finalizar Chamado'}
             </Button>
           )}
           {chamado.status === 'finalizado' && isSupport && (
             <Button
               variant="outline"
-              className="text-blue-600 border-blue-200 hover:bg-blue-50 w-full sm:w-auto"
+              size="sm"
+              className="text-blue-600 border-blue-200 hover:bg-blue-50 w-full sm:w-auto h-8 text-xs"
               onClick={() => setConfirmReabrirOpen(true)}
               disabled={completing || transferLoading}
             >
-              <RotateCcw className="mr-2 h-4 w-4" />
+              <RotateCcw className="mr-2 h-3.5 w-3.5" />
               Reabrir Chamado
             </Button>
           )}
         </div>
       </div>
 
-      <div className="bg-white rounded-xl border shadow-sm p-4 sm:p-6 lg:p-8 space-y-6">
-        <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
-          <div className="space-y-2">
-            <div className="flex flex-wrap items-center gap-2 mb-2">
+      <div className="bg-white rounded-lg border shadow-sm p-3 sm:p-4 lg:p-5 space-y-4">
+        <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3">
+          <div className="space-y-1.5">
+            <div className="flex flex-wrap items-center gap-1.5 mb-1">
               <Badge
                 variant="outline"
                 className={cn(
@@ -2619,48 +2636,48 @@ export default function ChamadoDetalhes() {
                   </Badge>
                 </div>
               )}
-            <h1 className="text-2xl font-bold text-slate-900">{chamado.titulo}</h1>
+            <h1 className="text-lg sm:text-xl font-bold text-slate-900">{chamado.titulo}</h1>
           </div>
-          <div className="text-sm text-slate-500 flex flex-col sm:items-end gap-1 bg-slate-50 p-3 rounded-lg border">
+          <div className="text-xs text-slate-500 flex flex-col sm:items-end gap-0.5 bg-slate-50 p-2 rounded-md border">
             <div className="flex items-center gap-1">
-              <Clock className="h-4 w-4" />
+              <Clock className="h-3.5 w-3.5" />
               <span>
                 {format(new Date(chamado.criado_em), "dd 'de' MMM, yyyy 'às' HH:mm", {
                   locale: ptBR,
                 })}
               </span>
             </div>
-            <div className="flex items-center gap-1 mt-1">
-              <User className="h-4 w-4" />
+            <div className="flex items-center gap-1 mt-0.5">
+              <User className="h-3.5 w-3.5" />
               <span className="font-medium text-slate-700">
                 {solicitante ? solicitante.nome_completo : 'Usuário não encontrado'}
               </span>
             </div>
             {solicitante?.email && (
-              <div className="text-xs text-slate-400 pl-5">{solicitante.email}</div>
+              <div className="text-[10px] text-slate-400 pl-4">{solicitante.email}</div>
             )}
           </div>
         </div>
 
-        <div className="pt-4 border-t">
-          <h3 className="text-sm font-bold text-slate-900 mb-3 uppercase tracking-wider">
+        <div className="pt-3 border-t">
+          <h3 className="text-xs font-bold text-slate-900 mb-2 uppercase tracking-wider">
             Descrição
           </h3>
-          <div className="text-slate-700 whitespace-pre-wrap leading-relaxed text-sm bg-slate-50 p-4 rounded-lg border">
+          <div className="text-slate-700 whitespace-pre-wrap leading-relaxed text-xs sm:text-sm bg-slate-50 p-3 rounded-md border">
             {descricaoDisplay || chamado.descricao}
           </div>
         </div>
 
         {(isSupport || (chamado.pia && chamado.pia.trim() !== '')) && (
-          <div className="pt-4 border-t">
-            <div className="flex flex-col gap-4">
+          <div className="pt-3 border-t">
+            <div className="flex flex-col gap-3">
               {isSupport && (
-                <div className="border border-orange-200 bg-orange-50/40 rounded-lg p-3 sm:p-4">
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div className="flex flex-col sm:flex-row sm:items-center gap-3">
-                      <div className="flex items-center gap-1.5 shrink-0 sm:w-32">
-                        <AlertCircle className="h-4 w-4 text-orange-700" />
-                        <h3 className="text-sm font-semibold text-orange-800 uppercase tracking-wider">
+                <div className="border border-orange-200 bg-orange-50/40 rounded-md p-2 sm:p-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div className="flex flex-col sm:flex-row sm:items-center gap-2">
+                      <div className="flex items-center gap-1 shrink-0 sm:w-28">
+                        <AlertCircle className="h-3.5 w-3.5 text-orange-700" />
+                        <h3 className="text-xs font-semibold text-orange-800 uppercase tracking-wider">
                           Tipo de Chamado
                         </h3>
                       </div>
@@ -2670,7 +2687,7 @@ export default function ChamadoDetalhes() {
                           onValueChange={handleSalvarTipoChamado}
                           disabled={savingTipoChamado || chamado.status === 'finalizado'}
                         >
-                          <SelectTrigger className="bg-white border-orange-200 focus:ring-orange-400 h-9 text-sm">
+                          <SelectTrigger className="bg-white border-orange-200 focus:ring-orange-400 h-8 text-xs">
                             <SelectValue placeholder="Selecione o tipo" />
                           </SelectTrigger>
                           <SelectContent>
@@ -2690,10 +2707,10 @@ export default function ChamadoDetalhes() {
                         </Select>
                       </div>
                     </div>
-                    <div className="flex flex-col sm:flex-row sm:items-center gap-3">
-                      <div className="flex items-center gap-1.5 shrink-0 sm:w-32">
-                        <AlertCircle className="h-4 w-4 text-orange-700" />
-                        <h3 className="text-sm font-semibold text-orange-800 uppercase tracking-wider">
+                    <div className="flex flex-col sm:flex-row sm:items-center gap-2">
+                      <div className="flex items-center gap-1 shrink-0 sm:w-24">
+                        <AlertCircle className="h-3.5 w-3.5 text-orange-700" />
+                        <h3 className="text-xs font-semibold text-orange-800 uppercase tracking-wider">
                           Prioridade
                         </h3>
                       </div>
@@ -2703,7 +2720,7 @@ export default function ChamadoDetalhes() {
                           onValueChange={handleSalvarPrioridade}
                           disabled={savingPrioridade || chamado.status === 'finalizado'}
                         >
-                          <SelectTrigger className="bg-white border-orange-200 focus:ring-orange-400 h-9 text-sm">
+                          <SelectTrigger className="bg-white border-orange-200 focus:ring-orange-400 h-8 text-xs">
                             <SelectValue placeholder="Selecione uma prioridade" />
                           </SelectTrigger>
                           <SelectContent>
@@ -2717,12 +2734,12 @@ export default function ChamadoDetalhes() {
                 </div>
               )}
 
-              <div className="grid grid-cols-1 gap-4">
-                <div className="border-2 border-green-700 bg-[rgba(200,230,201,0.1)] rounded-xl shadow-sm p-4 sm:p-6 space-y-4 flex flex-col justify-between">
+              <div className="grid grid-cols-1 gap-3">
+                <div className="border border-green-700 bg-[rgba(200,230,201,0.1)] rounded-md shadow-sm p-3 sm:p-4 space-y-3 flex flex-col justify-between">
                   <div>
-                    <div className="flex items-center gap-2 mb-2">
-                      <AlertCircle className="h-5 w-5 text-green-800" />
-                      <h3 className="text-base font-bold text-green-800 uppercase tracking-wider">
+                    <div className="flex items-center gap-1.5 mb-1.5">
+                      <AlertCircle className="h-4 w-4 text-green-800" />
+                      <h3 className="text-sm font-bold text-green-800 uppercase tracking-wider">
                         R.A.
                       </h3>
                     </div>
@@ -2732,23 +2749,24 @@ export default function ChamadoDetalhes() {
                       value={pia}
                       onChange={(e) => setPia(e.target.value)}
                       className={cn(
-                        'bg-white border-green-300 focus-visible:ring-green-700',
+                        'bg-white border-green-300 focus-visible:ring-green-700 h-8 text-xs',
                         !canEditRA && 'opacity-70 disabled:cursor-default',
                       )}
                       disabled={savingPia || !canEditRA}
                     />
                   </div>
                   {canEditRA && (
-                    <div className="flex justify-end mt-4">
+                    <div className="flex justify-end mt-2">
                       <Button
                         onClick={handleSalvarPia}
                         disabled={savingPia}
-                        className="bg-green-700 hover:bg-green-800 text-white w-full sm:w-auto"
+                        size="sm"
+                        className="bg-green-700 hover:bg-green-800 text-white w-full sm:w-auto h-8 text-xs"
                       >
                         {savingPia ? (
-                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          <Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" />
                         ) : (
-                          <CheckCircle2 className="mr-2 h-4 w-4" />
+                          <CheckCircle2 className="mr-2 h-3.5 w-3.5" />
                         )}
                         {savingPia ? 'Salvando...' : 'Salvar R.A.'}
                       </Button>
@@ -2761,27 +2779,27 @@ export default function ChamadoDetalhes() {
         )}
 
         {canAnexarOrcamento && (
-          <div className="pt-4 border-t">
-            <div className="border-2 border-purple-700 bg-[rgba(230,200,240,0.1)] rounded-xl shadow-sm p-4 sm:p-6 space-y-4">
-              <div className="flex items-center gap-2 mb-2">
-                <FileText className="h-5 w-5 text-purple-800" />
-                <h3 className="text-base font-bold text-purple-800 uppercase tracking-wider">
+          <div className="pt-3 border-t">
+            <div className="border border-purple-700 bg-[rgba(230,200,240,0.1)] rounded-md shadow-sm p-3 sm:p-4 space-y-3">
+              <div className="flex items-center gap-1.5 mb-1.5">
+                <FileText className="h-4 w-4 text-purple-800" />
+                <h3 className="text-sm font-bold text-purple-800 uppercase tracking-wider">
                   Anexar Orçamento
                 </h3>
               </div>
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                <div className="space-y-2">
-                  <Label>Número do Orçamento</Label>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <div className="space-y-1.5">
+                  <Label className="text-xs">Número do Orçamento</Label>
                   <Input
                     value={numeroOrcamento}
                     onChange={(e) => setNumeroOrcamento(e.target.value)}
                     placeholder="Ex: 12345"
                     disabled={savingOrcamento}
-                    className="bg-white border-purple-300 focus-visible:ring-purple-700"
+                    className="bg-white border-purple-300 focus-visible:ring-purple-700 h-8 text-xs"
                   />
                 </div>
-                <div className="space-y-2">
-                  <Label>Valor (R$)</Label>
+                <div className="space-y-1.5">
+                  <Label className="text-xs">Valor (R$)</Label>
                   <Input
                     type="number"
                     step="0.01"
@@ -2789,40 +2807,41 @@ export default function ChamadoDetalhes() {
                     onChange={(e) => setValorOrcamentoStr(e.target.value)}
                     placeholder="Ex: 1500.00"
                     disabled={savingOrcamento}
-                    className="bg-white border-purple-300 focus-visible:ring-purple-700"
+                    className="bg-white border-purple-300 focus-visible:ring-purple-700 h-8 text-xs"
                   />
                 </div>
-                <div className="space-y-2">
-                  <Label>Arquivo</Label>
+                <div className="space-y-1.5">
+                  <Label className="text-xs">Arquivo</Label>
                   <Input
                     type="file"
                     onChange={(e) => setFileOrcamento(e.target.files?.[0] || null)}
                     accept=".pdf,image/jpeg,image/png,image/gif"
                     disabled={savingOrcamento}
-                    className="bg-white border-purple-300 focus-visible:ring-purple-700 cursor-pointer"
+                    className="bg-white border-purple-300 focus-visible:ring-purple-700 cursor-pointer h-8 text-xs py-1"
                   />
                 </div>
               </div>
-              <div className="space-y-2">
-                <Label>Observações</Label>
+              <div className="space-y-1.5">
+                <Label className="text-xs">Observações</Label>
                 <Textarea
                   value={obsOrcamento}
                   onChange={(e) => setObsOrcamento(e.target.value)}
                   placeholder="Observações do orçamento..."
                   disabled={savingOrcamento}
-                  className="bg-white border-purple-300 focus-visible:ring-purple-700"
+                  className="bg-white border-purple-300 focus-visible:ring-purple-700 min-h-[60px] text-xs"
                 />
               </div>
-              <div className="flex justify-end mt-4">
+              <div className="flex justify-end mt-2">
                 <Button
                   onClick={handleUploadOrcamento}
                   disabled={savingOrcamento || !numeroOrcamento || !fileOrcamento}
-                  className="bg-purple-700 hover:bg-purple-800 text-white w-full sm:w-auto"
+                  size="sm"
+                  className="bg-purple-700 hover:bg-purple-800 text-white w-full sm:w-auto h-8 text-xs"
                 >
                   {savingOrcamento ? (
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    <Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" />
                   ) : (
-                    <Paperclip className="mr-2 h-4 w-4" />
+                    <Paperclip className="mr-2 h-3.5 w-3.5" />
                   )}
                   {savingOrcamento ? 'Enviando...' : 'Anexar Orçamento'}
                 </Button>
@@ -2832,9 +2851,9 @@ export default function ChamadoDetalhes() {
         )}
 
         {isSupport && (
-          <div className="pt-4 border-t space-y-2">
-            <div className="flex flex-col gap-2">
-              <div className="flex items-center justify-between gap-2 border-b border-slate-100 pb-2">
+          <div className="pt-3 border-t space-y-1.5">
+            <div className="flex flex-col gap-1.5">
+              <div className="flex items-center justify-between gap-2 border-b border-slate-100 pb-1.5">
                 <div className="flex items-center gap-2 overflow-hidden flex-1">
                   <LinkIcon className="h-4 w-4 text-slate-400 shrink-0" />
                   <span className="text-[12px] font-medium text-slate-700 shrink-0 hidden sm:inline-block">
@@ -2914,12 +2933,12 @@ export default function ChamadoDetalhes() {
         )}
 
         {isSupport && (
-          <div className="pt-4 border-t flex flex-col gap-4" id="anexos-internos">
+          <div className="pt-3 border-t flex flex-col gap-3" id="anexos-internos">
             <div>
-              <div className="flex items-center justify-between mb-3">
-                <h3 className="text-sm font-bold text-slate-900 uppercase tracking-wider flex items-center gap-2">
+              <div className="flex items-center justify-between mb-2">
+                <h3 className="text-xs font-bold text-slate-900 uppercase tracking-wider flex items-center gap-1.5">
                   Anexos Internos{' '}
-                  <Badge variant="secondary" className="bg-amber-100 text-amber-800">
+                  <Badge variant="secondary" className="bg-amber-100 text-amber-800 px-1.5 py-0">
                     {anexosInternos.length}
                   </Badge>
                 </h3>
@@ -2947,22 +2966,22 @@ export default function ChamadoDetalhes() {
               </div>
 
               {anexosInternos.length > 0 ? (
-                <div className="flex flex-col gap-2">
+                <div className="flex flex-col gap-1.5">
                   {anexosInternos.map((anexo) => (
                     <div
                       key={anexo.id}
-                      className="flex items-center justify-between p-3 rounded-lg border bg-amber-50/30"
+                      className="flex items-center justify-between p-2 rounded-md border bg-amber-50/30"
                     >
-                      <div className="flex items-center gap-3 min-w-0">
-                        <FileText className="h-5 w-5 text-amber-600 shrink-0" />
+                      <div className="flex items-center gap-2 min-w-0">
+                        <FileText className="h-4 w-4 text-amber-600 shrink-0" />
                         <div className="min-w-0">
                           <p
-                            className="text-sm font-medium text-slate-900 truncate"
+                            className="text-xs font-medium text-slate-900 truncate"
                             title={anexo.nome_arquivo}
                           >
                             {anexo.nome_arquivo}
                           </p>
-                          <p className="text-xs text-slate-500">
+                          <p className="text-[10px] text-slate-500">
                             {(anexo.tamanho_bytes / 1024 / 1024).toFixed(2)} MB •{' '}
                             {format(new Date(anexo.criado_em), 'dd/MM/yyyy HH:mm')}
                           </p>
@@ -2980,7 +2999,7 @@ export default function ChamadoDetalhes() {
                               return (
                                 <Badge
                                   variant="outline"
-                                  className="mt-1 bg-purple-50 text-purple-700 border-purple-200"
+                                  className="mt-0.5 bg-purple-50 text-purple-700 border-purple-200 text-[9px] px-1 py-0 leading-tight"
                                 >
                                   Valor: {formattedValue}
                                 </Badge>
@@ -3114,11 +3133,14 @@ export default function ChamadoDetalhes() {
         )}
 
         {anexos.length > 0 && (
-          <div className="pt-4 border-t">
-            <h3 className="text-sm font-bold text-slate-900 mb-3 uppercase tracking-wider flex items-center gap-2">
-              Anexos <Badge variant="secondary">{anexos.length}</Badge>
+          <div className="pt-3 border-t">
+            <h3 className="text-xs font-bold text-slate-900 mb-2 uppercase tracking-wider flex items-center gap-1.5">
+              Anexos{' '}
+              <Badge variant="secondary" className="px-1.5 py-0">
+                {anexos.length}
+              </Badge>
             </h3>
-            <div className="flex flex-col gap-2">
+            <div className="flex flex-col gap-1.5">
               {anexos.map((anexo) => {
                 const isImage =
                   anexo.tipo_arquivo.includes('imagem') || anexo.tipo_arquivo.includes('image')
@@ -3133,18 +3155,18 @@ export default function ChamadoDetalhes() {
                 return (
                   <div
                     key={anexo.id}
-                    className="flex items-center justify-between p-3 rounded-lg border bg-slate-50/50"
+                    className="flex items-center justify-between p-2 rounded-md border bg-slate-50/50"
                   >
-                    <div className="flex items-center gap-3 min-w-0">
-                      <Icon className="h-5 w-5 text-slate-500 shrink-0" />
+                    <div className="flex items-center gap-2 min-w-0">
+                      <Icon className="h-4 w-4 text-slate-500 shrink-0" />
                       <div className="min-w-0">
                         <p
-                          className="text-sm font-medium text-slate-900 truncate"
+                          className="text-xs font-medium text-slate-900 truncate"
                           title={anexo.nome_arquivo}
                         >
                           {anexo.nome_arquivo}
                         </p>
-                        <p className="text-xs text-slate-500">
+                        <p className="text-[10px] text-slate-500">
                           {anexo.tamanho_mb} MB •{' '}
                           {format(new Date(anexo.criado_em), 'dd/MM/yyyy HH:mm')}
                         </p>
@@ -3209,9 +3231,9 @@ export default function ChamadoDetalhes() {
         )}
       </div>
 
-      <div className="space-y-4">
-        <h3 className="text-lg font-bold text-slate-900 px-1">Histórico de Interações</h3>
-        <div className="bg-white rounded-xl border shadow-sm p-4 sm:p-6 flex flex-col gap-6 max-h-[600px] overflow-y-auto">
+      <div className="space-y-2">
+        <h3 className="text-base font-bold text-slate-900 px-1">Histórico de Interações</h3>
+        <div className="bg-white rounded-lg border shadow-sm p-3 sm:p-4 flex flex-col gap-3 max-h-[500px] overflow-y-auto">
           {timeline.length === 0 ? (
             <p className="text-slate-500 text-center py-8">Nenhuma interação registrada.</p>
           ) : (
@@ -3220,8 +3242,8 @@ export default function ChamadoDetalhes() {
 
               if (item.type === 'history') {
                 return (
-                  <div key={`${item.id}-${index}`} className="flex justify-center my-2">
-                    <div className="bg-slate-100 text-slate-500 text-xs px-3 py-1.5 rounded-3xl sm:rounded-full flex flex-col sm:flex-row sm:items-center gap-2 font-medium border max-w-[90%] text-center">
+                  <div key={`${item.id}-${index}`} className="flex justify-center my-1.5">
+                    <div className="bg-slate-100 text-slate-500 text-[10px] sm:text-xs px-2.5 py-1 rounded-3xl sm:rounded-full flex flex-col sm:flex-row sm:items-center gap-1.5 font-medium border max-w-[95%] text-center">
                       <div className="flex items-center justify-center gap-2">
                         <Clock className="h-3 w-3 shrink-0" />
                         <span>
@@ -3249,25 +3271,25 @@ export default function ChamadoDetalhes() {
                 >
                   <div
                     className={cn(
-                      'max-w-[85%] sm:max-w-[75%] rounded-2xl px-5 py-3 shadow-sm',
+                      'max-w-[85%] sm:max-w-[80%] rounded-xl px-3 py-2 shadow-sm',
                       isCurrentUser
                         ? 'bg-primary text-primary-foreground rounded-tr-sm'
                         : 'bg-slate-100 text-slate-800 rounded-tl-sm border',
                     )}
                   >
                     {!isCurrentUser && (
-                      <div className="font-bold text-xs mb-1 text-primary">
+                      <div className="font-bold text-[11px] mb-0.5 text-primary">
                         {item.usuario?.nome_completo || 'Usuário'}
                       </div>
                     )}
-                    <div className="whitespace-pre-wrap text-sm leading-relaxed">
+                    <div className="whitespace-pre-wrap text-xs sm:text-sm leading-snug">
                       {item.mensagem}
                     </div>
 
                     {item.anexos && item.anexos.length > 0 && (
                       <div
                         className={cn(
-                          'mt-3 space-y-2 pt-3 border-t',
+                          'mt-2 space-y-1.5 pt-2 border-t',
                           isCurrentUser ? 'border-primary-foreground/20' : 'border-slate-200',
                         )}
                       >
@@ -3290,16 +3312,16 @@ export default function ChamadoDetalhes() {
                               target="_blank"
                               rel="noreferrer"
                               className={cn(
-                                'flex items-center gap-3 p-2.5 rounded-lg border text-sm transition-colors text-left group',
+                                'flex items-center gap-2 p-1.5 rounded-md border text-xs transition-colors text-left group',
                                 isCurrentUser
                                   ? 'bg-primary-foreground/10 hover:bg-primary-foreground/20 border-primary-foreground/20'
                                   : 'bg-white hover:bg-slate-50 border-slate-200',
                               )}
                             >
-                              <Icon className="h-5 w-5 shrink-0 opacity-70" />
+                              <Icon className="h-4 w-4 shrink-0 opacity-70" />
                               <div className="flex-1 min-w-0">
                                 <p className="truncate font-medium">{anexo.nome_arquivo}</p>
-                                <p className="text-xs opacity-70">{anexo.tamanho_mb} MB</p>
+                                <p className="text-[10px] opacity-70">{anexo.tamanho_mb} MB</p>
                               </div>
                             </a>
                           )
@@ -3309,7 +3331,7 @@ export default function ChamadoDetalhes() {
 
                     <div
                       className={cn(
-                        'text-[10px] mt-2 text-right opacity-70',
+                        'text-[9px] sm:text-[10px] mt-1 text-right opacity-70',
                         isCurrentUser ? 'text-primary-foreground/90' : 'text-slate-500',
                       )}
                     >
@@ -3325,13 +3347,13 @@ export default function ChamadoDetalhes() {
       </div>
 
       {chamado.status !== 'finalizado' && canReply && (
-        <div className="bg-white rounded-xl border shadow-sm p-4 sm:p-6 animate-fade-in-up">
-          <h3 className="text-sm font-bold text-slate-900 mb-3 uppercase tracking-wider">
+        <div className="bg-white rounded-lg border shadow-sm p-3 sm:p-4 animate-fade-in-up">
+          <h3 className="text-xs font-bold text-slate-900 mb-2 uppercase tracking-wider">
             Responder
           </h3>
           <div
             className={cn(
-              'flex flex-col gap-3 rounded-lg border-2 border-dashed p-4 transition-colors bg-slate-50',
+              'flex flex-col gap-2 rounded-md border border-dashed p-3 transition-colors bg-slate-50',
               isDragActive ? 'border-primary bg-primary/5' : 'hover:border-slate-300',
             )}
             onDragOver={handleDragOver}
@@ -3342,12 +3364,12 @@ export default function ChamadoDetalhes() {
               placeholder="Digite sua resposta aqui... (Você também pode arrastar arquivos para anexar)"
               value={mensagem}
               onChange={(e) => setMensagem(e.target.value)}
-              className="min-h-[120px] resize-y bg-white"
+              className="min-h-[80px] resize-y bg-white text-xs sm:text-sm"
               disabled={submitting}
             />
 
             {files.length > 0 && (
-              <div className="flex flex-col gap-2 pt-2 border-t">
+              <div className="flex flex-col gap-1.5 pt-2 border-t">
                 {files.map((f) => (
                   <div
                     key={f.id}
@@ -3413,16 +3435,16 @@ export default function ChamadoDetalhes() {
               </div>
             )}
 
-            <div className="flex flex-col sm:flex-row justify-between items-center gap-4 pt-2 border-t mt-1">
+            <div className="flex flex-col sm:flex-row justify-between items-center gap-3 pt-2 border-t mt-1">
               <div className="flex items-center gap-2 w-full sm:w-auto">
                 <Button
                   variant="outline"
                   size="sm"
-                  className="text-slate-600 h-9 bg-white"
+                  className="text-slate-600 h-8 text-xs bg-white"
                   onClick={() => fileInputRef.current?.click()}
                   disabled={submitting || files.length >= MAX_FILES}
                 >
-                  <Paperclip className="mr-2 h-4 w-4" />
+                  <Paperclip className="mr-2 h-3.5 w-3.5" />
                   Anexar Arquivo
                 </Button>
                 <input
@@ -3433,7 +3455,7 @@ export default function ChamadoDetalhes() {
                   multiple
                   accept=".mp3,.mp4,.pdf,image/jpeg,image/png,image/gif,image/webp"
                 />
-                <span className="text-xs text-slate-500 hidden sm:inline-block">
+                <span className="text-[10px] text-slate-500 hidden sm:inline-block">
                   Máx 10 arquivos (20MB)
                 </span>
               </div>
@@ -3442,7 +3464,7 @@ export default function ChamadoDetalhes() {
                 <Button
                   variant="ghost"
                   size="sm"
-                  className="h-9"
+                  className="h-8 text-xs"
                   onClick={() => {
                     setMensagem('')
                     setFiles([])
@@ -3453,13 +3475,13 @@ export default function ChamadoDetalhes() {
                 </Button>
                 <Button
                   size="sm"
-                  className="h-9"
+                  className="h-8 text-xs"
                   onClick={handleResponder}
                   disabled={
                     submitting || !mensagem.trim() || files.some((f) => f.status !== 'success')
                   }
                 >
-                  <Send className="mr-2 h-4 w-4" />
+                  <Send className="mr-2 h-3.5 w-3.5" />
                   {submitting ? 'Enviando...' : 'Responder'}
                 </Button>
               </div>

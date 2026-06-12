@@ -126,11 +126,11 @@ const ATTACHMENT_CATEGORIES = [
     id: 'documento_veiculo' as const,
     title: 'Documento do veículo',
     description: 'Anexe o documento do veículo (CRLV ou RG do veículo)',
-    required: true,
-    min: 1,
+    required: false,
+    min: 0,
     max: 1,
-    accept: '.pdf,image/*',
-    allowedPrefixes: ['application/pdf', 'image/'],
+    accept: 'image/*,video/*',
+    allowedPrefixes: ['image/', 'video/'],
   },
   {
     id: 'fotos_videos' as const,
@@ -842,14 +842,12 @@ export default function NovoChamado() {
                           </div>
 
                           {catFiles.length < cat.max && (
-                            <div
+                            <label
+                              htmlFor={`file-upload-${cat.id}`}
                               className={`border-2 border-dashed rounded-lg p-6 text-center transition-colors cursor-pointer flex flex-col items-center justify-center gap-2 ${dragActiveId === cat.id ? 'border-primary bg-primary/5' : 'border-slate-300 hover:border-primary/50 hover:bg-slate-50'}`}
                               onDrop={(e) => handleDrop(e, cat.id)}
                               onDragOver={(e) => handleDragOver(e, cat.id)}
                               onDragLeave={handleDragLeave}
-                              onClick={() =>
-                                document.getElementById(`file-upload-${cat.id}`)?.click()
-                              }
                             >
                               <UploadCloud
                                 className={`h-8 w-8 ${dragActiveId === cat.id ? 'text-primary' : 'text-slate-400'}`}
@@ -859,9 +857,11 @@ export default function NovoChamado() {
                                 {cat.max > 1 ? 'arquivos aqui' : 'um arquivo aqui'}
                               </div>
                               <div className="text-xs text-muted-foreground">
-                                {cat.id === 'fotos_videos' || cat.id === 'anexo_lesao'
-                                  ? 'PDF, Imagens ou Vídeos'
-                                  : 'PDF ou Imagens'}{' '}
+                                {cat.id === 'fotos_videos' || cat.id === 'documento_veiculo'
+                                  ? 'Imagens ou Vídeos'
+                                  : cat.id === 'anexo_lesao'
+                                    ? 'PDF, Imagens ou Vídeos'
+                                    : 'PDF ou Imagens'}{' '}
                                 (Máx 20MB cada)
                               </div>
                               <input
@@ -872,7 +872,7 @@ export default function NovoChamado() {
                                 multiple={cat.max > 1}
                                 accept={cat.accept}
                               />
-                            </div>
+                            </label>
                           )}
 
                           {catFiles.length > 0 && (

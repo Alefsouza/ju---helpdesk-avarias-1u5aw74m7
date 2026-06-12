@@ -19,7 +19,7 @@ export function useDraft<T extends Record<string, any>>(
   const isInitialMount = useRef(true)
 
   useEffect(() => {
-    const saved = localStorage.getItem(storageKey)
+    const saved = sessionStorage.getItem(storageKey)
     if (saved) {
       try {
         const parsed = JSON.parse(saved)
@@ -61,16 +61,16 @@ export function useDraft<T extends Record<string, any>>(
       const isCompletelyEmpty = Object.values(toSave).every(isValueEmpty)
 
       if (!isCompletelyEmpty) {
-        localStorage.setItem(storageKey, JSON.stringify(toSave))
+        sessionStorage.setItem(storageKey, JSON.stringify(toSave))
       } else {
-        localStorage.removeItem(storageKey)
+        sessionStorage.removeItem(storageKey)
       }
     })
     return () => subscription.unsubscribe()
   }, [form, storageKey])
 
   const clearDraft = () => {
-    localStorage.removeItem(storageKey)
+    sessionStorage.removeItem(storageKey)
     setDraftRestored(false)
   }
 

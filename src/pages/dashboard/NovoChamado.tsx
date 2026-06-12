@@ -55,8 +55,8 @@ const SEGURADORA_CATEGORIES = [
     required: true,
     min: 1,
     max: 1,
-    accept: 'application/pdf,image/*',
-    allowedPrefixes: ['application/pdf', 'image/'],
+    accept: 'image/*',
+    allowedPrefixes: ['image/'],
   },
   {
     id: 'apolice' as const,
@@ -65,8 +65,8 @@ const SEGURADORA_CATEGORIES = [
     required: true,
     min: 1,
     max: 1,
-    accept: 'application/pdf,image/*',
-    allowedPrefixes: ['application/pdf', 'image/'],
+    accept: 'image/*',
+    allowedPrefixes: ['image/'],
   },
   {
     id: 'valor_acordo' as const,
@@ -75,8 +75,8 @@ const SEGURADORA_CATEGORIES = [
     required: true,
     min: 1,
     max: 1,
-    accept: 'application/pdf,image/*',
-    allowedPrefixes: ['application/pdf', 'image/'],
+    accept: 'image/*',
+    allowedPrefixes: ['image/'],
   },
 ]
 
@@ -88,8 +88,8 @@ const ATTACHMENT_CATEGORIES = [
     required: true,
     min: 1,
     max: 1,
-    accept: 'application/pdf,image/*',
-    allowedPrefixes: ['application/pdf', 'image/'],
+    accept: 'image/*',
+    allowedPrefixes: ['image/'],
   },
   {
     id: 'orcamento_confianca' as const,
@@ -98,8 +98,8 @@ const ATTACHMENT_CATEGORIES = [
     required: true,
     min: 2,
     max: 2,
-    accept: 'application/pdf,image/*',
-    allowedPrefixes: ['application/pdf', 'image/'],
+    accept: 'image/*',
+    allowedPrefixes: ['image/'],
   },
   {
     id: 'orcamento_carmg' as const,
@@ -109,8 +109,8 @@ const ATTACHMENT_CATEGORIES = [
     required: true,
     min: 1,
     max: 1,
-    accept: 'application/pdf,image/*',
-    allowedPrefixes: ['application/pdf', 'image/'],
+    accept: 'image/*',
+    allowedPrefixes: ['image/'],
   },
   {
     id: 'cnh' as const,
@@ -119,8 +119,8 @@ const ATTACHMENT_CATEGORIES = [
     required: true,
     min: 1,
     max: 1,
-    accept: 'application/pdf,image/*',
-    allowedPrefixes: ['application/pdf', 'image/'],
+    accept: 'image/*',
+    allowedPrefixes: ['image/'],
   },
   {
     id: 'documento_veiculo' as const,
@@ -129,30 +129,30 @@ const ATTACHMENT_CATEGORIES = [
     required: true,
     min: 1,
     max: 1,
-    accept: 'application/pdf,image/*,video/*',
-    allowedPrefixes: ['application/pdf', 'image/', 'video/'],
+    accept: 'image/*',
+    allowedPrefixes: ['image/'],
   },
   {
     id: 'fotos_videos' as const,
-    title: 'Fotos e/ou vídeos do veículo avariado',
-    description: 'Anexe fotos ou vídeos do veículo com os danos',
+    title: 'Fotos do veículo avariado',
+    description: 'Anexe fotos do veículo com os danos',
     required: false,
     min: 0,
     max: 10,
-    accept: 'image/*,video/*',
-    allowedPrefixes: ['image/', 'video/'],
+    accept: 'image/*',
+    allowedPrefixes: ['image/'],
   },
 ]
 
 const LESAO_ATTACHMENT = {
   id: 'anexo_lesao' as const,
   title: 'Anexos (Opcional)',
-  description: 'Anexe fotos, vídeos ou documentos relacionados à ocorrência',
+  description: 'Anexe fotos relacionadas à ocorrência',
   required: false,
   min: 0,
   max: 10,
-  accept: 'application/pdf,image/*,video/*',
-  allowedPrefixes: ['application/pdf', 'image/', 'video/'],
+  accept: 'image/*',
+  allowedPrefixes: ['image/'],
 }
 
 type FileItem = {
@@ -865,8 +865,8 @@ export default function NovoChamado() {
                     </Label>
                     <p className="text-sm text-muted-foreground">
                       {tipoChamado === 'Lesão Corporal'
-                        ? 'Você pode anexar fotos ou documentos relacionados à ocorrência.'
-                        : 'Forneça as documentações abaixo para a abertura do sinistro.'}
+                        ? 'Você pode anexar fotos (somente imagens) relacionadas à ocorrência.'
+                        : 'Forneça as documentações em formato de imagem abaixo para a abertura do sinistro.'}
                     </p>
                   </div>
 
@@ -917,12 +917,7 @@ export default function NovoChamado() {
                                 {cat.max > 1 ? 'arquivos aqui' : 'um arquivo aqui'}
                               </div>
                               <div className="text-xs text-muted-foreground">
-                                {cat.id === 'fotos_videos'
-                                  ? 'Imagens ou Vídeos'
-                                  : cat.id === 'anexo_lesao' || cat.id === 'documento_veiculo'
-                                    ? 'PDF, Imagens ou Vídeos'
-                                    : 'PDF ou Imagens'}{' '}
-                                (Máx 20MB cada)
+                                Somente imagens (Máx 20MB cada)
                               </div>
                               <input
                                 id={`file-upload-${cat.id}`}

@@ -1,17 +1,11 @@
 // AVOID UPDATING THIS FILE DIRECTLY. It is automatically generated.
-export type Json =
-  | string
-  | number
-  | boolean
-  | null
-  | { [key: string]: Json | undefined }
-  | Json[]
+export type Json = string | number | boolean | null | { [key: string]: Json | undefined } | Json[]
 
 export type Database = {
   // Allows to automatically instantiate createClient with right options
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
-    PostgrestVersion: "14.5"
+    PostgrestVersion: '14.5'
   }
   public: {
     Tables: {
@@ -45,11 +39,11 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: "anexos_chamado_chamado_id_fkey"
-            columns: ["chamado_id"]
+            foreignKeyName: 'anexos_chamado_chamado_id_fkey'
+            columns: ['chamado_id']
             isOneToOne: false
-            referencedRelation: "chamados"
-            referencedColumns: ["id"]
+            referencedRelation: 'chamados'
+            referencedColumns: ['id']
           },
         ]
       }
@@ -86,11 +80,11 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: "anexos_chamado_interno_chamado_id_fkey"
-            columns: ["chamado_id"]
+            foreignKeyName: 'anexos_chamado_interno_chamado_id_fkey'
+            columns: ['chamado_id']
             isOneToOne: false
-            referencedRelation: "chamados"
-            referencedColumns: ["id"]
+            referencedRelation: 'chamados'
+            referencedColumns: ['id']
           },
         ]
       }
@@ -295,18 +289,18 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: "documentos_chamado_id_fkey"
-            columns: ["chamado_id"]
+            foreignKeyName: 'documentos_chamado_id_fkey'
+            columns: ['chamado_id']
             isOneToOne: false
-            referencedRelation: "chamados"
-            referencedColumns: ["id"]
+            referencedRelation: 'chamados'
+            referencedColumns: ['id']
           },
           {
-            foreignKeyName: "documentos_formulario_id_fkey"
-            columns: ["formulario_id"]
+            foreignKeyName: 'documentos_formulario_id_fkey'
+            columns: ['formulario_id']
             isOneToOne: true
-            referencedRelation: "formularios_espelho_danos"
-            referencedColumns: ["id"]
+            referencedRelation: 'formularios_espelho_danos'
+            referencedColumns: ['id']
           },
         ]
       }
@@ -367,11 +361,11 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: "formularios_espelho_danos_chamado_id_fkey"
-            columns: ["chamado_id"]
+            foreignKeyName: 'formularios_espelho_danos_chamado_id_fkey'
+            columns: ['chamado_id']
             isOneToOne: false
-            referencedRelation: "chamados"
-            referencedColumns: ["id"]
+            referencedRelation: 'chamados'
+            referencedColumns: ['id']
           },
         ]
       }
@@ -444,11 +438,11 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: "formularios_ido_chamado_id_fkey"
-            columns: ["chamado_id"]
+            foreignKeyName: 'formularios_ido_chamado_id_fkey'
+            columns: ['chamado_id']
             isOneToOne: false
-            referencedRelation: "chamados"
-            referencedColumns: ["id"]
+            referencedRelation: 'chamados'
+            referencedColumns: ['id']
           },
         ]
       }
@@ -506,11 +500,11 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: "historico_chamado_chamado_id_fkey"
-            columns: ["chamado_id"]
+            foreignKeyName: 'historico_chamado_chamado_id_fkey'
+            columns: ['chamado_id']
             isOneToOne: false
-            referencedRelation: "chamados"
-            referencedColumns: ["id"]
+            referencedRelation: 'chamados'
+            referencedColumns: ['id']
           },
         ]
       }
@@ -538,11 +532,11 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: "parcelas_vales_chamado_id_fkey"
-            columns: ["chamado_id"]
+            foreignKeyName: 'parcelas_vales_chamado_id_fkey'
+            columns: ['chamado_id']
             isOneToOne: false
-            referencedRelation: "chamados"
-            referencedColumns: ["id"]
+            referencedRelation: 'chamados'
+            referencedColumns: ['id']
           },
         ]
       }
@@ -567,11 +561,11 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: "participantes_chamado_chamado_id_fkey"
-            columns: ["chamado_id"]
+            foreignKeyName: 'participantes_chamado_chamado_id_fkey'
+            columns: ['chamado_id']
             isOneToOne: false
-            referencedRelation: "chamados"
-            referencedColumns: ["id"]
+            referencedRelation: 'chamados'
+            referencedColumns: ['id']
           },
         ]
       }
@@ -671,11 +665,11 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: "respostas_chamado_chamado_id_fkey"
-            columns: ["chamado_id"]
+            foreignKeyName: 'respostas_chamado_chamado_id_fkey'
+            columns: ['chamado_id']
             isOneToOne: false
-            referencedRelation: "chamados"
-            referencedColumns: ["id"]
+            referencedRelation: 'chamados'
+            referencedColumns: ['id']
           },
         ]
       }
@@ -761,33 +755,31 @@ export type Database = {
   }
 }
 
-type DatabaseWithoutInternals = Omit<Database, "__InternalSupabase">
+type DatabaseWithoutInternals = Omit<Database, '__InternalSupabase'>
 
-type DefaultSchema = DatabaseWithoutInternals[Extract<keyof Database, "public">]
+type DefaultSchema = DatabaseWithoutInternals[Extract<keyof Database, 'public'>]
 
 export type Tables<
   DefaultSchemaTableNameOrOptions extends
-    | keyof (DefaultSchema["Tables"] & DefaultSchema["Views"])
+    | keyof (DefaultSchema['Tables'] & DefaultSchema['Views'])
     | { schema: keyof DatabaseWithoutInternals },
   TableName extends DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
-    ? keyof (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
-        DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])
+    ? keyof (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions['schema']]['Tables'] &
+        DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions['schema']]['Views'])
     : never = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
-  ? (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
-      DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])[TableName] extends {
+  ? (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions['schema']]['Tables'] &
+      DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions['schema']]['Views'])[TableName] extends {
       Row: infer R
     }
     ? R
     : never
-  : DefaultSchemaTableNameOrOptions extends keyof (DefaultSchema["Tables"] &
-        DefaultSchema["Views"])
-    ? (DefaultSchema["Tables"] &
-        DefaultSchema["Views"])[DefaultSchemaTableNameOrOptions] extends {
+  : DefaultSchemaTableNameOrOptions extends keyof (DefaultSchema['Tables'] & DefaultSchema['Views'])
+    ? (DefaultSchema['Tables'] & DefaultSchema['Views'])[DefaultSchemaTableNameOrOptions] extends {
         Row: infer R
       }
       ? R
@@ -796,23 +788,23 @@ export type Tables<
 
 export type TablesInsert<
   DefaultSchemaTableNameOrOptions extends
-    | keyof DefaultSchema["Tables"]
+    | keyof DefaultSchema['Tables']
     | { schema: keyof DatabaseWithoutInternals },
   TableName extends DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
-    ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
+    ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions['schema']]['Tables']
     : never = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
-  ? DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"][TableName] extends {
+  ? DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions['schema']]['Tables'][TableName] extends {
       Insert: infer I
     }
     ? I
     : never
-  : DefaultSchemaTableNameOrOptions extends keyof DefaultSchema["Tables"]
-    ? DefaultSchema["Tables"][DefaultSchemaTableNameOrOptions] extends {
+  : DefaultSchemaTableNameOrOptions extends keyof DefaultSchema['Tables']
+    ? DefaultSchema['Tables'][DefaultSchemaTableNameOrOptions] extends {
         Insert: infer I
       }
       ? I
@@ -821,23 +813,23 @@ export type TablesInsert<
 
 export type TablesUpdate<
   DefaultSchemaTableNameOrOptions extends
-    | keyof DefaultSchema["Tables"]
+    | keyof DefaultSchema['Tables']
     | { schema: keyof DatabaseWithoutInternals },
   TableName extends DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
-    ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
+    ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions['schema']]['Tables']
     : never = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
-  ? DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"][TableName] extends {
+  ? DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions['schema']]['Tables'][TableName] extends {
       Update: infer U
     }
     ? U
     : never
-  : DefaultSchemaTableNameOrOptions extends keyof DefaultSchema["Tables"]
-    ? DefaultSchema["Tables"][DefaultSchemaTableNameOrOptions] extends {
+  : DefaultSchemaTableNameOrOptions extends keyof DefaultSchema['Tables']
+    ? DefaultSchema['Tables'][DefaultSchemaTableNameOrOptions] extends {
         Update: infer U
       }
       ? U
@@ -846,36 +838,36 @@ export type TablesUpdate<
 
 export type Enums<
   DefaultSchemaEnumNameOrOptions extends
-    | keyof DefaultSchema["Enums"]
+    | keyof DefaultSchema['Enums']
     | { schema: keyof DatabaseWithoutInternals },
   EnumName extends DefaultSchemaEnumNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
-    ? keyof DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"]
+    ? keyof DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions['schema']]['Enums']
     : never = never,
 > = DefaultSchemaEnumNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
-  ? DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"][EnumName]
-  : DefaultSchemaEnumNameOrOptions extends keyof DefaultSchema["Enums"]
-    ? DefaultSchema["Enums"][DefaultSchemaEnumNameOrOptions]
+  ? DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions['schema']]['Enums'][EnumName]
+  : DefaultSchemaEnumNameOrOptions extends keyof DefaultSchema['Enums']
+    ? DefaultSchema['Enums'][DefaultSchemaEnumNameOrOptions]
     : never
 
 export type CompositeTypes<
   PublicCompositeTypeNameOrOptions extends
-    | keyof DefaultSchema["CompositeTypes"]
+    | keyof DefaultSchema['CompositeTypes']
     | { schema: keyof DatabaseWithoutInternals },
   CompositeTypeName extends PublicCompositeTypeNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
-    ? keyof DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"]
+    ? keyof DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions['schema']]['CompositeTypes']
     : never = never,
 > = PublicCompositeTypeNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
-  ? DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"][CompositeTypeName]
-  : PublicCompositeTypeNameOrOptions extends keyof DefaultSchema["CompositeTypes"]
-    ? DefaultSchema["CompositeTypes"][PublicCompositeTypeNameOrOptions]
+  ? DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions['schema']]['CompositeTypes'][CompositeTypeName]
+  : PublicCompositeTypeNameOrOptions extends keyof DefaultSchema['CompositeTypes']
+    ? DefaultSchema['CompositeTypes'][PublicCompositeTypeNameOrOptions]
     : never
 
 export const Constants = {
@@ -883,7 +875,6 @@ export const Constants = {
     Enums: {},
   },
 } as const
-
 
 // ====== DATABASE EXTENDED CONTEXT (auto-generated) ======
 // This section contains actual PostgreSQL column types, constraints, RLS policies,
@@ -1251,20 +1242,20 @@ export const Constants = {
 //       SELECT chamado_id, fotos_manutencao INTO v_chamado_id, v_fotos
 //       FROM public.documentos
 //       WHERE id = p_documento_id;
-//   
+//
 //       IF v_fotos IS NULL THEN
 //         v_fotos := '[]'::jsonb;
 //       END IF;
-//       
+//
 //       -- Append new photo URL
 //       v_fotos := v_fotos || jsonb_build_array(p_foto_url);
-//   
+//
 //       -- 2. Update the document
 //       UPDATE public.documentos
 //       SET fotos_manutencao = v_fotos,
 //           atualizado_em = NOW()
 //       WHERE id = p_documento_id;
-//   
+//
 //       -- 3. Add history if chamado_id exists
 //       IF v_chamado_id IS NOT NULL THEN
 //         -- Determine user for audit
@@ -1272,21 +1263,21 @@ export const Constants = {
 //           v_admin_id := p_usuario_id;
 //         ELSE
 //           -- Fallback to system/admin user
-//           SELECT id INTO v_admin_id 
-//           FROM public.perfil_usuario 
-//           WHERE tipo_usuario = 'admin' 
-//           ORDER BY criado_em ASC 
+//           SELECT id INTO v_admin_id
+//           FROM public.perfil_usuario
+//           WHERE tipo_usuario = 'admin'
+//           ORDER BY criado_em ASC
 //           LIMIT 1;
-//   
+//
 //           IF v_admin_id IS NULL THEN
-//             SELECT id INTO v_admin_id 
-//             FROM public.perfil_usuario 
-//             WHERE tipo_usuario = 'responsavel' 
-//             ORDER BY criado_em ASC 
+//             SELECT id INTO v_admin_id
+//             FROM public.perfil_usuario
+//             WHERE tipo_usuario = 'responsavel'
+//             ORDER BY criado_em ASC
 //             LIMIT 1;
 //           END IF;
 //         END IF;
-//   
+//
 //         IF v_admin_id IS NOT NULL THEN
 //           INSERT INTO public.historico_chamado (
 //             chamado_id,
@@ -1303,7 +1294,7 @@ export const Constants = {
 //       END IF;
 //     END;
 //     $function$
-//   
+//
 // FUNCTION buscar_garagem_por_placa(text)
 //   CREATE OR REPLACE FUNCTION public.buscar_garagem_por_placa(p_placa text)
 //    RETURNS text
@@ -1317,11 +1308,11 @@ export const Constants = {
 //     FROM public.frota_veiculos
 //     WHERE regexp_replace(placa, '[^a-zA-Z0-9]', '', 'g') ILIKE '%' || p_placa || '%'
 //     LIMIT 1;
-//     
+//
 //     RETURN v_garagem;
 //   END;
 //   $function$
-//   
+//
 // FUNCTION buscar_veiculo_por_placa(text)
 //   CREATE OR REPLACE FUNCTION public.buscar_veiculo_por_placa(p_placa text)
 //    RETURNS jsonb
@@ -1335,11 +1326,11 @@ export const Constants = {
 //     FROM public.frota_veiculos
 //     WHERE regexp_replace(placa, '[^a-zA-Z0-9]', '', 'g') ILIKE '%' || p_placa || '%'
 //     LIMIT 1;
-//     
+//
 //     RETURN v_result;
 //   END;
 //   $function$
-//   
+//
 // FUNCTION handle_new_user()
 //   CREATE OR REPLACE FUNCTION public.handle_new_user()
 //    RETURNS trigger
@@ -1358,7 +1349,7 @@ export const Constants = {
 //     RETURN NEW;
 //   END;
 //   $function$
-//   
+//
 // FUNCTION is_admin()
 //   CREATE OR REPLACE FUNCTION public.is_admin()
 //    RETURNS boolean
@@ -1371,7 +1362,7 @@ export const Constants = {
 //     );
 //   END;
 //   $function$
-//   
+//
 // FUNCTION is_coc()
 //   CREATE OR REPLACE FUNCTION public.is_coc()
 //    RETURNS boolean
@@ -1384,7 +1375,7 @@ export const Constants = {
 //     );
 //   END;
 //   $function$
-//   
+//
 // FUNCTION is_juridico()
 //   CREATE OR REPLACE FUNCTION public.is_juridico()
 //    RETURNS boolean
@@ -1397,7 +1388,7 @@ export const Constants = {
 //     );
 //   END;
 //   $function$
-//   
+//
 // FUNCTION is_responsavel()
 //   CREATE OR REPLACE FUNCTION public.is_responsavel()
 //    RETURNS boolean
@@ -1410,7 +1401,7 @@ export const Constants = {
 //     );
 //   END;
 //   $function$
-//   
+//
 // FUNCTION is_secretaria_tecnica()
 //   CREATE OR REPLACE FUNCTION public.is_secretaria_tecnica()
 //    RETURNS boolean
@@ -1423,7 +1414,7 @@ export const Constants = {
 //     );
 //   END;
 //   $function$
-//   
+//
 // FUNCTION is_sinistro()
 //   CREATE OR REPLACE FUNCTION public.is_sinistro()
 //    RETURNS boolean
@@ -1436,7 +1427,7 @@ export const Constants = {
 //     );
 //   END;
 //   $function$
-//   
+//
 // FUNCTION is_sos()
 //   CREATE OR REPLACE FUNCTION public.is_sos()
 //    RETURNS boolean
@@ -1449,7 +1440,7 @@ export const Constants = {
 //     );
 //   END;
 //   $function$
-//   
+//
 // FUNCTION is_vistoriador()
 //   CREATE OR REPLACE FUNCTION public.is_vistoriador()
 //    RETURNS boolean
@@ -1462,7 +1453,7 @@ export const Constants = {
 //     );
 //   END;
 //   $function$
-//   
+//
 // FUNCTION liberar_veiculo_manutencao(uuid, text)
 //   CREATE OR REPLACE FUNCTION public.liberar_veiculo_manutencao(p_id uuid, p_status text)
 //    RETURNS void
@@ -1483,7 +1474,7 @@ export const Constants = {
 //       END IF;
 //     END;
 //     $function$
-//   
+//
 // FUNCTION marcar_chamados_pendentes_por_inatividade()
 //   CREATE OR REPLACE FUNCTION public.marcar_chamados_pendentes_por_inatividade()
 //    RETURNS void
@@ -1496,23 +1487,23 @@ export const Constants = {
 //     v_count integer := 0;
 //   BEGIN
 //     -- Pega o ID de um administrador para registrar a alteração no histórico
-//     SELECT id INTO v_admin_id 
-//     FROM public.perfil_usuario 
-//     WHERE tipo_usuario = 'admin' 
-//     ORDER BY criado_em ASC 
+//     SELECT id INTO v_admin_id
+//     FROM public.perfil_usuario
+//     WHERE tipo_usuario = 'admin'
+//     ORDER BY criado_em ASC
 //     LIMIT 1;
-//     
+//
 //     -- Se não encontrar um admin, pega qualquer usuário responsável (fallback de segurança)
 //     IF v_admin_id IS NULL THEN
-//       SELECT id INTO v_admin_id 
-//       FROM public.perfil_usuario 
-//       WHERE tipo_usuario = 'responsavel' 
-//       ORDER BY criado_em ASC 
+//       SELECT id INTO v_admin_id
+//       FROM public.perfil_usuario
+//       WHERE tipo_usuario = 'responsavel'
+//       ORDER BY criado_em ASC
 //       LIMIT 1;
 //     END IF;
-//   
-//     FOR v_chamado_id IN 
-//       SELECT c.id 
+//
+//     FOR v_chamado_id IN
+//       SELECT c.id
 //       FROM public.chamados c
 //       WHERE c.status NOT IN ('finalizado', 'Pendente', 'pendente', 'deletado')
 //         AND c.atualizado_em < NOW() - INTERVAL '30 days'
@@ -1527,25 +1518,25 @@ export const Constants = {
 //         )
 //     LOOP
 //       -- Atualiza o status do chamado
-//       UPDATE public.chamados 
-//       SET 
+//       UPDATE public.chamados
+//       SET
 //         status = 'pendente',
 //         atualizado_em = NOW()
 //       WHERE id = v_chamado_id;
-//   
+//
 //       -- Insere o registro de histórico, se tivermos um usuário válido
 //       IF v_admin_id IS NOT NULL THEN
 //         INSERT INTO public.historico_chamado (chamado_id, acao, usuario_id, detalhes)
 //         VALUES (v_chamado_id, 'pendente', v_admin_id, 'Chamado movido para Pendente, pois não houve interação por mais de 30 dias.');
 //       END IF;
-//       
+//
 //       v_count := v_count + 1;
 //     END LOOP;
-//     
+//
 //     RAISE NOTICE 'Chamados inativos movidos para pendente: %', v_count;
 //   END;
 //   $function$
-//   
+//
 // FUNCTION ocultar_documento_manutencao(uuid)
 //   CREATE OR REPLACE FUNCTION public.ocultar_documento_manutencao(p_id uuid)
 //    RETURNS void
@@ -1558,7 +1549,7 @@ export const Constants = {
 //     WHERE id = p_id;
 //   END;
 //   $function$
-//   
+//
 // FUNCTION registrar_anexo_interno_publico(uuid, text, text, integer, text, text)
 //   CREATE OR REPLACE FUNCTION public.registrar_anexo_interno_publico(p_chamado_id uuid, p_nome_arquivo text, p_arquivo_url text, p_tamanho_bytes integer, p_tipo_arquivo text DEFAULT 'application/pdf'::text, p_detalhes_historico text DEFAULT 'Anexo incluído com sucesso.'::text)
 //    RETURNS void
@@ -1573,13 +1564,13 @@ export const Constants = {
 //     SELECT responsavel_id, usuario_id INTO v_responsavel_id, v_usuario_id
 //     FROM public.chamados
 //     WHERE id = p_chamado_id;
-//   
+//
 //     v_alvo_id := COALESCE(v_responsavel_id, v_usuario_id);
-//   
+//
 //     IF v_alvo_id IS NULL THEN
 //       RAISE EXCEPTION 'Chamado não encontrado ou sem usuários vinculados';
 //     END IF;
-//   
+//
 //     INSERT INTO public.anexos_chamado_interno (
 //       chamado_id,
 //       usuario_id,
@@ -1595,7 +1586,7 @@ export const Constants = {
 //       p_tipo_arquivo,
 //       p_tamanho_bytes
 //     );
-//   
+//
 //     INSERT INTO public.historico_chamado (
 //       chamado_id,
 //       usuario_id,
@@ -1609,7 +1600,7 @@ export const Constants = {
 //     );
 //   END;
 //   $function$
-//   
+//
 // FUNCTION registrar_boletim_ido(uuid, text, text, integer)
 //   CREATE OR REPLACE FUNCTION public.registrar_boletim_ido(p_chamado_id uuid, p_nome_arquivo text, p_arquivo_url text, p_tamanho_bytes integer)
 //    RETURNS void
@@ -1625,15 +1616,15 @@ export const Constants = {
 //     SELECT responsavel_id, usuario_id INTO v_responsavel_id, v_usuario_id
 //     FROM public.chamados
 //     WHERE id = p_chamado_id;
-//   
+//
 //     -- Determine the user ID to associate the attachment with
 //     -- If there's a responsible, use it, otherwise fallback to the creator
 //     v_alvo_id := COALESCE(v_responsavel_id, v_usuario_id);
-//   
+//
 //     IF v_alvo_id IS NULL THEN
 //       RAISE EXCEPTION 'Chamado não encontrado ou sem usuários vinculados';
 //     END IF;
-//   
+//
 //     -- Insert into anexos_chamado_interno
 //     INSERT INTO public.anexos_chamado_interno (
 //       chamado_id,
@@ -1650,7 +1641,7 @@ export const Constants = {
 //       'application/pdf',
 //       p_tamanho_bytes
 //     );
-//   
+//
 //     -- Insert notification into historico_chamado
 //     INSERT INTO public.historico_chamado (
 //       chamado_id,
@@ -1665,7 +1656,7 @@ export const Constants = {
 //     );
 //   END;
 //   $function$
-//   
+//
 // FUNCTION registrar_espelho_danos(uuid, text, text, integer)
 //   CREATE OR REPLACE FUNCTION public.registrar_espelho_danos(p_chamado_id uuid, p_nome_arquivo text, p_arquivo_url text, p_tamanho_bytes integer)
 //    RETURNS void
@@ -1681,14 +1672,14 @@ export const Constants = {
 //     SELECT responsavel_id, usuario_id INTO v_responsavel_id, v_usuario_id
 //     FROM public.chamados
 //     WHERE id = p_chamado_id;
-//   
+//
 //     -- Determine the user ID to associate the attachment with
 //     v_alvo_id := COALESCE(v_responsavel_id, v_usuario_id);
-//   
+//
 //     IF v_alvo_id IS NULL THEN
 //       RAISE EXCEPTION 'Chamado não encontrado ou sem usuários vinculados';
 //     END IF;
-//   
+//
 //     -- Insert into anexos_chamado_interno
 //     INSERT INTO public.anexos_chamado_interno (
 //       chamado_id,
@@ -1705,7 +1696,7 @@ export const Constants = {
 //       'application/pdf',
 //       p_tamanho_bytes
 //     );
-//   
+//
 //     -- Insert notification into historico_chamado
 //     INSERT INTO public.historico_chamado (
 //       chamado_id,
@@ -1720,7 +1711,7 @@ export const Constants = {
 //     );
 //   END;
 //   $function$
-//   
+//
 // FUNCTION remover_foto_manutencao(uuid, text, uuid)
 //   CREATE OR REPLACE FUNCTION public.remover_foto_manutencao(p_documento_id uuid, p_foto_url text, p_usuario_id uuid DEFAULT NULL::uuid)
 //    RETURNS void
@@ -1735,13 +1726,13 @@ export const Constants = {
 //     SELECT chamado_id INTO v_chamado_id
 //     FROM public.documentos
 //     WHERE id = p_documento_id;
-//   
+//
 //     -- 2. Update the document by removing the specific URL from the JSONB array
 //     UPDATE public.documentos
 //     SET fotos_manutencao = COALESCE(fotos_manutencao, '[]'::jsonb) - p_foto_url,
 //         atualizado_em = NOW()
 //     WHERE id = p_documento_id;
-//   
+//
 //     -- 3. Add history if chamado_id exists
 //     IF v_chamado_id IS NOT NULL THEN
 //       -- Determine user for audit
@@ -1749,21 +1740,21 @@ export const Constants = {
 //         v_admin_id := p_usuario_id;
 //       ELSE
 //         -- Fallback to system/admin user
-//         SELECT id INTO v_admin_id 
-//         FROM public.perfil_usuario 
-//         WHERE tipo_usuario = 'admin' 
-//         ORDER BY criado_em ASC 
+//         SELECT id INTO v_admin_id
+//         FROM public.perfil_usuario
+//         WHERE tipo_usuario = 'admin'
+//         ORDER BY criado_em ASC
 //         LIMIT 1;
-//   
+//
 //         IF v_admin_id IS NULL THEN
-//           SELECT id INTO v_admin_id 
-//           FROM public.perfil_usuario 
-//           WHERE tipo_usuario = 'responsavel' 
-//           ORDER BY criado_em ASC 
+//           SELECT id INTO v_admin_id
+//           FROM public.perfil_usuario
+//           WHERE tipo_usuario = 'responsavel'
+//           ORDER BY criado_em ASC
 //           LIMIT 1;
 //         END IF;
 //       END IF;
-//   
+//
 //       IF v_admin_id IS NOT NULL THEN
 //         INSERT INTO public.historico_chamado (
 //           chamado_id,
@@ -1780,7 +1771,7 @@ export const Constants = {
 //     END IF;
 //   END;
 //   $function$
-//   
+//
 // FUNCTION rls_auto_enable()
 //   CREATE OR REPLACE FUNCTION public.rls_auto_enable()
 //    RETURNS event_trigger
@@ -1811,7 +1802,7 @@ export const Constants = {
 //     END LOOP;
 //   END;
 //   $function$
-//   
+//
 // FUNCTION set_garagem_from_profile()
 //   CREATE OR REPLACE FUNCTION public.set_garagem_from_profile()
 //    RETURNS trigger
@@ -1827,7 +1818,7 @@ export const Constants = {
 //     RETURN NEW;
 //   END;
 //   $function$
-//   
+//
 // FUNCTION sync_chamado_status_interno()
 //   CREATE OR REPLACE FUNCTION public.sync_chamado_status_interno()
 //    RETURNS trigger
@@ -1841,16 +1832,16 @@ export const Constants = {
 //       SELECT departamento INTO v_departamento
 //       FROM public.perfil_usuario
 //       WHERE id = NEW.responsavel_id;
-//       
+//
 //       NEW.status_interno := v_departamento;
 //     ELSE
 //       NEW.status_interno := NULL;
 //     END IF;
-//     
+//
 //     RETURN NEW;
 //   END;
 //   $function$
-//   
+//
 // FUNCTION sync_fotos_manutencao_trigger()
 //   CREATE OR REPLACE FUNCTION public.sync_fotos_manutencao_trigger()
 //    RETURNS trigger
@@ -1874,42 +1865,42 @@ export const Constants = {
 //     IF NEW.tipo_documento NOT IN ('Vistoria', 'Espelho de Danos', 'OS de Manutenção') THEN
 //       RETURN NEW;
 //     END IF;
-//   
+//
 //     -- Only proceed if there are photos
 //     IF NEW.fotos_manutencao IS NULL OR jsonb_typeof(NEW.fotos_manutencao) != 'array' THEN
 //       RETURN NEW;
 //     END IF;
-//   
+//
 //     v_chamado_id := NEW.chamado_id;
-//   
+//
 //     -- Attempt correlation via numero_os if chamado_id is null
 //     IF v_chamado_id IS NULL AND NEW.numero_os IS NOT NULL AND TRIM(NEW.numero_os) != '' THEN
 //       SELECT id INTO v_chamado_id
 //       FROM public.chamados
 //       WHERE TRIM(numero_os) = TRIM(NEW.numero_os)
 //       LIMIT 1;
-//   
+//
 //       IF v_chamado_id IS NOT NULL THEN
 //         v_linked_by_os := true;
 //         -- Update the current document's chamado_id to preserve the link.
 //         -- This won't fire this trigger recursively because it only fires OF fotos_manutencao.
-//         UPDATE public.documentos 
-//         SET chamado_id = v_chamado_id 
+//         UPDATE public.documentos
+//         SET chamado_id = v_chamado_id
 //         WHERE id = NEW.id;
 //       END IF;
 //     END IF;
-//   
+//
 //     IF v_chamado_id IS NULL THEN
 //       RETURN NEW;
 //     END IF;
-//   
+//
 //     -- Attempt to get the current user
 //     v_usuario_id := auth.uid();
-//     
+//
 //     -- Get context from the ticket
 //     SELECT responsavel_id, usuario_id, carro INTO v_responsavel_id, v_criador_id, v_carro
 //     FROM public.chamados WHERE id = v_chamado_id;
-//   
+//
 //     -- User ID Fallback
 //     IF v_usuario_id IS NULL THEN
 //       v_usuario_id := v_responsavel_id;
@@ -1920,86 +1911,86 @@ export const Constants = {
 //         SELECT id INTO v_usuario_id FROM public.perfil_usuario WHERE tipo_usuario = 'admin' ORDER BY criado_em ASC LIMIT 1;
 //       END IF;
 //     END IF;
-//   
+//
 //     -- If still null, we can't insert into anexos_chamado_interno (auth.users foreign key)
 //     IF v_usuario_id IS NULL THEN
 //       RETURN NEW;
 //     END IF;
-//   
+//
 //     -- Get current count for sequence
-//     SELECT COUNT(*) INTO v_count 
-//     FROM public.anexos_chamado_interno 
+//     SELECT COUNT(*) INTO v_count
+//     FROM public.anexos_chamado_interno
 //     WHERE chamado_id = v_chamado_id AND nome_arquivo ILIKE 'Foto Conserto %';
-//     
+//
 //     v_next_seq := v_count + 1;
-//   
+//
 //     -- Iterate through photos
 //     FOR v_url IN SELECT jsonb_array_elements_text(NEW.fotos_manutencao)
 //     LOOP
 //       -- Check for duplicates
 //       IF NOT EXISTS (
-//         SELECT 1 FROM public.anexos_chamado_interno 
+//         SELECT 1 FROM public.anexos_chamado_interno
 //         WHERE chamado_id = v_chamado_id AND arquivo_url = v_url
 //       ) THEN
 //         v_nome_arquivo := 'Foto Conserto ' || LPAD(v_next_seq::text, 2, '0') || ' - Carro: ' || COALESCE(NEW.numero_carro, v_carro, 'N/A');
-//         
+//
 //         INSERT INTO public.anexos_chamado_interno (
-//           chamado_id, 
-//           usuario_id, 
-//           arquivo_url, 
-//           nome_arquivo, 
-//           tamanho_bytes, 
+//           chamado_id,
+//           usuario_id,
+//           arquivo_url,
+//           nome_arquivo,
+//           tamanho_bytes,
 //           tipo_arquivo
 //         )
 //         VALUES (
-//           v_chamado_id, 
-//           v_usuario_id, 
-//           v_url, 
-//           v_nome_arquivo, 
-//           0, 
+//           v_chamado_id,
+//           v_usuario_id,
+//           v_url,
+//           v_nome_arquivo,
+//           0,
 //           'image/jpeg'
 //         );
-//         
+//
 //         v_inserted := true;
 //         v_next_seq := v_next_seq + 1;
 //       END IF;
 //     END LOOP;
-//   
+//
 //     -- Add history if at least one photo was inserted
 //     IF v_inserted THEN
 //       IF v_linked_by_os THEN
 //         INSERT INTO public.historico_chamado (
-//           chamado_id, 
-//           acao, 
-//           usuario_id, 
+//           chamado_id,
+//           acao,
+//           usuario_id,
 //           detalhes
 //         )
 //         VALUES (
-//           v_chamado_id, 
-//           'respondido', 
-//           v_usuario_id, 
+//           v_chamado_id,
+//           'respondido',
+//           v_usuario_id,
 //           'Evidência de manutenção (foto) vinculada automaticamente via Número de OS: ' || NEW.numero_os
 //         );
 //       ELSE
 //         INSERT INTO public.historico_chamado (
-//           chamado_id, 
-//           acao, 
-//           usuario_id, 
+//           chamado_id,
+//           acao,
+//           usuario_id,
 //           detalhes
 //         )
 //         VALUES (
-//           v_chamado_id, 
-//           'respondido', 
-//           v_usuario_id, 
+//           v_chamado_id,
+//           'respondido',
+//           v_usuario_id,
 //           'Evidência de manutenção sincronizada automaticamente da OS.'
 //         );
 //       END IF;
 //     END IF;
-//   
+//
 //     RETURN NEW;
 //   END;
 //   $function$
-//   
+//
 // FUNCTION update_documentos_atualizado_em()
 //   CREATE OR REPLACE FUNCTION public.update_documentos_atualizado_em()
 //    RETURNS trigger
@@ -2010,7 +2001,7 @@ export const Constants = {
 //     RETURN NEW;
 //   END;
 //   $function$
-//   
+//
 // FUNCTION update_rascunhos_chamado_atualizado_em()
 //   CREATE OR REPLACE FUNCTION public.update_rascunhos_chamado_atualizado_em()
 //    RETURNS trigger
@@ -2021,7 +2012,7 @@ export const Constants = {
 //     RETURN NEW;
 //   END;
 //   $function$
-//   
+//
 
 // --- TRIGGERS ---
 // Table: chamados
@@ -2061,4 +2052,3 @@ export const Constants = {
 //   CREATE UNIQUE INDEX participantes_chamado_chamado_id_usuario_id_key ON public.participantes_chamado USING btree (chamado_id, usuario_id)
 // Table: rascunhos_chamado
 //   CREATE UNIQUE INDEX rascunhos_chamado_usuario_id_key ON public.rascunhos_chamado USING btree (usuario_id)
-

@@ -15,8 +15,7 @@ export function useDraft<T extends Record<string, any>>(
   storageKey: string,
 ) {
   const [draftRestored, setDraftRestored] = useState(false)
-  const isRestoring = useRef(false)
-  const isInitialMount = useRef(true)
+  const isRestoring = useRef(true)
 
   useEffect(() => {
     const saved = localStorage.getItem(storageKey)
@@ -29,29 +28,24 @@ export function useDraft<T extends Record<string, any>>(
         const isCompletelyEmpty = Object.values(parsed).every(isValueEmpty)
 
         if (!isCompletelyEmpty) {
-          isRestoring.current = true
           const currentValues = form.getValues()
           const merged = { ...currentValues, ...parsed }
 
           form.reset(merged)
           setDraftRestored(true)
-          setTimeout(() => {
-            isRestoring.current = false
-          }, 300)
         }
       } catch (e) {
         console.error('Failed to parse draft', e)
       }
     }
+
+    setTimeout(() => {
+      isRestoring.current = false
+    }, 500)
   }, [form, storageKey])
 
   useEffect(() => {
     const subscription = form.watch((value) => {
-      if (isInitialMount.current) {
-        isInitialMount.current = false
-        return
-      }
-
       if (isRestoring.current) return
 
       const toSave = { ...value }

@@ -126,11 +126,11 @@ const ATTACHMENT_CATEGORIES = [
     id: 'documento_veiculo' as const,
     title: 'Documento do veículo',
     description: 'Anexe o documento do veículo (CRLV ou RG do veículo)',
-    required: false,
-    min: 0,
+    required: true,
+    min: 1,
     max: 1,
-    accept: 'image/*,video/*',
-    allowedPrefixes: ['image/', 'video/'],
+    accept: 'application/pdf,image/*,video/*',
+    allowedPrefixes: ['application/pdf', 'image/', 'video/'],
   },
   {
     id: 'fotos_videos' as const,
@@ -206,6 +206,7 @@ export default function NovoChamado() {
   const [files, setFiles] = useState<FileItem[]>([])
   const [dragActiveId, setDragActiveId] = useState<FileCategory | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const isInitialFilesMount = useRef(true)
 
   useEffect(() => {
     const savedFilesStr = localStorage.getItem('draft-novo-chamado-files')
@@ -230,6 +231,11 @@ export default function NovoChamado() {
   }, [])
 
   useEffect(() => {
+    if (isInitialFilesMount.current) {
+      isInitialFilesMount.current = false
+      return
+    }
+
     if (files.length > 0) {
       const filesToSave = files.map((f) => ({
         id: f.id,
@@ -911,9 +917,9 @@ export default function NovoChamado() {
                                 {cat.max > 1 ? 'arquivos aqui' : 'um arquivo aqui'}
                               </div>
                               <div className="text-xs text-muted-foreground">
-                                {cat.id === 'fotos_videos' || cat.id === 'documento_veiculo'
+                                {cat.id === 'fotos_videos'
                                   ? 'Imagens ou Vídeos'
-                                  : cat.id === 'anexo_lesao'
+                                  : cat.id === 'anexo_lesao' || cat.id === 'documento_veiculo'
                                     ? 'PDF, Imagens ou Vídeos'
                                     : 'PDF ou Imagens'}{' '}
                                 (Máx 20MB cada)

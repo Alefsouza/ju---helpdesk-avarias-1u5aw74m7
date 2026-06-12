@@ -158,8 +158,11 @@ const LESAO_ATTACHMENT = {
 type FileItem = {
   id: string
   category: FileCategory
-  file: File
-  status: 'pending' | 'uploading' | 'success' | 'error'
+  file?: File
+  name: string
+  size: number
+  type: string
+  status: 'pending' | 'uploading' | 'success' | 'error' | 'lost'
   progress: number
   url?: string
   errorCount: number
@@ -203,6 +206,48 @@ export default function NovoChamado() {
   const [files, setFiles] = useState<FileItem[]>([])
   const [dragActiveId, setDragActiveId] = useState<FileCategory | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
+
+  useEffect(() => {
+    const savedFilesStr = localStorage.getItem('draft-novo-chamado-files')
+    if (savedFilesStr) {
+      try {
+        const parsedFiles = JSON.parse(savedFilesStr) as FileItem[]
+        if (parsedFiles && parsedFiles.length > 0) {
+          const restoredFiles = parsedFiles.map((f) => ({
+            ...f,
+            status: f.status === 'success' ? 'success' : 'lost',
+            errorMessage:
+              f.status === 'success'
+                ? undefined
+                : 'Arquivo perdido durante recarregamento. Remova e selecione novamente.',
+          }))
+          setFiles(restoredFiles as FileItem[])
+        }
+      } catch (e) {
+        console.error('Failed to parse draft files', e)
+      }
+    }
+  }, [])
+
+  useEffect(() => {
+    if (files.length > 0) {
+      const filesToSave = files.map((f) => ({
+        id: f.id,
+        category: f.category,
+        name: f.name,
+        size: f.size,
+        type: f.type,
+        status: f.status,
+        progress: f.progress,
+        url: f.url,
+        errorCount: f.errorCount,
+        errorMessage: f.errorMessage,
+      }))
+      localStorage.setItem('draft-novo-chamado-files', JSON.stringify(filesToSave))
+    } else {
+      localStorage.removeItem('draft-novo-chamado-files')
+    }
+  }, [files])
 
   useEffect(() => {
     if (draftRestored) {
@@ -261,6 +306,9 @@ export default function NovoChamado() {
         id: crypto.randomUUID(),
         category: categoryId,
         file,
+        name: file.name,
+        size: file.size,
+        type: file.type,
         status: 'pending',
         progress: 0,
         errorCount: 0,
@@ -275,7 +323,7 @@ export default function NovoChamado() {
   }
 
   const uploadFile = async (item: FileItem) => {
-    if (!user) return
+    if (!user || !item.file) return
 
     setFiles((prev) =>
       prev.map((f) =>
@@ -295,7 +343,7 @@ export default function NovoChamado() {
     }, 300)
 
     try {
-      const ext = item.file.name.split('.').pop()
+      const ext = item.name.split('.').pop()
       const filePath = `${user.id}/${crypto.randomUUID()}.${ext}`
 
       const { error } = await supabase.storage
@@ -366,7 +414,7 @@ export default function NovoChamado() {
   }
 
   const retryUpload = (item: FileItem) => {
-    if (item.errorCount >= 3) return
+    if (item.errorCount >= 3 || !item.file) return
     uploadFile(item)
   }
 
@@ -537,7 +585,7 @@ export default function NovoChamado() {
             return {
               chamado_id: chamado.id,
               tipo_documento: tipo_doc,
-              nome_arquivo: f.file.name,
+              nome_arquivo: f.name,
               arquivo_url: f.url!,
             }
           })
@@ -571,9 +619,9 @@ export default function NovoChamado() {
             return {
               chamado_id: chamado.id,
               url_arquivo: f.url!,
-              nome_arquivo: `[${categoryTitle}] - ${f.file.name}`,
-              tipo_arquivo: getTipoArquivo(f.file.type),
-              tamanho_mb: Number((f.file.size / (1024 * 1024)).toFixed(2)),
+              nome_arquivo: `[${categoryTitle}] - ${f.name}`,
+              tipo_arquivo: getTipoArquivo(f.type),
+              tamanho_mb: Number((f.size / (1024 * 1024)).toFixed(2)),
             }
           })
           const { error: anexosError } = await supabase.from('anexos_chamado').insert(anexosData)
@@ -588,6 +636,7 @@ export default function NovoChamado() {
       })
 
       clearDraft()
+      localStorage.removeItem('draft-novo-chamado-files')
       toast.success('Chamado aberto com sucesso')
       navigate(`/dashboard/chamados/${chamado.id}`)
     } catch (error) {
@@ -616,8 +665,8 @@ export default function NovoChamado() {
             <div>
               <h3 className="font-semibold text-blue-800">Rascunho Restaurado</h3>
               <p className="mt-1 text-sm">
-                Encontramos dados preenchidos anteriormente. Por questões de segurança,{' '}
-                <strong>anexos e fotos</strong> precisam ser adicionados novamente.
+                Encontramos dados preenchidos anteriormente. Seus <strong>anexos enviados</strong>{' '}
+                foram preservados, mas os pendentes precisam ser selecionados novamente.
               </p>
             </div>
           </div>
@@ -880,18 +929,16 @@ export default function NovoChamado() {
                               {catFiles.map((f) => (
                                 <div
                                   key={f.id}
-                                  className={`flex items-center gap-3 p-2.5 border rounded-md shadow-sm ${f.status === 'error' ? 'border-red-200 bg-red-50/50' : 'bg-white'}`}
+                                  className={`flex items-center gap-3 p-2.5 border rounded-md shadow-sm ${f.status === 'error' || f.status === 'lost' ? 'border-red-200 bg-red-50/50' : 'bg-white'}`}
                                 >
                                   <div className="bg-slate-100 p-1.5 rounded shrink-0">
                                     <FileIcon className="h-4 w-4 text-slate-500" />
                                   </div>
                                   <div className="flex-1 min-w-0">
                                     <div className="flex justify-between items-center mb-0.5">
-                                      <p className="text-sm font-medium truncate pr-4">
-                                        {f.file.name}
-                                      </p>
+                                      <p className="text-sm font-medium truncate pr-4">{f.name}</p>
                                       <span className="text-[10px] text-slate-500 shrink-0">
-                                        {formatSize(f.file.size)}
+                                        {formatSize(f.size)}
                                       </span>
                                     </div>
 
@@ -909,13 +956,13 @@ export default function NovoChamado() {
                                       </div>
                                     )}
 
-                                    {f.status === 'error' && (
+                                    {(f.status === 'error' || f.status === 'lost') && (
                                       <div className="flex flex-col gap-1">
                                         <div className="flex items-center gap-1 text-red-600 text-[10px] font-medium">
                                           <AlertCircle className="h-3 w-3" />
                                           {f.errorMessage}
                                         </div>
-                                        {f.errorCount < 3 && (
+                                        {f.errorCount < 3 && f.status === 'error' && (
                                           <button
                                             type="button"
                                             onClick={() => retryUpload(f)}

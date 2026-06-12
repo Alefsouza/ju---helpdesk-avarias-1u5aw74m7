@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '@/lib/supabase/client'
 import { useAuth } from '@/hooks/use-auth'
@@ -55,7 +55,7 @@ const SEGURADORA_CATEGORIES = [
     required: true,
     min: 1,
     max: 1,
-    accept: '.pdf,image/*',
+    accept: 'application/pdf,image/*',
     allowedPrefixes: ['application/pdf', 'image/'],
   },
   {
@@ -65,7 +65,7 @@ const SEGURADORA_CATEGORIES = [
     required: true,
     min: 1,
     max: 1,
-    accept: '.pdf,image/*',
+    accept: 'application/pdf,image/*',
     allowedPrefixes: ['application/pdf', 'image/'],
   },
   {
@@ -75,7 +75,7 @@ const SEGURADORA_CATEGORIES = [
     required: true,
     min: 1,
     max: 1,
-    accept: '.pdf,image/*',
+    accept: 'application/pdf,image/*',
     allowedPrefixes: ['application/pdf', 'image/'],
   },
 ]
@@ -88,7 +88,7 @@ const ATTACHMENT_CATEGORIES = [
     required: true,
     min: 1,
     max: 1,
-    accept: '.pdf,image/*',
+    accept: 'application/pdf,image/*',
     allowedPrefixes: ['application/pdf', 'image/'],
   },
   {
@@ -98,7 +98,7 @@ const ATTACHMENT_CATEGORIES = [
     required: true,
     min: 2,
     max: 2,
-    accept: '.pdf,image/*',
+    accept: 'application/pdf,image/*',
     allowedPrefixes: ['application/pdf', 'image/'],
   },
   {
@@ -109,7 +109,7 @@ const ATTACHMENT_CATEGORIES = [
     required: true,
     min: 1,
     max: 1,
-    accept: '.pdf,image/*',
+    accept: 'application/pdf,image/*',
     allowedPrefixes: ['application/pdf', 'image/'],
   },
   {
@@ -119,7 +119,7 @@ const ATTACHMENT_CATEGORIES = [
     required: true,
     min: 1,
     max: 1,
-    accept: '.pdf,image/*',
+    accept: 'application/pdf,image/*',
     allowedPrefixes: ['application/pdf', 'image/'],
   },
   {
@@ -151,7 +151,7 @@ const LESAO_ATTACHMENT = {
   required: false,
   min: 0,
   max: 10,
-  accept: '.pdf,image/*,video/*',
+  accept: 'application/pdf,image/*,video/*',
   allowedPrefixes: ['application/pdf', 'image/', 'video/'],
 }
 
@@ -249,8 +249,13 @@ export default function NovoChamado() {
     }
   }, [files])
 
+  const toastMostrado = useRef(false)
+
   useEffect(() => {
-    if (draftRestored) {
+    if (draftRestored && !toastMostrado.current) {
+      toast.success('Rascunho recuperado com sucesso!')
+      toastMostrado.current = true
+
       const dataObj = form.getValues('dataOcorrencia')
       if (dataObj && typeof dataObj === 'string') {
         form.setValue('dataOcorrencia', new Date(dataObj), { shouldValidate: true })

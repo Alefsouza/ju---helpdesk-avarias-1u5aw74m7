@@ -11,6 +11,7 @@ export default function AutorizarParcelas() {
   const { user, profile } = useAuth()
   const [solicitacoes, setSolicitacoes] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
+  const [actionLoading, setActionLoading] = useState<string | null>(null)
 
   const fetchSolicitacoes = async () => {
     setLoading(true)
@@ -37,6 +38,7 @@ export default function AutorizarParcelas() {
   }, [user, profile])
 
   const handleAction = async (id: string, newStatus: string) => {
+    setActionLoading(id)
     const { error } = await supabase
       .from('solicitacoes_parcelamento')
       .update({ status: newStatus, atualizado_em: new Date().toISOString() })
@@ -44,11 +46,13 @@ export default function AutorizarParcelas() {
 
     if (error) {
       toast.error('Erro ao atualizar solicitação')
+      setActionLoading(null)
       return
     }
 
     toast.success(`Solicitação ${newStatus === 'aprovado' ? 'aprovada' : 'recusada'}!`)
     setSolicitacoes((prev) => prev.filter((s) => s.id !== id))
+    setActionLoading(null)
   }
 
   if (loading) {
@@ -121,14 +125,26 @@ export default function AutorizarParcelas() {
                     variant="outline"
                     className="flex-1 md:flex-none text-red-600 hover:text-red-700 hover:bg-red-50 border-red-200"
                     onClick={() => handleAction(s.id, 'recusado')}
+                    disabled={actionLoading === s.id}
                   >
-                    <X className="w-4 h-4 mr-1.5" /> Recusar
+                    {actionLoading === s.id ? (
+                      <Loader2 className="w-4 h-4 mr-1.5 animate-spin" />
+                    ) : (
+                      <X className="w-4 h-4 mr-1.5" />
+                    )}{' '}
+                    Recusar
                   </Button>
                   <Button
                     className="flex-1 md:flex-none bg-emerald-600 hover:bg-emerald-700 text-white"
                     onClick={() => handleAction(s.id, 'aprovado')}
+                    disabled={actionLoading === s.id}
                   >
-                    <Check className="w-4 h-4 mr-1.5" /> Aprovar
+                    {actionLoading === s.id ? (
+                      <Loader2 className="w-4 h-4 mr-1.5 animate-spin" />
+                    ) : (
+                      <Check className="w-4 h-4 mr-1.5" />
+                    )}{' '}
+                    Aprovar
                   </Button>
                 </div>
               </CardContent>

@@ -213,6 +213,21 @@ function AppSidebar() {
                 </SidebarMenuItem>
               )}
 
+              {(isAdmin || user?.email === 'alex.fontes@viasudeste.com') && (
+                <SidebarMenuItem>
+                  <SidebarMenuButton
+                    asChild
+                    isActive={location.pathname === '/dashboard/autorizar-parcelas'}
+                    className="data-[active=true]:bg-transparent data-[active=true]:text-[#c8e6c9] hover:bg-[#c8e6c9]/10 hover:text-[#c8e6c9] text-white transition-colors"
+                  >
+                    <Link to="/dashboard/autorizar-parcelas">
+                      <CheckCircle />
+                      <span>Autorizar Parcelas</span>
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              )}
+
               {isCoc && (
                 <>
                   <SidebarMenuItem>

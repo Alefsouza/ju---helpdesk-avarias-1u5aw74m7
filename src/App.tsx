@@ -15,6 +15,7 @@ import AdminDashboard from './pages/dashboard/Admin'
 import Relatorios from './pages/dashboard/Relatorios'
 import Documentos from './pages/dashboard/Documentos'
 import ValesAprovacao from './pages/dashboard/ValesAprovacao'
+import AutorizarParcelas from './pages/dashboard/AutorizarParcelas'
 import ValesAprovadosDP from './pages/dp/ValesAprovadosDP'
 import Perfil from './pages/dashboard/Perfil'
 import ChamadoDetalhes from './pages/dashboard/ChamadoDetalhes'
@@ -90,6 +91,7 @@ const App = () => (
             <Route path="/dashboard/perfil" element={<Perfil />} />
             <Route path="/dashboard/secretaria-tecnica" element={<SecretariaTecnica />} />
             <Route path="/dashboard/vales-aprovacao" element={<ValesAprovacao />} />
+            <Route path="/dashboard/autorizar-parcelas" element={<AutorizarParcelas />} />
             <Route path="/vales-aprovados" element={<ValesAprovadosDP />} />
             <Route path="/vistoria/novo" element={<VistoriaForm />} />
             <Route path="/vistoria/pendentes" element={<DocumentosPendentes />} />

@@ -508,6 +508,36 @@ export type Database = {
           },
         ]
       }
+      notificacoes: {
+        Row: {
+          criado_em: string
+          id: string
+          lida: boolean
+          link: string | null
+          mensagem: string
+          titulo: string
+          usuario_id: string
+        }
+        Insert: {
+          criado_em?: string
+          id?: string
+          lida?: boolean
+          link?: string | null
+          mensagem: string
+          titulo: string
+          usuario_id: string
+        }
+        Update: {
+          criado_em?: string
+          id?: string
+          lida?: boolean
+          link?: string | null
+          mensagem?: string
+          titulo?: string
+          usuario_id?: string
+        }
+        Relationships: []
+      }
       parcelas_vales: {
         Row: {
           chamado_id: string
@@ -1016,6 +1046,14 @@ export const Constants = {
 //   usuario_id: uuid (not null)
 //   detalhes: text (nullable)
 //   criado_em: timestamp with time zone (not null, default: now())
+// Table: notificacoes
+//   id: uuid (not null, default: gen_random_uuid())
+//   usuario_id: uuid (not null)
+//   titulo: text (not null)
+//   mensagem: text (not null)
+//   link: text (nullable)
+//   lida: boolean (not null, default: false)
+//   criado_em: timestamp with time zone (not null, default: now())
 // Table: parcelas_vales
 //   id: uuid (not null, default: gen_random_uuid())
 //   chamado_id: uuid (not null)
@@ -1092,6 +1130,9 @@ export const Constants = {
 //   FOREIGN KEY historico_chamado_chamado_id_fkey: FOREIGN KEY (chamado_id) REFERENCES chamados(id) ON DELETE CASCADE
 //   PRIMARY KEY historico_chamado_pkey: PRIMARY KEY (id)
 //   FOREIGN KEY historico_chamado_usuario_id_fkey: FOREIGN KEY (usuario_id) REFERENCES auth.users(id) ON DELETE CASCADE
+// Table: notificacoes
+//   PRIMARY KEY notificacoes_pkey: PRIMARY KEY (id)
+//   FOREIGN KEY notificacoes_usuario_id_fkey: FOREIGN KEY (usuario_id) REFERENCES auth.users(id) ON DELETE CASCADE
 // Table: parcelas_vales
 //   FOREIGN KEY parcelas_vales_chamado_id_fkey: FOREIGN KEY (chamado_id) REFERENCES chamados(id) ON DELETE CASCADE
 //   PRIMARY KEY parcelas_vales_pkey: PRIMARY KEY (id)
@@ -1115,11 +1156,15 @@ export const Constants = {
 
 // --- ROW LEVEL SECURITY POLICIES ---
 // Table: anexos_chamado
+//   Policy "anexos_chamado_select_admin_responsavel" (SELECT, PERMISSIVE) roles={authenticated}
+//     USING: ((is_admin() OR is_responsavel()) AND (chamado_id IN ( SELECT chamados.id    FROM chamados)))
 //   Policy "anexos_insert" (INSERT, PERMISSIVE) roles={authenticated}
 //     WITH CHECK: (chamado_id IN ( SELECT chamados.id    FROM chamados))
 //   Policy "anexos_select" (SELECT, PERMISSIVE) roles={authenticated}
 //     USING: (chamado_id IN ( SELECT chamados.id    FROM chamados))
 // Table: anexos_chamado_interno
+//   Policy "anexos_interno_select_admin_responsavel" (SELECT, PERMISSIVE) roles={authenticated}
+//     USING: ((is_admin() OR is_responsavel()) AND (chamado_id IN ( SELECT chamados.id    FROM chamados)))
 //   Policy "anexos_internos_delete" (DELETE, PERMISSIVE) roles={authenticated}
 //     USING: (is_admin() OR is_sinistro() OR is_juridico() OR is_secretaria_tecnica() OR (usuario_id = auth.uid()) OR (chamado_id IN ( SELECT chamados.id    FROM chamados   WHERE (chamados.responsavel_id = auth.uid()))))
 //   Policy "anexos_internos_insert" (INSERT, PERMISSIVE) roles={authenticated}
@@ -1163,6 +1208,8 @@ export const Constants = {
 //     WITH CHECK: true
 //   Policy "documentos_select" (SELECT, PERMISSIVE) roles={authenticated}
 //     USING: ((NOT is_vistoriador()) OR (garagem = ( SELECT perfil_usuario.garagem    FROM perfil_usuario   WHERE (perfil_usuario.id = auth.uid()))))
+//   Policy "documentos_select_admin_responsavel" (SELECT, PERMISSIVE) roles={authenticated}
+//     USING: ((is_admin() OR is_responsavel()) AND (chamado_id IN ( SELECT chamados.id    FROM chamados)))
 //   Policy "documentos_select_public_os" (SELECT, PERMISSIVE) roles={public}
 //     USING: ((tipo_documento = ANY (ARRAY['Vistoria'::text, 'Espelho de Danos'::text])) AND (numero_os IS NOT NULL) AND (numero_os <> ''::text))
 //   Policy "documentos_update" (UPDATE, PERMISSIVE) roles={authenticated}
@@ -1202,6 +1249,12 @@ export const Constants = {
 //     WITH CHECK: (auth.uid() IS NOT NULL)
 //   Policy "Permitir SELECT para admin e responsáveis" (SELECT, PERMISSIVE) roles={authenticated}
 //     USING: ((( SELECT perfil_usuario.tipo_usuario    FROM perfil_usuario   WHERE (perfil_usuario.id = auth.uid())) = ANY (ARRAY['admin'::text, 'responsavel'::text, 'sinistro'::text, 'juridico'::text])) OR (chamado_id IN ( SELECT chamados.id    FROM chamados   WHERE (chamados.usuario_id = auth.uid()))) OR (chamado_id IN ( SELECT participantes_chamado.chamado_id    FROM participantes_chamado   WHERE (participantes_chamado.usuario_id = auth.uid()))))
+// Table: notificacoes
+//   Policy "notificacoes_select" (SELECT, PERMISSIVE) roles={authenticated}
+//     USING: (usuario_id = auth.uid())
+//   Policy "notificacoes_update" (UPDATE, PERMISSIVE) roles={authenticated}
+//     USING: (usuario_id = auth.uid())
+//     WITH CHECK: (usuario_id = auth.uid())
 // Table: parcelas_vales
 //   Policy "parcelas_vales_insert" (INSERT, PERMISSIVE) roles={authenticated}
 //     WITH CHECK: (is_admin() OR (( SELECT perfil_usuario.departamento    FROM perfil_usuario   WHERE (perfil_usuario.id = auth.uid())) = 'Diretoria'::text))
@@ -1991,6 +2044,158 @@ export const Constants = {
 //   END;
 //   $function$
 //
+// FUNCTION trg_notify_new_anexo()
+//   CREATE OR REPLACE FUNCTION public.trg_notify_new_anexo()
+//    RETURNS trigger
+//    LANGUAGE plpgsql
+//    SECURITY DEFINER
+//   AS $function$
+//   DECLARE
+//       v_chamado_id UUID := NEW.chamado_id;
+//       v_dono_id UUID;
+//       v_resp_id UUID;
+//       v_current_user UUID;
+//       v_short_id TEXT;
+//   BEGIN
+//       v_current_user := auth.uid();
+//       SELECT usuario_id, responsavel_id INTO v_dono_id, v_resp_id
+//       FROM public.chamados WHERE id = v_chamado_id;
+//       v_short_id := UPPER(SPLIT_PART(v_chamado_id::text, '-', 1));
+//
+//       IF v_current_user IS NOT NULL THEN
+//           IF v_current_user != v_dono_id THEN
+//               INSERT INTO public.notificacoes (usuario_id, titulo, mensagem, link)
+//               VALUES (v_dono_id, 'Novo Anexo no Chamado #' || v_short_id, 'Um arquivo foi anexado ao chamado.', '/dashboard/chamados/' || v_chamado_id);
+//           END IF;
+//
+//           IF v_resp_id IS NOT NULL AND v_current_user != v_resp_id THEN
+//               INSERT INTO public.notificacoes (usuario_id, titulo, mensagem, link)
+//               VALUES (v_resp_id, 'Novo Anexo no Chamado #' || v_short_id, 'Um arquivo foi anexado ao chamado.', '/dashboard/chamados/' || v_chamado_id);
+//           END IF;
+//       END IF;
+//       RETURN NEW;
+//   END;
+//   $function$
+//
+// FUNCTION trg_notify_new_anexo_interno()
+//   CREATE OR REPLACE FUNCTION public.trg_notify_new_anexo_interno()
+//    RETURNS trigger
+//    LANGUAGE plpgsql
+//    SECURITY DEFINER
+//   AS $function$
+//   DECLARE
+//       v_chamado_id UUID := NEW.chamado_id;
+//       v_dono_id UUID;
+//       v_resp_id UUID;
+//       v_autor_id UUID := NEW.usuario_id;
+//       v_short_id TEXT;
+//   BEGIN
+//       SELECT usuario_id, responsavel_id INTO v_dono_id, v_resp_id
+//       FROM public.chamados WHERE id = v_chamado_id;
+//       v_short_id := UPPER(SPLIT_PART(v_chamado_id::text, '-', 1));
+//
+//       IF v_autor_id != v_dono_id THEN
+//           INSERT INTO public.notificacoes (usuario_id, titulo, mensagem, link)
+//           VALUES (v_dono_id, 'Novo Anexo Interno #' || v_short_id, 'Um anexo interno foi adicionado.', '/dashboard/chamados/' || v_chamado_id);
+//       END IF;
+//
+//       IF v_resp_id IS NOT NULL AND v_autor_id != v_resp_id THEN
+//           INSERT INTO public.notificacoes (usuario_id, titulo, mensagem, link)
+//           VALUES (v_resp_id, 'Novo Anexo Interno #' || v_short_id, 'Um anexo interno foi adicionado.', '/dashboard/chamados/' || v_chamado_id);
+//       END IF;
+//       RETURN NEW;
+//   END;
+//   $function$
+//
+// FUNCTION trg_notify_new_chamado()
+//   CREATE OR REPLACE FUNCTION public.trg_notify_new_chamado()
+//    RETURNS trigger
+//    LANGUAGE plpgsql
+//    SECURITY DEFINER
+//   AS $function$
+//   DECLARE
+//       v_admin_id UUID;
+//       v_short_id TEXT;
+//   BEGIN
+//       v_short_id := UPPER(SPLIT_PART(NEW.id::text, '-', 1));
+//       FOR v_admin_id IN
+//           SELECT id FROM public.perfil_usuario WHERE tipo_usuario IN ('admin', 'responsavel')
+//       LOOP
+//           IF v_admin_id != NEW.usuario_id THEN
+//               INSERT INTO public.notificacoes (usuario_id, titulo, mensagem, link)
+//               VALUES (v_admin_id, 'Novo Chamado: #' || v_short_id, NEW.titulo, '/dashboard/chamados/' || NEW.id);
+//           END IF;
+//       END LOOP;
+//       RETURN NEW;
+//   END;
+//   $function$
+//
+// FUNCTION trg_notify_new_documento()
+//   CREATE OR REPLACE FUNCTION public.trg_notify_new_documento()
+//    RETURNS trigger
+//    LANGUAGE plpgsql
+//    SECURITY DEFINER
+//   AS $function$
+//   DECLARE
+//       v_chamado_id UUID := NEW.chamado_id;
+//       v_dono_id UUID;
+//       v_resp_id UUID;
+//       v_current_user UUID;
+//       v_short_id TEXT;
+//   BEGIN
+//       IF v_chamado_id IS NULL THEN
+//           RETURN NEW;
+//       END IF;
+//       v_current_user := auth.uid();
+//       SELECT usuario_id, responsavel_id INTO v_dono_id, v_resp_id
+//       FROM public.chamados WHERE id = v_chamado_id;
+//       v_short_id := UPPER(SPLIT_PART(v_chamado_id::text, '-', 1));
+//
+//       IF v_current_user IS NOT NULL THEN
+//           IF v_current_user != v_dono_id THEN
+//               INSERT INTO public.notificacoes (usuario_id, titulo, mensagem, link)
+//               VALUES (v_dono_id, 'Novo Documento no Chamado #' || v_short_id, 'Um novo documento foi anexado.', '/dashboard/chamados/' || v_chamado_id);
+//           END IF;
+//
+//           IF v_resp_id IS NOT NULL AND v_current_user != v_resp_id THEN
+//               INSERT INTO public.notificacoes (usuario_id, titulo, mensagem, link)
+//               VALUES (v_resp_id, 'Novo Documento no Chamado #' || v_short_id, 'Um novo documento foi anexado.', '/dashboard/chamados/' || v_chamado_id);
+//           END IF;
+//       END IF;
+//       RETURN NEW;
+//   END;
+//   $function$
+//
+// FUNCTION trg_notify_new_resposta()
+//   CREATE OR REPLACE FUNCTION public.trg_notify_new_resposta()
+//    RETURNS trigger
+//    LANGUAGE plpgsql
+//    SECURITY DEFINER
+//   AS $function$
+//   DECLARE
+//       v_chamado_id UUID := NEW.chamado_id;
+//       v_autor_id UUID := NEW.usuario_id;
+//       v_dono_id UUID;
+//       v_resp_id UUID;
+//       v_short_id TEXT;
+//   BEGIN
+//       SELECT usuario_id, responsavel_id INTO v_dono_id, v_resp_id
+//       FROM public.chamados WHERE id = v_chamado_id;
+//       v_short_id := UPPER(SPLIT_PART(v_chamado_id::text, '-', 1));
+//
+//       IF v_autor_id != v_dono_id THEN
+//           INSERT INTO public.notificacoes (usuario_id, titulo, mensagem, link)
+//           VALUES (v_dono_id, 'Nova Resposta no Chamado #' || v_short_id, 'Você recebeu uma nova mensagem.', '/dashboard/chamados/' || v_chamado_id);
+//       END IF;
+//
+//       IF v_resp_id IS NOT NULL AND v_autor_id != v_resp_id THEN
+//           INSERT INTO public.notificacoes (usuario_id, titulo, mensagem, link)
+//           VALUES (v_resp_id, 'Nova Resposta no Chamado #' || v_short_id, 'O solicitante enviou uma mensagem.', '/dashboard/chamados/' || v_chamado_id);
+//       END IF;
+//       RETURN NEW;
+//   END;
+//   $function$
+//
 // FUNCTION update_documentos_atualizado_em()
 //   CREATE OR REPLACE FUNCTION public.update_documentos_atualizado_em()
 //    RETURNS trigger
@@ -2015,17 +2220,25 @@ export const Constants = {
 //
 
 // --- TRIGGERS ---
+// Table: anexos_chamado
+//   on_new_anexo_notify: CREATE TRIGGER on_new_anexo_notify AFTER INSERT ON public.anexos_chamado FOR EACH ROW EXECUTE FUNCTION trg_notify_new_anexo()
+// Table: anexos_chamado_interno
+//   on_new_anexo_interno_notify: CREATE TRIGGER on_new_anexo_interno_notify AFTER INSERT ON public.anexos_chamado_interno FOR EACH ROW EXECUTE FUNCTION trg_notify_new_anexo_interno()
 // Table: chamados
+//   on_new_chamado_notify: CREATE TRIGGER on_new_chamado_notify AFTER INSERT ON public.chamados FOR EACH ROW EXECUTE FUNCTION trg_notify_new_chamado()
 //   trg_chamados_set_garagem: CREATE TRIGGER trg_chamados_set_garagem BEFORE INSERT ON public.chamados FOR EACH ROW EXECUTE FUNCTION set_garagem_from_profile()
 //   trigger_sync_chamado_status_interno: CREATE TRIGGER trigger_sync_chamado_status_interno BEFORE INSERT OR UPDATE OF responsavel_id ON public.chamados FOR EACH ROW EXECUTE FUNCTION sync_chamado_status_interno()
 // Table: documentos
 //   on_documentos_fotos_manutencao: CREATE TRIGGER on_documentos_fotos_manutencao AFTER INSERT OR UPDATE OF fotos_manutencao ON public.documentos FOR EACH ROW EXECUTE FUNCTION sync_fotos_manutencao_trigger()
+//   on_new_documento_notify: CREATE TRIGGER on_new_documento_notify AFTER INSERT ON public.documentos FOR EACH ROW EXECUTE FUNCTION trg_notify_new_documento()
 //   trg_documentos_set_garagem: CREATE TRIGGER trg_documentos_set_garagem BEFORE INSERT ON public.documentos FOR EACH ROW EXECUTE FUNCTION set_garagem_from_profile()
 //   update_documentos_atualizado_em_trigger: CREATE TRIGGER update_documentos_atualizado_em_trigger BEFORE UPDATE ON public.documentos FOR EACH ROW EXECUTE FUNCTION update_documentos_atualizado_em()
 // Table: formularios_espelho_danos
 //   trg_formularios_espelho_danos_set_garagem: CREATE TRIGGER trg_formularios_espelho_danos_set_garagem BEFORE INSERT ON public.formularios_espelho_danos FOR EACH ROW EXECUTE FUNCTION set_garagem_from_profile()
 // Table: rascunhos_chamado
 //   update_rascunhos_chamado_atualizado_em_trigger: CREATE TRIGGER update_rascunhos_chamado_atualizado_em_trigger BEFORE UPDATE ON public.rascunhos_chamado FOR EACH ROW EXECUTE FUNCTION update_rascunhos_chamado_atualizado_em()
+// Table: respostas_chamado
+//   on_new_resposta_notify: CREATE TRIGGER on_new_resposta_notify AFTER INSERT ON public.respostas_chamado FOR EACH ROW EXECUTE FUNCTION trg_notify_new_resposta()
 
 // --- INDEXES ---
 // Table: chamados

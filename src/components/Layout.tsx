@@ -37,6 +37,7 @@ import { supabase } from '@/lib/supabase/client'
 import { toast } from 'sonner'
 import logoBranco from '@/assets/logo_branco_transparente_nitido-80a6a.png'
 import logoColorido from '@/assets/whatsapp-image-2023-08-10-at-16.17.31-0b937.jpeg'
+import { NotificationsDropdown } from '@/components/NotificationsDropdown'
 
 function AppSidebar() {
   const { user, profile, signOut } = useAuth()
@@ -638,7 +639,8 @@ export default function Layout() {
             <img src={logoBranco} alt="Via Sudeste" className="h-8 w-auto object-contain" />
             <span className="font-semibold text-lg hidden sm:block">Departamento Pessoal</span>
           </div>
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2 sm:gap-4">
+            <NotificationsDropdown className="text-white hover:text-white hover:bg-white/10" />
             <div className="text-sm font-medium hidden sm:flex items-center gap-2">
               <span className="w-8 h-8 rounded-full bg-white/20 text-white flex items-center justify-center font-bold uppercase">
                 {(profile?.nome_completo || user?.email)?.[0]}
@@ -676,19 +678,22 @@ export default function Layout() {
             />
           </div>
           <div className="flex-1" />
-          <div className="text-sm font-medium text-slate-700 hidden sm:flex items-center gap-2">
-            {profile?.foto_url ? (
-              <img
-                src={profile.foto_url}
-                alt={profile.nome_completo || 'Avatar'}
-                className="w-8 h-8 rounded-full object-cover border border-slate-200"
-              />
-            ) : (
-              <span className="w-8 h-8 rounded-full bg-primary/10 text-primary flex items-center justify-center font-bold uppercase">
-                {(profile?.nome_completo || user?.email)?.[0]}
-              </span>
-            )}
-            {profile?.nome_completo || user?.email}
+          <div className="flex items-center gap-2 sm:gap-4">
+            <NotificationsDropdown />
+            <div className="text-sm font-medium text-slate-700 hidden sm:flex items-center gap-2">
+              {profile?.foto_url ? (
+                <img
+                  src={profile.foto_url}
+                  alt={profile.nome_completo || 'Avatar'}
+                  className="w-8 h-8 rounded-full object-cover border border-slate-200"
+                />
+              ) : (
+                <span className="w-8 h-8 rounded-full bg-primary/10 text-primary flex items-center justify-center font-bold uppercase">
+                  {(profile?.nome_completo || user?.email)?.[0]}
+                </span>
+              )}
+              {profile?.nome_completo || user?.email}
+            </div>
           </div>
         </header>
         <main className="flex-1 p-4 sm:p-6 lg:p-8 overflow-auto animate-fade-in">

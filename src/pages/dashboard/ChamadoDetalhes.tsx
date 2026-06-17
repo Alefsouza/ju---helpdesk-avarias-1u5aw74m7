@@ -278,6 +278,276 @@ function TransferModal({
   )
 }
 
+function SolicitarParcelasModal({
+  open,
+  setOpen,
+  orcamentoDoc,
+  chamadoId,
+  chamado,
+  userId,
+  anexosInternos,
+  documentosChamado,
+}: any) {
+  const [valorOrcamento, setValorOrcamento] = useState(0)
+  const [valorDisplay, setValorDisplay] = useState('')
+  const [registro, setRegistro] = useState('')
+  const [nome, setNome] = useState('')
+  const [parcelas, setParcelas] = useState('1')
+  const [loading, setLoading] = useState(false)
+  const [solicitacao, setSolicitacao] = useState<any>(null)
+
+  useEffect(() => {
+    if (open) {
+      const fetchOrcamento = async () => {
+        let foundValue = 0
+
+        if (documentosChamado && documentosChamado.length > 0) {
+          const validDoc = documentosChamado.find(
+            (d: any) => d.valor_orcamento && d.valor_orcamento > 0,
+          )
+          if (validDoc) foundValue = validDoc.valor_orcamento
+        }
+
+        if (!foundValue) {
+          const { data: docData } = await supabase
+            .from('documentos')
+            .select('valor_orcamento')
+            .eq('chamado_id', chamadoId)
+            .gt('valor_orcamento', 0)
+            .order('criado_em', { ascending: false })
+            .limit(1)
+            .maybeSingle()
+          if (docData?.valor_orcamento) foundValue = docData.valor_orcamento
+        }
+
+        if (!foundValue && orcamentoDoc?.valor_orcamento && orcamentoDoc.valor_orcamento > 0) {
+          foundValue = orcamentoDoc.valor_orcamento
+        }
+
+        if (!foundValue && anexosInternos) {
+          const orcInterno = anexosInternos.find(
+            (a: any) =>
+              a.nome_arquivo.toLowerCase().includes('orçamento') ||
+              a.nome_arquivo.toLowerCase().includes('orcamento'),
+          )
+          if (orcInterno) {
+            const { data } = await supabase
+              .from('documentos')
+              .select('valor_orcamento')
+              .eq('arquivo_url', orcInterno.arquivo_url)
+              .gt('valor_orcamento', 0)
+              .maybeSingle()
+            if (data?.valor_orcamento) foundValue = data.valor_orcamento
+          }
+        }
+
+        if (foundValue > 0) {
+          setValorOrcamento(foundValue)
+          setValorDisplay(
+            new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(
+              foundValue,
+            ),
+          )
+        } else {
+          setValorOrcamento(0)
+          setValorDisplay('')
+        }
+
+        const { data: solData } = await supabase
+          .from('solicitacoes_parcelamento')
+          .select('*')
+          .eq('chamado_id', chamadoId)
+          .order('criado_em', { ascending: false })
+          .limit(1)
+          .maybeSingle()
+
+        setSolicitacao(solData)
+        if (chamado?.registro_motorista) setRegistro(chamado.registro_motorista)
+        if (chamado?.nome_motorista) setNome(chamado.nome_motorista)
+      }
+      fetchOrcamento()
+      setParcelas('1')
+    }
+  }, [open, chamadoId, orcamentoDoc, anexosInternos, documentosChamado, chamado])
+
+  useEffect(() => {
+    if (!open) return
+    const channel = supabase
+      .channel(`solicitacoes_modal_${chamadoId}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'solicitacoes_parcelamento',
+          filter: `chamado_id=eq.${chamadoId}`,
+        },
+        (payload) => setSolicitacao(payload.new),
+      )
+      .subscribe()
+    return () => {
+      supabase.removeChannel(channel)
+    }
+  }, [open, chamadoId])
+
+  const handleValorChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const rawValue = e.target.value
+    const digits = rawValue.replace(/\D/g, '')
+    if (!digits) {
+      setValorDisplay('')
+      setValorOrcamento(0)
+      return
+    }
+    const num = parseInt(digits, 10) / 100
+    setValorOrcamento(num)
+    setValorDisplay(
+      new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(num),
+    )
+  }
+
+  const handleSolicitar = async () => {
+    if (!registro || !nome) {
+      toast.error('Preencha o Registro e o Nome do Colaborador.')
+      return
+    }
+    if (valorOrcamento <= 0) {
+      toast.error('O valor deve ser maior que 0.')
+      return
+    }
+
+    setLoading(true)
+    try {
+      const { data, error } = await supabase
+        .from('solicitacoes_parcelamento')
+        .insert({
+          chamado_id: chamadoId,
+          usuario_id: userId,
+          registro,
+          nome,
+          valor_orcamento: valorOrcamento,
+          quantidade_parcelas: parseInt(parcelas),
+          status: 'pendente',
+        })
+        .select()
+        .single()
+      if (error) throw error
+      setSolicitacao(data)
+      toast.success('Solicitação de parcelamento enviada com sucesso!')
+      setOpen(false)
+    } catch (e: any) {
+      console.error(e)
+      toast.error('Erro ao solicitar parcelamento: ' + e.message)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const maxParcelas = Math.max(1, Math.floor(valorOrcamento / 250))
+  useEffect(() => {
+    if (parseInt(parcelas) > maxParcelas) setParcelas(maxParcelas.toString())
+  }, [maxParcelas, parcelas])
+
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogContent className="sm:max-w-[425px]">
+        <DialogHeader>
+          <DialogTitle>Solicitar Autorização de Parcelas</DialogTitle>
+        </DialogHeader>
+        <div className="grid gap-4 py-4">
+          {solicitacao && solicitacao.status === 'pendente' && (
+            <div className="bg-amber-50 border border-amber-200 text-amber-800 p-3 rounded-md flex items-start gap-2">
+              <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
+              <div className="text-sm">
+                <p className="font-semibold">Solicitação Pendente</p>
+                <p>Uma solicitação já foi enviada e está aguardando aprovação.</p>
+              </div>
+            </div>
+          )}
+          {solicitacao && solicitacao.status === 'aprovado' && (
+            <div className="bg-emerald-50 border border-emerald-200 text-emerald-800 p-3 rounded-md flex items-start gap-2">
+              <CheckCircle2 className="w-4 h-4 shrink-0 mt-0.5" />
+              <div className="text-sm">
+                <p className="font-semibold">Solicitação Aprovada</p>
+                <p>O parcelamento anterior foi autorizado.</p>
+              </div>
+            </div>
+          )}
+          {solicitacao && solicitacao.status === 'recusado' && (
+            <div className="bg-red-50 border border-red-200 text-red-800 p-3 rounded-md flex items-start gap-2">
+              <X className="w-4 h-4 shrink-0 mt-0.5" />
+              <div className="text-sm">
+                <p className="font-semibold">Solicitação Recusada</p>
+                <p>A solicitação anterior foi recusada.</p>
+              </div>
+            </div>
+          )}
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label>Registro do Colaborador</Label>
+              <Input
+                value={registro}
+                onChange={(e) => setRegistro(e.target.value)}
+                disabled={loading || solicitacao?.status === 'pendente'}
+                placeholder="Ex: 12345"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Nome do Colaborador</Label>
+              <Input
+                value={nome}
+                onChange={(e) => setNome(e.target.value)}
+                disabled={loading || solicitacao?.status === 'pendente'}
+                placeholder="Nome completo"
+              />
+            </div>
+          </div>
+          <div className="space-y-2">
+            <Label>Valor Base (R$)</Label>
+            <Input
+              value={valorDisplay}
+              onChange={handleValorChange}
+              disabled={loading || solicitacao?.status === 'pendente'}
+              placeholder="R$ 0,00"
+            />
+          </div>
+          <div className="space-y-2">
+            <Label>Quantidade de Parcelas</Label>
+            <Select
+              value={parcelas}
+              onValueChange={setParcelas}
+              disabled={loading || solicitacao?.status === 'pendente'}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Selecione..." />
+              </SelectTrigger>
+              <SelectContent>
+                {Array.from({ length: maxParcelas }, (_, i) => i + 1).map((p) => (
+                  <SelectItem key={p} value={p.toString()}>
+                    {p}x
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={() => setOpen(false)} disabled={loading}>
+            Cancelar
+          </Button>
+          <Button
+            onClick={handleSolicitar}
+            disabled={loading || valorOrcamento <= 0 || solicitacao?.status === 'pendente'}
+            className="bg-amber-600 hover:bg-amber-700 text-white"
+          >
+            {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+            Solicitar Autorização
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  )
+}
+
 function GerarValeModal({
   open,
   setOpen,
@@ -292,9 +562,6 @@ function GerarValeModal({
   documentosChamado,
 }: any) {
   const [valorBaseNum, setValorBaseNum] = useState<number>(0)
-  const [registroColaborador, setRegistroColaborador] = useState<string>('')
-  const [nomeColaborador, setNomeColaborador] = useState<string>('')
-  const [solicitacaoParcelamento, setSolicitacaoParcelamento] = useState<any>(null)
   const [valorBaseDisplay, setValorBaseDisplay] = useState<string>('')
   const [resolvedDocId, setResolvedDocId] = useState<string | null>(null)
   const [desconto, setDesconto] = useState(false)
@@ -375,18 +642,6 @@ function GerarValeModal({
           setValorBaseDisplay('')
           setResolvedDocId(null)
         }
-
-        const { data: solData } = await supabase
-          .from('solicitacoes_parcelamento')
-          .select('*')
-          .eq('chamado_id', chamadoId)
-          .order('criado_em', { ascending: false })
-          .limit(1)
-          .maybeSingle()
-
-        setSolicitacaoParcelamento(solData)
-        if (chamado?.registro_motorista) setRegistroColaborador(chamado.registro_motorista)
-        if (chamado?.nome_motorista) setNomeColaborador(chamado.nome_motorista)
       }
 
       fetchOrcamento()
@@ -394,28 +649,6 @@ function GerarValeModal({
       setParcelas('1')
     }
   }, [open, chamadoId, orcamentoDoc, anexosInternos, documentosChamado, chamado])
-
-  useEffect(() => {
-    if (!open) return
-    const channel = supabase
-      .channel(`solicitacoes_${chamadoId}`)
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'solicitacoes_parcelamento',
-          filter: `chamado_id=eq.${chamadoId}`,
-        },
-        (payload) => {
-          setSolicitacaoParcelamento(payload.new)
-        },
-      )
-      .subscribe()
-    return () => {
-      supabase.removeChannel(channel)
-    }
-  }, [open, chamadoId])
 
   const handleValorChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const rawValue = e.target.value
@@ -447,42 +680,6 @@ function GerarValeModal({
     style: 'currency',
     currency: 'BRL',
   }).format(valorFinal)
-
-  const handleSolicitarParcelamento = async () => {
-    if (!registroColaborador || !nomeColaborador) {
-      toast.error('Preencha o Registro e o Nome do Colaborador para solicitar parcelamento.')
-      return
-    }
-    if (valorFinal <= 0) {
-      toast.error('O valor final deve ser maior que 0.')
-      return
-    }
-
-    setLoading(true)
-    try {
-      const { data, error } = await supabase
-        .from('solicitacoes_parcelamento')
-        .insert({
-          chamado_id: chamadoId,
-          usuario_id: userId,
-          registro: registroColaborador,
-          nome: nomeColaborador,
-          valor_orcamento: valorFinal,
-          quantidade_parcelas: parseInt(parcelas),
-          status: 'pendente',
-        })
-        .select()
-        .single()
-      if (error) throw error
-      setSolicitacaoParcelamento(data)
-      toast.success('Solicitação de parcelamento enviada com sucesso!')
-    } catch (e: any) {
-      console.error(e)
-      toast.error('Erro ao solicitar parcelamento: ' + e.message)
-    } finally {
-      setLoading(false)
-    }
-  }
 
   const handleGerar = async () => {
     if (valorFinal > 0 && parseInt(parcelas) > 1 && valorFinal / parseInt(parcelas) < 250) {
@@ -638,64 +835,13 @@ function GerarValeModal({
           <DialogTitle>Gerar Autorização de Desconto</DialogTitle>
         </DialogHeader>
         <div className="grid gap-4 py-4">
-          {solicitacaoParcelamento && solicitacaoParcelamento.status === 'pendente' && (
-            <div className="bg-amber-50 border border-amber-200 text-amber-800 p-3 rounded-md flex items-start gap-2">
-              <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
-              <div className="text-sm">
-                <p className="font-semibold">Solicitação Pendente</p>
-                <p>Você solicitou autorização de parcelamento. Aguarde a aprovação da diretoria.</p>
-              </div>
-            </div>
-          )}
-          {solicitacaoParcelamento && solicitacaoParcelamento.status === 'aprovado' && (
-            <div className="bg-emerald-50 border border-emerald-200 text-emerald-800 p-3 rounded-md flex items-start gap-2">
-              <CheckCircle2 className="w-4 h-4 shrink-0 mt-0.5" />
-              <div className="text-sm">
-                <p className="font-semibold">Solicitação Aprovada</p>
-                <p>O parcelamento foi autorizado. Você pode gerar a autorização de desconto.</p>
-              </div>
-            </div>
-          )}
-          {solicitacaoParcelamento && solicitacaoParcelamento.status === 'recusado' && (
-            <div className="bg-red-50 border border-red-200 text-red-800 p-3 rounded-md flex items-start gap-2">
-              <X className="w-4 h-4 shrink-0 mt-0.5" />
-              <div className="text-sm">
-                <p className="font-semibold">Solicitação Recusada</p>
-                <p>O parcelamento foi recusado. Você pode enviar uma nova solicitação.</p>
-              </div>
-            </div>
-          )}
-
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label>Registro do Colaborador</Label>
-              <Input
-                type="text"
-                value={registroColaborador}
-                onChange={(e) => setRegistroColaborador(e.target.value)}
-                disabled={loading || solicitacaoParcelamento?.status === 'pendente'}
-                placeholder="Ex: 12345"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label>Nome do Colaborador</Label>
-              <Input
-                type="text"
-                value={nomeColaborador}
-                onChange={(e) => setNomeColaborador(e.target.value)}
-                disabled={loading || solicitacaoParcelamento?.status === 'pendente'}
-                placeholder="Nome completo"
-              />
-            </div>
-          </div>
-
           <div className="space-y-2">
             <Label>Valor Base (R$)</Label>
             <Input
               type="text"
               value={valorBaseDisplay}
               onChange={handleValorChange}
-              disabled={loading || solicitacaoParcelamento?.status === 'pendente'}
+              disabled={loading}
               placeholder="R$ 0,00"
             />
           </div>
@@ -705,7 +851,7 @@ function GerarValeModal({
               id="desconto"
               checked={desconto}
               onCheckedChange={(checked) => setDesconto(!!checked)}
-              disabled={loading || solicitacaoParcelamento?.status === 'pendente'}
+              disabled={loading}
             />
             <Label htmlFor="desconto" className="text-sm cursor-pointer leading-none">
               Aplicar Desconto de 10%
@@ -714,11 +860,7 @@ function GerarValeModal({
 
           <div className="space-y-2">
             <Label>Quantidade de Parcelas (Mín. R$ 250/parcela)</Label>
-            <Select
-              value={parcelas}
-              onValueChange={setParcelas}
-              disabled={loading || solicitacaoParcelamento?.status === 'pendente'}
-            >
+            <Select value={parcelas} onValueChange={setParcelas} disabled={loading}>
               <SelectTrigger>
                 <SelectValue placeholder="Selecione..." />
               </SelectTrigger>
@@ -754,19 +896,9 @@ function GerarValeModal({
           >
             Cancelar
           </Button>
-          {parseInt(parcelas) > 1 &&
-            (!solicitacaoParcelamento || solicitacaoParcelamento.status === 'recusado') && (
-              <Button
-                onClick={handleSolicitarParcelamento}
-                disabled={loading || valorFinal <= 0}
-                className="w-full sm:w-auto bg-amber-600 hover:bg-amber-700 text-white"
-              >
-                Solicitar Autorização
-              </Button>
-            )}
           <Button
             onClick={handleGerar}
-            disabled={loading || valorFinal <= 0 || solicitacaoParcelamento?.status === 'pendente'}
+            disabled={loading || valorFinal <= 0}
             className="w-full sm:w-auto"
           >
             {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
@@ -1159,6 +1291,7 @@ export default function ChamadoDetalhes() {
   const [duplicateSubmitAction, setDuplicateSubmitAction] = useState<(() => void) | null>(null)
 
   const [gerarValeModalOpen, setGerarValeModalOpen] = useState(false)
+  const [solicitarParcelasModalOpen, setSolicitarParcelasModalOpen] = useState(false)
 
   const [anexoInternoToDelete, setAnexoInternoToDelete] = useState<{
     id: string
@@ -3578,7 +3711,15 @@ export default function ChamadoDetalhes() {
               currentUserProfile?.tipo_usuario === 'admin' ||
               currentUserProfile?.tipo_usuario === 'sinistro' ||
               currentUserProfile?.tipo_usuario === 'responsavel') && (
-              <div className="flex justify-end pt-2">
+              <div className="flex flex-col sm:flex-row justify-end gap-2 pt-2">
+                <Button
+                  onClick={() => setSolicitarParcelasModalOpen(true)}
+                  disabled={!canGenerateVale || completing}
+                  className="bg-amber-600 hover:bg-amber-700 text-white"
+                >
+                  <FileText className="mr-2 h-4 w-4" />
+                  Solicitar Autorização de Parcelas
+                </Button>
                 <Button
                   onClick={() => setGerarValeModalOpen(true)}
                   disabled={!canGenerateVale || completing}
@@ -4034,6 +4175,17 @@ export default function ChamadoDetalhes() {
         onDownload={(url: string, name: string) =>
           handleDocumentAction('vale-' + Date.now(), url, name, 'download')
         }
+      />
+
+      <SolicitarParcelasModal
+        open={solicitarParcelasModalOpen}
+        setOpen={setSolicitarParcelasModalOpen}
+        orcamentoDoc={orcamentoDoc}
+        chamadoId={id}
+        chamado={chamado}
+        userId={user?.id}
+        anexosInternos={anexosInternos}
+        documentosChamado={documentosChamado}
       />
 
       <AlertDialog

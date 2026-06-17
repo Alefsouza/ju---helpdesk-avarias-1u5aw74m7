@@ -617,6 +617,16 @@ export default function NovoChamado() {
       }
     }
 
+    if (isSearchingPlaca || !identifiedGaragem) {
+      toast.error('Aguarde a validação do veículo.')
+      return
+    }
+
+    if (identifiedGaragem === 'NOT_FOUND') {
+      toast.error('Esse carro não pertence a frota da Via Sudeste.')
+      return
+    }
+
     setIsSubmitting(true)
     try {
       let finalTitulo = titulo
@@ -732,7 +742,11 @@ export default function NovoChamado() {
     }
   })
 
-  const isSubmitDisabled = isSubmitting || files.some((f) => f.status !== 'success')
+  const isSubmitDisabled =
+    isSubmitting ||
+    files.some((f) => f.status !== 'success') ||
+    isSearchingPlaca ||
+    identifiedGaragem === 'NOT_FOUND'
 
   return (
     <div className="max-w-3xl mx-auto space-y-6 animate-fade-in-up p-4 mb-20">
@@ -856,7 +870,8 @@ export default function NovoChamado() {
                     )}
                     {!isSearchingPlaca && identifiedGaragem === 'NOT_FOUND' && (
                       <p className="text-sm text-red-500 font-medium flex items-center gap-1 mt-1">
-                        <AlertCircle className="h-3 w-3" /> Veículo não encontrado na base da frota
+                        <AlertCircle className="h-3 w-3" /> Esse carro não pertence a frota da Via
+                        Sudeste.
                       </p>
                     )}
                     {!isSearchingPlaca &&

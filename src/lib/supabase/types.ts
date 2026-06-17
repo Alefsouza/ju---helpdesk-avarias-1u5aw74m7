@@ -1077,7 +1077,7 @@ export const Constants = {
 //   FOREIGN KEY documentos_formulario_id_fkey: FOREIGN KEY (formulario_id) REFERENCES formularios_espelho_danos(id) ON DELETE SET NULL
 //   UNIQUE documentos_formulario_id_key: UNIQUE (formulario_id)
 //   PRIMARY KEY documentos_pkey: PRIMARY KEY (id)
-//   CHECK documentos_tipo_documento_check: CHECK ((tipo_documento = ANY (ARRAY['IDO'::text, 'Espelho de Danos'::text, 'Vistoria'::text, 'Boletim de Ocorrência'::text, 'Apólice'::text, 'Valor do acordo'::text, 'Relato manuscrito'::text, 'OS de Manutenção'::text, 'Orçamento'::text, 'Vale'::text])))
+//   CHECK documentos_tipo_documento_check: CHECK ((tipo_documento = ANY (ARRAY['IDO'::text, 'Espelho de Danos'::text, 'Vistoria'::text, 'Boletim de Ocorrência'::text, 'Apólice'::text, 'Valor do acordo'::text, 'Relato manuscrito'::text, 'OS de Manutenção'::text, 'Orçamento'::text, 'Vale'::text, 'CNH'::text, 'Documento do veículo'::text, 'Fotos/Vídeos'::text, 'Anexo Lesão Corporal'::text, 'Outros'::text])))
 // Table: formularios_espelho_danos
 //   FOREIGN KEY formularios_espelho_danos_chamado_id_fkey: FOREIGN KEY (chamado_id) REFERENCES chamados(id) ON DELETE CASCADE
 //   PRIMARY KEY formularios_espelho_danos_pkey: PRIMARY KEY (id)

@@ -289,21 +289,58 @@ function GerarValeModal({
   userId,
   anexosInternos,
   onDownload,
+  documentosChamado,
 }: any) {
-  const [valorBaseStr, setValorBaseStr] = useState<string>('')
+  const [valorBaseNum, setValorBaseNum] = useState<number>(0)
+  const [valorBaseDisplay, setValorBaseDisplay] = useState<string>('')
+  const [resolvedDocId, setResolvedDocId] = useState<string | null>(null)
   const [desconto, setDesconto] = useState(false)
   const [parcelas, setParcelas] = useState('1')
   const [loading, setLoading] = useState(false)
 
   useEffect(() => {
     if (open) {
-      if (orcamentoDoc?.valor_orcamento) {
-        setValorBaseStr(orcamentoDoc.valor_orcamento.toString())
-      } else {
-        setValorBaseStr('')
+      const fetchOrcamento = async () => {
+        let foundValue = 0
+        let foundDocId = null
 
-        const findAndSet = async () => {
-          const orcInterno = anexosInternos?.find(
+        // 1. Look in provided documentosChamado to avoid extra network latency
+        if (documentosChamado && documentosChamado.length > 0) {
+          const validDoc = documentosChamado.find(
+            (d: any) => d.valor_orcamento && d.valor_orcamento > 0,
+          )
+          if (validDoc) {
+            foundValue = validDoc.valor_orcamento
+            foundDocId = validDoc.id
+          }
+        }
+
+        // 2. Fallback to querying the database for any document with valor_orcamento > 0
+        if (!foundValue) {
+          const { data: docData } = await supabase
+            .from('documentos')
+            .select('id, valor_orcamento')
+            .eq('chamado_id', chamadoId)
+            .gt('valor_orcamento', 0)
+            .order('criado_em', { ascending: false })
+            .limit(1)
+            .maybeSingle()
+
+          if (docData?.valor_orcamento) {
+            foundValue = docData.valor_orcamento
+            foundDocId = docData.id
+          }
+        }
+
+        // 3. Fallback to existing orcamentoDoc from props
+        if (!foundValue && orcamentoDoc?.valor_orcamento && orcamentoDoc.valor_orcamento > 0) {
+          foundValue = orcamentoDoc.valor_orcamento
+          foundDocId = orcamentoDoc.id
+        }
+
+        // 4. Fallback to anexosInternos
+        if (!foundValue && anexosInternos) {
+          const orcInterno = anexosInternos.find(
             (a: any) =>
               a.nome_arquivo.toLowerCase().includes('orçamento') ||
               a.nome_arquivo.toLowerCase().includes('orcamento'),
@@ -311,22 +348,53 @@ function GerarValeModal({
           if (orcInterno) {
             const { data } = await supabase
               .from('documentos')
-              .select('valor_orcamento')
+              .select('id, valor_orcamento')
               .eq('arquivo_url', orcInterno.arquivo_url)
+              .gt('valor_orcamento', 0)
               .maybeSingle()
             if (data?.valor_orcamento) {
-              setValorBaseStr(data.valor_orcamento.toString())
+              foundValue = data.valor_orcamento
+              foundDocId = data.id
             }
           }
         }
-        findAndSet()
+
+        if (foundValue && foundValue > 0) {
+          setValorBaseNum(foundValue)
+          setValorBaseDisplay(
+            new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(
+              foundValue,
+            ),
+          )
+          setResolvedDocId(foundDocId)
+        } else {
+          setValorBaseNum(0)
+          setValorBaseDisplay('')
+          setResolvedDocId(null)
+        }
       }
+
+      fetchOrcamento()
       setDesconto(false)
       setParcelas('1')
     }
-  }, [open, orcamentoDoc, anexosInternos])
+  }, [open, chamadoId, orcamentoDoc, anexosInternos, documentosChamado])
 
-  const valorBaseNum = parseFloat(valorBaseStr) || 0
+  const handleValorChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const rawValue = e.target.value
+    const digits = rawValue.replace(/\D/g, '')
+    if (!digits) {
+      setValorBaseDisplay('')
+      setValorBaseNum(0)
+      return
+    }
+    const num = parseInt(digits, 10) / 100
+    setValorBaseNum(num)
+    setValorBaseDisplay(
+      new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(num),
+    )
+  }
+
   const valorFinal = desconto ? valorBaseNum * 0.9 : valorBaseNum
   const maxParcelas = Math.min(6, Math.max(1, Math.floor(valorFinal / 250)))
 
@@ -352,7 +420,12 @@ function GerarValeModal({
       let newUrl = ''
       let newNomeArquivo = `Autorizacao_Desconto_${format(new Date(), 'dd-MM-yyyy HHmm')}.docx`
 
-      if (orcamentoDoc && orcamentoDoc.id) {
+      if (resolvedDocId) {
+        await supabase
+          .from('documentos')
+          .update({ valor_orcamento: valorBaseNum })
+          .eq('id', resolvedDocId)
+      } else if (orcamentoDoc && orcamentoDoc.id) {
         await supabase
           .from('documentos')
           .update({ valor_orcamento: valorBaseNum })
@@ -490,11 +563,11 @@ function GerarValeModal({
           <div className="space-y-2">
             <Label>Valor Base (R$)</Label>
             <Input
-              type="number"
-              value={valorBaseStr}
-              onChange={(e) => setValorBaseStr(e.target.value)}
+              type="text"
+              value={valorBaseDisplay}
+              onChange={handleValorChange}
               disabled={loading}
-              step="0.01"
+              placeholder="R$ 0,00"
             />
           </div>
 
@@ -2729,7 +2802,10 @@ export default function ChamadoDetalhes() {
     const nomeLower = a.nome_arquivo.toLowerCase()
     return nomeLower.includes('orçamento') || nomeLower.includes('orcamento')
   })
-  const canGenerateVale = !!orcamentoDoc || hasOrcamentoInterno
+  const hasDocumentoComValor = documentosChamado.some(
+    (d) => d.valor_orcamento && d.valor_orcamento > 0,
+  )
+  const canGenerateVale = !!orcamentoDoc || hasOrcamentoInterno || hasDocumentoComValor
 
   const getAcaoText = (acao: string, userNome: string) => {
     switch (acao) {
@@ -3769,6 +3845,7 @@ export default function ChamadoDetalhes() {
         solicitante={solicitante}
         userId={user?.id}
         anexosInternos={anexosInternos}
+        documentosChamado={documentosChamado}
         onSuccess={() => fetchChamadoData()}
         onDownload={(url: string, name: string) =>
           handleDocumentAction('vale-' + Date.now(), url, name, 'download')

@@ -34,7 +34,15 @@ import {
 import { useForm, Controller } from 'react-hook-form'
 import { z } from 'zod'
 import { zodResolver } from '@hookform/resolvers/zod'
-import { useDraft } from '@/hooks/use-draft'
+import { useDraft, getSyncDraft } from '@/hooks/use-draft'
+import {
+  saveStoredFile,
+  getStoredFiles,
+  deleteStoredFile,
+  clearStoredFiles,
+  type StoredFile,
+} from '@/lib/indexeddb'
+import { compressImage } from '@/lib/image-compression'
 
 type FileCategory =
   | 'boletim'
@@ -47,127 +55,156 @@ type FileCategory =
   | 'apolice'
   | 'valor_acordo'
 
-const SEGURADORA_CATEGORIES = [
-  {
-    id: 'boletim' as const,
-    title: 'Boletim de Ocorrência',
-    description: 'Anexe o boletim de ocorrência do sinistro',
-    required: true,
-    min: 1,
-    max: 1,
-    accept: 'image/*',
-    allowedPrefixes: ['image/'],
-  },
-  {
-    id: 'apolice' as const,
-    title: 'Apólice',
-    description: 'Anexe a apólice do seguro',
-    required: true,
-    min: 1,
-    max: 1,
-    accept: 'image/*',
-    allowedPrefixes: ['image/'],
-  },
-  {
-    id: 'valor_acordo' as const,
-    title: 'Valor do acordo',
-    description: 'Anexe o documento com o valor do acordo',
-    required: true,
-    min: 1,
-    max: 1,
-    accept: 'image/*',
-    allowedPrefixes: ['image/'],
-  },
-]
+const detectOS = () => {
+  if (typeof navigator === 'undefined') return 'desktop'
+  const ua = navigator.userAgent || ''
+  if (/android/i.test(ua)) return 'android'
+  if (
+    /iPad|iPhone|iPod/.test(ua) ||
+    (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)
+  )
+    return 'ios'
+  if (/Win/i.test(ua)) return 'windows'
+  return 'desktop'
+}
 
-const ATTACHMENT_CATEGORIES = [
-  {
-    id: 'boletim' as const,
-    title: 'Boletim de Ocorrência',
-    description: 'Anexe o boletim de ocorrência do sinistro',
-    required: true,
-    min: 1,
-    max: 1,
-    accept: 'image/*',
-    allowedPrefixes: ['image/'],
-  },
-  {
-    id: 'orcamento_confianca' as const,
-    title: '02 Orçamentos de funilarias de sua confiança',
-    description: 'Anexe 2 orçamentos de funilarias diferentes',
-    required: true,
-    min: 2,
-    max: 2,
-    accept: 'image/*',
-    allowedPrefixes: ['image/'],
-  },
-  {
-    id: 'orcamento_carmg' as const,
-    title: '01 Orçamento da Nossa funilaria credenciada',
-    description:
-      'CARMG Funilaria e Pintura - R. Bom Pastor, 2454 - Ipiranga - Contato: (11) 94004-1866 / Marcos',
-    required: true,
-    min: 1,
-    max: 1,
-    accept: 'image/*',
-    allowedPrefixes: ['image/'],
-  },
-  {
-    id: 'cnh' as const,
-    title: 'CNH',
-    description: 'Anexe a Carteira Nacional de Habilitação do condutor',
-    required: true,
-    min: 1,
-    max: 1,
-    accept: 'image/*',
-    allowedPrefixes: ['image/'],
-  },
-  {
-    id: 'documento_veiculo' as const,
-    title: 'Documento do veículo',
-    description: 'Anexe o documento do veículo (CRLV ou RG do veículo)',
-    required: true,
-    min: 1,
-    max: 1,
-    accept: 'image/*',
-    allowedPrefixes: ['image/'],
-  },
-  {
-    id: 'fotos_videos' as const,
-    title: 'Fotos do veículo avariado',
-    description: 'Anexe fotos do veículo com os danos',
+const getCategoryConfigs = (os: string) => {
+  const isAndroid = os === 'android'
+  const acceptVal = isAndroid ? 'image/*' : 'image/*,application/pdf'
+  const allowedVal = isAndroid ? ['image/'] : ['image/', 'application/pdf']
+  const helperTextDynamic = isAndroid ? 'Imagens (Máx 20MB cada)' : 'Imagens e PDF (Máx 20MB cada)'
+  const helperTextImagesOnly = isAndroid
+    ? 'Imagens (Máx 20MB cada)'
+    : 'Somente imagens (Máx 20MB cada)'
+
+  const SEGURADORA_CATEGORIES = [
+    {
+      id: 'boletim' as const,
+      title: 'Boletim de Ocorrência',
+      description: 'Anexe o boletim de ocorrência do sinistro',
+      required: true,
+      min: 1,
+      max: 1,
+      accept: acceptVal,
+      allowedPrefixes: allowedVal,
+      helperText: helperTextDynamic,
+    },
+    {
+      id: 'apolice' as const,
+      title: 'Apólice',
+      description: 'Anexe a apólice do seguro',
+      required: true,
+      min: 1,
+      max: 1,
+      accept: 'image/*',
+      allowedPrefixes: ['image/'],
+      helperText: helperTextImagesOnly,
+    },
+    {
+      id: 'valor_acordo' as const,
+      title: 'Valor do acordo',
+      description: 'Anexe o documento com o valor do acordo',
+      required: true,
+      min: 1,
+      max: 1,
+      accept: 'image/*',
+      allowedPrefixes: ['image/'],
+      helperText: helperTextImagesOnly,
+    },
+  ]
+
+  const ATTACHMENT_CATEGORIES = [
+    {
+      id: 'boletim' as const,
+      title: 'Boletim de Ocorrência',
+      description: 'Anexe o boletim de ocorrência do sinistro',
+      required: true,
+      min: 1,
+      max: 1,
+      accept: acceptVal,
+      allowedPrefixes: allowedVal,
+      helperText: helperTextDynamic,
+    },
+    {
+      id: 'orcamento_confianca' as const,
+      title: '02 Orçamentos de funilarias de sua confiança',
+      description: 'Anexe 2 orçamentos de funilarias diferentes',
+      required: true,
+      min: 2,
+      max: 2,
+      accept: acceptVal,
+      allowedPrefixes: allowedVal,
+      helperText: helperTextDynamic,
+    },
+    {
+      id: 'orcamento_carmg' as const,
+      title: '01 Orçamento da Nossa funilaria credenciada',
+      description:
+        'CARMG Funilaria e Pintura - R. Bom Pastor, 2454 - Ipiranga - Contato: (11) 94004-1866 / Marcos',
+      required: false,
+      min: 0,
+      max: 1,
+      accept: acceptVal,
+      allowedPrefixes: allowedVal,
+      helperText: helperTextDynamic,
+    },
+    {
+      id: 'cnh' as const,
+      title: 'CNH',
+      description: 'Anexe a Carteira Nacional de Habilitação do condutor',
+      required: true,
+      min: 1,
+      max: 1,
+      accept: acceptVal,
+      allowedPrefixes: allowedVal,
+      helperText: helperTextDynamic,
+    },
+    {
+      id: 'documento_veiculo' as const,
+      title: 'Documento do veículo',
+      description: 'Anexe o documento do veículo (CRLV ou RG do veículo)',
+      required: true,
+      min: 1,
+      max: 1,
+      accept: acceptVal,
+      allowedPrefixes: allowedVal,
+      helperText: helperTextDynamic,
+    },
+    {
+      id: 'fotos_videos' as const,
+      title: 'Fotos do veículo avariado',
+      description: 'Anexe fotos do veículo com os danos',
+      required: false,
+      min: 0,
+      max: 10,
+      accept: 'image/*',
+      allowedPrefixes: ['image/'],
+      helperText: helperTextImagesOnly,
+    },
+  ]
+
+  const LESAO_ATTACHMENT = {
+    id: 'anexo_lesao' as const,
+    title: 'Anexos (Opcional)',
+    description: 'Anexe fotos relacionadas à ocorrência',
     required: false,
     min: 0,
     max: 10,
     accept: 'image/*',
     allowedPrefixes: ['image/'],
-  },
-]
+    helperText: helperTextImagesOnly,
+  }
 
-const LESAO_ATTACHMENT = {
-  id: 'anexo_lesao' as const,
-  title: 'Anexos (Opcional)',
-  description: 'Anexe fotos relacionadas à ocorrência',
-  required: false,
-  min: 0,
-  max: 10,
-  accept: 'image/*',
-  allowedPrefixes: ['image/'],
+  const UNIQUE_CATEGORIES = Array.from(
+    new Map(
+      [...ATTACHMENT_CATEGORIES, ...SEGURADORA_CATEGORIES, LESAO_ATTACHMENT].map((c) => [c.id, c]),
+    ).values(),
+  )
+
+  return { SEGURADORA_CATEGORIES, ATTACHMENT_CATEGORIES, LESAO_ATTACHMENT, UNIQUE_CATEGORIES }
 }
 
-type FileItem = {
-  id: string
-  category: FileCategory
-  file?: File
-  name: string
-  size: number
-  type: string
-  status: 'pending' | 'uploading' | 'success' | 'error' | 'lost'
-  progress: number
-  url?: string
-  errorCount: number
-  errorMessage?: string
-}
+type FileItem = Omit<StoredFile, 'category'> & { category: FileCategory }
 
 const MAX_SIZE_MB = 20
 const MAX_SIZE_BYTES = MAX_SIZE_MB * 1024 * 1024
@@ -186,18 +223,30 @@ export default function NovoChamado() {
   const { user, profile } = useAuth()
   const navigate = useNavigate()
 
+  const os = detectOS()
+  const { SEGURADORA_CATEGORIES, ATTACHMENT_CATEGORIES, LESAO_ATTACHMENT, UNIQUE_CATEGORIES } =
+    getCategoryConfigs(os)
+
+  const initialDraft = getSyncDraft('draft-novo-chamado')
+
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      tipoChamado: '',
-      titulo: '',
-      descricao: '',
-      placaOnibus: '',
-      dataOcorrencia: undefined,
+      tipoChamado: initialDraft?.tipoChamado || '',
+      titulo: initialDraft?.titulo || '',
+      descricao: initialDraft?.descricao || '',
+      placaOnibus: initialDraft?.placaOnibus || '',
+      dataOcorrencia: initialDraft?.dataOcorrencia
+        ? new Date(initialDraft.dataOcorrencia)
+        : undefined,
     },
   })
 
-  const { draftRestored, setDraftRestored, clearDraft } = useDraft(form, 'draft-novo-chamado')
+  const { draftRestored, setDraftRestored, clearDraft } = useDraft(
+    form,
+    'draft-novo-chamado',
+    user?.id,
+  )
 
   const [identifiedGaragem, setIdentifiedGaragem] = useState<string | null>(null)
   const [identifiedPrefixo, setIdentifiedPrefixo] = useState<string | null>(null)
@@ -209,51 +258,41 @@ export default function NovoChamado() {
   const isInitialFilesMount = useRef(true)
 
   useEffect(() => {
-    const savedFilesStr = localStorage.getItem('draft-novo-chamado-files')
-    if (savedFilesStr) {
+    if (!user) return
+
+    const loadFiles = async () => {
+      if (!isInitialFilesMount.current) return
+      isInitialFilesMount.current = false
+
+      // Clear legacy localStorage just in case
+      localStorage.removeItem('draft-novo-chamado-files')
+
       try {
-        const parsedFiles = JSON.parse(savedFilesStr) as FileItem[]
-        if (parsedFiles && parsedFiles.length > 0) {
-          const restoredFiles = parsedFiles.map((f) => ({
-            ...f,
-            status: f.status === 'success' ? 'success' : 'lost',
-            errorMessage:
-              f.status === 'success'
-                ? undefined
-                : 'Arquivo perdido durante recarregamento. Remova e selecione novamente.',
-          }))
-          setFiles(restoredFiles as FileItem[])
+        const storedFiles = await getStoredFiles()
+        if (storedFiles && storedFiles.length > 0) {
+          setFiles(storedFiles as FileItem[])
+
+          for (const f of storedFiles) {
+            if (!f.file && f.status !== 'success') {
+              updateItemState(f.id, (prev) => ({
+                ...prev,
+                status: 'lost',
+                errorMessage: 'Arquivo perdido durante recarregamento',
+              }))
+              continue
+            }
+            if (f.status === 'pending' || f.status === 'uploading' || f.status === 'error') {
+              uploadFile(f as FileItem, user)
+            }
+          }
         }
-      } catch (e) {
-        console.error('Failed to parse draft files', e)
+      } catch (error) {
+        console.error('Error loading files from IDB', error)
       }
     }
-  }, [])
 
-  useEffect(() => {
-    if (isInitialFilesMount.current) {
-      isInitialFilesMount.current = false
-      return
-    }
-
-    if (files.length > 0) {
-      const filesToSave = files.map((f) => ({
-        id: f.id,
-        category: f.category,
-        name: f.name,
-        size: f.size,
-        type: f.type,
-        status: f.status,
-        progress: f.progress,
-        url: f.url,
-        errorCount: f.errorCount,
-        errorMessage: f.errorMessage,
-      }))
-      localStorage.setItem('draft-novo-chamado-files', JSON.stringify(filesToSave))
-    } else {
-      localStorage.removeItem('draft-novo-chamado-files')
-    }
-  }, [files])
+    loadFiles()
+  }, [user])
 
   const toastMostrado = useRef(false)
 
@@ -287,7 +326,7 @@ export default function NovoChamado() {
     return [...ATTACHMENT_CATEGORIES, ...SEGURADORA_CATEGORIES].find((c) => c.id === id)!
   }
 
-  const processFiles = (newFiles: File[], categoryId: FileCategory) => {
+  const processFiles = async (newFiles: File[], categoryId: FileCategory) => {
     const categoryInfo = getCategoryInfo(categoryId)
     const currentFiles = files.filter((f) => f.category === categoryId)
 
@@ -300,18 +339,25 @@ export default function NovoChamado() {
 
     const itemsToUpload: FileItem[] = []
 
-    for (const file of newFiles) {
+    for (const rawFile of newFiles) {
       const isValidType = categoryInfo.allowedPrefixes.some((prefix) =>
-        file.type.startsWith(prefix),
+        rawFile.type.startsWith(prefix),
       )
       if (!isValidType) {
-        toast.error(`Tipo de arquivo não permitido para esta categoria: ${file.name}`)
+        if (categoryInfo.accept.includes('application/pdf')) {
+          toast.error('Formato de arquivo não suportado. Por favor, envie uma imagem ou PDF.')
+        } else {
+          toast.error(`Apenas imagens são permitidas para esta categoria: ${rawFile.name}`)
+        }
         continue
       }
-      if (file.size > MAX_SIZE_BYTES) {
-        toast.error(`Arquivo muito grande (Máx 20MB): ${file.name}`)
+
+      if (rawFile.size > MAX_SIZE_BYTES) {
+        toast.error(`O arquivo ${rawFile.name} excede o limite de 20MB.`)
         continue
       }
+
+      const file = await compressImage(rawFile)
 
       const item: FileItem = {
         id: crypto.randomUUID(),
@@ -329,18 +375,42 @@ export default function NovoChamado() {
 
     if (itemsToUpload.length > 0) {
       setFiles((prev) => [...prev, ...itemsToUpload])
-      itemsToUpload.forEach(uploadFile)
+
+      for (const item of itemsToUpload) {
+        await saveStoredFile(item).catch((err) => {
+          console.error('Storage limit reached or IDB failed', err)
+          toast.error('Aviso: Falha ao salvar arquivo localmente. O envio continuará.')
+        })
+        uploadFile(item)
+      }
     }
   }
 
-  const uploadFile = async (item: FileItem) => {
-    if (!user || !item.file) return
+  const updateItemState = (id: string, updater: (f: FileItem) => FileItem) => {
+    setFiles((prev) => {
+      let updatedObj: FileItem | undefined
+      const next = prev.map((f) => {
+        if (f.id === id) {
+          updatedObj = updater(f)
+          return updatedObj
+        }
+        return f
+      })
+      if (updatedObj) saveStoredFile(updatedObj).catch(() => {})
+      return next
+    })
+  }
 
-    setFiles((prev) =>
-      prev.map((f) =>
-        f.id === item.id ? { ...f, status: 'uploading', progress: 0, errorMessage: undefined } : f,
-      ),
-    )
+  const uploadFile = async (item: FileItem, currentUser?: any) => {
+    const u = currentUser || user
+    if (!u || !item.file) return
+
+    updateItemState(item.id, (f) => ({
+      ...f,
+      status: 'uploading',
+      progress: 0,
+      errorMessage: undefined,
+    }))
 
     const interval = setInterval(() => {
       setFiles((prev) =>
@@ -355,7 +425,7 @@ export default function NovoChamado() {
 
     try {
       const ext = item.name.split('.').pop()
-      const filePath = `${user.id}/${crypto.randomUUID()}.${ext}`
+      const filePath = `${u.id}/${crypto.randomUUID()}.${ext}`
 
       const { error } = await supabase.storage
         .from('anexos')
@@ -368,30 +438,26 @@ export default function NovoChamado() {
         data: { publicUrl },
       } = supabase.storage.from('anexos').getPublicUrl(filePath)
 
-      setFiles((prev) =>
-        prev.map((f) =>
-          f.id === item.id ? { ...f, status: 'success', progress: 100, url: publicUrl } : f,
-        ),
-      )
+      updateItemState(item.id, (f) => ({
+        ...f,
+        status: 'success',
+        progress: 100,
+        url: publicUrl,
+      }))
     } catch (err) {
       clearInterval(interval)
-      setFiles((prev) =>
-        prev.map((f) => {
-          if (f.id === item.id) {
-            const count = f.errorCount + 1
-            return {
-              ...f,
-              status: 'error',
-              errorCount: count,
-              errorMessage:
-                count >= 3
-                  ? 'Não conseguimos enviar este arquivo. Tente outro'
-                  : 'Erro no envio. Tente novamente',
-            }
-          }
-          return f
-        }),
-      )
+      updateItemState(item.id, (f) => {
+        const count = f.errorCount + 1
+        return {
+          ...f,
+          status: 'error',
+          errorCount: count,
+          errorMessage:
+            count >= 3
+              ? 'Não conseguimos enviar este arquivo. Tente outro'
+              : 'Erro no envio. Tente novamente',
+        }
+      })
     }
   }
 
@@ -420,8 +486,9 @@ export default function NovoChamado() {
     e.target.value = ''
   }
 
-  const removeFile = (id: string) => {
+  const removeFile = async (id: string) => {
     setFiles((prev) => prev.filter((f) => f.id !== id))
+    await deleteStoredFile(id)
   }
 
   const retryUpload = (item: FileItem) => {
@@ -527,6 +594,15 @@ export default function NovoChamado() {
     if (tipoChamado === 'Colisão' || tipoChamado === 'Seguradora') {
       const catsToCheck =
         tipoChamado === 'Seguradora' ? SEGURADORA_CATEGORIES : ATTACHMENT_CATEGORIES
+
+      const orcamentoConfiancaCount = files.filter(
+        (f) => f.category === 'orcamento_confianca',
+      ).length
+      if (tipoChamado === 'Colisão' && orcamentoConfiancaCount < 2) {
+        toast.error('Mínimo 2 orçamentos obrigatório')
+        return
+      }
+
       const missingRequired = catsToCheck.some(
         (cat) => cat.required && files.filter((f) => f.category === cat.id).length === 0,
       )
@@ -541,11 +617,7 @@ export default function NovoChamado() {
       })
 
       if (wrongQuantity) {
-        if (wrongQuantity.id === 'orcamento_confianca') {
-          toast.error('Mínimo 2 orçamentos obrigatório')
-        } else {
-          toast.error(`${wrongQuantity.title}: Mínimo de ${wrongQuantity.min} arquivo(s)`)
-        }
+        toast.error(`${wrongQuantity.title}: Mínimo de ${wrongQuantity.min} arquivo(s)`)
         return
       }
     }
@@ -604,39 +676,45 @@ export default function NovoChamado() {
           if (docError) throw docError
         } else {
           let orcamentoCount = 1
-          const anexosData = files.map((f) => {
+          const documentosData = files.map((f) => {
+            let tipo_doc = 'Outros'
             let categoryTitle = 'Anexo'
 
             if (tipoChamado === 'Lesão Corporal') {
+              tipo_doc = 'Anexo Lesão Corporal'
               categoryTitle = 'Anexo Lesão Corporal'
             } else {
-              categoryTitle =
-                ATTACHMENT_CATEGORIES.find((c) => c.id === f.category)?.title || 'Anexo'
-
               if (f.category === 'orcamento_confianca') {
+                tipo_doc = 'Orçamento'
                 categoryTitle = `Orçamento ${orcamentoCount}`
                 orcamentoCount++
               } else if (f.category === 'orcamento_carmg') {
+                tipo_doc = 'Orçamento'
                 categoryTitle = 'Orçamento CARMG'
-              } else if (f.category === 'fotos_videos') {
-                categoryTitle = 'Fotos/Vídeos'
-              } else if (f.category === 'documento_veiculo') {
-                categoryTitle = 'Documento do Veículo'
               } else if (f.category === 'boletim') {
+                tipo_doc = 'Boletim de Ocorrência'
                 categoryTitle = 'Boletim de Ocorrência'
+              } else if (f.category === 'cnh') {
+                tipo_doc = 'CNH'
+                categoryTitle = 'CNH'
+              } else if (f.category === 'documento_veiculo') {
+                tipo_doc = 'Documento do veículo'
+                categoryTitle = 'Documento do Veículo'
+              } else if (f.category === 'fotos_videos') {
+                tipo_doc = 'Fotos/Vídeos'
+                categoryTitle = 'Fotos/Vídeos'
               }
             }
 
             return {
               chamado_id: chamado.id,
-              url_arquivo: f.url!,
+              tipo_documento: tipo_doc,
               nome_arquivo: `[${categoryTitle}] - ${f.name}`,
-              tipo_arquivo: getTipoArquivo(f.type),
-              tamanho_mb: Number((f.size / (1024 * 1024)).toFixed(2)),
+              arquivo_url: f.url!,
             }
           })
-          const { error: anexosError } = await supabase.from('anexos_chamado').insert(anexosData)
-          if (anexosError) throw anexosError
+          const { error: docError } = await supabase.from('documentos').insert(documentosData)
+          if (docError) throw docError
         }
       }
 
@@ -648,6 +726,7 @@ export default function NovoChamado() {
 
       clearDraft()
       localStorage.removeItem('draft-novo-chamado-files')
+      await clearStoredFiles()
       toast.success('Chamado aberto com sucesso')
       navigate(`/dashboard/chamados/${chamado.id}`)
     } catch (error) {
@@ -669,6 +748,19 @@ export default function NovoChamado() {
 
   return (
     <div className="max-w-3xl mx-auto space-y-6 animate-fade-in-up p-4 mb-20">
+      <div className="hidden" aria-hidden="true">
+        {UNIQUE_CATEGORIES.map((cat) => (
+          <input
+            key={`hidden-input-${cat.id}`}
+            id={`file-upload-${cat.id}`}
+            type="file"
+            onChange={(e) => handleFileInput(e, cat.id)}
+            multiple={cat.max > 1}
+            accept={cat.accept}
+          />
+        ))}
+      </div>
+
       {draftRestored && (
         <div className="mb-2 rounded-lg border border-blue-200 bg-blue-50 p-4 text-blue-800 flex items-start justify-between">
           <div className="flex items-start gap-3">
@@ -676,8 +768,8 @@ export default function NovoChamado() {
             <div>
               <h3 className="font-semibold text-blue-800">Rascunho Restaurado</h3>
               <p className="mt-1 text-sm">
-                Encontramos dados preenchidos anteriormente. Seus <strong>anexos enviados</strong>{' '}
-                foram preservados, mas os pendentes precisam ser selecionados novamente.
+                Encontramos dados preenchidos anteriormente. Seus <strong>anexos</strong> foram
+                preservados.
               </p>
             </div>
           </div>
@@ -711,7 +803,7 @@ export default function NovoChamado() {
                   render={({ field }) => (
                     <Select
                       value={field.value}
-                      onValueChange={(val: 'Colisão' | 'Lesão Corporal' | 'Seguradora') => {
+                      onValueChange={async (val: 'Colisão' | 'Lesão Corporal' | 'Seguradora') => {
                         const currentVal = field.value
                         if (currentVal && currentVal !== '' && currentVal !== val) {
                           form.setValue('titulo', '')
@@ -719,6 +811,7 @@ export default function NovoChamado() {
                           form.setValue('dataOcorrencia', undefined)
                           form.setValue('placaOnibus', '')
                           setFiles([])
+                          await clearStoredFiles()
                           setIdentifiedGaragem(null)
                           setIdentifiedPrefixo(null)
                         }
@@ -916,17 +1009,7 @@ export default function NovoChamado() {
                                 Clique ou arraste{' '}
                                 {cat.max > 1 ? 'arquivos aqui' : 'um arquivo aqui'}
                               </div>
-                              <div className="text-xs text-muted-foreground">
-                                Somente imagens (Máx 20MB cada)
-                              </div>
-                              <input
-                                id={`file-upload-${cat.id}`}
-                                type="file"
-                                className="hidden"
-                                onChange={(e) => handleFileInput(e, cat.id)}
-                                multiple={cat.max > 1}
-                                accept={cat.accept}
-                              />
+                              <div className="text-xs text-muted-foreground">{cat.helperText}</div>
                             </label>
                           )}
 

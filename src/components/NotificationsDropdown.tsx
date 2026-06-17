@@ -16,6 +16,10 @@ export type Notificacao = Database['public']['Tables']['notificacoes']['Row']
 export function NotificationsDropdown({ className }: { className?: string }) {
   const { user } = useAuth()
   const [notifications, setNotifications] = useState<Notificacao[]>([])
+
+  const isRestrictedUser =
+    user?.email === 'leandro.ferraz@viasudeste.com' ||
+    user?.email === 'sonia.mattoso@viasudeste.com'
   const [unreadCount, setUnreadCount] = useState(0)
   const [isOpen, setIsOpen] = useState(false)
   const audioRef = useRef<HTMLAudioElement | null>(null)
@@ -29,12 +33,18 @@ export function NotificationsDropdown({ className }: { className?: string }) {
 
   const fetchNotifications = async () => {
     if (!user?.id) return
-    const { data } = await supabase
+    let query = supabase
       .from('notificacoes')
       .select('*')
       .eq('usuario_id', user.id)
       .order('criado_em', { ascending: false })
       .limit(30)
+
+    if (isRestrictedUser) {
+      query = query.or('titulo.ilike.%Vale%,mensagem.ilike.%Vale%')
+    }
+
+    const { data } = await query
 
     if (data) {
       setNotifications(data as Notificacao[])
@@ -58,6 +68,14 @@ export function NotificationsDropdown({ className }: { className?: string }) {
         },
         (payload) => {
           const newNotif = payload.new as Notificacao
+
+          if (isRestrictedUser) {
+            const isVale =
+              newNotif.titulo.toLowerCase().includes('vale') ||
+              newNotif.mensagem.toLowerCase().includes('vale')
+            if (!isVale) return
+          }
+
           setNotifications((prev) => [newNotif, ...prev])
           setUnreadCount((prev) => prev + 1)
 

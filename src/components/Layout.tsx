@@ -417,8 +417,14 @@ function AppSidebar() {
   )
 }
 
-function useRealtimeNotifications(userId: string | undefined, profile: any) {
+function useRealtimeNotifications(
+  userId: string | undefined,
+  profile: any,
+  email: string | undefined,
+) {
   const navigate = useNavigate()
+  const isRestrictedUser =
+    email === 'leandro.ferraz@viasudeste.com' || email === 'sonia.mattoso@viasudeste.com'
 
   useEffect(() => {
     if (!userId) return
@@ -429,6 +435,7 @@ function useRealtimeNotifications(userId: string | undefined, profile: any) {
         'postgres_changes',
         { event: 'INSERT', schema: 'public', table: 'respostas_chamado' },
         async (payload) => {
+          if (isRestrictedUser) return
           if (payload.new.usuario_id !== userId) {
             const { data } = await supabase
               .from('chamados')
@@ -451,6 +458,8 @@ function useRealtimeNotifications(userId: string | undefined, profile: any) {
         { event: 'INSERT', schema: 'public', table: 'documentos' },
         async (payload) => {
           const doc = payload.new
+          if (isRestrictedUser && doc.tipo_documento !== 'Vale') return
+
           let shouldNotify = false
 
           if (doc.chamado_id) {
@@ -512,7 +521,7 @@ export default function Layout() {
   const location = useLocation()
   const isAuthRoute = location.pathname === '/' || location.pathname === '/cadastro'
 
-  useRealtimeNotifications(user?.id, profile)
+  useRealtimeNotifications(user?.id, profile, user?.email)
 
   if (loading) {
     return (

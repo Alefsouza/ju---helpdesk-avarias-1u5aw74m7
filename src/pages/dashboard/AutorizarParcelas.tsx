@@ -99,10 +99,10 @@ export default function AutorizarParcelas() {
                   </Link>
                   <div className="text-sm text-slate-600 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-2">
                     <div>
-                      <span className="font-medium">Colaborador:</span> {s.nome_colaborador}
+                      <span className="font-medium">Colaborador:</span> {s.nome}
                     </div>
                     <div>
-                      <span className="font-medium">Registro:</span> {s.registro_colaborador}
+                      <span className="font-medium">Registro:</span> {s.registro}
                     </div>
                     <div>
                       <span className="font-medium">Valor:</span>{' '}

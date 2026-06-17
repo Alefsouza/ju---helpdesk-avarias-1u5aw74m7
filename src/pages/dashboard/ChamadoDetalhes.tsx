@@ -464,16 +464,15 @@ function GerarValeModal({
         .from('solicitacoes_parcelamento')
         .insert({
           chamado_id: chamadoId,
-          usuario_solicitante_id: userId,
-          registro_colaborador: registroColaborador,
-          nome_colaborador: nomeColaborador,
+          usuario_id: userId,
+          registro: registroColaborador,
+          nome: nomeColaborador,
           valor_orcamento: valorFinal,
           quantidade_parcelas: parseInt(parcelas),
           status: 'pendente',
         })
         .select()
         .single()
-
       if (error) throw error
       setSolicitacaoParcelamento(data)
       toast.success('Solicitação de parcelamento enviada com sucesso!')

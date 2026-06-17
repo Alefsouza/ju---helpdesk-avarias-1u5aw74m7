@@ -703,6 +703,53 @@ export type Database = {
           },
         ]
       }
+      solicitacoes_parcelamento: {
+        Row: {
+          atualizado_em: string
+          chamado_id: string
+          criado_em: string
+          id: string
+          nome: string | null
+          quantidade_parcelas: number
+          registro: string | null
+          status: string
+          usuario_id: string
+          valor_orcamento: number
+        }
+        Insert: {
+          atualizado_em?: string
+          chamado_id: string
+          criado_em?: string
+          id?: string
+          nome?: string | null
+          quantidade_parcelas: number
+          registro?: string | null
+          status?: string
+          usuario_id: string
+          valor_orcamento: number
+        }
+        Update: {
+          atualizado_em?: string
+          chamado_id?: string
+          criado_em?: string
+          id?: string
+          nome?: string | null
+          quantidade_parcelas?: number
+          registro?: string | null
+          status?: string
+          usuario_id?: string
+          valor_orcamento?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: 'solicitacoes_parcelamento_chamado_id_fkey'
+            columns: ['chamado_id']
+            isOneToOne: false
+            referencedRelation: 'chamados'
+            referencedColumns: ['id']
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
@@ -1092,6 +1139,17 @@ export const Constants = {
 //   usuario_id: uuid (not null)
 //   mensagem: text (not null)
 //   criado_em: timestamp with time zone (not null, default: now())
+// Table: solicitacoes_parcelamento
+//   id: uuid (not null, default: gen_random_uuid())
+//   chamado_id: uuid (not null)
+//   usuario_id: uuid (not null)
+//   registro: text (nullable)
+//   nome: text (nullable)
+//   valor_orcamento: numeric (not null)
+//   quantidade_parcelas: integer (not null)
+//   status: text (not null, default: 'pendente'::text)
+//   criado_em: timestamp with time zone (not null, default: now())
+//   atualizado_em: timestamp with time zone (not null, default: now())
 
 // --- CONSTRAINTS ---
 // Table: anexos_chamado
@@ -1154,6 +1212,11 @@ export const Constants = {
 //   FOREIGN KEY respostas_chamado_chamado_id_fkey: FOREIGN KEY (chamado_id) REFERENCES chamados(id) ON DELETE CASCADE
 //   PRIMARY KEY respostas_chamado_pkey: PRIMARY KEY (id)
 //   FOREIGN KEY respostas_chamado_usuario_id_fkey: FOREIGN KEY (usuario_id) REFERENCES auth.users(id) ON DELETE CASCADE
+// Table: solicitacoes_parcelamento
+//   FOREIGN KEY solicitacoes_parcelamento_chamado_id_fkey: FOREIGN KEY (chamado_id) REFERENCES chamados(id) ON DELETE CASCADE
+//   PRIMARY KEY solicitacoes_parcelamento_pkey: PRIMARY KEY (id)
+//   CHECK solicitacoes_parcelamento_status_check: CHECK ((status = ANY (ARRAY['pendente'::text, 'aprovado'::text, 'recusado'::text])))
+//   FOREIGN KEY solicitacoes_parcelamento_usuario_id_fkey: FOREIGN KEY (usuario_id) REFERENCES auth.users(id) ON DELETE CASCADE
 
 // --- ROW LEVEL SECURITY POLICIES ---
 // Table: anexos_chamado
@@ -1279,6 +1342,14 @@ export const Constants = {
 //     WITH CHECK: ((usuario_id = auth.uid()) AND (chamado_id IN ( SELECT chamados.id    FROM chamados)))
 //   Policy "respostas_select" (SELECT, PERMISSIVE) roles={authenticated}
 //     USING: ((usuario_id = auth.uid()) OR (chamado_id IN ( SELECT chamados.id    FROM chamados)))
+// Table: solicitacoes_parcelamento
+//   Policy "solicitacoes_parcelamento_insert" (INSERT, PERMISSIVE) roles={authenticated}
+//     WITH CHECK: true
+//   Policy "solicitacoes_parcelamento_select" (SELECT, PERMISSIVE) roles={authenticated}
+//     USING: ((usuario_id = auth.uid()) OR (chamado_id IN ( SELECT chamados.id    FROM chamados   WHERE ((chamados.responsavel_id = auth.uid()) OR (chamados.usuario_id = auth.uid())))) OR is_admin() OR (( SELECT perfil_usuario.departamento    FROM perfil_usuario   WHERE (perfil_usuario.id = auth.uid())) = 'Diretoria'::text) OR (( SELECT perfil_usuario.tipo_usuario    FROM perfil_usuario   WHERE (perfil_usuario.id = auth.uid())) = 'dp'::text) OR ((auth.jwt() ->> 'email'::text) = 'alex.fontes@viasudeste.com'::text))
+//   Policy "solicitacoes_parcelamento_update" (UPDATE, PERMISSIVE) roles={authenticated}
+//     USING: (is_admin() OR (( SELECT perfil_usuario.departamento    FROM perfil_usuario   WHERE (perfil_usuario.id = auth.uid())) = 'Diretoria'::text) OR ((auth.jwt() ->> 'email'::text) = 'alex.fontes@viasudeste.com'::text))
+//     WITH CHECK: (is_admin() OR (( SELECT perfil_usuario.departamento    FROM perfil_usuario   WHERE (perfil_usuario.id = auth.uid())) = 'Diretoria'::text) OR ((auth.jwt() ->> 'email'::text) = 'alex.fontes@viasudeste.com'::text))
 
 // --- DATABASE FUNCTIONS ---
 // FUNCTION anexar_foto_manutencao(uuid, text, uuid)
@@ -2264,6 +2335,17 @@ export const Constants = {
 //   END;
 //   $function$
 //
+// FUNCTION update_solicitacoes_parcelamento_atualizado_em()
+//   CREATE OR REPLACE FUNCTION public.update_solicitacoes_parcelamento_atualizado_em()
+//    RETURNS trigger
+//    LANGUAGE plpgsql
+//   AS $function$
+//   BEGIN
+//     NEW.atualizado_em = NOW();
+//     RETURN NEW;
+//   END;
+//   $function$
+//
 
 // --- TRIGGERS ---
 // Table: anexos_chamado
@@ -2285,6 +2367,8 @@ export const Constants = {
 //   update_rascunhos_chamado_atualizado_em_trigger: CREATE TRIGGER update_rascunhos_chamado_atualizado_em_trigger BEFORE UPDATE ON public.rascunhos_chamado FOR EACH ROW EXECUTE FUNCTION update_rascunhos_chamado_atualizado_em()
 // Table: respostas_chamado
 //   on_new_resposta_notify: CREATE TRIGGER on_new_resposta_notify AFTER INSERT ON public.respostas_chamado FOR EACH ROW EXECUTE FUNCTION trg_notify_new_resposta()
+// Table: solicitacoes_parcelamento
+//   update_solicitacoes_parcelamento_atualizado_em_trigger: CREATE TRIGGER update_solicitacoes_parcelamento_atualizado_em_trigger BEFORE UPDATE ON public.solicitacoes_parcelamento FOR EACH ROW EXECUTE FUNCTION update_solicitacoes_parcelamento_atualizado_em()
 
 // --- INDEXES ---
 // Table: chamados
@@ -2311,3 +2395,6 @@ export const Constants = {
 //   CREATE UNIQUE INDEX participantes_chamado_chamado_id_usuario_id_key ON public.participantes_chamado USING btree (chamado_id, usuario_id)
 // Table: rascunhos_chamado
 //   CREATE UNIQUE INDEX rascunhos_chamado_usuario_id_key ON public.rascunhos_chamado USING btree (usuario_id)
+// Table: solicitacoes_parcelamento
+//   CREATE INDEX idx_solicitacoes_parcelamento_chamado_id ON public.solicitacoes_parcelamento USING btree (chamado_id)
+//   CREATE INDEX idx_solicitacoes_parcelamento_status ON public.solicitacoes_parcelamento USING btree (status)

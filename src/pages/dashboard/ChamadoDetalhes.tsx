@@ -3592,30 +3592,34 @@ export default function ChamadoDetalhes() {
           </div>
         )}
 
-        {(anexos.length > 0 || documentosChamado.length > 0) && (
+        {(anexos.length > 0 ||
+          documentosChamado.filter((d) => d.tipo_documento !== 'Espelho de Danos').length > 0) && (
           <div className="pt-3 border-t">
             <h3 className="text-xs font-bold text-slate-900 mb-2 uppercase tracking-wider flex items-center gap-1.5">
               Anexos e Documentos{' '}
               <Badge variant="secondary" className="px-1.5 py-0">
-                {anexos.length + documentosChamado.length}
+                {anexos.length +
+                  documentosChamado.filter((d) => d.tipo_documento !== 'Espelho de Danos').length}
               </Badge>
             </h3>
             <div className="flex flex-col gap-1.5">
               {[
                 ...anexos,
-                ...documentosChamado.map((doc) => ({
-                  id: doc.id,
-                  url_arquivo: doc.arquivo_url || doc.orcamento_url,
-                  nome_arquivo: doc.nome_arquivo || doc.tipo_documento,
-                  tamanho_mb: 0,
-                  tipo_arquivo: (doc.arquivo_url || doc.orcamento_url)
-                    ?.toLowerCase()
-                    .endsWith('.pdf')
-                    ? 'application/pdf'
-                    : 'imagem',
-                  criado_em: doc.criado_em || new Date().toISOString(),
-                  isDocument: true,
-                })),
+                ...documentosChamado
+                  .filter((doc) => doc.tipo_documento !== 'Espelho de Danos')
+                  .map((doc) => ({
+                    id: doc.id,
+                    url_arquivo: doc.arquivo_url || doc.orcamento_url,
+                    nome_arquivo: doc.nome_arquivo || doc.tipo_documento,
+                    tamanho_mb: 0,
+                    tipo_arquivo: (doc.arquivo_url || doc.orcamento_url)
+                      ?.toLowerCase()
+                      .endsWith('.pdf')
+                      ? 'application/pdf'
+                      : 'imagem',
+                    criado_em: doc.criado_em || new Date().toISOString(),
+                    isDocument: true,
+                  })),
               ]
                 .filter((a) => a.url_arquivo)
                 .sort((a, b) => new Date(a.criado_em).getTime() - new Date(b.criado_em).getTime())

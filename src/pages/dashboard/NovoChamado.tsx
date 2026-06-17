@@ -210,11 +210,19 @@ const MAX_SIZE_MB = 20
 const MAX_SIZE_BYTES = MAX_SIZE_MB * 1024 * 1024
 
 const formSchema = z.object({
-  tipoChamado: z.enum(['Colisão', 'Lesão Corporal', 'Seguradora', '']),
-  titulo: z.string(),
-  dataOcorrencia: z.any().optional(),
-  descricao: z.string(),
-  placaOnibus: z.string(),
+  tipoChamado: z.enum(['Colisão', 'Lesão Corporal', 'Seguradora', ''], {
+    required_error: 'Tipo de chamado é obrigatório',
+  }),
+  titulo: z.string().min(1, 'Título é obrigatório'),
+  dataOcorrencia: z
+    .any()
+    .refine((val) => val !== undefined && val !== null, 'Data da ocorrência é obrigatória'),
+  descricao: z.string().min(20, 'A descrição deve ter no mínimo 20 caracteres'),
+  placaOnibus: z
+    .string({ required_error: 'A placa do veículo é obrigatória' })
+    .min(1, 'A placa do veículo é obrigatória')
+    .length(8, 'A placa deve conter 7 caracteres alfanuméricos (ex: ABC 1234)')
+    .regex(/^[A-Z]{3} [A-Z0-9]{4}$/, 'Formato inválido. Use ABC 1234 ou ABC 1D23'),
 })
 
 type FormValues = z.infer<typeof formSchema>
@@ -248,6 +256,7 @@ export default function NovoChamado() {
     user?.id,
   )
 
+  const [attachmentErrors, setAttachmentErrors] = useState<Record<string, string>>({})
   const [identifiedGaragem, setIdentifiedGaragem] = useState<string | null>(null)
   const [identifiedPrefixo, setIdentifiedPrefixo] = useState<string | null>(null)
   const [isSearchingPlaca, setIsSearchingPlaca] = useState(false)
@@ -375,6 +384,7 @@ export default function NovoChamado() {
 
     if (itemsToUpload.length > 0) {
       setFiles((prev) => [...prev, ...itemsToUpload])
+      setAttachmentErrors((prev) => ({ ...prev, [categoryId]: '' }))
 
       for (const item of itemsToUpload) {
         await saveStoredFile(item).catch((err) => {
@@ -555,69 +565,54 @@ export default function NovoChamado() {
 
     const { tipoChamado, titulo, dataOcorrencia, descricao, placaOnibus } = values
 
-    if (!tipoChamado) {
-      toast.error('Selecione o tipo de chamado')
-      return
-    }
-
-    if (!titulo?.trim()) {
-      toast.error('Título é obrigatório')
-      return
-    }
-
-    if (!dataOcorrencia) {
-      toast.error('A data da ocorrência é obrigatória')
-      return
-    }
-
-    if (!descricao?.trim()) {
-      toast.error('A descrição é obrigatória')
-      return
-    }
-
-    if (descricao.length < 20) {
-      toast.error('A descrição deve ter no mínimo 20 caracteres')
-      return
-    }
-
-    if (placaOnibus.length !== 8) {
-      toast.error('A placa do ônibus deve conter 7 caracteres alfanuméricos')
-      return
-    }
-
     const hasIncomplete = files.some((f) => f.status !== 'success')
     if (hasIncomplete) {
       toast.error('Valide todos os anexos antes de enviar')
       return
     }
 
-    if (tipoChamado === 'Colisão' || tipoChamado === 'Seguradora') {
-      const catsToCheck =
-        tipoChamado === 'Seguradora' ? SEGURADORA_CATEGORIES : ATTACHMENT_CATEGORIES
+    let hasAttachmentErrors = false
+    const newAttachmentErrors: Record<string, string> = {}
 
-      const orcamentoConfiancaCount = files.filter(
-        (f) => f.category === 'orcamento_confianca',
-      ).length
-      if (tipoChamado === 'Colisão' && orcamentoConfiancaCount < 2) {
-        toast.error('Mínimo 2 orçamentos obrigatório')
-        return
-      }
+    if (tipoChamado) {
+      let catsToCheck: any[] = []
 
-      const missingRequired = catsToCheck.some(
-        (cat) => cat.required && files.filter((f) => f.category === cat.id).length === 0,
-      )
-      if (missingRequired) {
-        toast.error('Preencha todos os campos obrigatórios')
-        return
-      }
+      if (tipoChamado === 'Seguradora') catsToCheck = SEGURADORA_CATEGORIES
+      else if (tipoChamado === 'Colisão') catsToCheck = ATTACHMENT_CATEGORIES
+      else catsToCheck = [LESAO_ATTACHMENT]
 
-      const wrongQuantity = catsToCheck.find((cat) => {
+      catsToCheck.forEach((cat) => {
         const count = files.filter((f) => f.category === cat.id).length
-        return count > 0 && count < cat.min
+        if (cat.required && count === 0) {
+          newAttachmentErrors[cat.id] = 'Este anexo é obrigatório'
+          hasAttachmentErrors = true
+        } else if (count > 0 && count < cat.min) {
+          newAttachmentErrors[cat.id] = `Mínimo de ${cat.min} arquivo(s)`
+          hasAttachmentErrors = true
+        }
       })
 
-      if (wrongQuantity) {
-        toast.error(`${wrongQuantity.title}: Mínimo de ${wrongQuantity.min} arquivo(s)`)
+      if (tipoChamado === 'Colisão') {
+        const orcamentoConfiancaCount = files.filter(
+          (f) => f.category === 'orcamento_confianca',
+        ).length
+        if (orcamentoConfiancaCount < 2) {
+          newAttachmentErrors['orcamento_confianca'] = 'Mínimo de 2 orçamentos obrigatórios'
+          hasAttachmentErrors = true
+        }
+      }
+
+      const isAnyAttachmentRequired = catsToCheck.some((cat) => cat.required)
+      const hasAnyValidAttachment = files.filter((f) => f.status === 'success').length > 0
+      if (isAnyAttachmentRequired && !hasAnyValidAttachment) {
+        toast.error('É obrigatório enviar pelo menos um anexo válido.')
+        hasAttachmentErrors = true
+      }
+
+      setAttachmentErrors(newAttachmentErrors)
+
+      if (hasAttachmentErrors) {
+        toast.error('Preencha todos os anexos obrigatórios')
         return
       }
     }
@@ -737,14 +732,7 @@ export default function NovoChamado() {
     }
   })
 
-  const isSubmitDisabled =
-    isSubmitting ||
-    !tipoChamado ||
-    files.some((f) => f.status !== 'success') ||
-    !titulo?.trim() ||
-    !dataOcorrencia ||
-    !descricao?.trim() ||
-    placaOnibus?.length !== 8
+  const isSubmitDisabled = isSubmitting || files.some((f) => f.status !== 'success')
 
   return (
     <div className="max-w-3xl mx-auto space-y-6 animate-fade-in-up p-4 mb-20">
@@ -853,10 +841,14 @@ export default function NovoChamado() {
                             field.onChange(value)
                           }}
                           maxLength={8}
-                          required
                         />
                       )}
                     />
+                    {form.formState.errors.placaOnibus && (
+                      <p className="text-sm font-medium text-red-500">
+                        {form.formState.errors.placaOnibus.message}
+                      </p>
+                    )}
                     {isSearchingPlaca && (
                       <p className="text-sm text-muted-foreground flex items-center gap-2 mt-1">
                         <Loader2 className="h-3 w-3 animate-spin" /> Buscando veículo...
@@ -974,7 +966,8 @@ export default function NovoChamado() {
                           <div className="flex justify-between items-start gap-4">
                             <div>
                               <Label className="text-sm font-medium flex items-center gap-2">
-                                {cat.title}
+                                {cat.title}{' '}
+                                {cat.required && <span className="text-red-500">*</span>}
                                 {cat.required ? (
                                   <span className="text-red-600 text-[10px] font-medium bg-red-50 px-1.5 py-0.5 rounded uppercase tracking-wider">
                                     Obrigatório
@@ -994,6 +987,11 @@ export default function NovoChamado() {
                             </span>
                           </div>
 
+                          {attachmentErrors[cat.id] && (
+                            <p className="text-sm font-medium text-red-500 mt-1">
+                              {attachmentErrors[cat.id]}
+                            </p>
+                          )}
                           {catFiles.length < cat.max && (
                             <label
                               htmlFor={`file-upload-${cat.id}`}

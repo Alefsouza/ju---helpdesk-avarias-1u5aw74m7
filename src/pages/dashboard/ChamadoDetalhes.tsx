@@ -396,7 +396,7 @@ function GerarValeModal({
   }
 
   const valorFinal = desconto ? valorBaseNum * 0.9 : valorBaseNum
-  const maxParcelas = Math.min(6, Math.max(1, Math.floor(valorFinal / 250)))
+  const maxParcelas = Math.max(1, Math.floor(valorFinal / 250))
 
   useEffect(() => {
     if (parseInt(parcelas) > maxParcelas) {
@@ -412,6 +412,11 @@ function GerarValeModal({
   }).format(valorFinal)
 
   const handleGerar = async () => {
+    if (valorFinal > 0 && parseInt(parcelas) > 1 && valorFinal / parseInt(parcelas) < 250) {
+      toast.error('O valor mínimo por parcela deve ser de R$ 250,00.')
+      return
+    }
+
     setLoading(true)
     try {
       const { data: sessionData } = await supabase.auth.getSession()
@@ -1101,7 +1106,9 @@ export default function ChamadoDetalhes() {
 
     const { data: docsData } = await supabase
       .from('documentos')
-      .select('id, orcamento_url, valor_orcamento, tipo_documento, arquivo_url')
+      .select(
+        'id, orcamento_url, valor_orcamento, tipo_documento, arquivo_url, nome_arquivo, criado_em',
+      )
       .eq('chamado_id', id)
     setDocumentosChamado(docsData || [])
 
@@ -1146,7 +1153,13 @@ export default function ChamadoDetalhes() {
           chamadosAnexos.push(anexo)
         }
       })
-      setAnexos(chamadosAnexos)
+
+      const isSupportUser =
+        currUser &&
+        ['admin', 'responsavel', 'sinistro', 'juridico', 'secretaria_tecnica'].includes(
+          currUser.tipo_usuario,
+        )
+      setAnexos(isSupportUser ? anexosData : chamadosAnexos)
     }
 
     const timelineItems: TimelineItem[] = []
@@ -3432,100 +3445,120 @@ export default function ChamadoDetalhes() {
           </div>
         )}
 
-        {anexos.length > 0 && (
+        {(anexos.length > 0 || documentosChamado.length > 0) && (
           <div className="pt-3 border-t">
             <h3 className="text-xs font-bold text-slate-900 mb-2 uppercase tracking-wider flex items-center gap-1.5">
-              Anexos{' '}
+              Anexos e Documentos{' '}
               <Badge variant="secondary" className="px-1.5 py-0">
-                {anexos.length}
+                {anexos.length + documentosChamado.length}
               </Badge>
             </h3>
             <div className="flex flex-col gap-1.5">
-              {anexos.map((anexo) => {
-                const isImage =
-                  anexo.tipo_arquivo.includes('imagem') || anexo.tipo_arquivo.includes('image')
-                const isVideo = anexo.tipo_arquivo.includes('video')
-                const isAudio = anexo.tipo_arquivo.includes('audio')
+              {[
+                ...anexos,
+                ...documentosChamado.map((doc) => ({
+                  id: doc.id,
+                  url_arquivo: doc.arquivo_url || doc.orcamento_url,
+                  nome_arquivo: doc.nome_arquivo || doc.tipo_documento,
+                  tamanho_mb: 0,
+                  tipo_arquivo: (doc.arquivo_url || doc.orcamento_url)
+                    ?.toLowerCase()
+                    .endsWith('.pdf')
+                    ? 'application/pdf'
+                    : 'imagem',
+                  criado_em: doc.criado_em || new Date().toISOString(),
+                  isDocument: true,
+                })),
+              ]
+                .filter((a) => a.url_arquivo)
+                .sort((a, b) => new Date(a.criado_em).getTime() - new Date(b.criado_em).getTime())
+                .map((anexo: any) => {
+                  const isImage =
+                    anexo.tipo_arquivo?.includes('imagem') || anexo.tipo_arquivo?.includes('image')
+                  const isVideo = anexo.tipo_arquivo?.includes('video')
+                  const isAudio = anexo.tipo_arquivo?.includes('audio')
 
-                let Icon = FileText
-                if (isImage) Icon = ImageIcon
-                if (isVideo) Icon = Video
-                if (isAudio) Icon = Music
+                  let Icon = FileText
+                  if (isImage) Icon = ImageIcon
+                  if (isVideo) Icon = Video
+                  if (isAudio) Icon = Music
 
-                return (
-                  <div
-                    key={anexo.id}
-                    className="flex items-center justify-between p-2 rounded-md border bg-slate-50/50"
-                  >
-                    <div className="flex items-center gap-2 min-w-0">
-                      <Icon className="h-4 w-4 text-slate-500 shrink-0" />
-                      <div className="min-w-0">
-                        <p
-                          className="text-xs font-medium text-slate-900 truncate"
-                          title={anexo.nome_arquivo}
-                        >
-                          {anexo.nome_arquivo}
-                        </p>
-                        <p className="text-[10px] text-slate-500">
-                          {anexo.tamanho_mb} MB •{' '}
-                          {format(new Date(anexo.criado_em), "dd/MM/yyyy 'às' HH:mm")}
-                        </p>
+                  return (
+                    <div
+                      key={anexo.id}
+                      className="flex items-center justify-between p-2 rounded-md border bg-slate-50/50"
+                    >
+                      <div className="flex items-center gap-2 min-w-0">
+                        <Icon className="h-4 w-4 text-slate-500 shrink-0" />
+                        <div className="min-w-0">
+                          <p
+                            className="text-xs font-medium text-slate-900 truncate"
+                            title={anexo.nome_arquivo}
+                          >
+                            {anexo.nome_arquivo}
+                          </p>
+                          <p className="text-[10px] text-slate-500">
+                            {anexo.tamanho_mb ? `${anexo.tamanho_mb} MB • ` : ''}
+                            {anexo.criado_em
+                              ? format(new Date(anexo.criado_em), "dd/MM/yyyy 'às' HH:mm")
+                              : ''}
+                          </p>
+                        </div>
                       </div>
-                    </div>
-                    <div className="flex items-center gap-2 shrink-0 ml-4">
-                      <Button
-                        size="icon"
-                        variant="ghost"
-                        className="h-8 w-8 text-slate-500 hover:text-slate-900"
-                        onClick={() => handleDownloadAnexo(anexo)}
-                        disabled={
-                          loadingAction === `${anexo.id}-download` ||
-                          loadingAction === `${anexo.id}-view`
-                        }
-                        title="Baixar anexo"
-                      >
-                        {loadingAction === `${anexo.id}-download` ? (
-                          <Loader2 className="h-4 w-4 animate-spin" />
-                        ) : (
-                          <Download className="h-4 w-4" />
-                        )}
-                      </Button>
-                      <Button
-                        size="icon"
-                        variant="ghost"
-                        className="h-8 w-8 text-slate-500 hover:text-slate-900"
-                        onClick={() => handleViewAnexo(anexo)}
-                        disabled={
-                          loadingAction === `${anexo.id}-download` ||
-                          loadingAction === `${anexo.id}-view`
-                        }
-                        title="Visualizar anexo"
-                      >
-                        {loadingAction === `${anexo.id}-view` ? (
-                          <Loader2 className="h-4 w-4 animate-spin" />
-                        ) : (
-                          <Eye className="h-4 w-4" />
-                        )}
-                      </Button>
-                      {isSupport && (
+                      <div className="flex items-center gap-2 shrink-0 ml-4">
                         <Button
                           size="icon"
                           variant="ghost"
-                          className="h-8 w-8 text-slate-500 hover:text-red-600"
-                          onClick={() => handleDeleteAnexo(anexo.id, anexo.url_arquivo)}
+                          className="h-8 w-8 text-slate-500 hover:text-slate-900"
+                          onClick={() => handleDownloadAnexo(anexo)}
                           disabled={
                             loadingAction === `${anexo.id}-download` ||
                             loadingAction === `${anexo.id}-view`
                           }
-                          title="Excluir anexo"
+                          title="Baixar anexo"
                         >
-                          <Trash2 className="h-4 w-4" />
+                          {loadingAction === `${anexo.id}-download` ? (
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                          ) : (
+                            <Download className="h-4 w-4" />
+                          )}
                         </Button>
-                      )}
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          className="h-8 w-8 text-slate-500 hover:text-slate-900"
+                          onClick={() => handleViewAnexo(anexo)}
+                          disabled={
+                            loadingAction === `${anexo.id}-download` ||
+                            loadingAction === `${anexo.id}-view`
+                          }
+                          title="Visualizar anexo"
+                        >
+                          {loadingAction === `${anexo.id}-view` ? (
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                          ) : (
+                            <Eye className="h-4 w-4" />
+                          )}
+                        </Button>
+                        {isSupport && !anexo.isDocument && (
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            className="h-8 w-8 text-slate-500 hover:text-red-600"
+                            onClick={() => handleDeleteAnexo(anexo.id, anexo.url_arquivo)}
+                            disabled={
+                              loadingAction === `${anexo.id}-download` ||
+                              loadingAction === `${anexo.id}-view`
+                            }
+                            title="Excluir anexo"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        )}
+                      </div>
                     </div>
-                  </div>
-                )
-              })}
+                  )
+                })}
             </div>
           </div>
         )}

@@ -116,7 +116,7 @@ export type Database = {
         Row: {
           aprovacoes_diretoria: Json | null
           atualizado_em: string
-          carro: string | null
+          carro: string
           criado_em: string
           data_ocorrencia: string | null
           descricao: string
@@ -143,7 +143,7 @@ export type Database = {
         Insert: {
           aprovacoes_diretoria?: Json | null
           atualizado_em?: string
-          carro?: string | null
+          carro: string
           criado_em?: string
           data_ocorrencia?: string | null
           descricao: string
@@ -170,7 +170,7 @@ export type Database = {
         Update: {
           aprovacoes_diretoria?: Json | null
           atualizado_em?: string
-          carro?: string | null
+          carro?: string
           criado_em?: string
           data_ocorrencia?: string | null
           descricao?: string
@@ -925,7 +925,7 @@ export const Constants = {
 //   nome_motorista: text (nullable)
 //   registro_cobrador: text (nullable)
 //   nome_cobrador: text (nullable)
-//   carro: text (nullable)
+//   carro: text (not null)
 //   linha: text (nullable)
 //   local_ocorrencia: text (nullable)
 //   operacao: text (nullable)

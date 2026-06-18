@@ -3727,7 +3727,16 @@ export default function ChamadoDetalhes() {
                                 d.orcamento_url === anexo.arquivo_url ||
                                 d.arquivo_url === anexo.arquivo_url,
                             )
-                            if (docRelacionado && docRelacionado.valor_orcamento != null) {
+                            const isOrcamento =
+                              docRelacionado?.tipo_documento === 'Orçamento' ||
+                              anexo.nome_arquivo.toLowerCase().includes('orçamento') ||
+                              anexo.nome_arquivo.toLowerCase().includes('orcamento')
+
+                            if (
+                              docRelacionado &&
+                              docRelacionado.valor_orcamento != null &&
+                              isOrcamento
+                            ) {
                               const formattedValue = new Intl.NumberFormat('pt-BR', {
                                 style: 'currency',
                                 currency: 'BRL',

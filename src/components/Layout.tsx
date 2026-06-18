@@ -213,7 +213,7 @@ function AppSidebar() {
                 </SidebarMenuItem>
               )}
 
-              {user?.email === 'alex.martins@viasudeste.com' && (
+              {user?.email === 'alex.fontes@viasudeste.com' && (
                 <SidebarMenuItem>
                   <SidebarMenuButton
                     asChild
@@ -616,6 +616,15 @@ export default function Layout() {
     location.pathname === '/dashboard/chamados-abertos'
   ) {
     return <Navigate to="/dashboard/meus-atendimentos" replace />
+  }
+
+  // Prevent unauthorized users from accessing Autorizar Parcelas
+  if (
+    user &&
+    location.pathname === '/dashboard/autorizar-parcelas' &&
+    user?.email !== 'alex.fontes@viasudeste.com'
+  ) {
+    return <Navigate to="/dashboard" replace />
   }
 
   // Prevent non-admin and non-dp from accessing /vales-aprovados

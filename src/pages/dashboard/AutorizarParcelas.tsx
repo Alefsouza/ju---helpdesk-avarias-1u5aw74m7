@@ -30,7 +30,7 @@ export default function AutorizarParcelas() {
   }
 
   useEffect(() => {
-    if (user?.email === 'alex.martins@viasudeste.com') {
+    if (user?.email === 'alex.fontes@viasudeste.com') {
       fetchSolicitacoes()
     } else {
       setLoading(false)
@@ -63,7 +63,7 @@ export default function AutorizarParcelas() {
     )
   }
 
-  if (user?.email !== 'alex.martins@viasudeste.com') {
+  if (user?.email !== 'alex.fontes@viasudeste.com') {
     return (
       <div className="flex flex-col items-center justify-center h-[50vh] text-slate-500">
         <AlertCircle className="w-12 h-12 mb-4 text-slate-300" />

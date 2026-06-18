@@ -62,6 +62,7 @@ import {
   Eye,
   RotateCcw,
   Pencil,
+  CornerUpLeft,
 } from 'lucide-react'
 import { supabase } from '@/lib/supabase/client'
 import { useAuth } from '@/hooks/use-auth'
@@ -1394,6 +1395,11 @@ export default function ChamadoDetalhes() {
   const [fileOrcamento, setFileOrcamento] = useState<File | null>(null)
   const [savingOrcamento, setSavingOrcamento] = useState(false)
 
+  const [recusarOrcamentoOpen, setRecusarOrcamentoOpen] = useState(false)
+  const [orcamentoToRecusar, setOrcamentoToRecusar] = useState<AnexoInterno | null>(null)
+  const [motivoRecusa, setMotivoRecusa] = useState('')
+  const [recusandoOrcamento, setRecusandoOrcamento] = useState(false)
+
   const { handleDocumentAction, loadingAction } = useDocumentAction()
 
   const fileInputRef = useRef<HTMLInputElement>(null)
@@ -1477,7 +1483,7 @@ export default function ChamadoDetalhes() {
     const { data: docsData } = await supabase
       .from('documentos')
       .select(
-        'id, orcamento_url, valor_orcamento, tipo_documento, arquivo_url, nome_arquivo, criado_em',
+        'id, orcamento_url, valor_orcamento, tipo_documento, arquivo_url, nome_arquivo, criado_em, is_recusado, motivo_recusa',
       )
       .eq('chamado_id', id)
     setDocumentosChamado(docsData || [])
@@ -2691,6 +2697,53 @@ export default function ChamadoDetalhes() {
     return { bucket, path }
   }
 
+  const handleRecusarOrcamento = async () => {
+    if (!motivoRecusa.trim() || !orcamentoToRecusar) return
+    setRecusandoOrcamento(true)
+
+    try {
+      const docRelacionado = documentosChamado.find(
+        (d) =>
+          d.orcamento_url === orcamentoToRecusar.arquivo_url ||
+          d.arquivo_url === orcamentoToRecusar.arquivo_url,
+      )
+
+      if (docRelacionado) {
+        const { error: updateError } = await supabase
+          .from('documentos')
+          .update({ is_recusado: true, motivo_recusa: motivoRecusa })
+          .eq('id', docRelacionado.id)
+
+        if (updateError) throw updateError
+      }
+
+      const { error: delError } = await supabase
+        .from('anexos_chamado_interno')
+        .delete()
+        .eq('id', orcamentoToRecusar.id)
+
+      if (delError) throw delError
+
+      setAnexosInternos((prev) => prev.filter((a) => a.id !== orcamentoToRecusar.id))
+
+      await supabase.from('historico_chamado').insert({
+        chamado_id: id as string,
+        usuario_id: user?.id as string,
+        acao: 'respondido',
+        detalhes: `Orçamento devolvido para a Secretaria Técnica. Motivo: ${motivoRecusa}`,
+      })
+
+      toast.success('Orçamento devolvido com sucesso.')
+      setRecusarOrcamentoOpen(false)
+      setMotivoRecusa('')
+      fetchChamadoData()
+    } catch (e: any) {
+      toast.error('Erro ao devolver orçamento: ' + e.message)
+    } finally {
+      setRecusandoOrcamento(false)
+    }
+  }
+
   const handleDeleteAnexo = async (anexoId: string, url: string) => {
     if (!window.confirm('Tem certeza que deseja deletar este anexo?')) return
 
@@ -3728,6 +3781,39 @@ export default function ChamadoDetalhes() {
                               <Pencil className="h-4 w-4" />
                             </Button>
                           )}
+                        {isSupport &&
+                          (() => {
+                            const isOrcamento =
+                              anexo.nome_arquivo.toLowerCase().includes('orçamento') ||
+                              anexo.nome_arquivo.toLowerCase().includes('orcamento') ||
+                              documentosChamado.find(
+                                (d) =>
+                                  d.orcamento_url === anexo.arquivo_url ||
+                                  d.arquivo_url === anexo.arquivo_url,
+                              )?.tipo_documento === 'Orçamento'
+                            if (isOrcamento) {
+                              return (
+                                <Button
+                                  size="icon"
+                                  variant="ghost"
+                                  className="h-8 w-8 text-amber-600 hover:text-amber-700 hover:bg-amber-50"
+                                  onClick={() => {
+                                    setOrcamentoToRecusar(anexo)
+                                    setRecusarOrcamentoOpen(true)
+                                  }}
+                                  disabled={
+                                    loadingAction === `${anexo.id}-download` ||
+                                    loadingAction === `${anexo.id}-view` ||
+                                    (savingDoc && editingDoc?.anexo.id === anexo.id)
+                                  }
+                                  title="Devolver Orçamento"
+                                >
+                                  <CornerUpLeft className="h-4 w-4" />
+                                </Button>
+                              )
+                            }
+                            return null
+                          })()}
                         <Button
                           size="icon"
                           variant="ghost"
@@ -4277,6 +4363,50 @@ export default function ChamadoDetalhes() {
         anexosInternos={anexosInternos}
         documentosChamado={documentosChamado}
       />
+
+      <Dialog open={recusarOrcamentoOpen} onOpenChange={setRecusarOrcamentoOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Devolver Orçamento</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="bg-amber-50 border border-amber-200 text-amber-800 p-3 rounded-md text-sm flex items-start gap-2">
+              <AlertCircle className="w-5 h-5 shrink-0 mt-0.5" />
+              <div>
+                O orçamento será devolvido para a Secretaria Técnica corrigir e anexar novamente.
+                Este arquivo será ocultado da lista de Anexos Internos.
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label>Motivo da Devolução</Label>
+              <Textarea
+                placeholder="Descreva por que este orçamento está sendo devolvido..."
+                value={motivoRecusa}
+                onChange={(e) => setMotivoRecusa(e.target.value)}
+                disabled={recusandoOrcamento}
+                className="min-h-[100px]"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setRecusarOrcamentoOpen(false)}
+              disabled={recusandoOrcamento}
+            >
+              Cancelar
+            </Button>
+            <Button
+              onClick={handleRecusarOrcamento}
+              disabled={!motivoRecusa.trim() || recusandoOrcamento}
+              className="bg-amber-600 hover:bg-amber-700 text-white"
+            >
+              {recusandoOrcamento && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              Confirmar Devolução
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <AlertDialog
         open={!!anexoInternoToDelete}

@@ -13,7 +13,16 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { useToast } from '@/hooks/use-toast'
 import { format } from 'date-fns'
-import { FileText, Image as ImageIcon, Upload, Paperclip, Loader2, Eye } from 'lucide-react'
+import {
+  FileText,
+  Image as ImageIcon,
+  Upload,
+  Paperclip,
+  Loader2,
+  Eye,
+  AlertCircle,
+} from 'lucide-react'
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 import {
   Dialog,
   DialogContent,
@@ -82,12 +91,12 @@ export default function SecretariaTecnica() {
 
       if (error) throw error
 
-      // Filter: must have maintenance photos (fotos_manutencao not empty) AND NO orcamento_url
+      // Filter: must have maintenance photos AND (NO orcamento_url OR is_recusado)
       const pendingDocuments =
         data?.filter((doc: any) => {
           const hasPhotos = Array.isArray(doc.fotos_manutencao) && doc.fotos_manutencao.length > 0
           const hasOrcamento = !!doc.orcamento_url
-          return hasPhotos && !hasOrcamento
+          return hasPhotos && (!hasOrcamento || doc.is_recusado)
         }) || []
 
       // Identify which OS numbers need a fresh lookup
@@ -305,7 +314,12 @@ export default function SecretariaTecnica() {
       const parsedValor = parseFloat(
         valorOrcamento.replace('R$ ', '').replace(/\./g, '').replace(',', '.'),
       )
-      const docUpdateData: any = { orcamento_url, valor_orcamento: parsedValor }
+      const docUpdateData: any = {
+        orcamento_url,
+        valor_orcamento: parsedValor,
+        is_recusado: false,
+        motivo_recusa: null,
+      }
       if (chamadoId && selectedDoc.chamado_id !== chamadoId) {
         // Automatically link the document to the active ticket if it wasn't already
         docUpdateData.chamado_id = chamadoId
@@ -412,9 +426,24 @@ export default function SecretariaTecnica() {
                       {doc.numero_os || doc.chamados?.numero_os || '-'}
                     </TableCell>
                     <TableCell>
-                      <Badge variant="outline" className="font-mono bg-slate-50">
-                        {doc.numero_carro || '-'}
-                      </Badge>
+                      <div className="flex items-center gap-2">
+                        <Badge variant="outline" className="font-mono bg-slate-50">
+                          {doc.numero_carro || '-'}
+                        </Badge>
+                        {doc.is_recusado && (
+                          <TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <AlertCircle className="h-4 w-4 text-red-500 cursor-help" />
+                              </TooltipTrigger>
+                              <TooltipContent className="max-w-[250px] bg-red-50 border-red-200 text-red-900">
+                                <p className="font-bold text-xs mb-1">Orçamento Devolvido</p>
+                                <p className="text-xs">{doc.motivo_recusa}</p>
+                              </TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
+                        )}
+                      </div>
                     </TableCell>
                     <TableCell className="text-slate-600">{doc.garagem || '-'}</TableCell>
                     <TableCell>

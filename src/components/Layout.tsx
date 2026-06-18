@@ -213,7 +213,7 @@ function AppSidebar() {
                 </SidebarMenuItem>
               )}
 
-              {(isAdmin || user?.email === 'alex.fontes@viasudeste.com') && (
+              {user?.email === 'alex.martins@viasudeste.com' && (
                 <SidebarMenuItem>
                   <SidebarMenuButton
                     asChild

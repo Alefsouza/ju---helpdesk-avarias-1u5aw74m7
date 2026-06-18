@@ -30,12 +30,12 @@ export default function AutorizarParcelas() {
   }
 
   useEffect(() => {
-    if (user?.email === 'alex.fontes@viasudeste.com' || profile?.tipo_usuario === 'admin') {
+    if (user?.email === 'alex.martins@viasudeste.com') {
       fetchSolicitacoes()
     } else {
       setLoading(false)
     }
-  }, [user, profile])
+  }, [user])
 
   const handleAction = async (id: string, newStatus: string) => {
     setActionLoading(id)
@@ -63,7 +63,7 @@ export default function AutorizarParcelas() {
     )
   }
 
-  if (user?.email !== 'alex.fontes@viasudeste.com' && profile?.tipo_usuario !== 'admin') {
+  if (user?.email !== 'alex.martins@viasudeste.com') {
     return (
       <div className="flex flex-col items-center justify-center h-[50vh] text-slate-500">
         <AlertCircle className="w-12 h-12 mb-4 text-slate-300" />

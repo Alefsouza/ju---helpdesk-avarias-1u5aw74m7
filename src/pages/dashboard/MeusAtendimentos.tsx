@@ -417,8 +417,8 @@ export default function MeusAtendimentos() {
                     onClick={() => handleSort('pia')}
                     style={{ width: columnWidths.pia }}
                   >
-                    <div className="flex items-center gap-1 overflow-hidden pr-2">
-                      <span className="truncate">R.A.</span>
+                    <div className="flex items-center gap-1 pr-2">
+                      <span className="break-words whitespace-normal">R.A.</span>
                       <ArrowUpDown className="h-3 w-3 shrink-0 text-slate-400 group-hover:text-slate-600" />
                     </div>
                     <div
@@ -433,8 +433,8 @@ export default function MeusAtendimentos() {
                     onClick={() => handleSort('titulo')}
                     style={{ width: columnWidths.titulo }}
                   >
-                    <div className="flex items-center gap-1 overflow-hidden pr-2">
-                      <span className="truncate">Título</span>
+                    <div className="flex items-center gap-1 pr-2">
+                      <span className="break-words whitespace-normal">Título</span>
                       <ArrowUpDown className="h-3 w-3 shrink-0 text-slate-400 group-hover:text-slate-600" />
                     </div>
                     <div
@@ -449,8 +449,8 @@ export default function MeusAtendimentos() {
                     onClick={() => handleSort('nome_usuario')}
                     style={{ width: columnWidths.solicitante }}
                   >
-                    <div className="flex items-center gap-1 overflow-hidden pr-2">
-                      <span className="truncate">Solicitante</span>
+                    <div className="flex items-center gap-1 pr-2">
+                      <span className="break-words whitespace-normal">Solicitante</span>
                       <ArrowUpDown className="h-3 w-3 shrink-0 text-slate-400 group-hover:text-slate-600" />
                     </div>
                     <div
@@ -465,8 +465,8 @@ export default function MeusAtendimentos() {
                     onClick={() => handleSort('prioridade')}
                     style={{ width: columnWidths.prioridade }}
                   >
-                    <div className="flex items-center gap-1 overflow-hidden pr-2">
-                      <span className="truncate">Prioridade</span>
+                    <div className="flex items-center gap-1 pr-2">
+                      <span className="break-words whitespace-normal">Prioridade</span>
                       <ArrowUpDown className="h-3 w-3 shrink-0 text-slate-400 group-hover:text-slate-600" />
                     </div>
                     <div
@@ -481,8 +481,8 @@ export default function MeusAtendimentos() {
                     onClick={() => handleSort('nome_responsavel')}
                     style={{ width: columnWidths.colaborador }}
                   >
-                    <div className="flex items-center gap-1 overflow-hidden pr-2">
-                      <span className="truncate">Colaborador</span>
+                    <div className="flex items-center gap-1 pr-2">
+                      <span className="break-words whitespace-normal">Colaborador</span>
                       <ArrowUpDown className="h-3 w-3 shrink-0 text-slate-400 group-hover:text-slate-600" />
                     </div>
                     <div
@@ -497,8 +497,8 @@ export default function MeusAtendimentos() {
                     onClick={() => handleSort('status')}
                     style={{ width: columnWidths.status }}
                   >
-                    <div className="flex items-center gap-1 overflow-hidden pr-2">
-                      <span className="truncate">Status</span>
+                    <div className="flex items-center gap-1 pr-2">
+                      <span className="break-words whitespace-normal">Status</span>
                       <ArrowUpDown className="h-3 w-3 shrink-0 text-slate-400 group-hover:text-slate-600" />
                     </div>
                     <div
@@ -513,8 +513,8 @@ export default function MeusAtendimentos() {
                     onClick={() => handleSort('atualizado_em')}
                     style={{ width: columnWidths.atualizacao }}
                   >
-                    <div className="flex items-center gap-1 overflow-hidden pr-2">
-                      <span className="truncate whitespace-nowrap">Última Atualização</span>
+                    <div className="flex items-center gap-1 pr-2">
+                      <span className="break-words whitespace-normal">Última Atualização</span>
                       <ArrowUpDown className="h-3 w-3 shrink-0 text-slate-400 group-hover:text-slate-600" />
                     </div>
                     <div
@@ -525,16 +525,16 @@ export default function MeusAtendimentos() {
                   </TableHead>
 
                   <TableHead className="relative text-right" style={{ width: columnWidths.acoes }}>
-                    <div className="pr-2">Ações</div>
+                    <div className="pr-2 break-words whitespace-normal">Ações</div>
                   </TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {filteredChamados.map((c) => (
-                  <TableRow key={c.id} className="hover:bg-slate-50/80 transition-colors h-[60px]">
+                  <TableRow key={c.id} className="hover:bg-slate-50/80 transition-colors py-2">
                     <TableCell className="align-middle">
                       <div
-                        className="line-clamp-2 font-semibold text-slate-700"
+                        className="font-semibold text-slate-700 break-words whitespace-normal"
                         title={c.pia || ''}
                       >
                         {c.pia || '—'}
@@ -542,7 +542,10 @@ export default function MeusAtendimentos() {
                     </TableCell>
                     <TableCell className="align-middle">
                       <div className="flex items-center gap-2">
-                        <div className="line-clamp-2 font-medium text-slate-900" title={c.titulo}>
+                        <div
+                          className="font-medium text-slate-900 break-words whitespace-normal"
+                          title={c.titulo}
+                        >
                           {c.titulo}
                         </div>
                         {c.is_duplicate && (
@@ -564,7 +567,7 @@ export default function MeusAtendimentos() {
                     </TableCell>
                     <TableCell className="align-middle text-sm">
                       <div
-                        className="line-clamp-2 font-medium text-slate-700"
+                        className="font-medium text-slate-700 break-words whitespace-normal"
                         title={c.nome_usuario}
                       >
                         {c.nome_usuario}
@@ -575,7 +578,7 @@ export default function MeusAtendimentos() {
                     </TableCell>
                     <TableCell className="align-middle text-sm">
                       <div
-                        className="line-clamp-2 font-medium text-slate-700"
+                        className="font-medium text-slate-700 break-words whitespace-normal"
                         title={c.nome_responsavel}
                       >
                         {c.nome_responsavel}
@@ -599,11 +602,11 @@ export default function MeusAtendimentos() {
                             : 'EM ATENDIMENTO'}
                       </Badge>
                     </TableCell>
-                    <TableCell className="align-middle text-sm text-slate-500 whitespace-nowrap">
+                    <TableCell className="align-middle text-sm text-slate-500 break-words whitespace-normal">
                       {formatDate(c.atualizado_em)}
                     </TableCell>
-                    <TableCell className="align-middle text-right whitespace-nowrap">
-                      <div className="flex justify-end gap-2">
+                    <TableCell className="align-middle text-right">
+                      <div className="flex justify-end gap-2 flex-wrap">
                         <Button
                           variant="outline"
                           size="sm"
@@ -673,11 +676,13 @@ export default function MeusAtendimentos() {
                 <CardContent className="p-4 space-y-4">
                   <div className="flex justify-between items-start gap-2">
                     <div className="flex-1 min-w-0">
-                      <div className="text-xs font-semibold text-slate-500 mb-1 flex items-center gap-1">
+                      <div className="text-xs font-semibold text-slate-500 mb-1 flex items-center gap-1 break-words whitespace-normal">
                         R.A.: {c.pia || '—'}
                       </div>
                       <div className="flex items-center gap-2">
-                        <h3 className="font-semibold text-slate-900 line-clamp-1">{c.titulo}</h3>
+                        <h3 className="font-semibold text-slate-900 break-words whitespace-normal">
+                          {c.titulo}
+                        </h3>
                         {c.is_duplicate && (
                           <TooltipProvider>
                             <Tooltip>
@@ -697,7 +702,7 @@ export default function MeusAtendimentos() {
                     </div>
                   </div>
 
-                  <div className="flex gap-2">
+                  <div className="flex gap-2 flex-wrap">
                     <PriorityBadge priority={c.prioridade} />
                     <Badge
                       variant="outline"
@@ -717,14 +722,16 @@ export default function MeusAtendimentos() {
                     </Badge>
                   </div>
 
-                  <div className="flex flex-col gap-1 text-sm text-slate-500 bg-slate-50 p-2 rounded-md">
-                    <div className="flex justify-between items-center">
-                      <span className="font-medium text-slate-700 truncate mr-2">
+                  <div className="flex flex-col gap-2 text-sm text-slate-500 bg-slate-50 p-3 rounded-md break-words whitespace-normal">
+                    <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-1">
+                      <span className="font-medium text-slate-700 break-words whitespace-normal">
                         Solicitante: {c.nome_usuario}
                       </span>
-                      <span className="whitespace-nowrap">{formatDate(c.atualizado_em)}</span>
+                      <span className="break-words whitespace-normal">
+                        {formatDate(c.atualizado_em)}
+                      </span>
                     </div>
-                    <div className="font-medium text-slate-700 truncate">
+                    <div className="font-medium text-slate-700 break-words whitespace-normal">
                       Colaborador: {c.nome_responsavel}
                     </div>
                   </div>

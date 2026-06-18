@@ -440,6 +440,8 @@ function useRealtimeNotifications(
   const navigate = useNavigate()
   const isRestrictedUser =
     email === 'leandro.ferraz@viasudeste.com' || email === 'sonia.mattoso@viasudeste.com'
+  const isAlexFontes = email === 'alex.fontes@viasudeste.com'
+  const isAdmin = profile?.tipo_usuario === 'admin'
 
   useEffect(() => {
     if (!userId) return
@@ -450,7 +452,7 @@ function useRealtimeNotifications(
         'postgres_changes',
         { event: 'INSERT', schema: 'public', table: 'respostas_chamado' },
         async (payload) => {
-          if (isRestrictedUser) return
+          if (isRestrictedUser || isAlexFontes || isAdmin) return
           if (payload.new.usuario_id !== userId) {
             const { data } = await supabase
               .from('chamados')
@@ -473,7 +475,9 @@ function useRealtimeNotifications(
         { event: 'INSERT', schema: 'public', table: 'documentos' },
         async (payload) => {
           const doc = payload.new
+          if (isAlexFontes) return
           if (isRestrictedUser && doc.tipo_documento !== 'Vale') return
+          if (isAdmin && doc.chamado_id) return
 
           let shouldNotify = false
 

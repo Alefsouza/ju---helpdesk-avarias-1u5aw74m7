@@ -14,12 +14,14 @@ import { Database } from '@/lib/supabase/types'
 export type Notificacao = Database['public']['Tables']['notificacoes']['Row']
 
 export function NotificationsDropdown({ className }: { className?: string }) {
-  const { user } = useAuth()
+  const { user, profile } = useAuth()
   const [notifications, setNotifications] = useState<Notificacao[]>([])
 
   const isRestrictedUser =
     user?.email === 'leandro.ferraz@viasudeste.com' ||
     user?.email === 'sonia.mattoso@viasudeste.com'
+  const isAlexFontes = user?.email === 'alex.fontes@viasudeste.com'
+  const isAdmin = profile?.tipo_usuario === 'admin'
   const [unreadCount, setUnreadCount] = useState(0)
   const [isOpen, setIsOpen] = useState(false)
   const audioRef = useRef<HTMLAudioElement | null>(null)
@@ -40,8 +42,14 @@ export function NotificationsDropdown({ className }: { className?: string }) {
       .order('criado_em', { ascending: false })
       .limit(30)
 
-    if (isRestrictedUser) {
+    if (isAlexFontes) {
+      query = query.or(
+        'titulo.ilike.%autoriz%,mensagem.ilike.%autoriz%,link.ilike.%/autorizar-parcelas%,titulo.ilike.%parcela%,mensagem.ilike.%parcela%',
+      )
+    } else if (isRestrictedUser) {
       query = query.or('titulo.ilike.%Vale%,mensagem.ilike.%Vale%')
+    } else if (isAdmin) {
+      query = query.not('titulo', 'ilike', '%chamado%')
     }
 
     const { data } = await query
@@ -69,11 +77,27 @@ export function NotificationsDropdown({ className }: { className?: string }) {
         (payload) => {
           const newNotif = payload.new as Notificacao
 
-          if (isRestrictedUser) {
+          if (isAlexFontes) {
+            const lTitle = newNotif.titulo.toLowerCase()
+            const lMsg = newNotif.mensagem.toLowerCase()
+            const lLink = (newNotif.link || '').toLowerCase()
+            const isAutoriz =
+              lTitle.includes('autoriz') ||
+              lMsg.includes('autoriz') ||
+              lTitle.includes('parcela') ||
+              lMsg.includes('parcela') ||
+              lLink.includes('/autorizar-parcelas')
+            if (!isAutoriz) return
+          } else if (isRestrictedUser) {
             const isVale =
               newNotif.titulo.toLowerCase().includes('vale') ||
               newNotif.mensagem.toLowerCase().includes('vale')
             if (!isVale) return
+          } else if (isAdmin) {
+            const lTitle = newNotif.titulo.toLowerCase()
+            const lLink = (newNotif.link || '').toLowerCase()
+            const isChamado = lLink.includes('/chamados/') || lTitle.includes('chamado')
+            if (isChamado) return
           }
 
           setNotifications((prev) => [newNotif, ...prev])

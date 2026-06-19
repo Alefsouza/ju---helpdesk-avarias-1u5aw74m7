@@ -3169,20 +3169,33 @@ export default function ChamadoDetalhes() {
   const handleFinalizar = async () => {
     if (!window.confirm('Tem certeza que deseja finalizar este chamado?')) return
     setCompleting(true)
-    const { error: updateError } = await supabase
+    const { data, error: updateError } = await supabase
       .from('chamados')
       .update({ status: 'finalizado', atualizado_em: new Date().toISOString() })
       .eq('id', id)
-    if (updateError) {
-      toast.error('Erro ao finalizar chamado')
+      .select('id')
+      .single()
+
+    if (updateError || !data) {
+      console.error(updateError)
+      toast.error(
+        updateError?.message ||
+          'Erro ao finalizar chamado: Permissão negada ou falha na comunicação',
+      )
       setCompleting(false)
       return
     }
+
     await supabase.from('historico_chamado').insert({
       chamado_id: id,
       acao: 'finalizado',
       usuario_id: user?.id,
     })
+
+    setChamado((prev) =>
+      prev ? { ...prev, status: 'finalizado', atualizado_em: new Date().toISOString() } : prev,
+    )
+
     setCompleting(false)
     toast.success('Chamado finalizado com sucesso')
   }

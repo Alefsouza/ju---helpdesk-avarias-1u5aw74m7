@@ -17,6 +17,7 @@ export type UserProfile = {
     | 'sinistro'
     | 'secretaria_tecnica'
     | 'dp'
+  departamento?: string | null
   foto_url?: string | null
   garagem?: string | null
 }

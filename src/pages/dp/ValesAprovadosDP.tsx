@@ -181,7 +181,7 @@ export default function ValesAprovadosDP() {
     return null
   }
 
-  if (profile?.departamento !== 'DP') {
+  if (profile?.departamento !== 'DP' && profile?.tipo_usuario !== 'dp') {
     return (
       <div className="flex flex-col items-center justify-center h-[80vh] p-8 text-center">
         <AlertCircle className="w-12 h-12 text-slate-400 mb-4" />

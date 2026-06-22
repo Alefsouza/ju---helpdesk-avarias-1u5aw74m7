@@ -15,6 +15,8 @@ export default function Dashboard() {
         navigate('/dashboard/chamados-abertos', { replace: true })
       } else if (profile.tipo_usuario === 'sinistro') {
         navigate('/dashboard/chamados-abertos', { replace: true })
+      } else if (profile.departamento === 'DP' || profile.tipo_usuario === 'dp') {
+        navigate('/vales-aprovados', { replace: true })
       } else {
         navigate('/dashboard/meus-chamados', { replace: true })
       }

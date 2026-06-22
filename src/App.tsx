@@ -53,7 +53,7 @@ const DashboardRoute = () => {
     if (!loading && profile?.tipo_usuario === 'secretaria_tecnica') {
       navigate('/dashboard/secretaria-tecnica', { replace: true })
     }
-    if (!loading && profile?.tipo_usuario === 'dp') {
+    if (!loading && (profile?.tipo_usuario === 'dp' || profile?.departamento === 'DP')) {
       navigate('/vales-aprovados', { replace: true })
     }
   }, [profile, loading, navigate])
@@ -62,7 +62,8 @@ const DashboardRoute = () => {
     loading ||
     profile?.tipo_usuario === 'juridico' ||
     profile?.tipo_usuario === 'secretaria_tecnica' ||
-    profile?.tipo_usuario === 'dp'
+    profile?.tipo_usuario === 'dp' ||
+    profile?.departamento === 'DP'
   ) {
     return null
   }

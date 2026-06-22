@@ -177,23 +177,30 @@ export default function ValesAprovacao() {
         }
 
         if (totalValue > 0) {
-          const parcelas = []
-          const today = new Date()
-          const parcelaValue = totalValue / parcelsCount
+          const { data: existingParcelas } = await supabase
+            .from('parcelas_vales')
+            .select('id')
+            .eq('chamado_id', selectedChamado.id)
 
-          for (let i = 0; i < parcelsCount; i++) {
-            const dataRef = new Date(today.getFullYear(), today.getMonth() + 1 + i, 1)
-              .toISOString()
-              .split('T')[0]
-            parcelas.push({
-              chamado_id: selectedChamado.id,
-              valor_parcela: Number(parcelaValue.toFixed(2)),
-              data_referencia: dataRef,
-            })
+          if (!existingParcelas || existingParcelas.length === 0) {
+            const parcelas = []
+            const today = new Date()
+            const parcelaValue = totalValue / parcelsCount
+
+            for (let i = 0; i < parcelsCount; i++) {
+              const dataRef = new Date(today.getFullYear(), today.getMonth() + i, 1)
+                .toISOString()
+                .split('T')[0]
+              parcelas.push({
+                chamado_id: selectedChamado.id,
+                valor_parcela: Number(parcelaValue.toFixed(2)),
+                data_referencia: dataRef,
+              })
+            }
+
+            const { error: parcelasError } = await supabase.from('parcelas_vales').insert(parcelas)
+            if (parcelasError) console.error('Error creating parcelas:', parcelasError)
           }
-
-          const { error: parcelasError } = await supabase.from('parcelas_vales').insert(parcelas)
-          if (parcelasError) console.error('Error creating parcelas:', parcelasError)
         }
       }
 

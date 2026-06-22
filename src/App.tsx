@@ -13,6 +13,8 @@ import MeusAtendimentos from './pages/dashboard/MeusAtendimentos'
 import Finalizados from './pages/dashboard/Finalizados'
 import AdminDashboard from './pages/dashboard/Admin'
 import Relatorios from './pages/dashboard/Relatorios'
+import CobrancaTerceiros from './pages/dashboard/CobrancaTerceiros'
+import DemandaJudicial from './pages/dashboard/DemandaJudicial'
 import Documentos from './pages/dashboard/Documentos'
 import ValesAprovacao from './pages/dashboard/ValesAprovacao'
 import AutorizarParcelas from './pages/dashboard/AutorizarParcelas'
@@ -84,6 +86,8 @@ const App = () => (
             <Route path="/dashboard/chamados-abertos" element={<ChamadosAbertos />} />
             <Route path="/dashboard/meus-atendimentos" element={<MeusAtendimentos />} />
             <Route path="/dashboard/finalizados" element={<Finalizados />} />
+            <Route path="/dashboard/cobranca-terceiros" element={<CobrancaTerceiros />} />
+            <Route path="/dashboard/demanda-judicial" element={<DemandaJudicial />} />
             <Route path="/dashboard/chamados/:id" element={<ChamadoDetalhes />} />
             <Route path="/dashboard/admin" element={<AdminDashboard />} />
             <Route path="/dashboard/relatorios" element={<Relatorios />} />

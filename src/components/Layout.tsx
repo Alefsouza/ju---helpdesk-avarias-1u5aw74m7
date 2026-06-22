@@ -30,6 +30,8 @@ import {
   Wrench,
   CheckCircle,
   Archive,
+  Briefcase,
+  Gavel,
 } from 'lucide-react'
 import { Skeleton } from '@/components/ui/skeleton'
 import { useEffect, useState } from 'react'
@@ -144,6 +146,34 @@ function AppSidebar() {
                       </Link>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
+                  {isJuridico && (
+                    <>
+                      <SidebarMenuItem>
+                        <SidebarMenuButton
+                          asChild
+                          isActive={location.pathname === '/dashboard/cobranca-terceiros'}
+                          className="data-[active=true]:bg-transparent data-[active=true]:text-[#c8e6c9] hover:bg-[#c8e6c9]/10 hover:text-[#c8e6c9] text-white transition-colors"
+                        >
+                          <Link to="/dashboard/cobranca-terceiros">
+                            <Briefcase />
+                            <span>Cobrança de Terceiros</span>
+                          </Link>
+                        </SidebarMenuButton>
+                      </SidebarMenuItem>
+                      <SidebarMenuItem>
+                        <SidebarMenuButton
+                          asChild
+                          isActive={location.pathname === '/dashboard/demanda-judicial'}
+                          className="data-[active=true]:bg-transparent data-[active=true]:text-[#c8e6c9] hover:bg-[#c8e6c9]/10 hover:text-[#c8e6c9] text-white transition-colors"
+                        >
+                          <Link to="/dashboard/demanda-judicial">
+                            <Gavel />
+                            <span>Demanda Judicial</span>
+                          </Link>
+                        </SidebarMenuButton>
+                      </SidebarMenuItem>
+                    </>
+                  )}
                   <SidebarMenuItem>
                     <SidebarMenuButton
                       asChild

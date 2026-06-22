@@ -35,6 +35,7 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import {
@@ -3166,6 +3167,36 @@ export default function ChamadoDetalhes() {
     }
   }
 
+  const handleMoverJuridico = async (novoStatus: string | null) => {
+    setCompleting(true)
+    try {
+      const { error } = await supabase
+        .from('chamados')
+        .update({ status_juridico: novoStatus, atualizado_em: new Date().toISOString() })
+        .eq('id', id)
+
+      if (error) throw error
+
+      setChamado((prev: any) => (prev ? { ...prev, status_juridico: novoStatus } : prev))
+
+      await supabase.from('historico_chamado').insert({
+        chamado_id: id as string,
+        acao: 'respondido',
+        usuario_id: user?.id as string,
+        detalhes: novoStatus
+          ? `Chamado classificado no jurídico como: ${novoStatus}`
+          : `Classificação jurídica removida`,
+      })
+
+      toast.success('Classificação jurídica atualizada com sucesso')
+    } catch (e) {
+      console.error(e)
+      toast.error('Erro ao atualizar classificação jurídica')
+    } finally {
+      setCompleting(false)
+    }
+  }
+
   const handleFinalizar = async () => {
     if (!window.confirm('Tem certeza que deseja finalizar este chamado?')) return
     setCompleting(true)
@@ -3245,6 +3276,7 @@ export default function ChamadoDetalhes() {
 
   const canEditRA = isSupport
   const canUnify = isSupport && chamado.status !== 'finalizado'
+  const isJuridico = currentUserProfile?.tipo_usuario === 'juridico'
 
   const orcamentoDoc = documentosChamado.find((d) => d.tipo_documento === 'Orçamento')
   const hasOrcamentoInterno = anexosInternos.some((a) => {
@@ -3301,6 +3333,36 @@ export default function ChamadoDetalhes() {
               <LinkIcon className="mr-2 h-3.5 w-3.5" />
               Unificar Chamado
             </Button>
+          )}
+          {isJuridico && (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="w-full sm:w-auto h-8 text-xs bg-indigo-50 border-indigo-200 text-indigo-700 hover:bg-indigo-100 hover:text-indigo-800"
+                  disabled={completing || transferLoading}
+                >
+                  <ArrowRightLeft className="mr-2 h-3.5 w-3.5" />
+                  Mover
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={() => handleMoverJuridico('Cobrança de Terceiros')}>
+                  Cobrança de Terceiros
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => handleMoverJuridico('Demanda Judicial')}>
+                  Demanda Judicial
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem
+                  onClick={() => handleMoverJuridico(null)}
+                  className="text-red-600 focus:bg-red-50 focus:text-red-700"
+                >
+                  Remover Classificação
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           )}
           {canTransfer && (
             <Button
@@ -3389,6 +3451,19 @@ export default function ChamadoDetalhes() {
                   </Badge>
                 </div>
               )}
+            {chamado.status_juridico && (
+              <div className="flex items-center gap-2 mb-2">
+                <span className="text-[10px] font-bold text-slate-500 tracking-wider">
+                  JURÍDICO:
+                </span>
+                <Badge
+                  variant="outline"
+                  className="px-2.5 py-0.5 uppercase text-[10px] font-bold tracking-wider bg-indigo-100 text-indigo-800 border-indigo-200"
+                >
+                  {chamado.status_juridico}
+                </Badge>
+              </div>
+            )}
             <h1 className="text-lg sm:text-xl font-bold text-slate-900">{chamado.titulo}</h1>
           </div>
           <div className="text-xs text-slate-500 flex flex-col sm:items-end gap-0.5 bg-slate-50 p-2 rounded-md border">

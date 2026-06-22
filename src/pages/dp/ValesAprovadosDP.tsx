@@ -48,6 +48,7 @@ export default function ValesAprovadosDP() {
         valor_parcela, 
         data_referencia, 
         chamado_id, 
+        aprovado_diretoria,
         chamados (
           id, 
           titulo,
@@ -61,6 +62,7 @@ export default function ValesAprovadosDP() {
           anexos_chamado_interno ( id, nome_arquivo, arquivo_url, criado_em )
         )
       `)
+      .eq('aprovado_diretoria' as any, true)
       .gte('data_referencia', startDate)
       .lte('data_referencia', endDate)
       .order('data_referencia', { ascending: false })

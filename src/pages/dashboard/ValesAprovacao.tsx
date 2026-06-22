@@ -183,19 +183,22 @@ export default function ValesAprovacao() {
             .eq('chamado_id', selectedChamado.id)
 
           if (!existingParcelas || existingParcelas.length === 0) {
-            const parcelas = []
+            const parcelas: any[] = []
             const today = new Date()
             const parcelaValue = totalValue / parcelsCount
 
             for (let i = 0; i < parcelsCount; i++) {
-              const targetYear = today.getFullYear() + Math.floor((today.getMonth() + i) / 12)
-              const targetMonth = ((today.getMonth() + i) % 12) + 1
+              const targetDate = new Date(today.getFullYear(), today.getMonth() + i - 1, 1)
+              const targetYear = targetDate.getFullYear()
+              const targetMonth = targetDate.getMonth() + 1
               const dataRef = `${targetYear}-${targetMonth.toString().padStart(2, '0')}-01`
 
               parcelas.push({
                 chamado_id: selectedChamado.id,
                 valor_parcela: Number(parcelaValue.toFixed(2)),
                 data_referencia: dataRef,
+                aprovado_diretoria: true,
+                aprovado_em: new Date().toISOString(),
               })
             }
 

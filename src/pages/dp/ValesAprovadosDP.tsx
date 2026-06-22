@@ -10,8 +10,23 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
-import { Download, Loader2, ArrowLeft, AlertCircle, FileText, FileSignature } from 'lucide-react'
+import {
+  Download,
+  Loader2,
+  ArrowLeft,
+  AlertCircle,
+  FileText,
+  FileSignature,
+  Search,
+} from 'lucide-react'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import { supabase } from '@/lib/supabase/client'
 import { toast } from 'sonner'
 import { format } from 'date-fns'
@@ -25,6 +40,8 @@ export default function ValesAprovadosDP() {
   const [parcelas, setParcelas] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [downloadMonth, setDownloadMonth] = useState(() => format(new Date(), 'yyyy-MM'))
+  const [searchTerm, setSearchTerm] = useState('')
+  const [garageFilter, setGarageFilter] = useState('Todas')
 
   useEffect(() => {
     fetchData()
@@ -56,6 +73,7 @@ export default function ValesAprovadosDP() {
           registro_motorista, 
           status_aprovacao,
           aprovacoes_diretoria,
+          garagem,
           formularios_espelho_danos ( registro_motorista, nome_motorista ),
           documentos ( id, nome_arquivo, arquivo_url, tipo_documento, orcamento_url, criado_em ),
           anexos_chamado_interno ( id, nome_arquivo, arquivo_url, criado_em )
@@ -103,7 +121,7 @@ export default function ValesAprovadosDP() {
     if (userIds.length > 0) {
       const { data: usersData } = await supabase
         .from('perfil_usuario')
-        .select('id, nome_completo, registro')
+        .select('id, nome_completo, registro, garagem')
         .in('id', userIds)
 
       usersMap = new Map((usersData || []).map((u) => [u.id, u]))
@@ -121,6 +139,7 @@ export default function ValesAprovadosDP() {
         espelhoData?.registro_motorista || chamado.registro_motorista || user?.registro || 'N/A'
       const nome =
         espelhoData?.nome_motorista || chamado.nome_motorista || user?.nome_completo || 'N/A'
+      const garagem = chamado.garagem || user?.garagem || 'N/A'
 
       let orcamentoUrl = null
       let orcamentoId = null
@@ -186,6 +205,7 @@ export default function ValesAprovadosDP() {
         data_referencia: p.data_referencia,
         nome,
         registro,
+        garagem,
         orcamentoUrl,
         orcamentoId,
         orcamentoNome,
@@ -199,15 +219,31 @@ export default function ValesAprovadosDP() {
     setLoading(false)
   }
 
+  const filteredParcelas = parcelas.filter((p) => {
+    const searchLower = searchTerm.toLowerCase()
+    const matchesSearch =
+      p.nome.toLowerCase().includes(searchLower) ||
+      p.registro.toLowerCase().includes(searchLower) ||
+      p.chamado_titulo.toLowerCase().includes(searchLower)
+
+    const matchesGarage =
+      garageFilter === 'Todas' ||
+      (p.garagem && p.garagem.toLowerCase() === garageFilter.toLowerCase())
+
+    return matchesSearch && matchesGarage
+  })
+
   const handleDownload = () => {
-    if (parcelas.length === 0) {
-      return toast.info('Nenhuma parcela válida encontrada para o mês selecionado.')
+    if (filteredParcelas.length === 0) {
+      return toast.info('Nenhuma parcela válida encontrada para exportação.')
     }
 
-    const csvRows = ['Registro,Nome Completo,Valor Parcela,Referência']
-    parcelas.forEach((p) => {
+    const csvRows = ['Registro,Nome Completo,Garagem,Valor Parcela,Referência']
+    filteredParcelas.forEach((p) => {
       const dataRef = format(new Date(p.data_referencia + 'T00:00:00'), 'MM/yyyy')
-      csvRows.push(`${p.registro},"${p.nome}",${Number(p.valor_parcela).toFixed(2)},${dataRef}`)
+      csvRows.push(
+        `${p.registro},"${p.nome}","${p.garagem}",${Number(p.valor_parcela).toFixed(2)},${dataRef}`,
+      )
     })
 
     const csvContent = csvRows.join('\n')
@@ -245,21 +281,45 @@ export default function ValesAprovadosDP() {
         </div>
       )}
 
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
           <h1 className="text-2xl font-bold text-slate-800">Vales Aprovados</h1>
           <p className="text-sm text-slate-500 mt-1">
             Acompanhe as parcelas de vales e gere o relatório de descontos.
           </p>
         </div>
-        <div className="flex items-center gap-4">
+        <div className="flex flex-col sm:flex-row items-center gap-4 w-full md:w-auto">
+          <div className="relative w-full sm:w-64">
+            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-slate-500" />
+            <Input
+              placeholder="Buscar registro, nome..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-9 bg-white border-slate-200"
+            />
+          </div>
+
+          <Select value={garageFilter} onValueChange={setGarageFilter}>
+            <SelectTrigger className="w-full sm:w-40 bg-white border-slate-200">
+              <SelectValue placeholder="Garagem" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="Todas">Todas as Garagens</SelectItem>
+              <SelectItem value="Cursino">Cursino</SelectItem>
+              <SelectItem value="Sapopemba">Sapopemba</SelectItem>
+            </SelectContent>
+          </Select>
+
           <Input
             type="month"
             value={downloadMonth}
             onChange={(e) => setDownloadMonth(e.target.value)}
-            className="w-48 bg-white border-slate-200"
+            className="w-full sm:w-48 bg-white border-slate-200"
           />
-          <Button onClick={handleDownload} className="bg-[#225f3d] hover:bg-[#1a4a2f]">
+          <Button
+            onClick={handleDownload}
+            className="w-full sm:w-auto bg-[#225f3d] hover:bg-[#1a4a2f]"
+          >
             <Download className="w-4 h-4 mr-2" /> Exportar CSV
           </Button>
         </div>
@@ -273,6 +333,7 @@ export default function ValesAprovadosDP() {
                 <TableHead className="pl-6">Chamado</TableHead>
                 <TableHead>Registro</TableHead>
                 <TableHead>Nome</TableHead>
+                <TableHead>Garagem</TableHead>
                 <TableHead>Valor Parcela</TableHead>
                 <TableHead>Referência</TableHead>
                 <TableHead className="pr-6 text-right">Documentos</TableHead>
@@ -281,18 +342,18 @@ export default function ValesAprovadosDP() {
             <TableBody>
               {loading ? (
                 <TableRow>
-                  <TableCell colSpan={6} className="text-center py-8">
+                  <TableCell colSpan={7} className="text-center py-8">
                     <Loader2 className="w-6 h-6 animate-spin mx-auto text-slate-400" />
                   </TableCell>
                 </TableRow>
-              ) : parcelas.length === 0 ? (
+              ) : filteredParcelas.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={6} className="text-center py-8 text-slate-500">
-                    Nenhuma parcela de vale aprovado encontrada para este mês.
+                  <TableCell colSpan={7} className="text-center py-8 text-slate-500">
+                    Nenhuma parcela de vale encontrada para os filtros aplicados.
                   </TableCell>
                 </TableRow>
               ) : (
-                parcelas.map((p) => (
+                filteredParcelas.map((p) => (
                   <TableRow key={p.id}>
                     <TableCell className="pl-6">
                       <div className="flex flex-col">
@@ -304,6 +365,15 @@ export default function ValesAprovadosDP() {
                     </TableCell>
                     <TableCell>{p.registro}</TableCell>
                     <TableCell>{p.nome}</TableCell>
+                    <TableCell>
+                      {p.garagem !== 'N/A' ? (
+                        <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-slate-100 text-slate-800">
+                          {p.garagem}
+                        </span>
+                      ) : (
+                        <span className="text-slate-400 text-sm">-</span>
+                      )}
+                    </TableCell>
                     <TableCell>R$ {Number(p.valor_parcela).toFixed(2)}</TableCell>
                     <TableCell>
                       {format(new Date(p.data_referencia + 'T00:00:00'), 'MM/yyyy')}

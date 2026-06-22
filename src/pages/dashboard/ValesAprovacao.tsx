@@ -44,7 +44,7 @@ export default function ValesAprovacao() {
     const { data, error } = await supabase
       .from('chamados')
       .select(`
-        id, titulo, descricao, status_aprovacao, aprovacoes_diretoria,
+        id, titulo, descricao, status_aprovacao, aprovacoes_diretoria, criado_em,
         registro_motorista, nome_motorista, data_ocorrencia,
         anexos_chamado_interno ( id, nome_arquivo, arquivo_url, criado_em ),
         documentos ( id, nome_arquivo, arquivo_url, tipo_documento, orcamento_url, valor_orcamento, criado_em ),
@@ -196,36 +196,35 @@ export default function ValesAprovacao() {
             const anyDiscountApplied = nextAprovacoes.some((a: any) => a.desconto_aplicado === true)
             const finalValue = anyDiscountApplied ? totalValue * 0.9 : totalValue
 
-            const parcelas: any[] = []
-            const baseDate = new Date(selectedChamado.criado_em)
-            const parcelaValue = finalValue / parcelsCount
+            const baseDateStr = selectedChamado.criado_em
+              ? selectedChamado.criado_em.split('T')[0]
+              : new Date().toISOString().split('T')[0]
 
-            for (let i = 0; i < parcelsCount; i++) {
-              const targetYear = baseDate.getFullYear()
-              const targetMonth = baseDate.getMonth() + i
-              const baseDay = baseDate.getDate()
+            const { data: calculadas, error: calcError } = await supabase.rpc(
+              'calcular_parcelas_vale',
+              {
+                p_valor_base: finalValue,
+                p_quantidade_parcelas: parcelsCount,
+                p_data_base: baseDateStr,
+              },
+            )
 
-              const lastDayOfTargetMonth = new Date(targetYear, targetMonth + 1, 0).getDate()
-              const targetDay = Math.min(baseDay, lastDayOfTargetMonth)
-
-              const tempDate = new Date(targetYear, targetMonth, targetDay)
-
-              const yyyy = tempDate.getFullYear()
-              const mm = String(tempDate.getMonth() + 1).padStart(2, '0')
-              const dd = String(tempDate.getDate()).padStart(2, '0')
-              const dataRef = `${yyyy}-${mm}-${dd}`
-
-              parcelas.push({
+            if (calcError) {
+              console.error('Erro ao calcular parcelas:', calcError)
+            } else if (calculadas && calculadas.length > 0) {
+              const parcelas = calculadas.map((p) => ({
                 chamado_id: selectedChamado.id,
-                valor_parcela: Number(parcelaValue.toFixed(2)),
-                data_referencia: dataRef,
+                valor_parcela: p.valor_parcela,
+                data_referencia: p.data_referencia,
                 aprovado_diretoria: true,
                 aprovado_em: new Date().toISOString(),
-              })
-            }
+              }))
 
-            const { error: parcelasError } = await supabase.from('parcelas_vales').insert(parcelas)
-            if (parcelasError) console.error('Error creating parcelas:', parcelasError)
+              const { error: parcelasError } = await supabase
+                .from('parcelas_vales')
+                .insert(parcelas)
+              if (parcelasError) console.error('Error creating parcelas:', parcelasError)
+            }
           }
         }
       }

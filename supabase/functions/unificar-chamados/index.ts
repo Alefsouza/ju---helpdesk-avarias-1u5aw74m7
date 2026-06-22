@@ -183,11 +183,11 @@ Deno.serve(async (req: Request) => {
       .update({ chamado_id: destino_id })
       .eq('chamado_id', origem_id)
 
-    // Mark origin as finalized/unified
+    // Mark origin as unified
     await supabaseAdmin
       .from('chamados')
       .update({
-        status: 'finalizado',
+        status: 'unificado',
         atualizado_em: new Date().toISOString(),
         descricao:
           origem.descricao +
@@ -198,7 +198,7 @@ Deno.serve(async (req: Request) => {
     // Add history record for the source ticket AFTER moving old history to the destination ticket
     await supabaseAdmin.from('historico_chamado').insert({
       chamado_id: origem_id,
-      acao: 'finalizado',
+      acao: 'unificado',
       usuario_id: user.id,
       detalhes: `Chamado unificado com o destino #${destino_id.substring(0, 8)} e encerrado. Todos os registros anteriores foram migrados.`,
     })

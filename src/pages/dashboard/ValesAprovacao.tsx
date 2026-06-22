@@ -489,30 +489,13 @@ export default function ValesAprovacao() {
             <DialogDescription>Deseja confirmar a aprovação deste vale?</DialogDescription>
           </DialogHeader>
 
-          {selectedChamado && (
-            <div className="grid gap-4 py-4">
-              <div className="bg-muted p-4 rounded-lg flex flex-col gap-2">
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Valor Total:</span>
-                  <span className="font-semibold">
-                    R$ {parseFloat(valorTotal || '0').toFixed(2)}
-                  </span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Quantidade de Parcelas:</span>
-                  <span className="font-semibold">{numeroParcelas}x</span>
-                </div>
-              </div>
-            </div>
-          )}
-
-          <DialogFooter>
+          <DialogFooter className="mt-4">
             <Button variant="outline" onClick={() => setIsApproveOpen(false)}>
               Cancelar
             </Button>
             <Button onClick={handleApproveSubmit} disabled={isSubmitting}>
               {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Confirmar Aprovação
+              Confirmar
             </Button>
           </DialogFooter>
         </DialogContent>

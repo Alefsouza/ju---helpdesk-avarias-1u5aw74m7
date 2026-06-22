@@ -17,9 +17,11 @@ import { toast } from 'sonner'
 import { format } from 'date-fns'
 import { Link } from 'react-router-dom'
 import { useAuth } from '@/hooks/use-auth'
+import { useDocumentAction } from '@/hooks/use-document-action'
 
 export default function ValesAprovadosDP() {
   const { profile, loading: authLoading } = useAuth()
+  const { handleDocumentAction, loadingAction } = useDocumentAction()
   const [parcelas, setParcelas] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [downloadMonth, setDownloadMonth] = useState(() => format(new Date(), 'yyyy-MM'))
@@ -121,23 +123,56 @@ export default function ValesAprovadosDP() {
         espelhoData?.nome_motorista || chamado.nome_motorista || user?.nome_completo || 'N/A'
 
       let orcamentoUrl = null
+      let orcamentoId = null
+      let orcamentoNome = null
       if (chamado.documentos && chamado.documentos.length > 0) {
         const orcamentos = chamado.documentos.filter(
           (d: any) => d.tipo_documento === 'orcamento' || d.orcamento_url,
         )
         if (orcamentos.length > 0) {
           orcamentoUrl = orcamentos[0].orcamento_url || orcamentos[0].arquivo_url
+          orcamentoId = orcamentos[0].id
+          orcamentoNome = orcamentos[0].nome_arquivo
         }
       }
 
       let autorizacaoUrl = null
+      let autorizacaoId = null
+      let autorizacaoNome = null
+
       if (chamado.anexos_chamado_interno && chamado.anexos_chamado_interno.length > 0) {
         const autorizacoes = chamado.anexos_chamado_interno.filter((a: any) => {
-          const nomeArq = a.nome_arquivo.toLowerCase()
-          return nomeArq.includes('autorização') || nomeArq.includes('autorizacao')
+          const nomeArq = a.nome_arquivo?.toLowerCase() || ''
+          return (
+            nomeArq.includes('autorização') ||
+            nomeArq.includes('autorizacao') ||
+            nomeArq.includes('desconto') ||
+            nomeArq.includes('parcelamento')
+          )
         })
         if (autorizacoes.length > 0) {
           autorizacaoUrl = autorizacoes[0].arquivo_url
+          autorizacaoId = autorizacoes[0].id
+          autorizacaoNome = autorizacoes[0].nome_arquivo
+        }
+      }
+
+      if (!autorizacaoUrl && chamado.documentos && chamado.documentos.length > 0) {
+        const autorizacoesDoc = chamado.documentos.filter((d: any) => {
+          const nomeArq = d.nome_arquivo?.toLowerCase() || ''
+          return (
+            d.tipo_documento === 'autorizacao_desconto' ||
+            d.tipo_documento === 'autorizacao' ||
+            nomeArq.includes('autorização') ||
+            nomeArq.includes('autorizacao') ||
+            nomeArq.includes('desconto') ||
+            nomeArq.includes('parcelamento')
+          )
+        })
+        if (autorizacoesDoc.length > 0) {
+          autorizacaoUrl = autorizacoesDoc[0].arquivo_url
+          autorizacaoId = autorizacoesDoc[0].id
+          autorizacaoNome = autorizacoesDoc[0].nome_arquivo
         }
       }
 
@@ -152,7 +187,11 @@ export default function ValesAprovadosDP() {
         nome,
         registro,
         orcamentoUrl,
+        orcamentoId,
+        orcamentoNome,
         autorizacaoUrl,
+        autorizacaoId,
+        autorizacaoNome,
       }
     })
 
@@ -274,14 +313,26 @@ export default function ValesAprovadosDP() {
                         {p.orcamentoUrl ? (
                           <Tooltip>
                             <TooltipTrigger asChild>
-                              <a
-                                href={p.orcamentoUrl}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="text-slate-500 hover:text-slate-700"
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-8 w-8 text-slate-500 hover:text-slate-700 p-0"
+                                onClick={() =>
+                                  handleDocumentAction(
+                                    p.orcamentoId || p.id,
+                                    p.orcamentoUrl,
+                                    p.orcamentoNome || 'orcamento.pdf',
+                                    'view',
+                                  )
+                                }
+                                disabled={loadingAction === `${p.orcamentoId || p.id}-view`}
                               >
-                                <FileText className="h-4 w-4" />
-                              </a>
+                                {loadingAction === `${p.orcamentoId || p.id}-view` ? (
+                                  <Loader2 className="h-4 w-4 animate-spin" />
+                                ) : (
+                                  <FileText className="h-4 w-4" />
+                                )}
+                              </Button>
                             </TooltipTrigger>
                             <TooltipContent>
                               <p>Ver Orçamento</p>
@@ -290,7 +341,7 @@ export default function ValesAprovadosDP() {
                         ) : (
                           <Tooltip>
                             <TooltipTrigger asChild>
-                              <div className="text-slate-300 cursor-not-allowed">
+                              <div className="h-8 w-8 flex items-center justify-center text-slate-300 cursor-not-allowed">
                                 <FileText className="h-4 w-4" />
                               </div>
                             </TooltipTrigger>
@@ -303,14 +354,26 @@ export default function ValesAprovadosDP() {
                         {p.autorizacaoUrl ? (
                           <Tooltip>
                             <TooltipTrigger asChild>
-                              <a
-                                href={p.autorizacaoUrl}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="text-slate-500 hover:text-slate-700"
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-8 w-8 text-slate-500 hover:text-slate-700 p-0"
+                                onClick={() =>
+                                  handleDocumentAction(
+                                    p.autorizacaoId || p.id,
+                                    p.autorizacaoUrl,
+                                    p.autorizacaoNome || 'autorizacao.pdf',
+                                    'view',
+                                  )
+                                }
+                                disabled={loadingAction === `${p.autorizacaoId || p.id}-view`}
                               >
-                                <FileSignature className="h-4 w-4" />
-                              </a>
+                                {loadingAction === `${p.autorizacaoId || p.id}-view` ? (
+                                  <Loader2 className="h-4 w-4 animate-spin" />
+                                ) : (
+                                  <FileSignature className="h-4 w-4" />
+                                )}
+                              </Button>
                             </TooltipTrigger>
                             <TooltipContent>
                               <p>Ver Autorização de Desconto</p>
@@ -319,7 +382,7 @@ export default function ValesAprovadosDP() {
                         ) : (
                           <Tooltip>
                             <TooltipTrigger asChild>
-                              <div className="text-slate-300 cursor-not-allowed">
+                              <div className="h-8 w-8 flex items-center justify-center text-slate-300 cursor-not-allowed">
                                 <FileSignature className="h-4 w-4" />
                               </div>
                             </TooltipTrigger>

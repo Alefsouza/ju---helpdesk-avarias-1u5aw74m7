@@ -228,8 +228,30 @@ export default function ValesAprovacao() {
                 .from('parcelas_vales')
                 .insert(parcelas)
               if (parcelasError) console.error('Error creating parcelas:', parcelasError)
+
+              if (
+                selectedChamado.solicitacoes_parcelamento &&
+                selectedChamado.solicitacoes_parcelamento.length > 0
+              ) {
+                await supabase
+                  .from('solicitacoes_parcelamento')
+                  .update({ status: 'aprovado', atualizado_em: new Date().toISOString() })
+                  .eq('id', selectedChamado.solicitacoes_parcelamento[0].id)
+              }
             }
           }
+        }
+      }
+
+      if (isFinished && isRejected) {
+        if (
+          selectedChamado.solicitacoes_parcelamento &&
+          selectedChamado.solicitacoes_parcelamento.length > 0
+        ) {
+          await supabase
+            .from('solicitacoes_parcelamento')
+            .update({ status: 'recusado', atualizado_em: new Date().toISOString() })
+            .eq('id', selectedChamado.solicitacoes_parcelamento[0].id)
         }
       }
 
@@ -318,6 +340,16 @@ export default function ValesAprovacao() {
           usuario_id: user!.id,
           mensagem: `Vale reprovado pela diretoria. Motivos: ${motivos}`,
         })
+
+        if (
+          selectedChamado.solicitacoes_parcelamento &&
+          selectedChamado.solicitacoes_parcelamento.length > 0
+        ) {
+          await supabase
+            .from('solicitacoes_parcelamento')
+            .update({ status: 'recusado', atualizado_em: new Date().toISOString() })
+            .eq('id', selectedChamado.solicitacoes_parcelamento[0].id)
+        }
       }
 
       toast.success(
@@ -407,6 +439,7 @@ export default function ValesAprovacao() {
                     <TableHead>Registro do Motorista</TableHead>
                     <TableHead>Nome do Motorista</TableHead>
                     <TableHead>Data da Ocorrência</TableHead>
+                    <TableHead>Desconto 10%</TableHead>
                     <TableHead>Aprovações</TableHead>
                     <TableHead>Documentos</TableHead>
                     <TableHead className="text-right">Ações</TableHead>
@@ -420,6 +453,14 @@ export default function ValesAprovacao() {
                     const aprovacoes = Array.isArray(chamado.aprovacoes_diretoria)
                       ? chamado.aprovacoes_diretoria
                       : []
+                    let hasDiscount = false
+                    if (
+                      chamado.solicitacoes_parcelamento &&
+                      chamado.solicitacoes_parcelamento.length > 0
+                    ) {
+                      hasDiscount = chamado.solicitacoes_parcelamento[0].desconto_aplicado === true
+                    }
+
                     return (
                       <TableRow key={chamado.id}>
                         <TableCell>
@@ -433,6 +474,17 @@ export default function ValesAprovacao() {
                           {chamado.data_ocorrencia
                             ? format(new Date(chamado.data_ocorrencia + 'T12:00:00'), 'dd/MM/yyyy')
                             : '-'}
+                        </TableCell>
+                        <TableCell>
+                          <span
+                            className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
+                              hasDiscount
+                                ? 'bg-green-100 text-green-700'
+                                : 'bg-gray-100 text-gray-700'
+                            }`}
+                          >
+                            {hasDiscount ? 'Sim' : 'Não'}
+                          </span>
                         </TableCell>
                         <TableCell>
                           <div className="flex items-center gap-2">
@@ -580,68 +632,6 @@ export default function ValesAprovacao() {
             <DialogTitle>Confirmar Aprovação</DialogTitle>
             <DialogDescription>Deseja confirmar a aprovação deste vale?</DialogDescription>
           </DialogHeader>
-
-          {selectedChamado &&
-            (() => {
-              let totalValue = 0
-              let hasDiscount = false
-              let parcelsCount = 1
-
-              if (
-                selectedChamado.solicitacoes_parcelamento &&
-                selectedChamado.solicitacoes_parcelamento.length > 0
-              ) {
-                const sol = selectedChamado.solicitacoes_parcelamento[0]
-                totalValue = Number(sol.valor_orcamento) || 0
-                hasDiscount = sol.desconto_aplicado === true
-                parcelsCount = Number(sol.quantidade_parcelas) || 1
-              } else {
-                const docOrcamento = selectedChamado.documentos?.find(
-                  (d: any) =>
-                    (d.tipo_documento === 'orcamento' || d.orcamento_url) && d.valor_orcamento,
-                )
-                if (docOrcamento) {
-                  totalValue = Number(docOrcamento.valor_orcamento) || 0
-                }
-              }
-
-              const finalValue = hasDiscount ? totalValue * 0.9 : totalValue
-
-              return (
-                <div className="py-4 space-y-3">
-                  <div className="flex justify-between text-sm">
-                    <span className="font-medium text-muted-foreground">Valor do Orçamento:</span>
-                    <span>
-                      {new Intl.NumberFormat('pt-BR', {
-                        style: 'currency',
-                        currency: 'BRL',
-                      }).format(totalValue)}
-                    </span>
-                  </div>
-                  <div className="flex justify-between text-sm">
-                    <span className="font-medium text-muted-foreground">
-                      Desconto de 10% aplicado:
-                    </span>
-                    <span>{hasDiscount ? 'Sim' : 'Não'}</span>
-                  </div>
-                  <div className="flex justify-between text-base font-semibold pt-3 border-t">
-                    <span>Valor Final a Descontar:</span>
-                    <span>
-                      {new Intl.NumberFormat('pt-BR', {
-                        style: 'currency',
-                        currency: 'BRL',
-                      }).format(finalValue)}
-                    </span>
-                  </div>
-                  <div className="flex justify-between text-sm pt-1">
-                    <span className="font-medium text-muted-foreground">
-                      Quantidade de Parcelas:
-                    </span>
-                    <span>{parcelsCount}</span>
-                  </div>
-                </div>
-              )
-            })()}
 
           <DialogFooter className="mt-4">
             <Button variant="outline" onClick={() => setIsApproveOpen(false)}>

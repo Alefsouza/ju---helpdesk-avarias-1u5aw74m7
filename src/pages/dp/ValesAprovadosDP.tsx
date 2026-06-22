@@ -121,6 +121,7 @@ export default function ValesAprovadosDP() {
         espelhoData?.nome_motorista || chamado.nome_motorista || user?.nome_completo || 'N/A'
 
       let orcamentoUrl = null
+      let isVale = false
       if (chamado.documentos && chamado.documentos.length > 0) {
         const orcamentos = chamado.documentos.filter(
           (d: any) => d.tipo_documento === 'orcamento' || d.orcamento_url,
@@ -128,6 +129,7 @@ export default function ValesAprovadosDP() {
         if (orcamentos.length > 0) {
           orcamentoUrl = orcamentos[0].orcamento_url || orcamentos[0].arquivo_url
         }
+        isVale = chamado.documentos.some((d: any) => d.tipo_documento === 'vale')
       }
 
       let autorizacaoUrl = null
@@ -141,11 +143,13 @@ export default function ValesAprovadosDP() {
         }
       }
 
+      const valorCalculado = isVale ? Number(p.valor_parcela) * 0.9 : Number(p.valor_parcela)
+
       return {
         id: p.id,
         chamado_id: p.chamado_id,
         chamado_titulo: chamado?.titulo || '-',
-        valor_parcela: p.valor_parcela,
+        valor_parcela: valorCalculado,
         data_referencia: p.data_referencia,
         nome,
         registro,
@@ -166,7 +170,7 @@ export default function ValesAprovadosDP() {
     const csvRows = ['Registro,Nome Completo,Valor Parcela,Referência']
     parcelas.forEach((p) => {
       const dataRef = format(new Date(p.data_referencia + 'T00:00:00'), 'MM/yyyy')
-      csvRows.push(`${p.registro},"${p.nome}",${p.valor_parcela},${dataRef}`)
+      csvRows.push(`${p.registro},"${p.nome}",${Number(p.valor_parcela).toFixed(2)},${dataRef}`)
     })
 
     const csvContent = csvRows.join('\n')
@@ -263,14 +267,7 @@ export default function ValesAprovadosDP() {
                     </TableCell>
                     <TableCell>{p.registro}</TableCell>
                     <TableCell>{p.nome}</TableCell>
-                    <TableCell>
-                      <div className="flex flex-col">
-                        <span>R$ {Number(p.valor_parcela).toFixed(2)}</span>
-                        <span className="text-[10px] text-emerald-600 font-medium whitespace-nowrap">
-                          10% desc. aplicado
-                        </span>
-                      </div>
-                    </TableCell>
+                    <TableCell>R$ {Number(p.valor_parcela).toFixed(2)}</TableCell>
                     <TableCell>
                       {format(new Date(p.data_referencia + 'T00:00:00'), 'MM/yyyy')}
                     </TableCell>

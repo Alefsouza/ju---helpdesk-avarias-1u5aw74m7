@@ -248,10 +248,10 @@ export default function ValesAprovadosDP() {
   })
 
   const handleDownload = () => {
-    const exportableParcelas = filteredParcelas.filter((p) => p.aprovado_diretoria === true)
+    const exportableParcelas = filteredParcelas
 
     if (exportableParcelas.length === 0) {
-      return toast.info('Nenhuma parcela aprovada pela diretoria encontrada para exportação.')
+      return toast.info('Nenhuma parcela encontrada para exportação.')
     }
 
     toast.loading('Gerando arquivo TXT...', { id: 'export-txt' })
@@ -274,7 +274,15 @@ export default function ValesAprovadosDP() {
       const blob = new Blob([txtContent], { type: 'text/plain;charset=utf-8;' })
       const link = document.createElement('a')
       link.href = URL.createObjectURL(blob)
-      link.download = `vales_${downloadMonth}.txt`
+
+      let filename = 'Via Sudeste - Imp.txt'
+      if (garageFilter === 'Cursino') {
+        filename = 'Via Sudeste Cursino - Imp.txt'
+      } else if (garageFilter === 'Sapopemba') {
+        filename = 'Via Sudeste Sapopemba - Imp.txt'
+      }
+
+      link.download = filename
       link.click()
 
       toast.success('Arquivo TXT gerado com sucesso!', { id: 'export-txt' })

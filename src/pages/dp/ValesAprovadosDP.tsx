@@ -64,6 +64,7 @@ export default function ValesAprovadosDP() {
       id, 
       valor_parcela, 
       data_referencia, 
+      aprovado_em,
       chamado_id, 
       aprovado_diretoria,
       chamados (
@@ -81,9 +82,9 @@ export default function ValesAprovadosDP() {
         anexos_chamado_interno ( id, nome_arquivo, arquivo_url, criado_em )
       )
     `)
-      .gte('data_referencia', startDate)
-      .lte('data_referencia', endDate)
-      .order('data_referencia', { ascending: false })
+      .gte('aprovado_em', `${startDate}T00:00:00.000Z`)
+      .lte('aprovado_em', `${endDate}T23:59:59.999Z`)
+      .order('aprovado_em', { ascending: false })
 
     if (error) {
       toast.error('Erro ao buscar parcelas')
@@ -218,6 +219,7 @@ export default function ValesAprovadosDP() {
         chamado_titulo: chamado?.titulo || '-',
         valor_parcela: valorCalculado,
         data_referencia: p.data_referencia,
+        aprovado_em: p.aprovado_em,
         aprovado_diretoria: p.aprovado_diretoria,
         nome,
         registro,
@@ -375,19 +377,20 @@ export default function ValesAprovadosDP() {
                 <TableHead>Garagem</TableHead>
                 <TableHead>Valor Parcela</TableHead>
                 <TableHead>Referência</TableHead>
+                <TableHead>Aprovado Em</TableHead>
                 <TableHead className="pr-6 text-right">Documentos</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {loading ? (
                 <TableRow>
-                  <TableCell colSpan={7} className="text-center py-8">
+                  <TableCell colSpan={8} className="text-center py-8">
                     <Loader2 className="w-6 h-6 animate-spin mx-auto text-slate-400" />
                   </TableCell>
                 </TableRow>
               ) : filteredParcelas.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={7} className="text-center py-8 text-slate-500">
+                  <TableCell colSpan={8} className="text-center py-8 text-slate-500">
                     Nenhuma parcela de vale encontrada para os filtros aplicados.
                   </TableCell>
                 </TableRow>
@@ -413,6 +416,9 @@ export default function ValesAprovadosDP() {
                     <TableCell>R$ {Number(p.valor_parcela).toFixed(2)}</TableCell>
                     <TableCell>
                       {format(new Date(p.data_referencia + 'T00:00:00'), 'dd/MM/yyyy')}
+                    </TableCell>
+                    <TableCell>
+                      {p.aprovado_em ? format(new Date(p.aprovado_em), 'dd/MM/yyyy HH:mm') : '-'}
                     </TableCell>
                     <TableCell className="pr-6">
                       <div className="flex justify-end gap-2">

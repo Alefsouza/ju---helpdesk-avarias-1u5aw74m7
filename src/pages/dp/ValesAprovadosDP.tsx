@@ -32,9 +32,14 @@ export default function ValesAprovadosDP() {
     if (!downloadMonth) return
     setLoading(true)
 
-    const [year, month] = downloadMonth.split('-')
-    const startDate = new Date(Number(year), Number(month) - 1, 1).toISOString().split('T')[0]
-    const endDate = new Date(Number(year), Number(month), 0).toISOString().split('T')[0]
+    const [yearStr, monthStr] = downloadMonth.split('-')
+    const yearNum = Number(yearStr)
+    const monthNum = Number(monthStr)
+
+    // Calcula as datas com segurança de timezone para garantir o mês correto
+    const startDate = `${yearNum}-${monthNum.toString().padStart(2, '0')}-01`
+    const lastDay = new Date(yearNum, monthNum, 0).getDate()
+    const endDate = `${yearNum}-${monthNum.toString().padStart(2, '0')}-${lastDay.toString().padStart(2, '0')}`
 
     const { data: parcelasData, error } = await supabase
       .from('parcelas_vales')

@@ -188,9 +188,10 @@ export default function ValesAprovacao() {
             const parcelaValue = totalValue / parcelsCount
 
             for (let i = 0; i < parcelsCount; i++) {
-              const dataRef = new Date(today.getFullYear(), today.getMonth() + i, 1)
-                .toISOString()
-                .split('T')[0]
+              const targetYear = today.getFullYear() + Math.floor((today.getMonth() + i) / 12)
+              const targetMonth = ((today.getMonth() + i) % 12) + 1
+              const dataRef = `${targetYear}-${targetMonth.toString().padStart(2, '0')}-01`
+
               parcelas.push({
                 chamado_id: selectedChamado.id,
                 valor_parcela: Number(parcelaValue.toFixed(2)),

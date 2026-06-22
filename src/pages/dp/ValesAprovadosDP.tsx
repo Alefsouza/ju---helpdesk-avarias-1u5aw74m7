@@ -56,6 +56,7 @@ export default function ValesAprovadosDP() {
     const monthNum = Number(monthStr)
 
     const startDate = `${yearNum}-${monthNum.toString().padStart(2, '0')}-01`
+    const endDate = new Date(yearNum, monthNum, 0).toISOString().split('T')[0]
 
     const { data: parcelasData, error } = await supabase
       .from('parcelas_vales')
@@ -80,7 +81,8 @@ export default function ValesAprovadosDP() {
         anexos_chamado_interno ( id, nome_arquivo, arquivo_url, criado_em )
       )
     `)
-      .eq('data_referencia', startDate)
+      .gte('data_referencia', startDate)
+      .lte('data_referencia', endDate)
       .order('data_referencia', { ascending: false })
 
     if (error) {
@@ -410,7 +412,7 @@ export default function ValesAprovadosDP() {
                     </TableCell>
                     <TableCell>R$ {Number(p.valor_parcela).toFixed(2)}</TableCell>
                     <TableCell>
-                      {format(new Date(p.data_referencia + 'T00:00:00'), 'MM/yyyy')}
+                      {format(new Date(p.data_referencia + 'T00:00:00'), 'dd/MM/yyyy')}
                     </TableCell>
                     <TableCell className="pr-6">
                       <div className="flex justify-end gap-2">

@@ -203,13 +203,7 @@ export default function ValesAprovacao() {
             )
             const finalValue = anyDiscountApplied ? totalValue * 0.9 : totalValue
 
-            const rawDateStr = selectedChamado.criado_em
-              ? selectedChamado.criado_em.split('T')[0]
-              : new Date().toISOString().split('T')[0]
-
-            const dateParts = rawDateStr.split('-')
-            const baseDateStr =
-              dateParts.length === 3 ? `${dateParts[0]}-${dateParts[1]}-01` : rawDateStr
+            const baseDateStr = new Date().toISOString().split('T')[0]
 
             const { data: calculadas, error: calcError } = await supabase.rpc(
               'calcular_parcelas_vale',

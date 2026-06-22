@@ -188,7 +188,7 @@ export default function ValesAprovacao() {
             const parcelaValue = totalValue / parcelsCount
 
             for (let i = 0; i < parcelsCount; i++) {
-              const targetDate = new Date(today.getFullYear(), today.getMonth() + i - 1, 1)
+              const targetDate = new Date(today.getFullYear(), today.getMonth() + i, 1)
               const targetYear = targetDate.getFullYear()
               const targetMonth = targetDate.getMonth() + 1
               const dataRef = `${targetYear}-${targetMonth.toString().padStart(2, '0')}-01`

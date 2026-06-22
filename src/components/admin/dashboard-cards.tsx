@@ -1,5 +1,14 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Ticket, Activity, CheckCircle, Clock, TrendingUp, TrendingDown, Minus } from 'lucide-react'
+import {
+  Ticket,
+  Activity,
+  CheckCircle,
+  Clock,
+  TrendingUp,
+  TrendingDown,
+  Minus,
+  GitMerge,
+} from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { subDays, isAfter, isBefore } from 'date-fns'
 
@@ -39,6 +48,7 @@ export function DashboardCards({
   const abertos = filtered.filter((c) => c.status === 'aberto').length
   const emAtendimento = filtered.filter((c) => c.status === 'em_atendimento').length
   const finalizados = filtered.filter((c) => c.status === 'finalizado').length
+  const unificados = filtered.filter((c) => c.status === 'unificado').length
 
   const now = new Date()
   const thirtyDaysAgo = subDays(now, 30)
@@ -65,6 +75,7 @@ export function DashboardCards({
     abertos: calcTrend('aberto'),
     emAtendimento: calcTrend('em_atendimento'),
     finalizados: calcTrend('finalizado'),
+    unificados: calcTrend('unificado'),
   }
 
   const renderTrend = (up: boolean | null, val: string) => (
@@ -114,10 +125,17 @@ export function DashboardCards({
       up: trends.finalizados.up,
       trend: trends.finalizados.val,
     },
+    {
+      title: 'Chamados Unificados',
+      value: unificados,
+      icon: GitMerge,
+      up: trends.unificados.up,
+      trend: trends.unificados.val,
+    },
   ]
 
   return (
-    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4 mb-6">
+    <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 mb-6">
       {cards.map((card, i) => (
         <Card
           key={i}

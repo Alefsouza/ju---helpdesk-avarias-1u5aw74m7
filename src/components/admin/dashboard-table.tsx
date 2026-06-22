@@ -107,7 +107,7 @@ export function DashboardTable({
     aberto: 'bg-blue-100 text-blue-800 hover:bg-blue-100',
     em_atendimento: 'bg-yellow-100 text-yellow-800 hover:bg-yellow-100',
     finalizado: 'bg-[#404040] text-white hover:bg-[#404040]/90 border-transparent',
-    unificado: 'bg-slate-200 text-slate-700 hover:bg-slate-200',
+    unificado: 'bg-purple-100 text-purple-800 hover:bg-purple-100',
   }
 
   const prioColor: Record<string, string> = {

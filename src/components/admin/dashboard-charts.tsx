@@ -23,6 +23,7 @@ const statusColors = {
   aberto: '#225f3d', // verde escuro
   em_atendimento: '#c8e6c9', // verde claro
   finalizado: '#808080', // cinza médio
+  unificado: '#a855f7', // purple
 }
 
 const priorityColors = {
@@ -75,6 +76,12 @@ export function DashboardCharts({
       name: 'Finalizado',
       value: baseChamados.filter((c) => c.status === 'finalizado').length,
       fill: statusColors.finalizado,
+    },
+    {
+      id: 'unificado',
+      name: 'Unificado',
+      value: baseChamados.filter((c) => c.status === 'unificado').length,
+      fill: statusColors.unificado,
     },
   ]
 
@@ -172,6 +179,7 @@ export function DashboardCharts({
     aberto: { label: 'Aberto', color: statusColors.aberto },
     em_atendimento: { label: 'Em Atendimento', color: statusColors.em_atendimento },
     finalizado: { label: 'Finalizado', color: statusColors.finalizado },
+    unificado: { label: 'Unificado', color: statusColors.unificado },
   }
 
   const prioConfig = {
@@ -194,6 +202,7 @@ export function DashboardCharts({
       if (value === 'aberto') return 'Aberto'
       if (value === 'em_atendimento') return 'Em Atendimento'
       if (value === 'finalizado') return 'Finalizado'
+      if (value === 'unificado') return 'Unificado'
     }
     return value
   }

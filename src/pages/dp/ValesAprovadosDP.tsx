@@ -36,10 +36,7 @@ export default function ValesAprovadosDP() {
     const yearNum = Number(yearStr)
     const monthNum = Number(monthStr)
 
-    // Calcula as datas com segurança de timezone para garantir o mês correto
     const startDate = `${yearNum}-${monthNum.toString().padStart(2, '0')}-01`
-    const lastDay = new Date(yearNum, monthNum, 0).getDate()
-    const endDate = `${yearNum}-${monthNum.toString().padStart(2, '0')}-${lastDay.toString().padStart(2, '0')}`
 
     const { data: parcelasData, error } = await supabase
       .from('parcelas_vales')
@@ -62,9 +59,7 @@ export default function ValesAprovadosDP() {
           anexos_chamado_interno ( id, nome_arquivo, arquivo_url, criado_em )
         )
       `)
-      .eq('aprovado_diretoria' as any, true)
-      .gte('data_referencia', startDate)
-      .lte('data_referencia', endDate)
+      .eq('data_referencia', startDate)
       .order('data_referencia', { ascending: false })
 
     if (error) {
@@ -78,12 +73,24 @@ export default function ValesAprovadosDP() {
         const chamado = p.chamados
         if (!chamado) return false
 
-        const aprovacoes = Array.isArray(chamado.aprovacoes_diretoria)
-          ? chamado.aprovacoes_diretoria
-          : []
+        if (p.aprovado_diretoria === true) return true
 
-        // Verifica pelo status ou se há aprovações registradas
-        return chamado.status_aprovacao === 'aprovado' || aprovacoes.length > 0
+        let aprovacoes: any[] = []
+        try {
+          if (Array.isArray(chamado.aprovacoes_diretoria)) {
+            aprovacoes = chamado.aprovacoes_diretoria
+          } else if (typeof chamado.aprovacoes_diretoria === 'string') {
+            aprovacoes = JSON.parse(chamado.aprovacoes_diretoria)
+          }
+        } catch {
+          /* intentionally ignored */
+        }
+
+        const hasAprovacao =
+          Array.isArray(aprovacoes) &&
+          aprovacoes.some((a: any) => String(a?.acao).toLowerCase() === 'aprovado')
+
+        return chamado.status_aprovacao === 'aprovado' || hasAprovacao
       }) || []
 
     const userIds = [

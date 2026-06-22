@@ -24,6 +24,7 @@ import {
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { Check, X, FileText, Loader2, AlertCircle, FileSignature } from 'lucide-react'
 import { toast } from 'sonner'
+import { format } from 'date-fns'
 
 export default function ValesAprovacao() {
   const { user, profile } = useAuth()
@@ -34,6 +35,9 @@ export default function ValesAprovacao() {
   const [valorTotal, setValorTotal] = useState('')
   const [numeroParcelas, setNumeroParcelas] = useState('1')
   const [isSubmitting, setIsSubmitting] = useState(false)
+
+  const [isRejectOpen, setIsRejectOpen] = useState(false)
+  const [rejectReason, setRejectReason] = useState('')
 
   const fetchChamados = async () => {
     setLoading(true)
@@ -113,398 +117,467 @@ export default function ValesAprovacao() {
     const isSecondApproval =
       currentAprovacoes.length >= 1 || selectedChamado.status_aprovacao === 'aprovacao_parcial'
 
-    const newAprovacoes = [
-      ...currentAprovacoes,
-      {
-        usuario_id: user!.id,
-        nome_diretor: profile?.nome_completo || 'Diretor',
-        aprovado: true,
-        data_aprovacao: new Date().toISOString(),
-      },
-    ]
+    const newAprovacao = {
+      usuario_id: user!.id,
+      data: new Date().toISOString(),
+      nome: profile?.nome_completo,
+    }
 
-    const isFinalApproval = newAprovacoes.length >= 2
-    const newStatus = isFinalApproval ? 'aprovado' : 'aprovacao_parcial'
+    try {
+      if (isSecondApproval) {
+        const { error } = await supabase
+          .from('chamados')
+          .update({
+            status_aprovacao: 'aprovado',
+            aprovacoes_diretoria: [...currentAprovacoes, newAprovacao],
+            atualizado_em: new Date().toISOString(),
+          })
+          .eq('id', selectedChamado.id)
 
-    if (!isSecondApproval) {
-      const total = parseFloat(valorTotal.replace(',', '.'))
-      const parcelasCount = parseInt(numeroParcelas, 10)
+        if (error) throw error
 
-      if (isNaN(total) || total <= 0) {
-        toast.error('Valor total inválido')
-        setIsSubmitting(false)
-        return
-      }
-      if (isNaN(parcelasCount) || parcelasCount <= 0) {
-        toast.error('Número de parcelas inválido')
-        setIsSubmitting(false)
-        return
-      }
-
-      const valorParcela = Math.floor((total / parcelasCount) * 100) / 100
-      const parcelas = []
-      let currentDate = new Date()
-      currentDate.setMonth(currentDate.getMonth() + 1)
-      currentDate.setDate(1)
-
-      for (let i = 0; i < parcelasCount; i++) {
-        const isLast = i === parcelasCount - 1
-        const parcelaValue = isLast
-          ? (total - valorParcela * (parcelasCount - 1)).toFixed(2)
-          : valorParcela.toFixed(2)
-
-        parcelas.push({
+        await supabase.from('historico_chamado').insert({
           chamado_id: selectedChamado.id,
-          valor_parcela: parcelaValue,
-          data_referencia: currentDate.toISOString().split('T')[0],
+          usuario_id: user!.id,
+          acao: 'Vale Aprovado',
+          detalhes: 'Vale aprovado pela diretoria (Aprovação Final)',
         })
-        currentDate.setMonth(currentDate.getMonth() + 1)
+      } else {
+        const numParc = parseInt(numeroParcelas)
+        const valorTot = parseFloat(valorTotal)
+
+        if (isNaN(numParc) || isNaN(valorTot) || numParc <= 0 || valorTot <= 0) {
+          toast.error('Valores inválidos para parcelamento')
+          setIsSubmitting(false)
+          return
+        }
+
+        const { error: updateError } = await supabase
+          .from('chamados')
+          .update({
+            status_aprovacao: 'aprovacao_parcial',
+            aprovacoes_diretoria: [...currentAprovacoes, newAprovacao],
+            atualizado_em: new Date().toISOString(),
+          })
+          .eq('id', selectedChamado.id)
+
+        if (updateError) throw updateError
+
+        // Delete any existing parcels first to avoid duplicates
+        await supabase.from('parcelas_vales').delete().eq('chamado_id', selectedChamado.id)
+
+        const valorParcela = valorTot / numParc
+        const parcelasToInsert = []
+        let dataRef = new Date()
+
+        for (let i = 0; i < numParc; i++) {
+          dataRef.setMonth(dataRef.getMonth() + 1)
+          parcelasToInsert.push({
+            chamado_id: selectedChamado.id,
+            valor_parcela: valorParcela,
+            data_referencia: dataRef.toISOString().split('T')[0],
+          })
+        }
+
+        const { error: parcelasError } = await supabase
+          .from('parcelas_vales')
+          .insert(parcelasToInsert)
+
+        if (parcelasError) throw parcelasError
+
+        await supabase.from('historico_chamado').insert({
+          chamado_id: selectedChamado.id,
+          usuario_id: user!.id,
+          acao: 'Vale Aprovado Parcialmente',
+          detalhes: `Vale aprovado pela diretoria (1ª Aprovação). Valor: R$ ${valorTot.toFixed(2)} em ${numParc}x`,
+        })
       }
 
-      const { error: parcelasError } = await supabase.from('parcelas_vales').insert(parcelas)
-      if (parcelasError) {
-        toast.error('Erro ao gerar parcelas')
-        setIsSubmitting(false)
-        return
-      }
-    }
-
-    const { error } = await supabase
-      .from('chamados')
-      .update({
-        status_aprovacao: newStatus,
-        aprovacoes_diretoria: newAprovacoes,
-      } as any)
-      .eq('id', selectedChamado.id)
-
-    if (error) {
-      toast.error('Erro ao aprovar chamado')
+      toast.success('Vale aprovado com sucesso!')
+      setIsApproveOpen(false)
+      fetchChamados()
+    } catch (error: any) {
+      console.error(error)
+      toast.error('Erro ao aprovar vale: ' + error.message)
+    } finally {
       setIsSubmitting(false)
+    }
+  }
+
+  const handleRejectClick = (chamado: any) => {
+    setSelectedChamado(chamado)
+    setRejectReason('')
+    setIsRejectOpen(true)
+  }
+
+  const handleRejectSubmit = async () => {
+    if (!selectedChamado || !rejectReason.trim()) {
+      toast.error('Informe o motivo da recusa')
       return
     }
 
-    await supabase.from('historico_chamado').insert({
-      chamado_id: selectedChamado.id,
-      acao: 'respondido',
-      usuario_id: user!.id,
-      detalhes: isFinalApproval
-        ? `Autorização aprovada integralmente pela Diretoria.`
-        : `Autorização pré-aprovada pela Diretoria (1/2). Total: R$ ${valorTotal} em ${numeroParcelas}x. Aguardando segunda aprovação.`,
-    })
+    setIsSubmitting(true)
+    try {
+      const { error } = await supabase
+        .from('chamados')
+        .update({
+          status_aprovacao: 'reprovado',
+          status: 'em_andamento',
+          status_interno: 'Reprovado Diretoria',
+          atualizado_em: new Date().toISOString(),
+        })
+        .eq('id', selectedChamado.id)
 
-    toast.success(
-      isFinalApproval ? 'Chamado aprovado com sucesso!' : 'Aprovação parcial registrada!',
+      if (error) throw error
+
+      await supabase.from('respostas_chamado').insert({
+        chamado_id: selectedChamado.id,
+        usuario_id: user!.id,
+        mensagem: `Vale reprovado pela diretoria. Motivo: ${rejectReason}`,
+      })
+
+      await supabase.from('historico_chamado').insert({
+        chamado_id: selectedChamado.id,
+        usuario_id: user!.id,
+        acao: 'Vale Reprovado',
+        detalhes: `Recusado pela diretoria: ${rejectReason}`,
+      })
+
+      toast.success('Vale recusado com sucesso')
+      setIsRejectOpen(false)
+      fetchChamados()
+    } catch (error: any) {
+      toast.error('Erro ao recusar vale')
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
+
+  const getDriverData = (chamado: any) => {
+    const espelhoData = Array.isArray(chamado.formularios_espelho_danos)
+      ? chamado.formularios_espelho_danos[0]
+      : chamado.formularios_espelho_danos
+
+    return {
+      registro: espelhoData?.registro_motorista || chamado.registro_motorista || '-',
+      nome: espelhoData?.nome_motorista || chamado.nome_motorista || '-',
+    }
+  }
+
+  const getOrcamentoUrl = (chamado: any) => {
+    if (!chamado.documentos || chamado.documentos.length === 0) return null
+    const orcamentos = chamado.documentos.filter(
+      (d: any) => d.tipo_documento === 'orcamento' || d.orcamento_url,
     )
-    setChamados((prev) => prev.filter((c) => c.id !== selectedChamado.id))
-    setIsApproveOpen(false)
-    setIsSubmitting(false)
-  }
-
-  const handleRefuse = async (chamado: any) => {
-    const { error } = await supabase
-      .from('chamados')
-      .update({ status_aprovacao: 'recusado' } as any)
-      .eq('id', chamado.id)
-
-    if (error) {
-      toast.error('Erro ao recusar chamado')
-      return
+    if (orcamentos.length > 0) {
+      return orcamentos[0].orcamento_url || orcamentos[0].arquivo_url
     }
-
-    await supabase.from('historico_chamado').insert({
-      chamado_id: chamado.id,
-      acao: 'respondido',
-      usuario_id: user!.id,
-      detalhes: 'Recusado pela Diretoria',
-    })
-
-    toast.success('Chamado recusado!')
-    setChamados((prev) => prev.filter((c) => c.id !== chamado.id))
+    return null
   }
 
-  const getLatestDocument = (docs: any[]) => {
-    if (!docs || docs.length === 0) return null
-    return docs.sort(
-      (a, b) => new Date(b.criado_em || 0).getTime() - new Date(a.criado_em || 0).getTime(),
-    )[0]
-  }
-
-  const getLatestAutorizacao = (anexos: any[]) => {
-    const autorizacoes = (anexos || []).filter((a: any) => {
+  const getAutorizacaoUrl = (chamado: any) => {
+    if (!chamado.anexos_chamado_interno || chamado.anexos_chamado_interno.length === 0) return null
+    const autorizacoes = chamado.anexos_chamado_interno.filter((a: any) => {
       const nome = a.nome_arquivo.toLowerCase()
       return nome.includes('autorização') || nome.includes('autorizacao')
     })
-    return getLatestDocument(autorizacoes)
-  }
-
-  const getLatestOrcamento = (documentos: any[]) => {
-    const orcamentos = (documentos || []).filter((d: any) => {
-      const nome = d.nome_arquivo?.toLowerCase() || ''
-      return (
-        d.tipo_documento === 'orcamento' ||
-        nome.includes('orçamento') ||
-        nome.includes('orcamento') ||
-        d.orcamento_url
-      )
-    })
-    return getLatestDocument(orcamentos)
-  }
-
-  const getMotoristaInfo = (chamado: any) => {
-    const form = chamado.formularios_espelho_danos?.[0]
-    return {
-      registro: form?.registro_motorista || chamado.registro_motorista || 'Não informado',
-      nome: form?.nome_motorista || chamado.nome_motorista || 'Não informado',
+    if (autorizacoes.length > 0) {
+      return autorizacoes[0].arquivo_url
     }
-  }
-
-  if (loading) {
-    return (
-      <div className="flex h-[50vh] items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-slate-400" />
-      </div>
-    )
+    return null
   }
 
   if (profile?.departamento !== 'Diretoria') {
     return (
-      <div className="flex flex-col items-center justify-center h-[50vh] text-slate-500">
-        <AlertCircle className="w-12 h-12 mb-4 text-slate-300" />
-        <h2 className="text-xl font-medium">Acesso Restrito</h2>
-        <p>Apenas membros da Diretoria podem acessar esta página.</p>
+      <div className="flex flex-col items-center justify-center h-full p-8 text-center">
+        <AlertCircle className="w-12 h-12 text-muted-foreground mb-4" />
+        <h2 className="text-2xl font-bold mb-2">Acesso Restrito</h2>
+        <p className="text-muted-foreground">Esta página é exclusiva para a Diretoria.</p>
       </div>
     )
   }
 
   return (
-    <div className="max-w-6xl mx-auto space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold text-slate-800">Vales para aprovação</h1>
-        <p className="text-sm text-slate-500 mt-1">
-          Revise e aprove as autorizações de desconto (vales) dos chamados finalizados. É necessária
-          a aprovação de 2 diretores.
-        </p>
+    <div className="p-6 max-w-7xl mx-auto space-y-6">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">Vales para Aprovação</h1>
+          <p className="text-muted-foreground">Gerencie as aprovações de desconto em folha.</p>
+        </div>
       </div>
 
-      {chamados.length === 0 ? (
-        <Card className="border-dashed border-2">
-          <CardContent className="flex flex-col items-center justify-center h-48 text-center pt-6">
-            <Check className="h-12 w-12 text-slate-200 mb-4" />
-            <p className="text-slate-500 font-medium">
-              Nenhuma autorização de desconto pendente de aprovação para você no momento.
-            </p>
-          </CardContent>
-        </Card>
-      ) : (
-        <div className="bg-white rounded-md border shadow-sm overflow-hidden">
-          <div className="overflow-x-auto">
-            <Table>
-              <TableHeader className="bg-slate-50">
-                <TableRow>
-                  <TableHead className="w-[120px]">Chamado</TableHead>
-                  <TableHead>Registro</TableHead>
-                  <TableHead>Nome do Motorista</TableHead>
-                  <TableHead>Data da Ocorrência</TableHead>
-                  <TableHead className="text-center">Documentos</TableHead>
-                  <TableHead className="text-right">Ações</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {chamados.map((chamado) => {
-                  const autorizacao = getLatestAutorizacao(chamado.anexos_chamado_interno)
-                  const orcamento = getLatestOrcamento(chamado.documentos)
-                  const motoristaInfo = getMotoristaInfo(chamado)
+      <Card>
+        <CardContent className="p-0">
+          {loading ? (
+            <div className="flex justify-center items-center p-8">
+              <Loader2 className="h-8 w-8 animate-spin text-primary" />
+            </div>
+          ) : chamados.length === 0 ? (
+            <div className="flex flex-col items-center justify-center p-12 text-center">
+              <Check className="h-12 w-12 text-muted-foreground/50 mb-4" />
+              <p className="text-lg font-medium text-muted-foreground">
+                Nenhum vale pendente de aprovação
+              </p>
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Chamado</TableHead>
+                    <TableHead>Registro do Motorista</TableHead>
+                    <TableHead>Nome do Motorista</TableHead>
+                    <TableHead>Data da Ocorrência</TableHead>
+                    <TableHead>Aprovações</TableHead>
+                    <TableHead>Documentos</TableHead>
+                    <TableHead className="text-right">Ações</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {chamados.map((chamado) => {
+                    const driver = getDriverData(chamado)
+                    const orcamentoUrl = getOrcamentoUrl(chamado)
+                    const autorizacaoUrl = getAutorizacaoUrl(chamado)
+                    const aprovacoes = Array.isArray(chamado.aprovacoes_diretoria)
+                      ? chamado.aprovacoes_diretoria
+                      : []
+                    const isSecondApproval =
+                      aprovacoes.length >= 1 || chamado.status_aprovacao === 'aprovacao_parcial'
 
-                  const currentAprovacoes = Array.isArray(chamado.aprovacoes_diretoria)
-                    ? chamado.aprovacoes_diretoria
-                    : []
-                  const isSecondApproval =
-                    currentAprovacoes.length >= 1 ||
-                    chamado.status_aprovacao === 'aprovacao_parcial'
-
-                  return (
-                    <TableRow key={chamado.id}>
-                      <TableCell className="font-medium">
-                        <div className="flex flex-col">
-                          <span>#{chamado.id.split('-')[0].toUpperCase()}</span>
-                          {isSecondApproval && (
-                            <span className="text-[10px] text-amber-700 bg-amber-100 rounded px-1.5 py-0.5 w-fit mt-1 whitespace-nowrap">
-                              1/2 Aprov.
+                    return (
+                      <TableRow key={chamado.id}>
+                        <TableCell>
+                          <div className="flex flex-col">
+                            <span className="font-medium">{chamado.titulo || '-'}</span>
+                            <span className="text-xs text-muted-foreground">
+                              {chamado.id.substring(0, 8).toUpperCase()}
                             </span>
-                          )}
-                        </div>
-                      </TableCell>
-                      <TableCell>{motoristaInfo.registro}</TableCell>
-                      <TableCell className="max-w-[200px] truncate" title={motoristaInfo.nome}>
-                        {motoristaInfo.nome}
-                      </TableCell>
-                      <TableCell>
-                        {chamado.data_ocorrencia
-                          ? chamado.data_ocorrencia.split('-').reverse().join('/')
-                          : 'Não informada'}
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex items-center justify-center gap-2">
-                          {orcamento ? (
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <a
-                                  href={orcamento.orcamento_url || orcamento.arquivo_url}
-                                  target="_blank"
-                                  rel="noreferrer"
-                                  className="inline-flex items-center justify-center w-8 h-8 rounded-full bg-emerald-50 text-emerald-600 hover:bg-emerald-100 transition-colors"
-                                >
-                                  <FileText className="w-4 h-4" />
-                                </a>
-                              </TooltipTrigger>
-                              <TooltipContent>Ver Orçamento</TooltipContent>
-                            </Tooltip>
-                          ) : (
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <div className="inline-flex items-center justify-center w-8 h-8 rounded-full bg-slate-50 text-slate-300 cursor-not-allowed">
-                                  <FileText className="w-4 h-4" />
-                                </div>
-                              </TooltipTrigger>
-                              <TooltipContent>Orçamento Indisponível</TooltipContent>
-                            </Tooltip>
-                          )}
+                          </div>
+                        </TableCell>
+                        <TableCell>{driver.registro}</TableCell>
+                        <TableCell>{driver.nome}</TableCell>
+                        <TableCell>
+                          {chamado.data_ocorrencia
+                            ? format(new Date(chamado.data_ocorrencia + 'T12:00:00'), 'dd/MM/yyyy')
+                            : '-'}
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex items-center gap-2">
+                            <div
+                              className={`h-2 w-2 rounded-full ${aprovacoes.length > 0 ? 'bg-green-500' : 'bg-yellow-500'}`}
+                            />
+                            <span>{aprovacoes.length}/2 Aprov.</span>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex gap-2">
+                            {orcamentoUrl ? (
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <a
+                                    href={orcamentoUrl}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="text-primary hover:text-primary/80"
+                                  >
+                                    <FileText className="h-5 w-5" />
+                                  </a>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  <p>Ver Orçamento</p>
+                                </TooltipContent>
+                              </Tooltip>
+                            ) : (
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <div className="text-muted-foreground/30 cursor-not-allowed">
+                                    <FileText className="h-5 w-5" />
+                                  </div>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  <p>Orçamento não anexado</p>
+                                </TooltipContent>
+                              </Tooltip>
+                            )}
 
-                          {autorizacao ? (
+                            {autorizacaoUrl ? (
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <a
+                                    href={autorizacaoUrl}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="text-primary hover:text-primary/80"
+                                  >
+                                    <FileSignature className="h-5 w-5" />
+                                  </a>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  <p>Ver Autorização de Desconto</p>
+                                </TooltipContent>
+                              </Tooltip>
+                            ) : (
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <div className="text-muted-foreground/30 cursor-not-allowed">
+                                    <FileSignature className="h-5 w-5" />
+                                  </div>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  <p>Autorização não anexada</p>
+                                </TooltipContent>
+                              </Tooltip>
+                            )}
+                          </div>
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <div className="flex justify-end gap-2">
                             <Tooltip>
                               <TooltipTrigger asChild>
-                                <a
-                                  href={autorizacao.arquivo_url}
-                                  target="_blank"
-                                  rel="noreferrer"
-                                  className="inline-flex items-center justify-center w-8 h-8 rounded-full bg-blue-50 text-blue-600 hover:bg-blue-100 transition-colors"
+                                <Button
+                                  variant="outline"
+                                  size="icon"
+                                  className="text-green-600 border-green-200 hover:bg-green-50 hover:text-green-700"
+                                  onClick={() => handleApproveClick(chamado)}
                                 >
-                                  <FileSignature className="w-4 h-4" />
-                                </a>
+                                  <Check className="h-4 w-4" />
+                                </Button>
                               </TooltipTrigger>
-                              <TooltipContent>Ver Autorização</TooltipContent>
+                              <TooltipContent>
+                                <p>{isSecondApproval ? 'Aprovação Final' : '1ª Aprovação'}</p>
+                              </TooltipContent>
                             </Tooltip>
-                          ) : (
                             <Tooltip>
                               <TooltipTrigger asChild>
-                                <div className="inline-flex items-center justify-center w-8 h-8 rounded-full bg-slate-50 text-slate-300 cursor-not-allowed">
-                                  <FileSignature className="w-4 h-4" />
-                                </div>
+                                <Button
+                                  variant="outline"
+                                  size="icon"
+                                  className="text-red-600 border-red-200 hover:bg-red-50 hover:text-red-700"
+                                  onClick={() => handleRejectClick(chamado)}
+                                >
+                                  <X className="h-4 w-4" />
+                                </Button>
                               </TooltipTrigger>
-                              <TooltipContent>Autorização Indisponível</TooltipContent>
+                              <TooltipContent>
+                                <p>Recusar</p>
+                              </TooltipContent>
                             </Tooltip>
-                          )}
-                        </div>
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <div className="flex items-center justify-end gap-2">
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            className="text-red-600 border-red-200 hover:bg-red-50 hover:text-red-700 h-8 px-2"
-                            onClick={() => handleRefuse(chamado)}
-                            title="Recusar"
-                          >
-                            <X className="w-4 h-4" />
-                          </Button>
-                          <Button
-                            size="sm"
-                            className="bg-emerald-600 hover:bg-emerald-700 text-white h-8 px-3"
-                            onClick={() => handleApproveClick(chamado)}
-                          >
-                            <Check className="w-4 h-4 mr-1 md:mr-1.5" />
-                            <span className="hidden md:inline">
-                              {isSecondApproval ? 'Confirmar' : 'Aprovar'}
-                            </span>
-                          </Button>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  )
-                })}
-              </TableBody>
-            </Table>
-          </div>
-        </div>
-      )}
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    )
+                  })}
+                </TableBody>
+              </Table>
+            </div>
+          )}
+        </CardContent>
+      </Card>
 
       <Dialog open={isApproveOpen} onOpenChange={setIsApproveOpen}>
-        <DialogContent className="sm:max-w-[425px]">
+        <DialogContent>
           <DialogHeader>
-            <DialogTitle>
-              {(Array.isArray(selectedChamado?.aprovacoes_diretoria) &&
-                selectedChamado.aprovacoes_diretoria.length >= 1) ||
-              selectedChamado?.status_aprovacao === 'aprovacao_parcial'
-                ? 'Confirmar 2ª Aprovação'
-                : 'Aprovar Autorização'}
-            </DialogTitle>
+            <DialogTitle>Confirmar Aprovação</DialogTitle>
             <DialogDescription>
-              {(Array.isArray(selectedChamado?.aprovacoes_diretoria) &&
-                selectedChamado.aprovacoes_diretoria.length >= 1) ||
-              selectedChamado?.status_aprovacao === 'aprovacao_parcial'
-                ? 'A primeira aprovação já foi registrada com os valores abaixo. Confirme para finalizar a aprovação e enviar ao DP.'
-                : 'Insira o valor total e em quantas parcelas o valor será descontado.'}
+              {selectedChamado &&
+              (Array.isArray(selectedChamado.aprovacoes_diretoria)
+                ? selectedChamado.aprovacoes_diretoria.length
+                : 0) >= 1
+                ? 'Esta é a segunda aprovação (Aprovação Final). Os valores e parcelas já foram definidos.'
+                : 'Defina o valor total e o número de parcelas para a primeira aprovação.'}
+            </DialogDescription>
+          </DialogHeader>
+
+          {selectedChamado &&
+            (Array.isArray(selectedChamado.aprovacoes_diretoria)
+              ? selectedChamado.aprovacoes_diretoria.length
+              : 0) === 0 &&
+            selectedChamado.status_aprovacao !== 'aprovacao_parcial' && (
+              <div className="grid gap-4 py-4">
+                <div className="grid gap-2">
+                  <Label htmlFor="valorTotal">Valor Total (R$)</Label>
+                  <Input
+                    id="valorTotal"
+                    type="number"
+                    step="0.01"
+                    placeholder="0.00"
+                    value={valorTotal}
+                    onChange={(e) => setValorTotal(e.target.value)}
+                  />
+                </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="numeroParcelas">Número de Parcelas</Label>
+                  <Input
+                    id="numeroParcelas"
+                    type="number"
+                    min="1"
+                    step="1"
+                    value={numeroParcelas}
+                    onChange={(e) => setNumeroParcelas(e.target.value)}
+                  />
+                </div>
+              </div>
+            )}
+
+          {selectedChamado &&
+            ((Array.isArray(selectedChamado.aprovacoes_diretoria)
+              ? selectedChamado.aprovacoes_diretoria.length
+              : 0) >= 1 ||
+              selectedChamado.status_aprovacao === 'aprovacao_parcial') && (
+              <div className="grid gap-4 py-4">
+                <div className="bg-muted p-4 rounded-lg flex flex-col gap-2">
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Valor Total:</span>
+                    <span className="font-semibold">
+                      R$ {parseFloat(valorTotal || '0').toFixed(2)}
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Número de Parcelas:</span>
+                    <span className="font-semibold">{numeroParcelas}x</span>
+                  </div>
+                </div>
+              </div>
+            )}
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsApproveOpen(false)}>
+              Cancelar
+            </Button>
+            <Button onClick={handleApproveSubmit} disabled={isSubmitting}>
+              {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              Confirmar Aprovação
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={isRejectOpen} onOpenChange={setIsRejectOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Recusar Vale</DialogTitle>
+            <DialogDescription>
+              Informe o motivo da recusa. O chamado retornará para análise.
             </DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 py-4">
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="valorTotal" className="text-right">
-                Valor Total (R$)
-              </Label>
+            <div className="grid gap-2">
+              <Label htmlFor="rejectReason">Motivo</Label>
               <Input
-                id="valorTotal"
-                type="number"
-                step="0.01"
-                placeholder="Ex: 900.00"
-                value={valorTotal}
-                onChange={(e) => setValorTotal(e.target.value)}
-                className="col-span-3 disabled:opacity-75 disabled:cursor-not-allowed disabled:bg-slate-50"
-                disabled={
-                  (Array.isArray(selectedChamado?.aprovacoes_diretoria) &&
-                    selectedChamado.aprovacoes_diretoria.length >= 1) ||
-                  selectedChamado?.status_aprovacao === 'aprovacao_parcial'
-                }
-              />
-            </div>
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="parcelas" className="text-right">
-                Nº de Parcelas
-              </Label>
-              <Input
-                id="parcelas"
-                type="number"
-                min="1"
-                step="1"
-                value={numeroParcelas}
-                onChange={(e) => setNumeroParcelas(e.target.value)}
-                className="col-span-3 disabled:opacity-75 disabled:cursor-not-allowed disabled:bg-slate-50"
-                disabled={
-                  (Array.isArray(selectedChamado?.aprovacoes_diretoria) &&
-                    selectedChamado.aprovacoes_diretoria.length >= 1) ||
-                  selectedChamado?.status_aprovacao === 'aprovacao_parcial'
-                }
+                id="rejectReason"
+                placeholder="Ex: Valor incorreto..."
+                value={rejectReason}
+                onChange={(e) => setRejectReason(e.target.value)}
               />
             </div>
           </div>
           <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => setIsApproveOpen(false)}
-              disabled={isSubmitting}
-            >
+            <Button variant="outline" onClick={() => setIsRejectOpen(false)}>
               Cancelar
             </Button>
-            <Button
-              onClick={handleApproveSubmit}
-              disabled={isSubmitting}
-              className="bg-emerald-600 hover:bg-emerald-700 text-white"
-            >
-              {isSubmitting ? (
-                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-              ) : (
-                <Check className="w-4 h-4 mr-2" />
-              )}
-              Confirmar e Aprovar
+            <Button variant="destructive" onClick={handleRejectSubmit} disabled={isSubmitting}>
+              {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              Confirmar Recusa
             </Button>
           </DialogFooter>
         </DialogContent>

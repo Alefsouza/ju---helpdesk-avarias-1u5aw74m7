@@ -49,7 +49,8 @@ export default function ValesAprovacao() {
         anexos_chamado_interno ( id, nome_arquivo, arquivo_url, criado_em ),
         documentos ( id, nome_arquivo, arquivo_url, tipo_documento, orcamento_url, criado_em ),
         parcelas_vales ( id, valor_parcela, data_referencia ),
-        formularios_espelho_danos ( registro_motorista, nome_motorista )
+        formularios_espelho_danos ( registro_motorista, nome_motorista ),
+        solicitacoes_parcelamento ( id, valor_orcamento, quantidade_parcelas, status )
       `)
       .eq('status', 'finalizado')
       .or('status_aprovacao.is.null,status_aprovacao.eq.aprovacao_parcial')
@@ -101,8 +102,18 @@ export default function ValesAprovacao() {
       setValorTotal(total.toFixed(2))
       setNumeroParcelas(parcelas.length.toString())
     } else {
-      setValorTotal('')
-      setNumeroParcelas('1')
+      const solicitacoes = chamado.solicitacoes_parcelamento || []
+      const solicitacao = Array.isArray(solicitacoes)
+        ? solicitacoes[solicitacoes.length - 1]
+        : solicitacoes
+
+      if (solicitacao) {
+        setValorTotal(Number(solicitacao.valor_orcamento).toFixed(2))
+        setNumeroParcelas(solicitacao.quantidade_parcelas.toString())
+      } else {
+        setValorTotal('0.00')
+        setNumeroParcelas('1')
+      }
     }
     setIsApproveOpen(true)
   }
@@ -475,67 +486,25 @@ export default function ValesAprovacao() {
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Confirmar Aprovação</DialogTitle>
-            <DialogDescription>
-              {selectedChamado &&
-              (Array.isArray(selectedChamado.aprovacoes_diretoria)
-                ? selectedChamado.aprovacoes_diretoria.length
-                : 0) >= 1
-                ? 'Esta é a segunda aprovação (Aprovação Final). Os valores e parcelas já foram definidos.'
-                : 'Defina o valor total e o número de parcelas para a primeira aprovação.'}
-            </DialogDescription>
+            <DialogDescription>Deseja confirmar a aprovação deste vale?</DialogDescription>
           </DialogHeader>
 
-          {selectedChamado &&
-            (Array.isArray(selectedChamado.aprovacoes_diretoria)
-              ? selectedChamado.aprovacoes_diretoria.length
-              : 0) === 0 &&
-            selectedChamado.status_aprovacao !== 'aprovacao_parcial' && (
-              <div className="grid gap-4 py-4">
-                <div className="grid gap-2">
-                  <Label htmlFor="valorTotal">Valor Total (R$)</Label>
-                  <Input
-                    id="valorTotal"
-                    type="number"
-                    step="0.01"
-                    placeholder="0.00"
-                    value={valorTotal}
-                    onChange={(e) => setValorTotal(e.target.value)}
-                  />
+          {selectedChamado && (
+            <div className="grid gap-4 py-4">
+              <div className="bg-muted p-4 rounded-lg flex flex-col gap-2">
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Valor Total:</span>
+                  <span className="font-semibold">
+                    R$ {parseFloat(valorTotal || '0').toFixed(2)}
+                  </span>
                 </div>
-                <div className="grid gap-2">
-                  <Label htmlFor="numeroParcelas">Número de Parcelas</Label>
-                  <Input
-                    id="numeroParcelas"
-                    type="number"
-                    min="1"
-                    step="1"
-                    value={numeroParcelas}
-                    onChange={(e) => setNumeroParcelas(e.target.value)}
-                  />
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Quantidade de Parcelas:</span>
+                  <span className="font-semibold">{numeroParcelas}x</span>
                 </div>
               </div>
-            )}
-
-          {selectedChamado &&
-            ((Array.isArray(selectedChamado.aprovacoes_diretoria)
-              ? selectedChamado.aprovacoes_diretoria.length
-              : 0) >= 1 ||
-              selectedChamado.status_aprovacao === 'aprovacao_parcial') && (
-              <div className="grid gap-4 py-4">
-                <div className="bg-muted p-4 rounded-lg flex flex-col gap-2">
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Valor Total:</span>
-                    <span className="font-semibold">
-                      R$ {parseFloat(valorTotal || '0').toFixed(2)}
-                    </span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Número de Parcelas:</span>
-                    <span className="font-semibold">{numeroParcelas}x</span>
-                  </div>
-                </div>
-              </div>
-            )}
+            </div>
+          )}
 
           <DialogFooter>
             <Button variant="outline" onClick={() => setIsApproveOpen(false)}>

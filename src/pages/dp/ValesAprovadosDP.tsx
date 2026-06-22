@@ -263,7 +263,14 @@ export default function ValesAprovadosDP() {
                     </TableCell>
                     <TableCell>{p.registro}</TableCell>
                     <TableCell>{p.nome}</TableCell>
-                    <TableCell>R$ {Number(p.valor_parcela).toFixed(2)}</TableCell>
+                    <TableCell>
+                      <div className="flex flex-col">
+                        <span>R$ {Number(p.valor_parcela).toFixed(2)}</span>
+                        <span className="text-[10px] text-emerald-600 font-medium whitespace-nowrap">
+                          10% desc. aplicado
+                        </span>
+                      </div>
+                    </TableCell>
                     <TableCell>
                       {format(new Date(p.data_referencia + 'T00:00:00'), 'MM/yyyy')}
                     </TableCell>

@@ -183,12 +183,15 @@ export default function ValesAprovacao() {
             .eq('chamado_id', selectedChamado.id)
 
           if (!existingParcelas || existingParcelas.length === 0) {
+            // Apply mandatory 10% discount on Vales logic
+            const discountedValue = totalValue * 0.9
             const parcelas: any[] = []
             const today = new Date()
-            const parcelaValue = totalValue / parcelsCount
+            const parcelaValue = discountedValue / parcelsCount
 
             for (let i = 0; i < parcelsCount; i++) {
-              const targetDate = new Date(today.getFullYear(), today.getMonth() + i, 1)
+              // Target next month as reference for the first installment
+              const targetDate = new Date(today.getFullYear(), today.getMonth() + i + 1, 1)
               const targetYear = targetDate.getFullYear()
               const targetMonth = targetDate.getMonth() + 1
               const dataRef = `${targetYear}-${targetMonth.toString().padStart(2, '0')}-01`

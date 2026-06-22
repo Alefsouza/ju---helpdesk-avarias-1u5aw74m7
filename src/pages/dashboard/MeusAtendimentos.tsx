@@ -160,9 +160,18 @@ export default function MeusAtendimentos() {
 
       if (err) throw err
 
-      if (data && data.length > 0) {
+      let fetchedData = data || []
+      if (profile.tipo_usuario === 'juridico') {
+        fetchedData = fetchedData.filter(
+          (c) =>
+            c.status_juridico !== 'Cobrança de Terceiros' &&
+            c.status_juridico !== 'Demanda Judicial',
+        )
+      }
+
+      if (fetchedData.length > 0) {
         const userIds = [
-          ...new Set(data.flatMap((c) => [c.usuario_id, c.responsavel_id]).filter(Boolean)),
+          ...new Set(fetchedData.flatMap((c) => [c.usuario_id, c.responsavel_id]).filter(Boolean)),
         ]
         const { data: perfis } = await supabase
           .from('perfil_usuario')
@@ -184,7 +193,7 @@ export default function MeusAtendimentos() {
 
         const activeChamados = allActiveChamados || []
 
-        const chamadosComNome = data.map((c) => ({
+        const chamadosComNome = fetchedData.map((c) => ({
           ...c,
           nome_usuario: perfilMap?.[c.usuario_id] || 'Usuário Desconhecido',
           nome_responsavel: c.responsavel_id

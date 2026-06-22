@@ -259,14 +259,15 @@ export default function ValesAprovadosDP() {
     try {
       const txtRows = exportableParcelas.map((p) => {
         const rawRegistro = String(p.registro).replace(/\D/g, '') || '0'
-        const registroPadded = rawRegistro.padStart(10, '0')
+        const registroPadded = rawRegistro.padStart(6, '0')
 
         const codigo = '261'
 
-        const valorCents = Math.round(Number(p.valor_parcela) * 100)
-        const valorPadded = String(valorCents).padStart(15, '0')
+        const valueNum = Number(p.valor_parcela)
+        const valueStr = valueNum.toFixed(2).replace('.', ',')
+        const valorPadded = valueStr.padStart(15, '0')
 
-        return `${registroPadded}${codigo}${valorPadded}`
+        return `${registroPadded}\t${codigo}\t${valorPadded}`
       })
 
       const txtContent = txtRows.join('\n')

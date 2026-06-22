@@ -13,7 +13,7 @@ import {
 } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Check, X, FileText, Loader2, AlertCircle } from 'lucide-react'
+import { Check, X, FileText, Loader2, AlertCircle, FileSignature } from 'lucide-react'
 import { toast } from 'sonner'
 
 export default function ValesAprovacao() {
@@ -32,7 +32,9 @@ export default function ValesAprovacao() {
       .from('chamados')
       .select(`
         id, titulo, descricao, status_aprovacao, aprovacoes_diretoria,
+        registro_motorista, nome_motorista, data_ocorrencia,
         anexos_chamado_interno ( id, nome_arquivo, arquivo_url ),
+        documentos ( id, nome_arquivo, arquivo_url, tipo_documento, orcamento_url ),
         parcelas_vales ( id, valor_parcela, data_referencia )
       `)
       .eq('status', 'finalizado')
@@ -51,13 +53,12 @@ export default function ValesAprovacao() {
         if (aprovacoes.some((a: any) => a.usuario_id === user!.id)) return false
 
         const anexos = c.anexos_chamado_interno || []
-        const hasVale = anexos.some((a: any) => a.nome_arquivo.toLowerCase().includes('vale'))
-        const hasOrcamento = anexos.some(
-          (a: any) =>
-            a.nome_arquivo.toLowerCase().includes('orçamento') ||
-            a.nome_arquivo.toLowerCase().includes('orcamento'),
-        )
-        return hasVale && hasOrcamento
+        const hasAutorizacao = anexos.some((a: any) => {
+          const nome = a.nome_arquivo.toLowerCase()
+          return nome.includes('autorização') || nome.includes('autorizacao')
+        })
+
+        return hasAutorizacao
       }) || []
 
     setChamados(filtered)
@@ -177,8 +178,8 @@ export default function ValesAprovacao() {
       acao: 'respondido',
       usuario_id: user!.id,
       detalhes: isFinalApproval
-        ? `Vale aprovado integralmente pela Diretoria.`
-        : `Vale pré-aprovado pela Diretoria (1/2). Total: R$ ${valorTotal} em ${numeroParcelas}x. Aguardando segunda aprovação.`,
+        ? `Autorização aprovada integralmente pela Diretoria.`
+        : `Autorização pré-aprovada pela Diretoria (1/2). Total: R$ ${valorTotal} em ${numeroParcelas}x. Aguardando segunda aprovação.`,
     })
 
     toast.success(
@@ -234,8 +235,8 @@ export default function ValesAprovacao() {
       <div>
         <h1 className="text-2xl font-bold text-slate-800">Vales para aprovação</h1>
         <p className="text-sm text-slate-500 mt-1">
-          Revise e aprove os vales dos chamados finalizados. É necessária a aprovação de 2
-          diretores.
+          Revise e aprove as autorizações de desconto (vales) dos chamados finalizados. É necessária
+          a aprovação de 2 diretores.
         </p>
       </div>
 
@@ -244,7 +245,7 @@ export default function ValesAprovacao() {
           <CardContent className="flex flex-col items-center justify-center h-48 text-center pt-6">
             <Check className="h-12 w-12 text-slate-200 mb-4" />
             <p className="text-slate-500 font-medium">
-              Nenhum vale pendente de aprovação para você no momento.
+              Nenhuma autorização de desconto pendente de aprovação para você no momento.
             </p>
           </CardContent>
         </Card>
@@ -252,12 +253,20 @@ export default function ValesAprovacao() {
         <div className="grid gap-4">
           {chamados.map((chamado) => {
             const anexos = chamado.anexos_chamado_interno || []
-            const vales = anexos.filter((a: any) => a.nome_arquivo.toLowerCase().includes('vale'))
-            const orcamentos = anexos.filter(
-              (a: any) =>
-                a.nome_arquivo.toLowerCase().includes('orçamento') ||
-                a.nome_arquivo.toLowerCase().includes('orcamento'),
-            )
+            const documentos = chamado.documentos || []
+            const autorizacoes = anexos.filter((a: any) => {
+              const nome = a.nome_arquivo.toLowerCase()
+              return nome.includes('autorização') || nome.includes('autorizacao')
+            })
+            const orcamentos = documentos.filter((d: any) => {
+              const nome = d.nome_arquivo?.toLowerCase() || ''
+              return (
+                d.tipo_documento === 'orcamento' ||
+                nome.includes('orçamento') ||
+                nome.includes('orcamento') ||
+                d.orcamento_url
+              )
+            })
             const currentAprovacoes = Array.isArray(chamado.aprovacoes_diretoria)
               ? chamado.aprovacoes_diretoria
               : []
@@ -270,50 +279,100 @@ export default function ValesAprovacao() {
                 className="shadow-sm border-slate-200 overflow-hidden transition-all hover:shadow-md"
               >
                 <CardHeader className="bg-slate-50/50 border-b pb-4">
-                  <CardTitle className="text-lg text-slate-800 flex items-center justify-between">
-                    <span className="flex items-center gap-2">
+                  <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
+                    <CardTitle className="text-lg text-slate-800 flex items-center gap-2">
                       {chamado.titulo}
                       {isSecondApproval && (
-                        <span className="text-xs bg-amber-100 text-amber-800 px-2 py-0.5 rounded-full font-medium">
+                        <span className="text-xs bg-amber-100 text-amber-800 px-2 py-0.5 rounded-full font-medium whitespace-nowrap">
                           1/2 Aprovações
                         </span>
                       )}
-                    </span>
-                    <span className="text-xs font-normal text-slate-500 bg-white px-2 py-1 rounded-full border">
+                    </CardTitle>
+                    <span className="text-xs font-normal text-slate-500 bg-white px-2 py-1 rounded-full border self-start md:self-auto">
                       #{chamado.id.split('-')[0].toUpperCase()}
                     </span>
-                  </CardTitle>
+                  </div>
                 </CardHeader>
                 <CardContent className="space-y-4 pt-4">
-                  <div className="text-sm text-slate-600 bg-slate-50 p-4 rounded-lg whitespace-pre-wrap">
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm bg-white border border-slate-100 p-4 rounded-lg shadow-sm">
+                    <div>
+                      <span className="block text-slate-500 text-xs font-medium uppercase mb-1">
+                        Motorista
+                      </span>
+                      <span className="font-medium text-slate-700">
+                        {chamado.nome_motorista || 'Não informado'}
+                      </span>
+                    </div>
+                    <div>
+                      <span className="block text-slate-500 text-xs font-medium uppercase mb-1">
+                        Registro
+                      </span>
+                      <span className="font-medium text-slate-700">
+                        {chamado.registro_motorista || 'Não informado'}
+                      </span>
+                    </div>
+                    <div>
+                      <span className="block text-slate-500 text-xs font-medium uppercase mb-1">
+                        Data da Ocorrência
+                      </span>
+                      <span className="font-medium text-slate-700">
+                        {chamado.data_ocorrencia
+                          ? chamado.data_ocorrencia.split('-').reverse().join('/')
+                          : 'Não informada'}
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="text-sm text-slate-600 bg-slate-50 p-4 rounded-lg whitespace-pre-wrap border border-slate-100">
                     {chamado.descricao}
                   </div>
 
-                  <div className="flex flex-wrap gap-2 pt-2">
-                    {vales.map((v: any) => (
-                      <a
-                        key={v.id}
-                        href={v.arquivo_url}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="inline-flex items-center gap-2 px-4 py-2 bg-blue-50 text-blue-700 rounded-md text-sm font-medium hover:bg-blue-100 transition-colors border border-blue-100"
+                  <div className="flex flex-wrap gap-3 pt-2">
+                    {autorizacoes.length > 0 ? (
+                      autorizacoes.map((a: any) => (
+                        <a
+                          key={a.id}
+                          href={a.arquivo_url}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="inline-flex items-center gap-2 px-4 py-2 bg-blue-50 text-blue-700 rounded-md text-sm font-medium hover:bg-blue-100 transition-colors border border-blue-200"
+                        >
+                          <FileSignature className="w-4 h-4" />
+                          Ver Autorização
+                        </a>
+                      ))
+                    ) : (
+                      <span
+                        className="inline-flex items-center gap-2 px-4 py-2 bg-slate-50 text-slate-400 rounded-md text-sm font-medium border border-slate-200 cursor-not-allowed"
+                        title="Autorização não anexada"
+                      >
+                        <FileSignature className="w-4 h-4" />
+                        Autorização Indisponível
+                      </span>
+                    )}
+
+                    {orcamentos.length > 0 ? (
+                      orcamentos.map((o: any) => (
+                        <a
+                          key={o.id}
+                          href={o.orcamento_url || o.arquivo_url}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="inline-flex items-center gap-2 px-4 py-2 bg-emerald-50 text-emerald-700 rounded-md text-sm font-medium hover:bg-emerald-100 transition-colors border border-emerald-200"
+                        >
+                          <FileText className="w-4 h-4" />
+                          Ver Orçamento
+                        </a>
+                      ))
+                    ) : (
+                      <span
+                        className="inline-flex items-center gap-2 px-4 py-2 bg-slate-50 text-slate-400 rounded-md text-sm font-medium border border-slate-200 cursor-not-allowed"
+                        title="Orçamento não anexado"
                       >
                         <FileText className="w-4 h-4" />
-                        Ver Vale
-                      </a>
-                    ))}
-                    {orcamentos.map((o: any) => (
-                      <a
-                        key={o.id}
-                        href={o.arquivo_url}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="inline-flex items-center gap-2 px-4 py-2 bg-emerald-50 text-emerald-700 rounded-md text-sm font-medium hover:bg-emerald-100 transition-colors border border-emerald-100"
-                      >
-                        <FileText className="w-4 h-4" />
-                        Ver Orçamento
-                      </a>
-                    ))}
+                        Orçamento Indisponível
+                      </span>
+                    )}
                   </div>
                 </CardContent>
                 <CardFooter className="flex gap-3 justify-end border-t bg-slate-50 py-3">
@@ -347,7 +406,7 @@ export default function ValesAprovacao() {
                 selectedChamado.aprovacoes_diretoria.length >= 1) ||
               selectedChamado?.status_aprovacao === 'aprovacao_parcial'
                 ? 'Confirmar 2ª Aprovação'
-                : 'Aprovar Vale'}
+                : 'Aprovar Autorização'}
             </DialogTitle>
             <DialogDescription>
               {(Array.isArray(selectedChamado?.aprovacoes_diretoria) &&

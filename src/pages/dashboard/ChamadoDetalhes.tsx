@@ -802,12 +802,14 @@ function GerarValeModal({
       const qtyParcelas = parseInt(parcelas) || 1
       const valorParcela = valorFinal / qtyParcelas
       const parcelasToInsert = Array.from({ length: qtyParcelas }).map((_, idx) => {
-        const dataRef = new Date()
-        dataRef.setMonth(dataRef.getMonth() + idx + 1)
+        const today = new Date()
+        const targetDate = new Date(today.getFullYear(), today.getMonth() + idx, 1)
+        const targetYear = targetDate.getFullYear()
+        const targetMonth = targetDate.getMonth() + 1
         return {
           chamado_id: chamadoId,
           valor_parcela: valorParcela,
-          data_referencia: dataRef.toISOString().split('T')[0],
+          data_referencia: `${targetYear}-${targetMonth.toString().padStart(2, '0')}-01`,
         }
       })
       await supabase.from('parcelas_vales').delete().eq('chamado_id', chamadoId)

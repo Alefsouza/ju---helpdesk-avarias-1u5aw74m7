@@ -60,25 +60,26 @@ export default function ValesAprovadosDP() {
     const { data: parcelasData, error } = await supabase
       .from('parcelas_vales')
       .select(`
+      id, 
+      valor_parcela, 
+      data_referencia, 
+      chamado_id, 
+      aprovado_diretoria,
+      chamados (
         id, 
-        valor_parcela, 
-        data_referencia, 
-        chamado_id, 
-        aprovado_diretoria,
-        chamados (
-          id, 
-          titulo,
-          usuario_id, 
-          nome_motorista, 
-          registro_motorista, 
-          status_aprovacao,
-          aprovacoes_diretoria,
-          garagem,
-          formularios_espelho_danos ( registro_motorista, nome_motorista ),
-          documentos ( id, nome_arquivo, arquivo_url, tipo_documento, orcamento_url, criado_em ),
-          anexos_chamado_interno ( id, nome_arquivo, arquivo_url, criado_em )
-        )
-      `)
+        titulo,
+        usuario_id, 
+        nome_motorista, 
+        registro_motorista, 
+        status_aprovacao,
+        aprovacoes_diretoria,
+        garagem,
+        formularios_espelho_danos ( registro_motorista, nome_motorista ),
+        solicitacoes_parcelamento ( registro, nome ),
+        documentos ( id, nome_arquivo, arquivo_url, tipo_documento, orcamento_url, criado_em ),
+        anexos_chamado_interno ( id, nome_arquivo, arquivo_url, criado_em )
+      )
+    `)
       .eq('data_referencia', startDate)
       .order('data_referencia', { ascending: false })
 
@@ -135,10 +136,22 @@ export default function ValesAprovadosDP() {
         ? chamado.formularios_espelho_danos[0]
         : chamado.formularios_espelho_danos
 
+      const solicitacaoData = Array.isArray(chamado.solicitacoes_parcelamento)
+        ? chamado.solicitacoes_parcelamento[0]
+        : chamado.solicitacoes_parcelamento
+
       const registro =
-        espelhoData?.registro_motorista || chamado.registro_motorista || user?.registro || 'N/A'
+        solicitacaoData?.registro ||
+        espelhoData?.registro_motorista ||
+        chamado.registro_motorista ||
+        user?.registro ||
+        'N/A'
       const nome =
-        espelhoData?.nome_motorista || chamado.nome_motorista || user?.nome_completo || 'N/A'
+        solicitacaoData?.nome ||
+        espelhoData?.nome_motorista ||
+        chamado.nome_motorista ||
+        user?.nome_completo ||
+        'N/A'
       const garagem = chamado.garagem || user?.garagem || 'N/A'
 
       let orcamentoUrl = null
@@ -203,6 +216,7 @@ export default function ValesAprovadosDP() {
         chamado_titulo: chamado?.titulo || '-',
         valor_parcela: valorCalculado,
         data_referencia: p.data_referencia,
+        aprovado_diretoria: p.aprovado_diretoria,
         nome,
         registro,
         garagem,
@@ -234,24 +248,38 @@ export default function ValesAprovadosDP() {
   })
 
   const handleDownload = () => {
-    if (filteredParcelas.length === 0) {
-      return toast.info('Nenhuma parcela válida encontrada para exportação.')
+    const exportableParcelas = filteredParcelas.filter((p) => p.aprovado_diretoria === true)
+
+    if (exportableParcelas.length === 0) {
+      return toast.info('Nenhuma parcela aprovada pela diretoria encontrada para exportação.')
     }
 
-    const csvRows = ['Registro,Nome Completo,Garagem,Valor Parcela,Referência']
-    filteredParcelas.forEach((p) => {
-      const dataRef = format(new Date(p.data_referencia + 'T00:00:00'), 'MM/yyyy')
-      csvRows.push(
-        `${p.registro},"${p.nome}","${p.garagem}",${Number(p.valor_parcela).toFixed(2)},${dataRef}`,
-      )
-    })
+    toast.loading('Gerando arquivo TXT...', { id: 'export-txt' })
 
-    const csvContent = csvRows.join('\n')
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
-    const link = document.createElement('a')
-    link.href = URL.createObjectURL(blob)
-    link.download = `vales_${downloadMonth}.csv`
-    link.click()
+    try {
+      const txtRows = exportableParcelas.map((p) => {
+        const rawRegistro = String(p.registro).replace(/\D/g, '') || '0'
+        const registroPadded = rawRegistro.padStart(10, '0')
+
+        const codigo = '261'
+
+        const valorCents = Math.round(Number(p.valor_parcela) * 100)
+        const valorPadded = String(valorCents).padStart(15, '0')
+
+        return `${registroPadded}${codigo}${valorPadded}`
+      })
+
+      const txtContent = txtRows.join('\n')
+      const blob = new Blob([txtContent], { type: 'text/plain;charset=utf-8;' })
+      const link = document.createElement('a')
+      link.href = URL.createObjectURL(blob)
+      link.download = `vales_${downloadMonth}.txt`
+      link.click()
+
+      toast.success('Arquivo TXT gerado com sucesso!', { id: 'export-txt' })
+    } catch (error) {
+      toast.error('Erro ao gerar arquivo TXT.', { id: 'export-txt' })
+    }
   }
 
   if (authLoading) {
@@ -320,7 +348,7 @@ export default function ValesAprovadosDP() {
             onClick={handleDownload}
             className="w-full sm:w-auto bg-[#225f3d] hover:bg-[#1a4a2f]"
           >
-            <Download className="w-4 h-4 mr-2" /> Exportar CSV
+            <Download className="w-4 h-4 mr-2" /> Exportar TXT
           </Button>
         </div>
       </div>

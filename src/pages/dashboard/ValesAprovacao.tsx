@@ -201,8 +201,8 @@ export default function ValesAprovacao() {
             const parcelaValue = finalValue / parcelsCount
 
             for (let i = 0; i < parcelsCount; i++) {
-              // Target next month as reference for the first installment
-              const targetDate = new Date(today.getFullYear(), today.getMonth() + i + 1, 1)
+              // Target current month as reference for the first installment
+              const targetDate = new Date(today.getFullYear(), today.getMonth() + i, 1)
               const targetYear = targetDate.getFullYear()
               const targetMonth = targetDate.getMonth() + 1
               const dataRef = `${targetYear}-${targetMonth.toString().padStart(2, '0')}-01`

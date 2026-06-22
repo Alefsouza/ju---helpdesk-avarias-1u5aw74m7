@@ -98,8 +98,6 @@ export default function ValesAprovacao() {
     const currentAprovacoes = Array.isArray(selectedChamado.aprovacoes_diretoria)
       ? selectedChamado.aprovacoes_diretoria
       : []
-    const isSecondApproval =
-      currentAprovacoes.length >= 1 || selectedChamado.status_aprovacao === 'aprovacao_parcial'
 
     const newAprovacao = {
       usuario_id: user!.id,
@@ -108,97 +106,23 @@ export default function ValesAprovacao() {
     }
 
     try {
-      const solicitacoes = selectedChamado.solicitacoes_parcelamento || []
-      const solicitacao = Array.isArray(solicitacoes)
-        ? solicitacoes[solicitacoes.length - 1]
-        : solicitacoes
-
-      if (isSecondApproval) {
-        const { error } = await supabase
-          .from('chamados')
-          .update({
-            status_aprovacao: 'aprovado',
-            aprovacoes_diretoria: [...currentAprovacoes, newAprovacao],
-            atualizado_em: new Date().toISOString(),
-          })
-          .eq('id', selectedChamado.id)
-
-        if (error) throw error
-
-        if (solicitacao) {
-          await supabase
-            .from('solicitacoes_parcelamento')
-            .update({ status: 'aprovado', atualizado_em: new Date().toISOString() })
-            .eq('id', solicitacao.id)
-        }
-
-        await supabase.from('historico_chamado').insert({
-          chamado_id: selectedChamado.id,
-          usuario_id: user!.id,
-          acao: 'Vale Aprovado',
-          detalhes: 'Vale aprovado pela diretoria (Aprovação Final)',
+      const { error } = await supabase
+        .from('chamados')
+        .update({
+          status_aprovacao: 'aprovado',
+          aprovacoes_diretoria: [...currentAprovacoes, newAprovacao],
+          atualizado_em: new Date().toISOString(),
         })
-      } else {
-        if (!solicitacao) {
-          toast.error('Nenhuma solicitação de parcelamento encontrada para este chamado.')
-          setIsSubmitting(false)
-          return
-        }
+        .eq('id', selectedChamado.id)
 
-        const numParc = Number(solicitacao.quantidade_parcelas)
-        const valorTot = Number(solicitacao.valor_orcamento)
+      if (error) throw error
 
-        if (isNaN(numParc) || isNaN(valorTot) || numParc <= 0 || valorTot <= 0) {
-          toast.error('Valores da solicitação inválidos ou zerados.')
-          setIsSubmitting(false)
-          return
-        }
-
-        const { error: updateError } = await supabase
-          .from('chamados')
-          .update({
-            status_aprovacao: 'aprovacao_parcial',
-            aprovacoes_diretoria: [...currentAprovacoes, newAprovacao],
-            atualizado_em: new Date().toISOString(),
-          })
-          .eq('id', selectedChamado.id)
-
-        if (updateError) throw updateError
-
-        // Delete any existing parcels first to avoid duplicates
-        await supabase.from('parcelas_vales').delete().eq('chamado_id', selectedChamado.id)
-
-        const valorParcela = valorTot / numParc
-        const parcelasToInsert = []
-        let dataRef = new Date()
-
-        for (let i = 0; i < numParc; i++) {
-          dataRef.setMonth(dataRef.getMonth() + 1)
-          parcelasToInsert.push({
-            chamado_id: selectedChamado.id,
-            valor_parcela: valorParcela,
-            data_referencia: dataRef.toISOString().split('T')[0],
-          })
-        }
-
-        const { error: parcelasError } = await supabase
-          .from('parcelas_vales')
-          .insert(parcelasToInsert)
-
-        if (parcelasError) throw parcelasError
-
-        await supabase
-          .from('solicitacoes_parcelamento')
-          .update({ status: 'aprovado_parcial', atualizado_em: new Date().toISOString() })
-          .eq('id', solicitacao.id)
-
-        await supabase.from('historico_chamado').insert({
-          chamado_id: selectedChamado.id,
-          usuario_id: user!.id,
-          acao: 'Vale Aprovado Parcialmente',
-          detalhes: `Vale aprovado pela diretoria (1ª Aprovação). Valor: R$ ${valorTot.toFixed(2)} em ${numParc}x`,
-        })
-      }
+      await supabase.from('historico_chamado').insert({
+        chamado_id: selectedChamado.id,
+        usuario_id: user!.id,
+        acao: 'Aprovação Diretor',
+        detalhes: 'Vale aprovado pela diretoria',
+      })
 
       toast.success('Vale aprovado com sucesso!')
       setIsApproveOpen(false)
@@ -246,7 +170,7 @@ export default function ValesAprovacao() {
       await supabase.from('historico_chamado').insert({
         chamado_id: selectedChamado.id,
         usuario_id: user!.id,
-        acao: 'Vale Reprovado',
+        acao: 'Reprovação Diretor',
         detalhes: `Recusado pela diretoria: ${rejectReason}`,
       })
 
@@ -348,9 +272,6 @@ export default function ValesAprovacao() {
                     const aprovacoes = Array.isArray(chamado.aprovacoes_diretoria)
                       ? chamado.aprovacoes_diretoria
                       : []
-                    const isSecondApproval =
-                      aprovacoes.length >= 1 || chamado.status_aprovacao === 'aprovacao_parcial'
-
                     return (
                       <TableRow key={chamado.id}>
                         <TableCell>
@@ -370,7 +291,7 @@ export default function ValesAprovacao() {
                             <div
                               className={`h-2 w-2 rounded-full ${aprovacoes.length > 0 ? 'bg-green-500' : 'bg-yellow-500'}`}
                             />
-                            <span>{aprovacoes.length}/2 Aprov.</span>
+                            <span>{aprovacoes.length} Aprov.</span>
                           </div>
                         </TableCell>
                         <TableCell>
@@ -448,7 +369,7 @@ export default function ValesAprovacao() {
                                 </Button>
                               </TooltipTrigger>
                               <TooltipContent>
-                                <p>{isSecondApproval ? 'Aprovação Final' : '1ª Aprovação'}</p>
+                                <p>Aprovar</p>
                               </TooltipContent>
                             </Tooltip>
                             <Tooltip>

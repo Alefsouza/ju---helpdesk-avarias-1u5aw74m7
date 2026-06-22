@@ -358,9 +358,6 @@ export default function ValesAprovadosDP() {
                     <TableCell className="pl-6">
                       <div className="flex flex-col">
                         <span className="font-medium">{p.chamado_titulo}</span>
-                        <span className="text-xs text-slate-500">
-                          #{p.chamado_id.split('-')[0].toUpperCase()}
-                        </span>
                       </div>
                     </TableCell>
                     <TableCell>{p.registro}</TableCell>

@@ -283,14 +283,8 @@ export default function Finalizados() {
         </Badge>
       )
     }
-    return (
-      <Badge
-        variant="outline"
-        className="bg-slate-100 text-slate-800 border-slate-200 whitespace-nowrap"
-      >
-        FINALIZADO
-      </Badge>
-    )
+    return
+    null
   }
 
   const PriorityBadge = ({ priority }: { priority: string | null }) => {

@@ -75,8 +75,10 @@ export default function ValesAprovadosDP() {
           ? chamado.aprovacoes_diretoria
           : []
 
+        const approvedCount = aprovacoes.filter((a: any) => a.acao === 'aprovado' || !a.acao).length
+
         // Verifica se tem aprovação dupla pelo status ou quantidade de aprovações
-        return chamado.status_aprovacao === 'aprovado' || aprovacoes.length >= 2
+        return chamado.status_aprovacao === 'aprovado' || approvedCount >= 2
       }) || []
 
     const userIds = [

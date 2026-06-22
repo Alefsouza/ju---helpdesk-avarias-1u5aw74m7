@@ -62,9 +62,6 @@ export default function ValesAprovacao() {
 
     const filtered =
       data?.filter((c: any) => {
-        const aprovacoes = Array.isArray(c.aprovacoes_diretoria) ? c.aprovacoes_diretoria : []
-        if (aprovacoes.some((a: any) => a.usuario_id === user!.id)) return false
-
         const anexos = c.anexos_chamado_interno || []
         const hasAutorizacao = anexos.some((a: any) => {
           const nome = a.nome_arquivo.toLowerCase()
@@ -101,16 +98,23 @@ export default function ValesAprovacao() {
 
     const newAprovacao = {
       usuario_id: user!.id,
-      data: new Date().toISOString(),
-      nome: profile?.nome_completo,
+      nome_completo: profile?.nome_completo,
+      acao: 'aprovado',
+      data_hora: new Date().toISOString(),
     }
+
+    const nextAprovacoes = [...currentAprovacoes, newAprovacao]
+    const approvedCount = nextAprovacoes.filter((a: any) => a.acao === 'aprovado' || !a.acao).length
+
+    const isFullyApproved = approvedCount >= 2
+    const nextStatusAprovacao = isFullyApproved ? 'aprovado' : 'aprovacao_parcial'
 
     try {
       const { error } = await supabase
         .from('chamados')
         .update({
-          status_aprovacao: 'aprovado',
-          aprovacoes_diretoria: [...currentAprovacoes, newAprovacao],
+          status_aprovacao: nextStatusAprovacao,
+          aprovacoes_diretoria: nextAprovacoes,
           atualizado_em: new Date().toISOString(),
         })
         .eq('id', selectedChamado.id)
@@ -121,10 +125,16 @@ export default function ValesAprovacao() {
         chamado_id: selectedChamado.id,
         usuario_id: user!.id,
         acao: 'Aprovação Diretor',
-        detalhes: 'Vale aprovado pela diretoria',
+        detalhes: isFullyApproved
+          ? 'Vale aprovado pela diretoria (Aprovação Final)'
+          : 'Vale aprovado pela diretoria (Aprovação 1/2)',
       })
 
-      toast.success('Vale aprovado com sucesso!')
+      toast.success(
+        isFullyApproved
+          ? 'Vale aprovado com sucesso!'
+          : 'Aprovação registrada! Aguardando segundo diretor.',
+      )
       setIsApproveOpen(false)
       fetchChamados()
     } catch (error: any) {
@@ -148,6 +158,19 @@ export default function ValesAprovacao() {
     }
 
     setIsSubmitting(true)
+
+    const currentAprovacoes = Array.isArray(selectedChamado.aprovacoes_diretoria)
+      ? selectedChamado.aprovacoes_diretoria
+      : []
+
+    const newAprovacao = {
+      usuario_id: user!.id,
+      nome_completo: profile?.nome_completo,
+      acao: 'recusado',
+      data_hora: new Date().toISOString(),
+      motivo: rejectReason,
+    }
+
     try {
       const { error } = await supabase
         .from('chamados')
@@ -155,6 +178,7 @@ export default function ValesAprovacao() {
           status_aprovacao: 'reprovado',
           status: 'em_andamento',
           status_interno: 'Reprovado Diretoria',
+          aprovacoes_diretoria: [...currentAprovacoes, newAprovacao],
           atualizado_em: new Date().toISOString(),
         })
         .eq('id', selectedChamado.id)
@@ -289,9 +313,15 @@ export default function ValesAprovacao() {
                         <TableCell>
                           <div className="flex items-center gap-2">
                             <div
-                              className={`h-2 w-2 rounded-full ${aprovacoes.length > 0 ? 'bg-green-500' : 'bg-yellow-500'}`}
+                              className={`h-2 w-2 rounded-full ${aprovacoes.filter((a: any) => a.acao === 'aprovado' || !a.acao).length > 0 ? 'bg-green-500' : 'bg-yellow-500'}`}
                             />
-                            <span>{aprovacoes.length} Aprov.</span>
+                            <span>
+                              {
+                                aprovacoes.filter((a: any) => a.acao === 'aprovado' || !a.acao)
+                                  .length
+                              }
+                              /2 Aprov.
+                            </span>
                           </div>
                         </TableCell>
                         <TableCell>
@@ -356,38 +386,59 @@ export default function ValesAprovacao() {
                           </div>
                         </TableCell>
                         <TableCell className="text-right">
-                          <div className="flex justify-end gap-2">
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <Button
-                                  variant="outline"
-                                  size="icon"
-                                  className="text-green-600 border-green-200 hover:bg-green-50 hover:text-green-700"
-                                  onClick={() => handleApproveClick(chamado)}
-                                >
-                                  <Check className="h-4 w-4" />
-                                </Button>
-                              </TooltipTrigger>
-                              <TooltipContent>
-                                <p>Aprovar</p>
-                              </TooltipContent>
-                            </Tooltip>
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <Button
-                                  variant="outline"
-                                  size="icon"
-                                  className="text-red-600 border-red-200 hover:bg-red-50 hover:text-red-700"
-                                  onClick={() => handleRejectClick(chamado)}
-                                >
-                                  <X className="h-4 w-4" />
-                                </Button>
-                              </TooltipTrigger>
-                              <TooltipContent>
-                                <p>Recusar</p>
-                              </TooltipContent>
-                            </Tooltip>
-                          </div>
+                          {(() => {
+                            const userAprovacao = aprovacoes.find(
+                              (a: any) => a.usuario_id === user!.id,
+                            )
+                            if (userAprovacao) {
+                              const isAprovado =
+                                userAprovacao.acao === 'aprovado' || !userAprovacao.acao
+                              return (
+                                <div className="flex justify-end items-center h-full min-h-[40px]">
+                                  <span
+                                    className={`text-sm font-medium px-2 py-1 rounded-md ${isAprovado ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'}`}
+                                  >
+                                    {isAprovado ? 'Aprovado por você' : 'Recusado por você'}
+                                  </span>
+                                </div>
+                              )
+                            }
+
+                            return (
+                              <div className="flex justify-end gap-2">
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <Button
+                                      variant="outline"
+                                      size="icon"
+                                      className="text-green-600 border-green-200 hover:bg-green-50 hover:text-green-700"
+                                      onClick={() => handleApproveClick(chamado)}
+                                    >
+                                      <Check className="h-4 w-4" />
+                                    </Button>
+                                  </TooltipTrigger>
+                                  <TooltipContent>
+                                    <p>Aprovar</p>
+                                  </TooltipContent>
+                                </Tooltip>
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <Button
+                                      variant="outline"
+                                      size="icon"
+                                      className="text-red-600 border-red-200 hover:bg-red-50 hover:text-red-700"
+                                      onClick={() => handleRejectClick(chamado)}
+                                    >
+                                      <X className="h-4 w-4" />
+                                    </Button>
+                                  </TooltipTrigger>
+                                  <TooltipContent>
+                                    <p>Recusar</p>
+                                  </TooltipContent>
+                                </Tooltip>
+                              </div>
+                            )
+                          })()}
                         </TableCell>
                       </TableRow>
                     )

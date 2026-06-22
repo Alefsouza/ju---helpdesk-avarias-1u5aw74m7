@@ -349,9 +349,6 @@ export default function ValesAprovacao() {
                         <TableCell>
                           <div className="flex flex-col">
                             <span className="font-medium">{chamado.titulo || '-'}</span>
-                            <span className="text-xs text-muted-foreground">
-                              {chamado.id.substring(0, 8).toUpperCase()}
-                            </span>
                           </div>
                         </TableCell>
                         <TableCell>{driver.registro}</TableCell>

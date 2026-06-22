@@ -34,7 +34,6 @@ export default function ValesAprovacao() {
   const [isApproveOpen, setIsApproveOpen] = useState(false)
   const [selectedChamado, setSelectedChamado] = useState<any>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
-  const [applyDiscount, setApplyDiscount] = useState(false)
 
   const [isRejectOpen, setIsRejectOpen] = useState(false)
   const [rejectReason, setRejectReason] = useState('')
@@ -87,19 +86,20 @@ export default function ValesAprovacao() {
 
   const handleApproveClick = (chamado: any) => {
     setSelectedChamado(chamado)
-
-    let defaultDiscount = false
-    if (chamado.solicitacoes_parcelamento && chamado.solicitacoes_parcelamento.length > 0) {
-      defaultDiscount = chamado.solicitacoes_parcelamento[0].desconto_aplicado === true
-    }
-    setApplyDiscount(defaultDiscount)
-
     setIsApproveOpen(true)
   }
 
   const handleApproveSubmit = async () => {
     if (!selectedChamado) return
     setIsSubmitting(true)
+
+    let hasDiscount = false
+    if (
+      selectedChamado.solicitacoes_parcelamento &&
+      selectedChamado.solicitacoes_parcelamento.length > 0
+    ) {
+      hasDiscount = selectedChamado.solicitacoes_parcelamento[0].desconto_aplicado === true
+    }
 
     const currentAprovacoes = Array.isArray(selectedChamado.aprovacoes_diretoria)
       ? selectedChamado.aprovacoes_diretoria
@@ -110,7 +110,7 @@ export default function ValesAprovacao() {
       nome_completo: profile?.nome_completo,
       acao: 'aprovado',
       data_hora: new Date().toISOString(),
-      desconto_aplicado: applyDiscount,
+      desconto_aplicado: hasDiscount,
     }
 
     const nextAprovacoes = [...currentAprovacoes, newAprovacao]
@@ -149,9 +149,9 @@ export default function ValesAprovacao() {
         acao: 'Aprovação Diretor',
         detalhes: isFinished
           ? isFullyApproved
-            ? 'Vale aprovado pela diretoria (Aprovação Final)'
+            ? 'Vale aprovado pela diretoria com os valores previamente assinados (Aprovação Final)'
             : 'Vale reprovado após avaliação final'
-          : 'Vale aprovado por um diretor (Aguardando segunda avaliação)',
+          : 'Vale aprovado por um diretor com os valores previamente assinados (Aguardando segunda avaliação)',
       })
 
       if (isFinished && isRejected) {
@@ -581,20 +581,67 @@ export default function ValesAprovacao() {
             <DialogDescription>Deseja confirmar a aprovação deste vale?</DialogDescription>
           </DialogHeader>
 
-          <div className="flex items-center space-x-2 py-4">
-            <Checkbox
-              id="applyDiscountModal"
-              checked={applyDiscount}
-              onCheckedChange={(c) => setApplyDiscount(!!c)}
-              disabled={isSubmitting}
-            />
-            <Label
-              htmlFor="applyDiscountModal"
-              className="text-sm font-medium leading-none cursor-pointer"
-            >
-              Aplicar desconto de 10%
-            </Label>
-          </div>
+          {selectedChamado &&
+            (() => {
+              let totalValue = 0
+              let hasDiscount = false
+              let parcelsCount = 1
+
+              if (
+                selectedChamado.solicitacoes_parcelamento &&
+                selectedChamado.solicitacoes_parcelamento.length > 0
+              ) {
+                const sol = selectedChamado.solicitacoes_parcelamento[0]
+                totalValue = Number(sol.valor_orcamento) || 0
+                hasDiscount = sol.desconto_aplicado === true
+                parcelsCount = Number(sol.quantidade_parcelas) || 1
+              } else {
+                const docOrcamento = selectedChamado.documentos?.find(
+                  (d: any) =>
+                    (d.tipo_documento === 'orcamento' || d.orcamento_url) && d.valor_orcamento,
+                )
+                if (docOrcamento) {
+                  totalValue = Number(docOrcamento.valor_orcamento) || 0
+                }
+              }
+
+              const finalValue = hasDiscount ? totalValue * 0.9 : totalValue
+
+              return (
+                <div className="py-4 space-y-3">
+                  <div className="flex justify-between text-sm">
+                    <span className="font-medium text-muted-foreground">Valor do Orçamento:</span>
+                    <span>
+                      {new Intl.NumberFormat('pt-BR', {
+                        style: 'currency',
+                        currency: 'BRL',
+                      }).format(totalValue)}
+                    </span>
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <span className="font-medium text-muted-foreground">
+                      Desconto de 10% aplicado:
+                    </span>
+                    <span>{hasDiscount ? 'Sim' : 'Não'}</span>
+                  </div>
+                  <div className="flex justify-between text-base font-semibold pt-3 border-t">
+                    <span>Valor Final a Descontar:</span>
+                    <span>
+                      {new Intl.NumberFormat('pt-BR', {
+                        style: 'currency',
+                        currency: 'BRL',
+                      }).format(finalValue)}
+                    </span>
+                  </div>
+                  <div className="flex justify-between text-sm pt-1">
+                    <span className="font-medium text-muted-foreground">
+                      Quantidade de Parcelas:
+                    </span>
+                    <span>{parcelsCount}</span>
+                  </div>
+                </div>
+              )
+            })()}
 
           <DialogFooter className="mt-4">
             <Button variant="outline" onClick={() => setIsApproveOpen(false)}>

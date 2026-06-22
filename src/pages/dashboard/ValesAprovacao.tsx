@@ -197,15 +197,23 @@ export default function ValesAprovacao() {
             const finalValue = anyDiscountApplied ? totalValue * 0.9 : totalValue
 
             const parcelas: any[] = []
-            const today = new Date()
+            const baseDate = new Date(selectedChamado.criado_em)
             const parcelaValue = finalValue / parcelsCount
 
             for (let i = 0; i < parcelsCount; i++) {
-              // Target current month as reference for the first installment
-              const targetDate = new Date(today.getFullYear(), today.getMonth() + i, 1)
-              const targetYear = targetDate.getFullYear()
-              const targetMonth = targetDate.getMonth() + 1
-              const dataRef = `${targetYear}-${targetMonth.toString().padStart(2, '0')}-01`
+              const targetYear = baseDate.getFullYear()
+              const targetMonth = baseDate.getMonth() + i
+              const baseDay = baseDate.getDate()
+
+              const lastDayOfTargetMonth = new Date(targetYear, targetMonth + 1, 0).getDate()
+              const targetDay = Math.min(baseDay, lastDayOfTargetMonth)
+
+              const tempDate = new Date(targetYear, targetMonth, targetDay)
+
+              const yyyy = tempDate.getFullYear()
+              const mm = String(tempDate.getMonth() + 1).padStart(2, '0')
+              const dd = String(tempDate.getDate()).padStart(2, '0')
+              const dataRef = `${yyyy}-${mm}-${dd}`
 
               parcelas.push({
                 chamado_id: selectedChamado.id,

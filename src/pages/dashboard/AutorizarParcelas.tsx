@@ -6,12 +6,15 @@ import { Button } from '@/components/ui/button'
 import { Check, X, Loader2, AlertCircle } from 'lucide-react'
 import { toast } from 'sonner'
 import { Link } from 'react-router-dom'
+import { Checkbox } from '@/components/ui/checkbox'
+import { Label } from '@/components/ui/label'
 
 export default function AutorizarParcelas() {
   const { user, profile } = useAuth()
   const [solicitacoes, setSolicitacoes] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [actionLoading, setActionLoading] = useState<string | null>(null)
+  const [descontos, setDescontos] = useState<Record<string, boolean>>({})
 
   const fetchSolicitacoes = async () => {
     setLoading(true)
@@ -39,9 +42,19 @@ export default function AutorizarParcelas() {
 
   const handleAction = async (id: string, newStatus: string) => {
     setActionLoading(id)
+
+    const updatePayload: any = {
+      status: newStatus,
+      atualizado_em: new Date().toISOString(),
+    }
+
+    if (newStatus === 'aprovado') {
+      updatePayload.desconto_aplicado = descontos[id] || false
+    }
+
     const { error } = await supabase
       .from('solicitacoes_parcelamento')
-      .update({ status: newStatus, atualizado_em: new Date().toISOString() })
+      .update(updatePayload)
       .eq('id', id)
 
     if (error) {
@@ -120,32 +133,48 @@ export default function AutorizarParcelas() {
                     </div>
                   </div>
                 </div>
-                <div className="flex gap-2 w-full md:w-auto mt-2 md:mt-0">
-                  <Button
-                    variant="outline"
-                    className="flex-1 md:flex-none text-red-600 hover:text-red-700 hover:bg-red-50 border-red-200"
-                    onClick={() => handleAction(s.id, 'recusado')}
-                    disabled={actionLoading === s.id}
-                  >
-                    {actionLoading === s.id ? (
-                      <Loader2 className="w-4 h-4 mr-1.5 animate-spin" />
-                    ) : (
-                      <X className="w-4 h-4 mr-1.5" />
-                    )}{' '}
-                    Recusar
-                  </Button>
-                  <Button
-                    className="flex-1 md:flex-none bg-emerald-600 hover:bg-emerald-700 text-white"
-                    onClick={() => handleAction(s.id, 'aprovado')}
-                    disabled={actionLoading === s.id}
-                  >
-                    {actionLoading === s.id ? (
-                      <Loader2 className="w-4 h-4 mr-1.5 animate-spin" />
-                    ) : (
-                      <Check className="w-4 h-4 mr-1.5" />
-                    )}{' '}
-                    Aprovar
-                  </Button>
+                <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 w-full md:w-auto mt-4 md:mt-0">
+                  <div className="flex items-center space-x-2">
+                    <Checkbox
+                      id={`desconto-${s.id}`}
+                      checked={descontos[s.id] || false}
+                      onCheckedChange={(c) => setDescontos((prev) => ({ ...prev, [s.id]: !!c }))}
+                      disabled={actionLoading === s.id}
+                    />
+                    <Label
+                      htmlFor={`desconto-${s.id}`}
+                      className="text-sm cursor-pointer whitespace-nowrap"
+                    >
+                      Aplicar desconto de 10%
+                    </Label>
+                  </div>
+                  <div className="flex gap-2 w-full sm:w-auto">
+                    <Button
+                      variant="outline"
+                      className="flex-1 sm:flex-none text-red-600 hover:text-red-700 hover:bg-red-50 border-red-200"
+                      onClick={() => handleAction(s.id, 'recusado')}
+                      disabled={actionLoading === s.id}
+                    >
+                      {actionLoading === s.id ? (
+                        <Loader2 className="w-4 h-4 mr-1.5 animate-spin" />
+                      ) : (
+                        <X className="w-4 h-4 mr-1.5" />
+                      )}{' '}
+                      Recusar
+                    </Button>
+                    <Button
+                      className="flex-1 sm:flex-none bg-emerald-600 hover:bg-emerald-700 text-white"
+                      onClick={() => handleAction(s.id, 'aprovado')}
+                      disabled={actionLoading === s.id}
+                    >
+                      {actionLoading === s.id ? (
+                        <Loader2 className="w-4 h-4 mr-1.5 animate-spin" />
+                      ) : (
+                        <Check className="w-4 h-4 mr-1.5" />
+                      )}{' '}
+                      Aprovar
+                    </Button>
+                  </div>
                 </div>
               </CardContent>
             </Card>

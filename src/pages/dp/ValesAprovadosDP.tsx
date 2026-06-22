@@ -121,7 +121,6 @@ export default function ValesAprovadosDP() {
         espelhoData?.nome_motorista || chamado.nome_motorista || user?.nome_completo || 'N/A'
 
       let orcamentoUrl = null
-      let isVale = false
       if (chamado.documentos && chamado.documentos.length > 0) {
         const orcamentos = chamado.documentos.filter(
           (d: any) => d.tipo_documento === 'orcamento' || d.orcamento_url,
@@ -129,7 +128,6 @@ export default function ValesAprovadosDP() {
         if (orcamentos.length > 0) {
           orcamentoUrl = orcamentos[0].orcamento_url || orcamentos[0].arquivo_url
         }
-        isVale = chamado.documentos.some((d: any) => d.tipo_documento === 'vale')
       }
 
       let autorizacaoUrl = null
@@ -143,7 +141,7 @@ export default function ValesAprovadosDP() {
         }
       }
 
-      const valorCalculado = isVale ? Number(p.valor_parcela) * 0.9 : Number(p.valor_parcela)
+      const valorCalculado = Number(p.valor_parcela)
 
       return {
         id: p.id,

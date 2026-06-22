@@ -22,6 +22,7 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
+import { Checkbox } from '@/components/ui/checkbox'
 import { Check, X, FileText, Loader2, AlertCircle, FileSignature } from 'lucide-react'
 import { toast } from 'sonner'
 import { format } from 'date-fns'
@@ -33,6 +34,7 @@ export default function ValesAprovacao() {
   const [isApproveOpen, setIsApproveOpen] = useState(false)
   const [selectedChamado, setSelectedChamado] = useState<any>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [applyDiscount, setApplyDiscount] = useState(false)
 
   const [isRejectOpen, setIsRejectOpen] = useState(false)
   const [rejectReason, setRejectReason] = useState('')
@@ -48,7 +50,7 @@ export default function ValesAprovacao() {
         documentos ( id, nome_arquivo, arquivo_url, tipo_documento, orcamento_url, valor_orcamento, criado_em ),
         parcelas_vales ( id, valor_parcela, data_referencia ),
         formularios_espelho_danos ( registro_motorista, nome_motorista ),
-        solicitacoes_parcelamento ( id, valor_orcamento, quantidade_parcelas, status )
+        solicitacoes_parcelamento ( id, valor_orcamento, quantidade_parcelas, status, desconto_aplicado )
       `)
       .eq('status', 'finalizado')
       .or('status_aprovacao.is.null,status_aprovacao.eq.aprovacao_parcial')
@@ -85,6 +87,13 @@ export default function ValesAprovacao() {
 
   const handleApproveClick = (chamado: any) => {
     setSelectedChamado(chamado)
+
+    let defaultDiscount = false
+    if (chamado.solicitacoes_parcelamento && chamado.solicitacoes_parcelamento.length > 0) {
+      defaultDiscount = chamado.solicitacoes_parcelamento[0].desconto_aplicado === true
+    }
+    setApplyDiscount(defaultDiscount)
+
     setIsApproveOpen(true)
   }
 
@@ -101,6 +110,7 @@ export default function ValesAprovacao() {
       nome_completo: profile?.nome_completo,
       acao: 'aprovado',
       data_hora: new Date().toISOString(),
+      desconto_aplicado: applyDiscount,
     }
 
     const nextAprovacoes = [...currentAprovacoes, newAprovacao]
@@ -183,11 +193,12 @@ export default function ValesAprovacao() {
             .eq('chamado_id', selectedChamado.id)
 
           if (!existingParcelas || existingParcelas.length === 0) {
-            // Apply mandatory 10% discount on Vales logic
-            const discountedValue = totalValue * 0.9
+            const anyDiscountApplied = nextAprovacoes.some((a: any) => a.desconto_aplicado === true)
+            const finalValue = anyDiscountApplied ? totalValue * 0.9 : totalValue
+
             const parcelas: any[] = []
             const today = new Date()
-            const parcelaValue = discountedValue / parcelsCount
+            const parcelaValue = finalValue / parcelsCount
 
             for (let i = 0; i < parcelsCount; i++) {
               // Target next month as reference for the first installment
@@ -558,6 +569,21 @@ export default function ValesAprovacao() {
             <DialogTitle>Confirmar Aprovação</DialogTitle>
             <DialogDescription>Deseja confirmar a aprovação deste vale?</DialogDescription>
           </DialogHeader>
+
+          <div className="flex items-center space-x-2 py-4">
+            <Checkbox
+              id="applyDiscountModal"
+              checked={applyDiscount}
+              onCheckedChange={(c) => setApplyDiscount(!!c)}
+              disabled={isSubmitting}
+            />
+            <Label
+              htmlFor="applyDiscountModal"
+              className="text-sm font-medium leading-none cursor-pointer"
+            >
+              Aplicar desconto de 10%
+            </Label>
+          </div>
 
           <DialogFooter className="mt-4">
             <Button variant="outline" onClick={() => setIsApproveOpen(false)}>

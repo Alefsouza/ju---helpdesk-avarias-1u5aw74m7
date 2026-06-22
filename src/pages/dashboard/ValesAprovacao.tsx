@@ -45,7 +45,7 @@ export default function ValesAprovacao() {
         id, titulo, descricao, status_aprovacao, aprovacoes_diretoria,
         registro_motorista, nome_motorista, data_ocorrencia,
         anexos_chamado_interno ( id, nome_arquivo, arquivo_url, criado_em ),
-        documentos ( id, nome_arquivo, arquivo_url, tipo_documento, orcamento_url, criado_em ),
+        documentos ( id, nome_arquivo, arquivo_url, tipo_documento, orcamento_url, valor_orcamento, criado_em ),
         parcelas_vales ( id, valor_parcela, data_referencia ),
         formularios_espelho_danos ( registro_motorista, nome_motorista ),
         solicitacoes_parcelamento ( id, valor_orcamento, quantidade_parcelas, status )
@@ -104,19 +104,31 @@ export default function ValesAprovacao() {
     }
 
     const nextAprovacoes = [...currentAprovacoes, newAprovacao]
-    const approvedCount = nextAprovacoes.filter((a: any) => a.acao === 'aprovado' || !a.acao).length
-
-    const isFullyApproved = approvedCount >= 2
-    const nextStatusAprovacao = isFullyApproved ? 'aprovado' : 'aprovacao_parcial'
+    const isFinished = nextAprovacoes.length >= 2
+    const isFullyApproved =
+      isFinished && nextAprovacoes.every((a: any) => a.acao === 'aprovado' || !a.acao)
+    const isRejected = isFinished && !isFullyApproved
+    const nextStatusAprovacao = isFinished
+      ? isFullyApproved
+        ? 'aprovado'
+        : 'reprovado'
+      : 'aprovacao_parcial'
 
     try {
+      const updatePayload: any = {
+        status_aprovacao: nextStatusAprovacao,
+        aprovacoes_diretoria: nextAprovacoes,
+        atualizado_em: new Date().toISOString(),
+      }
+
+      if (isFinished && isRejected) {
+        updatePayload.status = 'em_andamento'
+        updatePayload.status_interno = 'Reprovado Diretoria'
+      }
+
       const { error } = await supabase
         .from('chamados')
-        .update({
-          status_aprovacao: nextStatusAprovacao,
-          aprovacoes_diretoria: nextAprovacoes,
-          atualizado_em: new Date().toISOString(),
-        })
+        .update(updatePayload)
         .eq('id', selectedChamado.id)
 
       if (error) throw error
@@ -125,14 +137,71 @@ export default function ValesAprovacao() {
         chamado_id: selectedChamado.id,
         usuario_id: user!.id,
         acao: 'Aprovação Diretor',
-        detalhes: isFullyApproved
-          ? 'Vale aprovado pela diretoria (Aprovação Final)'
-          : 'Vale aprovado pela diretoria (Aprovação 1/2)',
+        detalhes: isFinished
+          ? isFullyApproved
+            ? 'Vale aprovado pela diretoria (Aprovação Final)'
+            : 'Vale reprovado após avaliação final'
+          : 'Vale aprovado por um diretor (Aguardando segunda avaliação)',
       })
 
+      if (isFinished && isRejected) {
+        const motivos = nextAprovacoes
+          .filter((a: any) => a.acao === 'recusado' && a.motivo)
+          .map((a: any) => a.motivo)
+          .join(' | ')
+        await supabase.from('respostas_chamado').insert({
+          chamado_id: selectedChamado.id,
+          usuario_id: user!.id,
+          mensagem: `Vale reprovado pela diretoria.${motivos ? ' Motivos: ' + motivos : ''}`,
+        })
+      }
+
+      if (isFinished && isFullyApproved) {
+        let totalValue = 0
+        let parcelsCount = 1
+
+        if (
+          selectedChamado.solicitacoes_parcelamento &&
+          selectedChamado.solicitacoes_parcelamento.length > 0
+        ) {
+          const sol = selectedChamado.solicitacoes_parcelamento[0]
+          totalValue = Number(sol.valor_orcamento) || 0
+          parcelsCount = Number(sol.quantidade_parcelas) || 1
+        } else {
+          const docOrcamento = selectedChamado.documentos?.find(
+            (d: any) => (d.tipo_documento === 'orcamento' || d.orcamento_url) && d.valor_orcamento,
+          )
+          if (docOrcamento) {
+            totalValue = Number(docOrcamento.valor_orcamento) || 0
+          }
+        }
+
+        if (totalValue > 0) {
+          const parcelas = []
+          const today = new Date()
+          const parcelaValue = totalValue / parcelsCount
+
+          for (let i = 0; i < parcelsCount; i++) {
+            const dataRef = new Date(today.getFullYear(), today.getMonth() + 1 + i, 1)
+              .toISOString()
+              .split('T')[0]
+            parcelas.push({
+              chamado_id: selectedChamado.id,
+              valor_parcela: Number(parcelaValue.toFixed(2)),
+              data_referencia: dataRef,
+            })
+          }
+
+          const { error: parcelasError } = await supabase.from('parcelas_vales').insert(parcelas)
+          if (parcelasError) console.error('Error creating parcelas:', parcelasError)
+        }
+      }
+
       toast.success(
-        isFullyApproved
-          ? 'Vale aprovado com sucesso!'
+        isFinished
+          ? isFullyApproved
+            ? 'Vale aprovado e parcelas geradas com sucesso!'
+            : 'Vale reprovado finalizado!'
           : 'Aprovação registrada! Aguardando segundo diretor.',
       )
       setIsApproveOpen(false)
@@ -171,34 +240,53 @@ export default function ValesAprovacao() {
       motivo: rejectReason,
     }
 
+    const nextAprovacoes = [...currentAprovacoes, newAprovacao]
+    const isFinished = nextAprovacoes.length >= 2
+    const nextStatusAprovacao = isFinished ? 'reprovado' : 'aprovacao_parcial'
+
     try {
+      const updatePayload: any = {
+        status_aprovacao: nextStatusAprovacao,
+        aprovacoes_diretoria: nextAprovacoes,
+        atualizado_em: new Date().toISOString(),
+      }
+
+      if (isFinished) {
+        updatePayload.status = 'em_andamento'
+        updatePayload.status_interno = 'Reprovado Diretoria'
+      }
+
       const { error } = await supabase
         .from('chamados')
-        .update({
-          status_aprovacao: 'reprovado',
-          status: 'em_andamento',
-          status_interno: 'Reprovado Diretoria',
-          aprovacoes_diretoria: [...currentAprovacoes, newAprovacao],
-          atualizado_em: new Date().toISOString(),
-        })
+        .update(updatePayload)
         .eq('id', selectedChamado.id)
 
       if (error) throw error
-
-      await supabase.from('respostas_chamado').insert({
-        chamado_id: selectedChamado.id,
-        usuario_id: user!.id,
-        mensagem: `Vale reprovado pela diretoria. Motivo: ${rejectReason}`,
-      })
 
       await supabase.from('historico_chamado').insert({
         chamado_id: selectedChamado.id,
         usuario_id: user!.id,
         acao: 'Reprovação Diretor',
-        detalhes: `Recusado pela diretoria: ${rejectReason}`,
+        detalhes: isFinished
+          ? `Vale reprovado após avaliação final. Motivo: ${rejectReason}`
+          : `Recusado por um diretor: ${rejectReason} (Aguardando segunda avaliação)`,
       })
 
-      toast.success('Vale recusado com sucesso')
+      if (isFinished) {
+        const motivos = nextAprovacoes
+          .filter((a: any) => a.acao === 'recusado' && a.motivo)
+          .map((a: any) => a.motivo)
+          .join(' | ')
+        await supabase.from('respostas_chamado').insert({
+          chamado_id: selectedChamado.id,
+          usuario_id: user!.id,
+          mensagem: `Vale reprovado pela diretoria. Motivos: ${motivos}`,
+        })
+      }
+
+      toast.success(
+        isFinished ? 'Vale recusado com sucesso' : 'Recusa registrada! Aguardando segundo diretor.',
+      )
       setIsRejectOpen(false)
       fetchChamados()
     } catch (error: any) {

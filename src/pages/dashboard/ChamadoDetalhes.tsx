@@ -113,11 +113,13 @@ const statusColors: Record<string, string> = {
   aberto: 'bg-blue-100 text-blue-800 border-blue-200',
   em_atendimento: 'bg-yellow-100 text-yellow-800 border-yellow-200',
   finalizado: 'bg-green-100 text-green-800 border-green-200',
+  unificado: 'bg-slate-200 text-slate-700 border-slate-300',
 }
 const statusLabels: Record<string, string> = {
   aberto: 'Aberto',
   em_atendimento: 'Em Atendimento',
   finalizado: 'Finalizado',
+  unificado: 'Unificado',
 }
 const prioridadeColors: Record<string, string> = {
   baixa: 'bg-slate-100 text-slate-800 border-slate-200',
@@ -3264,16 +3266,19 @@ export default function ChamadoDetalhes() {
   const isSolicitante = chamado.usuario_id === user?.id
 
   const canReply = isSolicitante || isResponsible || isSupport || isParticipant
-  const canFinalize = isSupport && chamado.status !== 'finalizado'
+  const canFinalize = isSupport && chamado.status !== 'finalizado' && chamado.status !== 'unificado'
 
   const isPrivilegedTransfer =
     currentUserProfile?.tipo_usuario === 'admin' ||
     currentUserProfile?.tipo_usuario === 'sinistro' ||
     currentUserProfile?.tipo_usuario === 'juridico'
-  const canTransfer = (isResponsible || isPrivilegedTransfer) && chamado.status !== 'finalizado'
+  const canTransfer =
+    (isResponsible || isPrivilegedTransfer) &&
+    chamado.status !== 'finalizado' &&
+    chamado.status !== 'unificado'
 
   const canEditRA = isSupport
-  const canUnify = isSupport && chamado.status !== 'finalizado'
+  const canUnify = isSupport && chamado.status !== 'finalizado' && chamado.status !== 'unificado'
   const isJuridico = currentUserProfile?.tipo_usuario === 'juridico'
 
   const orcamentoDoc = documentosChamado.find((d) => d.tipo_documento === 'Orçamento')
@@ -3509,7 +3514,11 @@ export default function ChamadoDetalhes() {
                         <Select
                           value={tipoChamado || undefined}
                           onValueChange={handleSalvarTipoChamado}
-                          disabled={savingTipoChamado || chamado.status === 'finalizado'}
+                          disabled={
+                            savingTipoChamado ||
+                            chamado.status === 'finalizado' ||
+                            chamado.status === 'unificado'
+                          }
                         >
                           <SelectTrigger className="bg-white border-orange-200 focus:ring-orange-400 h-8 text-xs">
                             <SelectValue placeholder="Selecione o tipo" />
@@ -3542,7 +3551,11 @@ export default function ChamadoDetalhes() {
                         <Select
                           value={prioridade || undefined}
                           onValueChange={handleSalvarPrioridade}
-                          disabled={savingPrioridade || chamado.status === 'finalizado'}
+                          disabled={
+                            savingPrioridade ||
+                            chamado.status === 'finalizado' ||
+                            chamado.status === 'unificado'
+                          }
                         >
                           <SelectTrigger className="bg-white border-orange-200 focus:ring-orange-400 h-8 text-xs">
                             <SelectValue placeholder="Selecione uma prioridade" />

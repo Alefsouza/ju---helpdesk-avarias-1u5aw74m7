@@ -54,6 +54,7 @@ export default function Finalizados() {
   const [searchTerm, setSearchTerm] = useState('')
   const [debouncedSearch, setDebouncedSearch] = useState('')
   const [date, setDate] = useState<DateRange | undefined>()
+  const [statusFilter, setStatusFilter] = useState('finalizado')
 
   const [currentUserProfile, setCurrentUserProfile] = useState<any>(null)
   const [sortConfig, setSortConfig] = useState<{ key: string; direction: 'asc' | 'desc' } | null>(
@@ -145,10 +146,15 @@ export default function Finalizados() {
       let query = supabase
         .from('chamados')
         .select('*')
-        .eq('status', 'finalizado')
         .is('status_juridico', null)
         .order('atualizado_em', { ascending: false })
         .limit(200)
+
+      if (statusFilter === 'all') {
+        query = query.in('status', ['finalizado', 'unificado'])
+      } else {
+        query = query.eq('status', statusFilter)
+      }
 
       if (debouncedSearch) {
         const term = `%${debouncedSearch}%`
@@ -209,7 +215,7 @@ export default function Finalizados() {
 
   useEffect(() => {
     fetchFinalizados()
-  }, [user, debouncedSearch, date])
+  }, [user, debouncedSearch, date, statusFilter])
 
   const handleReabrir = async (chamadoId: string) => {
     setCompletingId(chamadoId)
@@ -257,6 +263,27 @@ export default function Finalizados() {
       hour: '2-digit',
       minute: '2-digit',
     })
+  }
+
+  const BadgeStatus = ({ status }: { status: string }) => {
+    if (status === 'unificado') {
+      return (
+        <Badge
+          variant="outline"
+          className="bg-slate-200 text-slate-700 border-slate-300 whitespace-nowrap"
+        >
+          UNIFICADO
+        </Badge>
+      )
+    }
+    return (
+      <Badge
+        variant="outline"
+        className="bg-slate-100 text-slate-800 border-slate-200 whitespace-nowrap"
+      >
+        FINALIZADO
+      </Badge>
+    )
   }
 
   const PriorityBadge = ({ priority }: { priority: string | null }) => {
@@ -319,7 +346,17 @@ export default function Finalizados() {
             onChange={(e) => setSearchTerm(e.target.value)}
           />
         </div>
-        <div className="w-full sm:w-auto z-10">
+        <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto z-10">
+          <Select value={statusFilter} onValueChange={setStatusFilter}>
+            <SelectTrigger className="w-full sm:w-[160px] bg-white shadow-sm">
+              <SelectValue placeholder="Status" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="finalizado">Finalizados</SelectItem>
+              <SelectItem value="unificado">Unificados</SelectItem>
+              <SelectItem value="all">Ambos</SelectItem>
+            </SelectContent>
+          </Select>
           <Popover>
             <PopoverTrigger asChild>
               <Button
@@ -514,7 +551,10 @@ export default function Finalizados() {
                       </div>
                     </TableCell>
                     <TableCell className="align-middle">
-                      <PriorityBadge priority={c.prioridade} />
+                      <div className="flex flex-wrap gap-1">
+                        <PriorityBadge priority={c.prioridade} />
+                        <BadgeStatus status={c.status} />
+                      </div>
                     </TableCell>
                     <TableCell className="align-middle text-sm">
                       <div
@@ -577,12 +617,7 @@ export default function Finalizados() {
 
                   <div className="flex gap-2">
                     <PriorityBadge priority={c.prioridade} />
-                    <Badge
-                      variant="outline"
-                      className="bg-slate-100 text-slate-800 border-slate-200"
-                    >
-                      FINALIZADO
-                    </Badge>
+                    <BadgeStatus status={c.status} />
                   </div>
 
                   <div className="flex flex-col gap-1 text-sm text-slate-500 bg-slate-50 p-2 rounded-md">

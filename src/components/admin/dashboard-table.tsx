@@ -107,6 +107,7 @@ export function DashboardTable({
     aberto: 'bg-blue-100 text-blue-800 hover:bg-blue-100',
     em_atendimento: 'bg-yellow-100 text-yellow-800 hover:bg-yellow-100',
     finalizado: 'bg-[#404040] text-white hover:bg-[#404040]/90 border-transparent',
+    unificado: 'bg-slate-200 text-slate-700 hover:bg-slate-200',
   }
 
   const prioColor: Record<string, string> = {
@@ -120,6 +121,7 @@ export function DashboardTable({
     aberto: 'Aberto',
     em_atendimento: 'Em Atendimento',
     finalizado: 'Finalizado',
+    unificado: 'Unificado',
   }
   const prioLabel: Record<string, string> = {
     baixa: 'Baixa',
@@ -312,6 +314,7 @@ export function DashboardTable({
               <SelectItem value="aberto">Aberto</SelectItem>
               <SelectItem value="em_atendimento">Em Atendimento</SelectItem>
               <SelectItem value="finalizado">Finalizado</SelectItem>
+              <SelectItem value="unificado">Unificado</SelectItem>
             </SelectContent>
           </Select>
           <Select value={prioridade} onValueChange={setPrioridade}>

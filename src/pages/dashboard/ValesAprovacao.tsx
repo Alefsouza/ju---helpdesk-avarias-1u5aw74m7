@@ -98,7 +98,8 @@ export default function ValesAprovacao() {
       selectedChamado.solicitacoes_parcelamento &&
       selectedChamado.solicitacoes_parcelamento.length > 0
     ) {
-      hasDiscount = selectedChamado.solicitacoes_parcelamento[0].desconto_aplicado === true
+      const val = selectedChamado.solicitacoes_parcelamento[0].desconto_aplicado
+      hasDiscount = val === true || val === 'true' || val === '1' || val === 1
     }
 
     const currentAprovacoes = Array.isArray(selectedChamado.aprovacoes_diretoria)
@@ -193,7 +194,13 @@ export default function ValesAprovacao() {
             .eq('chamado_id', selectedChamado.id)
 
           if (!existingParcelas || existingParcelas.length === 0) {
-            const anyDiscountApplied = nextAprovacoes.some((a: any) => a.desconto_aplicado === true)
+            const anyDiscountApplied = nextAprovacoes.some(
+              (a: any) =>
+                a.desconto_aplicado === true ||
+                a.desconto_aplicado === 'true' ||
+                a.desconto_aplicado === '1' ||
+                a.desconto_aplicado === 1,
+            )
             const finalValue = anyDiscountApplied ? totalValue * 0.9 : totalValue
 
             const rawDateStr = selectedChamado.criado_em
@@ -439,7 +446,6 @@ export default function ValesAprovacao() {
                     <TableHead>Registro do Motorista</TableHead>
                     <TableHead>Nome do Motorista</TableHead>
                     <TableHead>Data da Ocorrência</TableHead>
-                    <TableHead>Desconto 10%</TableHead>
                     <TableHead>Aprovações</TableHead>
                     <TableHead>Documentos</TableHead>
                     <TableHead className="text-right">Ações</TableHead>
@@ -453,14 +459,6 @@ export default function ValesAprovacao() {
                     const aprovacoes = Array.isArray(chamado.aprovacoes_diretoria)
                       ? chamado.aprovacoes_diretoria
                       : []
-                    let hasDiscount = false
-                    if (
-                      chamado.solicitacoes_parcelamento &&
-                      chamado.solicitacoes_parcelamento.length > 0
-                    ) {
-                      hasDiscount = chamado.solicitacoes_parcelamento[0].desconto_aplicado === true
-                    }
-
                     return (
                       <TableRow key={chamado.id}>
                         <TableCell>
@@ -474,17 +472,6 @@ export default function ValesAprovacao() {
                           {chamado.data_ocorrencia
                             ? format(new Date(chamado.data_ocorrencia + 'T12:00:00'), 'dd/MM/yyyy')
                             : '-'}
-                        </TableCell>
-                        <TableCell>
-                          <span
-                            className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
-                              hasDiscount
-                                ? 'bg-green-100 text-green-700'
-                                : 'bg-gray-100 text-gray-700'
-                            }`}
-                          >
-                            {hasDiscount ? 'Sim' : 'Não'}
-                          </span>
                         </TableCell>
                         <TableCell>
                           <div className="flex items-center gap-2">

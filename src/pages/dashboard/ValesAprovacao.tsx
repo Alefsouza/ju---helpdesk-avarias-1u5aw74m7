@@ -32,8 +32,6 @@ export default function ValesAprovacao() {
   const [loading, setLoading] = useState(true)
   const [isApproveOpen, setIsApproveOpen] = useState(false)
   const [selectedChamado, setSelectedChamado] = useState<any>(null)
-  const [valorTotal, setValorTotal] = useState('')
-  const [numeroParcelas, setNumeroParcelas] = useState('1')
   const [isSubmitting, setIsSubmitting] = useState(false)
 
   const [isRejectOpen, setIsRejectOpen] = useState(false)
@@ -90,31 +88,6 @@ export default function ValesAprovacao() {
 
   const handleApproveClick = (chamado: any) => {
     setSelectedChamado(chamado)
-    const currentAprovacoes = Array.isArray(chamado.aprovacoes_diretoria)
-      ? chamado.aprovacoes_diretoria
-      : []
-    const isSecondApproval =
-      currentAprovacoes.length >= 1 || chamado.status_aprovacao === 'aprovacao_parcial'
-
-    if (isSecondApproval) {
-      const parcelas = chamado.parcelas_vales || []
-      const total = parcelas.reduce((acc: number, p: any) => acc + Number(p.valor_parcela), 0)
-      setValorTotal(total.toFixed(2))
-      setNumeroParcelas(parcelas.length.toString())
-    } else {
-      const solicitacoes = chamado.solicitacoes_parcelamento || []
-      const solicitacao = Array.isArray(solicitacoes)
-        ? solicitacoes[solicitacoes.length - 1]
-        : solicitacoes
-
-      if (solicitacao) {
-        setValorTotal(Number(solicitacao.valor_orcamento).toFixed(2))
-        setNumeroParcelas(solicitacao.quantidade_parcelas.toString())
-      } else {
-        setValorTotal('0.00')
-        setNumeroParcelas('1')
-      }
-    }
     setIsApproveOpen(true)
   }
 
@@ -135,6 +108,11 @@ export default function ValesAprovacao() {
     }
 
     try {
+      const solicitacoes = selectedChamado.solicitacoes_parcelamento || []
+      const solicitacao = Array.isArray(solicitacoes)
+        ? solicitacoes[solicitacoes.length - 1]
+        : solicitacoes
+
       if (isSecondApproval) {
         const { error } = await supabase
           .from('chamados')
@@ -147,6 +125,13 @@ export default function ValesAprovacao() {
 
         if (error) throw error
 
+        if (solicitacao) {
+          await supabase
+            .from('solicitacoes_parcelamento')
+            .update({ status: 'aprovado', atualizado_em: new Date().toISOString() })
+            .eq('id', solicitacao.id)
+        }
+
         await supabase.from('historico_chamado').insert({
           chamado_id: selectedChamado.id,
           usuario_id: user!.id,
@@ -154,11 +139,17 @@ export default function ValesAprovacao() {
           detalhes: 'Vale aprovado pela diretoria (Aprovação Final)',
         })
       } else {
-        const numParc = parseInt(numeroParcelas)
-        const valorTot = parseFloat(valorTotal)
+        if (!solicitacao) {
+          toast.error('Nenhuma solicitação de parcelamento encontrada para este chamado.')
+          setIsSubmitting(false)
+          return
+        }
+
+        const numParc = Number(solicitacao.quantidade_parcelas)
+        const valorTot = Number(solicitacao.valor_orcamento)
 
         if (isNaN(numParc) || isNaN(valorTot) || numParc <= 0 || valorTot <= 0) {
-          toast.error('Valores inválidos para parcelamento')
+          toast.error('Valores da solicitação inválidos ou zerados.')
           setIsSubmitting(false)
           return
         }
@@ -195,6 +186,11 @@ export default function ValesAprovacao() {
           .insert(parcelasToInsert)
 
         if (parcelasError) throw parcelasError
+
+        await supabase
+          .from('solicitacoes_parcelamento')
+          .update({ status: 'aprovado_parcial', atualizado_em: new Date().toISOString() })
+          .eq('id', solicitacao.id)
 
         await supabase.from('historico_chamado').insert({
           chamado_id: selectedChamado.id,

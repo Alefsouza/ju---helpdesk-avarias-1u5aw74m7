@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '@/lib/supabase/client'
 import { useAuth } from '@/hooks/use-auth'
-import { Card, CardHeader, CardTitle, CardContent, CardFooter } from '@/components/ui/card'
+import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import {
   Dialog,
@@ -13,6 +13,15 @@ import {
 } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table'
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { Check, X, FileText, Loader2, AlertCircle, FileSignature } from 'lucide-react'
 import { toast } from 'sonner'
 
@@ -33,9 +42,10 @@ export default function ValesAprovacao() {
       .select(`
         id, titulo, descricao, status_aprovacao, aprovacoes_diretoria,
         registro_motorista, nome_motorista, data_ocorrencia,
-        anexos_chamado_interno ( id, nome_arquivo, arquivo_url ),
-        documentos ( id, nome_arquivo, arquivo_url, tipo_documento, orcamento_url ),
-        parcelas_vales ( id, valor_parcela, data_referencia )
+        anexos_chamado_interno ( id, nome_arquivo, arquivo_url, criado_em ),
+        documentos ( id, nome_arquivo, arquivo_url, tipo_documento, orcamento_url, criado_em ),
+        parcelas_vales ( id, valor_parcela, data_referencia ),
+        formularios_espelho_danos ( registro_motorista, nome_motorista )
       `)
       .eq('status', 'finalizado')
       .or('status_aprovacao.is.null,status_aprovacao.eq.aprovacao_parcial')
@@ -212,6 +222,42 @@ export default function ValesAprovacao() {
     setChamados((prev) => prev.filter((c) => c.id !== chamado.id))
   }
 
+  const getLatestDocument = (docs: any[]) => {
+    if (!docs || docs.length === 0) return null
+    return docs.sort(
+      (a, b) => new Date(b.criado_em || 0).getTime() - new Date(a.criado_em || 0).getTime(),
+    )[0]
+  }
+
+  const getLatestAutorizacao = (anexos: any[]) => {
+    const autorizacoes = (anexos || []).filter((a: any) => {
+      const nome = a.nome_arquivo.toLowerCase()
+      return nome.includes('autorização') || nome.includes('autorizacao')
+    })
+    return getLatestDocument(autorizacoes)
+  }
+
+  const getLatestOrcamento = (documentos: any[]) => {
+    const orcamentos = (documentos || []).filter((d: any) => {
+      const nome = d.nome_arquivo?.toLowerCase() || ''
+      return (
+        d.tipo_documento === 'orcamento' ||
+        nome.includes('orçamento') ||
+        nome.includes('orcamento') ||
+        d.orcamento_url
+      )
+    })
+    return getLatestDocument(orcamentos)
+  }
+
+  const getMotoristaInfo = (chamado: any) => {
+    const form = chamado.formularios_espelho_danos?.[0]
+    return {
+      registro: form?.registro_motorista || chamado.registro_motorista || 'Não informado',
+      nome: form?.nome_motorista || chamado.nome_motorista || 'Não informado',
+    }
+  }
+
   if (loading) {
     return (
       <div className="flex h-[50vh] items-center justify-center">
@@ -231,7 +277,7 @@ export default function ValesAprovacao() {
   }
 
   return (
-    <div className="max-w-4xl mx-auto space-y-6">
+    <div className="max-w-6xl mx-auto space-y-6">
       <div>
         <h1 className="text-2xl font-bold text-slate-800">Vales para aprovação</h1>
         <p className="text-sm text-slate-500 mt-1">
@@ -250,151 +296,135 @@ export default function ValesAprovacao() {
           </CardContent>
         </Card>
       ) : (
-        <div className="grid gap-4">
-          {chamados.map((chamado) => {
-            const anexos = chamado.anexos_chamado_interno || []
-            const documentos = chamado.documentos || []
-            const autorizacoes = anexos.filter((a: any) => {
-              const nome = a.nome_arquivo.toLowerCase()
-              return nome.includes('autorização') || nome.includes('autorizacao')
-            })
-            const orcamentos = documentos.filter((d: any) => {
-              const nome = d.nome_arquivo?.toLowerCase() || ''
-              return (
-                d.tipo_documento === 'orcamento' ||
-                nome.includes('orçamento') ||
-                nome.includes('orcamento') ||
-                d.orcamento_url
-              )
-            })
-            const currentAprovacoes = Array.isArray(chamado.aprovacoes_diretoria)
-              ? chamado.aprovacoes_diretoria
-              : []
-            const isSecondApproval =
-              currentAprovacoes.length >= 1 || chamado.status_aprovacao === 'aprovacao_parcial'
+        <div className="bg-white rounded-md border shadow-sm overflow-hidden">
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader className="bg-slate-50">
+                <TableRow>
+                  <TableHead className="w-[120px]">Chamado</TableHead>
+                  <TableHead>Registro</TableHead>
+                  <TableHead>Nome do Motorista</TableHead>
+                  <TableHead>Data da Ocorrência</TableHead>
+                  <TableHead className="text-center">Documentos</TableHead>
+                  <TableHead className="text-right">Ações</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {chamados.map((chamado) => {
+                  const autorizacao = getLatestAutorizacao(chamado.anexos_chamado_interno)
+                  const orcamento = getLatestOrcamento(chamado.documentos)
+                  const motoristaInfo = getMotoristaInfo(chamado)
 
-            return (
-              <Card
-                key={chamado.id}
-                className="shadow-sm border-slate-200 overflow-hidden transition-all hover:shadow-md"
-              >
-                <CardHeader className="bg-slate-50/50 border-b pb-4">
-                  <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
-                    <CardTitle className="text-lg text-slate-800 flex items-center gap-2">
-                      {chamado.titulo}
-                      {isSecondApproval && (
-                        <span className="text-xs bg-amber-100 text-amber-800 px-2 py-0.5 rounded-full font-medium whitespace-nowrap">
-                          1/2 Aprovações
-                        </span>
-                      )}
-                    </CardTitle>
-                    <span className="text-xs font-normal text-slate-500 bg-white px-2 py-1 rounded-full border self-start md:self-auto">
-                      #{chamado.id.split('-')[0].toUpperCase()}
-                    </span>
-                  </div>
-                </CardHeader>
-                <CardContent className="space-y-4 pt-4">
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm bg-white border border-slate-100 p-4 rounded-lg shadow-sm">
-                    <div>
-                      <span className="block text-slate-500 text-xs font-medium uppercase mb-1">
-                        Motorista
-                      </span>
-                      <span className="font-medium text-slate-700">
-                        {chamado.nome_motorista || 'Não informado'}
-                      </span>
-                    </div>
-                    <div>
-                      <span className="block text-slate-500 text-xs font-medium uppercase mb-1">
-                        Registro
-                      </span>
-                      <span className="font-medium text-slate-700">
-                        {chamado.registro_motorista || 'Não informado'}
-                      </span>
-                    </div>
-                    <div>
-                      <span className="block text-slate-500 text-xs font-medium uppercase mb-1">
-                        Data da Ocorrência
-                      </span>
-                      <span className="font-medium text-slate-700">
+                  const currentAprovacoes = Array.isArray(chamado.aprovacoes_diretoria)
+                    ? chamado.aprovacoes_diretoria
+                    : []
+                  const isSecondApproval =
+                    currentAprovacoes.length >= 1 ||
+                    chamado.status_aprovacao === 'aprovacao_parcial'
+
+                  return (
+                    <TableRow key={chamado.id}>
+                      <TableCell className="font-medium">
+                        <div className="flex flex-col">
+                          <span>#{chamado.id.split('-')[0].toUpperCase()}</span>
+                          {isSecondApproval && (
+                            <span className="text-[10px] text-amber-700 bg-amber-100 rounded px-1.5 py-0.5 w-fit mt-1 whitespace-nowrap">
+                              1/2 Aprov.
+                            </span>
+                          )}
+                        </div>
+                      </TableCell>
+                      <TableCell>{motoristaInfo.registro}</TableCell>
+                      <TableCell className="max-w-[200px] truncate" title={motoristaInfo.nome}>
+                        {motoristaInfo.nome}
+                      </TableCell>
+                      <TableCell>
                         {chamado.data_ocorrencia
                           ? chamado.data_ocorrencia.split('-').reverse().join('/')
                           : 'Não informada'}
-                      </span>
-                    </div>
-                  </div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-center justify-center gap-2">
+                          {orcamento ? (
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <a
+                                  href={orcamento.orcamento_url || orcamento.arquivo_url}
+                                  target="_blank"
+                                  rel="noreferrer"
+                                  className="inline-flex items-center justify-center w-8 h-8 rounded-full bg-emerald-50 text-emerald-600 hover:bg-emerald-100 transition-colors"
+                                >
+                                  <FileText className="w-4 h-4" />
+                                </a>
+                              </TooltipTrigger>
+                              <TooltipContent>Ver Orçamento</TooltipContent>
+                            </Tooltip>
+                          ) : (
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <div className="inline-flex items-center justify-center w-8 h-8 rounded-full bg-slate-50 text-slate-300 cursor-not-allowed">
+                                  <FileText className="w-4 h-4" />
+                                </div>
+                              </TooltipTrigger>
+                              <TooltipContent>Orçamento Indisponível</TooltipContent>
+                            </Tooltip>
+                          )}
 
-                  <div className="text-sm text-slate-600 bg-slate-50 p-4 rounded-lg whitespace-pre-wrap border border-slate-100">
-                    {chamado.descricao}
-                  </div>
-
-                  <div className="flex flex-wrap gap-3 pt-2">
-                    {autorizacoes.length > 0 ? (
-                      autorizacoes.map((a: any) => (
-                        <a
-                          key={a.id}
-                          href={a.arquivo_url}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="inline-flex items-center gap-2 px-4 py-2 bg-blue-50 text-blue-700 rounded-md text-sm font-medium hover:bg-blue-100 transition-colors border border-blue-200"
-                        >
-                          <FileSignature className="w-4 h-4" />
-                          Ver Autorização
-                        </a>
-                      ))
-                    ) : (
-                      <span
-                        className="inline-flex items-center gap-2 px-4 py-2 bg-slate-50 text-slate-400 rounded-md text-sm font-medium border border-slate-200 cursor-not-allowed"
-                        title="Autorização não anexada"
-                      >
-                        <FileSignature className="w-4 h-4" />
-                        Autorização Indisponível
-                      </span>
-                    )}
-
-                    {orcamentos.length > 0 ? (
-                      orcamentos.map((o: any) => (
-                        <a
-                          key={o.id}
-                          href={o.orcamento_url || o.arquivo_url}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="inline-flex items-center gap-2 px-4 py-2 bg-emerald-50 text-emerald-700 rounded-md text-sm font-medium hover:bg-emerald-100 transition-colors border border-emerald-200"
-                        >
-                          <FileText className="w-4 h-4" />
-                          Ver Orçamento
-                        </a>
-                      ))
-                    ) : (
-                      <span
-                        className="inline-flex items-center gap-2 px-4 py-2 bg-slate-50 text-slate-400 rounded-md text-sm font-medium border border-slate-200 cursor-not-allowed"
-                        title="Orçamento não anexado"
-                      >
-                        <FileText className="w-4 h-4" />
-                        Orçamento Indisponível
-                      </span>
-                    )}
-                  </div>
-                </CardContent>
-                <CardFooter className="flex gap-3 justify-end border-t bg-slate-50 py-3">
-                  <Button
-                    variant="outline"
-                    className="text-red-600 hover:text-red-700 hover:bg-red-50 border-red-200"
-                    onClick={() => handleRefuse(chamado)}
-                  >
-                    <X className="w-4 h-4 mr-1.5" />
-                    Recusar
-                  </Button>
-                  <Button
-                    className="bg-emerald-600 hover:bg-emerald-700 text-white"
-                    onClick={() => handleApproveClick(chamado)}
-                  >
-                    <Check className="w-4 h-4 mr-1.5" />
-                    {isSecondApproval ? 'Confirmar 2ª Aprovação' : 'Aprovar'}
-                  </Button>
-                </CardFooter>
-              </Card>
-            )
-          })}
+                          {autorizacao ? (
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <a
+                                  href={autorizacao.arquivo_url}
+                                  target="_blank"
+                                  rel="noreferrer"
+                                  className="inline-flex items-center justify-center w-8 h-8 rounded-full bg-blue-50 text-blue-600 hover:bg-blue-100 transition-colors"
+                                >
+                                  <FileSignature className="w-4 h-4" />
+                                </a>
+                              </TooltipTrigger>
+                              <TooltipContent>Ver Autorização</TooltipContent>
+                            </Tooltip>
+                          ) : (
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <div className="inline-flex items-center justify-center w-8 h-8 rounded-full bg-slate-50 text-slate-300 cursor-not-allowed">
+                                  <FileSignature className="w-4 h-4" />
+                                </div>
+                              </TooltipTrigger>
+                              <TooltipContent>Autorização Indisponível</TooltipContent>
+                            </Tooltip>
+                          )}
+                        </div>
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <div className="flex items-center justify-end gap-2">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="text-red-600 border-red-200 hover:bg-red-50 hover:text-red-700 h-8 px-2"
+                            onClick={() => handleRefuse(chamado)}
+                            title="Recusar"
+                          >
+                            <X className="w-4 h-4" />
+                          </Button>
+                          <Button
+                            size="sm"
+                            className="bg-emerald-600 hover:bg-emerald-700 text-white h-8 px-3"
+                            onClick={() => handleApproveClick(chamado)}
+                          >
+                            <Check className="w-4 h-4 mr-1 md:mr-1.5" />
+                            <span className="hidden md:inline">
+                              {isSecondApproval ? 'Confirmar' : 'Aprovar'}
+                            </span>
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  )
+                })}
+              </TableBody>
+            </Table>
+          </div>
         </div>
       )}
 

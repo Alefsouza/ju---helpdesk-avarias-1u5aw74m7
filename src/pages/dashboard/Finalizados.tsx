@@ -146,6 +146,7 @@ export default function Finalizados() {
         .from('chamados')
         .select('*')
         .eq('status', 'finalizado')
+        .is('status_juridico', null)
         .order('atualizado_em', { ascending: false })
         .limit(200)
 

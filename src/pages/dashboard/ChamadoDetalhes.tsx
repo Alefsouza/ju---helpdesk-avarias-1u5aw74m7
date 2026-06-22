@@ -3181,11 +3181,9 @@ export default function ChamadoDetalhes() {
 
       await supabase.from('historico_chamado').insert({
         chamado_id: id as string,
-        acao: 'respondido',
+        acao: 'Classificação Jurídica Alterada',
         usuario_id: user?.id as string,
-        detalhes: novoStatus
-          ? `Chamado classificado no jurídico como: ${novoStatus}`
-          : `Classificação jurídica removida`,
+        detalhes: novoStatus ? `Movido para ${novoStatus}` : `Classificação Jurídica removida`,
       })
 
       toast.success('Classificação jurídica atualizada com sucesso')
@@ -3304,6 +3302,8 @@ export default function ChamadoDetalhes() {
         return `Transferido por ${userNome}`
       case 'reaberto':
         return `Reaberto por ${userNome}`
+      case 'Classificação Jurídica Alterada':
+        return `Classificação Jurídica alterada por ${userNome}`
       default:
         return `Ação ${acao} por ${userNome}`
     }
@@ -3322,18 +3322,6 @@ export default function ChamadoDetalhes() {
           Voltar
         </Button>
         <div className="flex flex-col sm:flex-row items-center gap-2 w-full sm:w-auto">
-          {canUnify && (
-            <Button
-              variant="outline"
-              size="sm"
-              className="w-full sm:w-auto h-8 text-xs"
-              onClick={() => setUnificarModalOpen(true)}
-              disabled={completing || transferLoading}
-            >
-              <LinkIcon className="mr-2 h-3.5 w-3.5" />
-              Unificar Chamado
-            </Button>
-          )}
           {isJuridico && (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
@@ -3363,6 +3351,18 @@ export default function ChamadoDetalhes() {
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
+          )}
+          {canUnify && (
+            <Button
+              variant="outline"
+              size="sm"
+              className="w-full sm:w-auto h-8 text-xs"
+              onClick={() => setUnificarModalOpen(true)}
+              disabled={completing || transferLoading}
+            >
+              <LinkIcon className="mr-2 h-3.5 w-3.5" />
+              Unificar Chamado
+            </Button>
           )}
           {canTransfer && (
             <Button

@@ -299,6 +299,7 @@ function SolicitarParcelasModal({
   const [parcelas, setParcelas] = useState('1')
   const [loading, setLoading] = useState(false)
   const [solicitacao, setSolicitacao] = useState<any>(null)
+  const [aplicarDesconto, setAplicarDesconto] = useState(true)
 
   useEffect(() => {
     if (open) {
@@ -423,7 +424,7 @@ function SolicitarParcelasModal({
     )
   }
 
-  const valorFinal = valorOrcamento * 0.9
+  const valorFinal = aplicarDesconto ? valorOrcamento * 0.9 : valorOrcamento
 
   const handleSolicitar = async () => {
     if (!registro || !nome) {
@@ -447,6 +448,7 @@ function SolicitarParcelasModal({
           valor_orcamento: valorFinal,
           quantidade_parcelas: parseInt(parcelas),
           status: 'pendente',
+          desconto_aplicado: aplicarDesconto,
         })
         .select()
         .single()
@@ -531,15 +533,12 @@ function SolicitarParcelasModal({
           <div className="flex items-center space-x-2 bg-slate-50 p-3 rounded-lg border">
             <Checkbox
               id="desconto-solicitacao"
-              checked={true}
-              onCheckedChange={() => {}}
-              disabled={true}
+              checked={aplicarDesconto}
+              onCheckedChange={(checked) => setAplicarDesconto(!!checked)}
+              disabled={loading || solicitacao?.status === 'pendente'}
             />
-            <Label
-              htmlFor="desconto-solicitacao"
-              className="text-sm cursor-pointer leading-none opacity-70"
-            >
-              Aplicar Desconto de 10% (Automático para Vales)
+            <Label htmlFor="desconto-solicitacao" className="text-sm cursor-pointer leading-none">
+              Aplicar Desconto de 10%
             </Label>
           </div>
 
@@ -617,6 +616,7 @@ function GerarValeModal({
   const [resolvedDocId, setResolvedDocId] = useState<string | null>(null)
   const [parcelas, setParcelas] = useState('1')
   const [loading, setLoading] = useState(false)
+  const [aplicarDesconto, setAplicarDesconto] = useState(true)
 
   useEffect(() => {
     if (open) {
@@ -731,7 +731,7 @@ function GerarValeModal({
     )
   }
 
-  const valorFinal = valorBaseNum * 0.9
+  const valorFinal = aplicarDesconto ? valorBaseNum * 0.9 : valorBaseNum
   const isAprovado = solicitacaoStatus === 'aprovado'
   const maxParcelas = isAprovado ? 36 : Math.max(1, Math.floor(valorFinal / 250))
 
@@ -831,7 +831,7 @@ function GerarValeModal({
               valor_base: valorBaseNum,
               valor_final: valorFinal,
               parcelas,
-              com_desconto: true,
+              com_desconto: aplicarDesconto,
             },
             headers: {
               Authorization: `Bearer ${token}`,
@@ -939,9 +939,14 @@ function GerarValeModal({
           </div>
 
           <div className="flex items-center space-x-2 bg-slate-50 p-3 rounded-lg border">
-            <Checkbox id="desconto" checked={true} onCheckedChange={() => {}} disabled={true} />
-            <Label htmlFor="desconto" className="text-sm cursor-pointer leading-none opacity-70">
-              Aplicar Desconto de 10% (Automático para Vales)
+            <Checkbox
+              id="desconto"
+              checked={aplicarDesconto}
+              onCheckedChange={(checked) => setAplicarDesconto(!!checked)}
+              disabled={loading}
+            />
+            <Label htmlFor="desconto" className="text-sm cursor-pointer leading-none">
+              Aplicar Desconto de 10%
             </Label>
           </div>
 

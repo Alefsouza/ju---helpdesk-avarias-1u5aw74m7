@@ -82,9 +82,9 @@ export default function ValesAprovadosDP() {
         anexos_chamado_interno ( id, nome_arquivo, arquivo_url, criado_em )
       )
     `)
-      .gte('aprovado_em', `${startDate}T00:00:00.000Z`)
-      .lte('aprovado_em', `${endDate}T23:59:59.999Z`)
-      .order('aprovado_em', { ascending: false })
+      .gte('data_referencia', startDate)
+      .lte('data_referencia', endDate)
+      .order('data_referencia', { ascending: true })
 
     if (error) {
       toast.error('Erro ao buscar parcelas')

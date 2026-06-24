@@ -194,14 +194,9 @@ export default function ValesAprovacao() {
             .eq('chamado_id', selectedChamado.id)
 
           if (!existingParcelas || existingParcelas.length === 0) {
-            const anyDiscountApplied = nextAprovacoes.some(
-              (a: any) =>
-                a.desconto_aplicado === true ||
-                a.desconto_aplicado === 'true' ||
-                a.desconto_aplicado === '1' ||
-                a.desconto_aplicado === 1,
-            )
-            const finalValue = anyDiscountApplied ? totalValue * 0.9 : totalValue
+            // O valor totalValue já é o final value da solicitacao_parcelamento
+            // Então não precisamos aplicar o desconto novamente
+            const finalValue = totalValue
 
             const baseDateStr = new Date().toISOString().split('T')[0]
 

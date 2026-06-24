@@ -283,8 +283,7 @@ export default function Finalizados() {
         </Badge>
       )
     }
-    return
-    null
+    return null
   }
 
   const PriorityBadge = ({ priority }: { priority: string | null }) => {

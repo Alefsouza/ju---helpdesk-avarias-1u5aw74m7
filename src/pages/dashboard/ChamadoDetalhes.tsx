@@ -798,8 +798,39 @@ function GerarValeModal({
         }
       }
 
-      // Inserir na tabela parcelas_vales
       const qtyParcelas = parseInt(parcelas) || 1
+
+      // Atualizar ou inserir na solicitacoes_parcelamento para salvar o desconto
+      const { data: existingSol } = await supabase
+        .from('solicitacoes_parcelamento')
+        .select('id')
+        .eq('chamado_id', chamadoId)
+        .maybeSingle()
+
+      if (existingSol) {
+        await supabase
+          .from('solicitacoes_parcelamento')
+          .update({
+            desconto_aplicado: aplicarDesconto,
+            valor_orcamento: valorFinal,
+            quantidade_parcelas: qtyParcelas,
+            atualizado_em: new Date().toISOString(),
+          })
+          .eq('id', existingSol.id)
+      } else {
+        await supabase.from('solicitacoes_parcelamento').insert({
+          chamado_id: chamadoId,
+          usuario_id: userId,
+          desconto_aplicado: aplicarDesconto,
+          valor_orcamento: valorFinal,
+          quantidade_parcelas: qtyParcelas,
+          status: 'pendente',
+          registro: chamado?.registro_motorista || solicitante?.registro || '',
+          nome: chamado?.nome_motorista || solicitante?.nome_completo || '',
+        })
+      }
+
+      // Inserir na tabela parcelas_vales
       const valorParcela = valorFinal / qtyParcelas
       const parcelasToInsert = Array.from({ length: qtyParcelas }).map((_, idx) => {
         const today = new Date()

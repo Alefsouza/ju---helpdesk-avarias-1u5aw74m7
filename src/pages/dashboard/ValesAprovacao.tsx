@@ -198,7 +198,10 @@ export default function ValesAprovacao() {
             // Então não precisamos aplicar o desconto novamente
             const finalValue = totalValue
 
-            const baseDateStr = new Date().toISOString().split('T')[0]
+            const today = new Date()
+            const baseDateStr = new Date(today.getFullYear(), today.getMonth(), 1)
+              .toISOString()
+              .split('T')[0]
 
             const { data: calculadas, error: calcError } = await supabase.rpc(
               'calcular_parcelas_vale',

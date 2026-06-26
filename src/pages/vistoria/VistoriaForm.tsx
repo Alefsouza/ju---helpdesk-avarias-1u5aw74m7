@@ -40,7 +40,7 @@ const formSchema = z.object({
 
 type FormValues = z.infer<typeof formSchema>
 
-let registrosCache: Array<{ REGISTRO: string | number; NOME: string }> | null = null
+let registrosCache: Array<{ registro: string | number; nome: string }> | null = null
 
 const getRegistros = () => {
   if (registrosCache !== null) return registrosCache
@@ -51,7 +51,21 @@ const getRegistros = () => {
       return registrosCache
     }
     const parsed = JSON.parse(raw)
-    registrosCache = Array.isArray(parsed) ? parsed : []
+    let items = []
+
+    if (parsed && typeof parsed === 'object' && Array.isArray(parsed.items)) {
+      items = parsed.items
+    } else if (Array.isArray(parsed)) {
+      items = parsed.map((item) => ({
+        registro: item.registro || item.REGISTRO,
+        nome: item.nome || item.NOME,
+      }))
+    }
+
+    registrosCache = items.map((item: any) => ({
+      registro: item.registro,
+      nome: item.nome,
+    }))
   } catch (e) {
     console.error('Failed to parse VITE_REGISTROS', e)
     registrosCache = []
@@ -94,10 +108,10 @@ export default function VistoriaForm() {
       setIsSearchingMotorista(true)
       try {
         const registros = getRegistros()
-        const match = registros.find((r) => String(r.REGISTRO) === registro)
+        const match = registros.find((r) => String(r.registro) === registro)
 
-        if (match && match.NOME) {
-          form.setValue('nome_motorista', match.NOME, { shouldValidate: true, shouldDirty: true })
+        if (match && match.nome) {
+          form.setValue('nome_motorista', match.nome, { shouldValidate: true, shouldDirty: true })
         }
       } catch (err) {
         console.error('Erro ao buscar motorista:', err)
@@ -119,10 +133,10 @@ export default function VistoriaForm() {
       setIsSearchingMotorista(true)
       try {
         const registros = getRegistros()
-        const match = registros.find((r) => String(r.REGISTRO) === registro)
+        const match = registros.find((r) => String(r.registro) === registro)
 
-        if (match && match.NOME) {
-          form.setValue('nome_motorista', match.NOME, { shouldValidate: true, shouldDirty: true })
+        if (match && match.nome) {
+          form.setValue('nome_motorista', match.nome, { shouldValidate: true, shouldDirty: true })
         }
       } finally {
         setIsSearchingMotorista(false)

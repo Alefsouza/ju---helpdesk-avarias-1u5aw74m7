@@ -138,18 +138,25 @@ export default function VistoriaForm() {
     const searchReg = String(registroMotorista).trim().toLowerCase()
     if (!searchReg) return
 
+    const searchRegNormalized = searchReg.replace(/^0+(?!$)/, '')
     const records = getRegistros()
-    const found = records.find((r) => r.registro === searchReg)
+
+    const found = records.find((r) => {
+      const recordRegNormalized = r.registro.replace(/^0+(?!$)/, '')
+      return recordRegNormalized === searchRegNormalized
+    })
 
     if (found && found.nome) {
-      console.log(`[Diagnostic] Search phase: found "${found.nome}" for registro "${searchReg}"`)
+      console.log(
+        `[Diagnostic] Search phase: found "${found.nome}" for registro "${searchReg}" (normalized: "${searchRegNormalized}")`,
+      )
       const current = form.getValues('nome_motorista')
       if (current !== found.nome) {
         form.setValue('nome_motorista', found.nome, { shouldValidate: true, shouldDirty: true })
       }
     } else {
       console.log(
-        `[Diagnostic] Search phase: no match for registro "${searchReg}". Leaving field available for manual fallback.`,
+        `[Diagnostic] Search phase: no match for registro "${searchReg}" (normalized: "${searchRegNormalized}"). Leaving field available for manual fallback.`,
       )
     }
   }, [registroMotorista, form])

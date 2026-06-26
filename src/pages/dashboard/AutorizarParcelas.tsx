@@ -6,15 +6,13 @@ import { Button } from '@/components/ui/button'
 import { Check, X, Loader2, AlertCircle } from 'lucide-react'
 import { toast } from 'sonner'
 import { Link } from 'react-router-dom'
-import { Checkbox } from '@/components/ui/checkbox'
-import { Label } from '@/components/ui/label'
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 
 export default function AutorizarParcelas() {
   const { user, profile } = useAuth()
   const [solicitacoes, setSolicitacoes] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [actionLoading, setActionLoading] = useState<string | null>(null)
-  const [descontos, setDescontos] = useState<Record<string, boolean>>({})
 
   const fetchSolicitacoes = async () => {
     setLoading(true)
@@ -51,10 +49,6 @@ export default function AutorizarParcelas() {
     const updatePayload: any = {
       status: newStatus,
       atualizado_em: new Date().toISOString(),
-    }
-
-    if (newStatus === 'aprovado') {
-      updatePayload.desconto_aplicado = descontos[id] || false
     }
 
     const { error } = await supabase
@@ -138,10 +132,24 @@ export default function AutorizarParcelas() {
                     </div>
                     <div>
                       <span className="font-medium">Valor:</span>{' '}
-                      {new Intl.NumberFormat('pt-BR', {
-                        style: 'currency',
-                        currency: 'BRL',
-                      }).format(s.valor_orcamento)}
+                      <div className="inline-flex items-center gap-1.5 align-bottom">
+                        {new Intl.NumberFormat('pt-BR', {
+                          style: 'currency',
+                          currency: 'BRL',
+                        }).format(s.valor_orcamento)}
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <AlertCircle className="w-4 h-4 text-amber-500 cursor-help" />
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <p>
+                              {s.desconto_aplicado
+                                ? 'Valor com 10% de desconto'
+                                : 'Valor sem 10% de desconto'}
+                            </p>
+                          </TooltipContent>
+                        </Tooltip>
+                      </div>
                     </div>
                     <div>
                       <span className="font-medium">Parcelas:</span> {s.quantidade_parcelas}x
@@ -149,20 +157,6 @@ export default function AutorizarParcelas() {
                   </div>
                 </div>
                 <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 w-full md:w-auto mt-4 md:mt-0">
-                  <div className="flex items-center space-x-2">
-                    <Checkbox
-                      id={`desconto-${s.id}`}
-                      checked={descontos[s.id] || false}
-                      onCheckedChange={(c) => setDescontos((prev) => ({ ...prev, [s.id]: !!c }))}
-                      disabled={actionLoading === s.id}
-                    />
-                    <Label
-                      htmlFor={`desconto-${s.id}`}
-                      className="text-sm cursor-pointer whitespace-nowrap"
-                    >
-                      Aplicar desconto de 10%
-                    </Label>
-                  </div>
                   <div className="flex gap-2 w-full sm:w-auto">
                     <Button
                       variant="outline"

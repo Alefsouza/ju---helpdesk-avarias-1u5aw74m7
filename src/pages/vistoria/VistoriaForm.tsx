@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { z } from 'zod'
 import { useForm } from 'react-hook-form'
@@ -63,6 +63,39 @@ export default function VistoriaForm() {
 
   const draftKey = `draft-vistoria-${chamadoId || 'new'}`
   const { draftRestored, clearDraft, setDraftRestored } = useDraft(form, draftKey)
+
+  const [isSearchingMotorista, setIsSearchingMotorista] = useState(false)
+  const registroMotorista = form.watch('registro_motorista')
+
+  useEffect(() => {
+    const fetchNomeMotorista = async () => {
+      const registro = registroMotorista?.trim()
+      if (!registro) return
+
+      setIsSearchingMotorista(true)
+      try {
+        const { data, error } = await supabase
+          .from('registros' as any)
+          .select('nome')
+          .eq('registro', registro)
+          .maybeSingle()
+
+        if (data && data.nome) {
+          form.setValue('nome_motorista', data.nome, { shouldValidate: true, shouldDirty: true })
+        }
+      } catch (err) {
+        console.error('Erro ao buscar motorista:', err)
+      } finally {
+        setIsSearchingMotorista(false)
+      }
+    }
+
+    const debounceTimer = setTimeout(() => {
+      fetchNomeMotorista()
+    }, 500)
+
+    return () => clearTimeout(debounceTimer)
+  }, [registroMotorista, form])
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!e.target.files) return
@@ -295,7 +328,14 @@ export default function VistoriaForm() {
                     <FormItem>
                       <FormLabel>Registro do Motorista</FormLabel>
                       <FormControl>
-                        <Input placeholder="Matrícula / Registro" {...field} />
+                        <div className="relative">
+                          <Input placeholder="Matrícula / Registro" {...field} />
+                          {isSearchingMotorista && (
+                            <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                              <Loader2 className="h-4 w-4 animate-spin text-slate-400" />
+                            </div>
+                          )}
+                        </div>
                       </FormControl>
                       <FormMessage />
                     </FormItem>

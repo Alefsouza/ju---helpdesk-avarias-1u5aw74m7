@@ -105,11 +105,26 @@ export default function Relatorios() {
   }, [user])
 
   const fetchAssignees = async () => {
+    const { data: chamados } = await supabase
+      .from('chamados')
+      .select('responsavel_id')
+      .not('responsavel_id', 'is', null)
+
+    if (!chamados || chamados.length === 0) {
+      setAssignees([])
+      return
+    }
+
+    const assignedIds = Array.from(new Set(chamados.map((c) => c.responsavel_id as string)))
+
     const { data } = await supabase
       .from('perfil_usuario')
       .select('id, nome_completo')
-      .in('tipo_usuario', ['admin', 'responsavel'])
-    if (data) setAssignees(data)
+      .in('id', assignedIds)
+
+    if (data) {
+      setAssignees(data.sort((a, b) => a.nome_completo.localeCompare(b.nome_completo)))
+    }
   }
 
   const fetchData = useCallback(async () => {

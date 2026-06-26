@@ -135,30 +135,35 @@ export default function VistoriaForm() {
 
   useEffect(() => {
     if (!registroMotorista) return
-    const searchReg = String(registroMotorista).trim().toLowerCase()
-    if (!searchReg) return
 
-    const searchRegNormalized = searchReg.replace(/^0+(?!$)/, '')
-    const records = getRegistros()
+    const timeoutId = setTimeout(() => {
+      const searchReg = String(registroMotorista).trim().toLowerCase()
+      if (!searchReg) return
 
-    const found = records.find((r) => {
-      const recordRegNormalized = r.registro.replace(/^0+(?!$)/, '')
-      return recordRegNormalized === searchRegNormalized
-    })
+      const searchRegNormalized = searchReg.replace(/^0+(?!$)/, '')
+      const records = getRegistros()
 
-    if (found && found.nome) {
-      console.log(
-        `[Diagnostic] Search phase: found "${found.nome}" for registro "${searchReg}" (normalized: "${searchRegNormalized}")`,
-      )
-      const current = form.getValues('nome_motorista')
-      if (current !== found.nome) {
-        form.setValue('nome_motorista', found.nome, { shouldValidate: true, shouldDirty: true })
+      const found = records.find((r) => {
+        const recordRegNormalized = r.registro.replace(/^0+(?!$)/, '')
+        return recordRegNormalized === searchRegNormalized
+      })
+
+      if (found && found.nome) {
+        console.log(
+          `[Diagnostic] Search phase: found "${found.nome}" for registro "${searchReg}" (normalized: "${searchRegNormalized}")`,
+        )
+        const current = form.getValues('nome_motorista')
+        if (current !== found.nome) {
+          form.setValue('nome_motorista', found.nome, { shouldValidate: true, shouldDirty: true })
+        }
+      } else {
+        console.log(
+          `[Diagnostic] Search phase: no match for registro "${searchReg}" (normalized: "${searchRegNormalized}"). Leaving field available for manual fallback.`,
+        )
       }
-    } else {
-      console.log(
-        `[Diagnostic] Search phase: no match for registro "${searchReg}" (normalized: "${searchRegNormalized}"). Leaving field available for manual fallback.`,
-      )
-    }
+    }, 400)
+
+    return () => clearTimeout(timeoutId)
   }, [registroMotorista, form])
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {

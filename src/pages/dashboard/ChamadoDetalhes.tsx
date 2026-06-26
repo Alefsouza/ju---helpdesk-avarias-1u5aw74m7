@@ -814,6 +814,7 @@ function GerarValeModal({
             desconto_aplicado: aplicarDesconto,
             valor_orcamento: valorFinal,
             quantidade_parcelas: qtyParcelas,
+            status: 'aprovado',
             atualizado_em: new Date().toISOString(),
           })
           .eq('id', existingSol.id)
@@ -824,7 +825,7 @@ function GerarValeModal({
           desconto_aplicado: aplicarDesconto,
           valor_orcamento: valorFinal,
           quantidade_parcelas: qtyParcelas,
-          status: 'pendente',
+          status: 'aprovado',
           registro: chamado?.registro_motorista || solicitante?.registro || '',
           nome: chamado?.nome_motorista || solicitante?.nome_completo || '',
         })

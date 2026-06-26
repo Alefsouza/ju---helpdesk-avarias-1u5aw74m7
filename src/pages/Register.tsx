@@ -33,14 +33,32 @@ export default function Register() {
   const [error, setError] = useState<string | null>(null)
   const [isSuccess, setIsSuccess] = useState(false)
   const [isBgLoaded, setIsBgLoaded] = useState(false)
+  const [bgUrl, setBgUrl] = useState<string>('')
 
   useEffect(() => {
+    const supabaseBg = supabase.storage.from('assets').getPublicUrl('background-bus.png')
+      .data.publicUrl
+
     const img = new Image()
-    img.src = localBgImage
-    if (img.complete) {
+    img.src = supabaseBg
+
+    img.onload = () => {
+      setBgUrl(supabaseBg)
       setIsBgLoaded(true)
-    } else {
-      img.onload = () => setIsBgLoaded(true)
+    }
+
+    img.onerror = () => {
+      const fallbackImg = new Image()
+      fallbackImg.src = localBgImage
+      if (fallbackImg.complete) {
+        setBgUrl(localBgImage)
+        setIsBgLoaded(true)
+      } else {
+        fallbackImg.onload = () => {
+          setBgUrl(localBgImage)
+          setIsBgLoaded(true)
+        }
+      }
     }
   }, [])
 
@@ -117,7 +135,7 @@ export default function Register() {
     }
   }
 
-  const backgroundStyle = isBgLoaded ? { backgroundImage: `url('${localBgImage}')` } : undefined
+  const backgroundStyle = isBgLoaded ? { backgroundImage: `url('${bgUrl}')` } : undefined
 
   if (isSuccess) {
     return (

@@ -38,7 +38,6 @@ import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase/client'
 import { toast } from 'sonner'
 import logoBranco from '@/assets/logo_branco_transparente_nitido-80a6a.png'
-import logoColorido from '@/assets/whatsapp-image-2023-08-10-at-16.17.31-0b937.jpeg'
 import { NotificationsDropdown } from '@/components/NotificationsDropdown'
 
 function AppSidebar() {
@@ -682,15 +681,26 @@ export default function Layout() {
   // Auth Layout
   if (isAuthRoute) {
     return (
-      <main className="min-h-screen flex flex-col items-center justify-start pt-[40px] bg-[#225f3d] px-4 pb-8 sm:px-8">
-        <div className="mb-12 flex items-center justify-center animate-fade-in-down w-full max-w-[400px]">
-          <img
-            src={logoColorido}
-            alt="Via Sudeste"
-            className="w-[200px] h-auto md:w-[200px] object-contain rounded-2xl shadow-2xl"
-          />
-        </div>
-        <div className="w-full max-w-[400px]">
+      <main className="min-h-screen relative flex items-center justify-center px-4 sm:px-8 py-8">
+        <div
+          className="absolute inset-0 z-0 bg-cover bg-center bg-no-repeat"
+          style={{
+            backgroundImage: 'url(https://img.usecurling.com/p/1920/1080?q=electric%20bus)',
+          }}
+        />
+        <div className="absolute inset-0 z-0 bg-[#225f3d]/30 mix-blend-multiply" />
+        <div className="absolute inset-0 z-0 bg-black/60" />
+
+        <div className="relative z-10 w-full max-w-[400px] animate-fade-in-up">
+          {location.pathname !== '/' && (
+            <div className="mb-8 flex items-center justify-center">
+              <img
+                src={logoBranco}
+                alt="Via Sudeste"
+                className="w-[180px] h-auto object-contain drop-shadow-lg"
+              />
+            </div>
+          )}
           <Outlet />
         </div>
       </main>
@@ -737,12 +747,8 @@ export default function Layout() {
       <SidebarInset className="flex flex-col flex-1 min-h-screen bg-white">
         <header className="flex h-16 shrink-0 items-center border-b px-4 gap-4 bg-white sticky top-0 z-10 shadow-sm">
           <SidebarTrigger className="-ml-2 text-slate-700" />
-          <div className="flex md:hidden items-center ml-2">
-            <img
-              src={logoColorido}
-              alt="Via Sudeste"
-              className="h-8 w-auto object-contain rounded"
-            />
+          <div className="flex md:hidden items-center ml-2 bg-[#225f3d] px-2 py-1 rounded">
+            <img src={logoBranco} alt="Via Sudeste" className="h-6 w-auto object-contain" />
           </div>
           <div className="flex-1" />
           <div className="flex items-center gap-2 sm:gap-4">

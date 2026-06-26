@@ -180,7 +180,7 @@ Deno.serve(async (req: Request) => {
       let logoBytes: ArrayBuffer | null = null
       try {
         const logoRes = await fetch(
-          'https://helpdesk-cadastro-5422c--preview.goskip.app/assets/whatsapp-image-2023-08-10-at-16.17.31-0b937-DEVbArSW.jpeg',
+          'https://img.usecurling.com/i?q=company+logo&color=white&shape=fill',
         )
         if (logoRes.ok) {
           logoBytes = await logoRes.arrayBuffer()

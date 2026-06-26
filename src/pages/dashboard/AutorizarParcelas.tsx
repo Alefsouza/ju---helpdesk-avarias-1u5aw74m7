@@ -20,7 +20,7 @@ export default function AutorizarParcelas() {
     setLoading(true)
     const { data, error } = await supabase
       .from('solicitacoes_parcelamento')
-      .select('*, chamados(titulo, id)')
+      .select('*, chamados(titulo, id, nome_motorista, registro_motorista)')
       .eq('status', 'pendente')
       .order('criado_em', { ascending: false })
 
@@ -116,10 +116,12 @@ export default function AutorizarParcelas() {
                   </Link>
                   <div className="text-sm text-slate-600 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-2">
                     <div>
-                      <span className="font-medium">Colaborador:</span> {s.nome}
+                      <span className="font-medium">Colaborador:</span>{' '}
+                      {s.chamados?.nome_motorista || s.nome}
                     </div>
                     <div>
-                      <span className="font-medium">Registro:</span> {s.registro}
+                      <span className="font-medium">Registro:</span>{' '}
+                      {s.chamados?.registro_motorista || s.registro}
                     </div>
                     <div>
                       <span className="font-medium">Valor:</span>{' '}

@@ -40,6 +40,25 @@ const formSchema = z.object({
 
 type FormValues = z.infer<typeof formSchema>
 
+let registrosCache: Array<{ REGISTRO: string | number; NOME: string }> | null = null
+
+const getRegistros = () => {
+  if (registrosCache !== null) return registrosCache
+  try {
+    const raw = import.meta.env.VITE_REGISTROS
+    if (!raw) {
+      registrosCache = []
+      return registrosCache
+    }
+    const parsed = JSON.parse(raw)
+    registrosCache = Array.isArray(parsed) ? parsed : []
+  } catch (e) {
+    console.error('Failed to parse VITE_REGISTROS', e)
+    registrosCache = []
+  }
+  return registrosCache
+}
+
 export default function VistoriaForm() {
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
@@ -68,20 +87,17 @@ export default function VistoriaForm() {
   const registroMotorista = form.watch('registro_motorista')
 
   useEffect(() => {
-    const fetchNomeMotorista = async () => {
+    const fetchNomeMotorista = () => {
       const registro = registroMotorista?.trim()
       if (!registro) return
 
       setIsSearchingMotorista(true)
       try {
-        const { data, error } = await supabase
-          .from('registros')
-          .select('nome')
-          .eq('registro', registro)
-          .maybeSingle()
+        const registros = getRegistros()
+        const match = registros.find((r) => String(r.REGISTRO) === registro)
 
-        if (data && data.nome) {
-          form.setValue('nome_motorista', data.nome, { shouldValidate: true, shouldDirty: true })
+        if (match && match.NOME) {
+          form.setValue('nome_motorista', match.NOME, { shouldValidate: true, shouldDirty: true })
         }
       } catch (err) {
         console.error('Erro ao buscar motorista:', err)
@@ -101,19 +117,16 @@ export default function VistoriaForm() {
     const registro = form.getValues('registro_motorista')?.trim()
     if (registro) {
       setIsSearchingMotorista(true)
-      supabase
-        .from('registros')
-        .select('nome')
-        .eq('registro', registro)
-        .maybeSingle()
-        .then(({ data }) => {
-          if (data && data.nome) {
-            form.setValue('nome_motorista', data.nome, { shouldValidate: true, shouldDirty: true })
-          }
-        })
-        .finally(() => {
-          setIsSearchingMotorista(false)
-        })
+      try {
+        const registros = getRegistros()
+        const match = registros.find((r) => String(r.REGISTRO) === registro)
+
+        if (match && match.NOME) {
+          form.setValue('nome_motorista', match.NOME, { shouldValidate: true, shouldDirty: true })
+        }
+      } finally {
+        setIsSearchingMotorista(false)
+      }
     }
   }
 

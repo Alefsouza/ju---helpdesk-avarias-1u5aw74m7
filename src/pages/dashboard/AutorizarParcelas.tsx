@@ -117,11 +117,11 @@ export default function AutorizarParcelas() {
                   <div className="text-sm text-slate-600 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-2">
                     <div>
                       <span className="font-medium">Colaborador:</span>{' '}
-                      {s.chamados?.nome_motorista || s.nome}
+                      {s.chamados?.nome_motorista || '-'}
                     </div>
                     <div>
                       <span className="font-medium">Registro:</span>{' '}
-                      {s.chamados?.registro_motorista || s.registro}
+                      {s.chamados?.registro_motorista || '-'}
                     </div>
                     <div>
                       <span className="font-medium">Valor:</span>{' '}

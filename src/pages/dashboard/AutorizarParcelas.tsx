@@ -20,7 +20,9 @@ export default function AutorizarParcelas() {
     setLoading(true)
     const { data, error } = await supabase
       .from('solicitacoes_parcelamento')
-      .select('*, chamados(titulo, id, nome_motorista, registro_motorista)')
+      .select(
+        '*, chamados(titulo, id, nome_motorista, registro_motorista, formularios_espelho_danos(nome_motorista, registro_motorista))',
+      )
       .eq('status', 'pendente')
       .order('criado_em', { ascending: false })
 
@@ -33,7 +35,10 @@ export default function AutorizarParcelas() {
   }
 
   useEffect(() => {
-    if (user?.email === 'alex.fontes@viasudeste.com') {
+    if (
+      user?.email === 'financeiro@viasudeste.com' ||
+      user?.email === 'alex.fontes@viasudeste.com'
+    ) {
       fetchSolicitacoes()
     } else {
       setLoading(false)
@@ -76,7 +81,7 @@ export default function AutorizarParcelas() {
     )
   }
 
-  if (user?.email !== 'alex.fontes@viasudeste.com') {
+  if (user?.email !== 'financeiro@viasudeste.com' && user?.email !== 'alex.fontes@viasudeste.com') {
     return (
       <div className="flex flex-col items-center justify-center h-[50vh] text-slate-500">
         <AlertCircle className="w-12 h-12 mb-4 text-slate-300" />
@@ -117,11 +122,19 @@ export default function AutorizarParcelas() {
                   <div className="text-sm text-slate-600 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-2">
                     <div>
                       <span className="font-medium">Colaborador:</span>{' '}
-                      {s.chamados?.nome_motorista || '-'}
+                      {(Array.isArray(s.chamados?.formularios_espelho_danos)
+                        ? s.chamados?.formularios_espelho_danos[0]?.nome_motorista
+                        : s.chamados?.formularios_espelho_danos?.nome_motorista) ||
+                        s.chamados?.nome_motorista ||
+                        '-'}
                     </div>
                     <div>
                       <span className="font-medium">Registro:</span>{' '}
-                      {s.chamados?.registro_motorista || '-'}
+                      {(Array.isArray(s.chamados?.formularios_espelho_danos)
+                        ? s.chamados?.formularios_espelho_danos[0]?.registro_motorista
+                        : s.chamados?.formularios_espelho_danos?.registro_motorista) ||
+                        s.chamados?.registro_motorista ||
+                        '-'}
                     </div>
                     <div>
                       <span className="font-medium">Valor:</span>{' '}

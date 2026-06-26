@@ -75,7 +75,7 @@ export default function VistoriaForm() {
       setIsSearchingMotorista(true)
       try {
         const { data, error } = await supabase
-          .from('registros' as any)
+          .from('registros')
           .select('nome')
           .eq('registro', registro)
           .maybeSingle()
@@ -96,6 +96,26 @@ export default function VistoriaForm() {
 
     return () => clearTimeout(debounceTimer)
   }, [registroMotorista, form])
+
+  const handleRegistroBlur = () => {
+    const registro = form.getValues('registro_motorista')?.trim()
+    if (registro) {
+      setIsSearchingMotorista(true)
+      supabase
+        .from('registros')
+        .select('nome')
+        .eq('registro', registro)
+        .maybeSingle()
+        .then(({ data }) => {
+          if (data && data.nome) {
+            form.setValue('nome_motorista', data.nome, { shouldValidate: true, shouldDirty: true })
+          }
+        })
+        .finally(() => {
+          setIsSearchingMotorista(false)
+        })
+    }
+  }
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!e.target.files) return
@@ -329,7 +349,14 @@ export default function VistoriaForm() {
                       <FormLabel>Registro do Motorista</FormLabel>
                       <FormControl>
                         <div className="relative">
-                          <Input placeholder="Matrícula / Registro" {...field} />
+                          <Input
+                            placeholder="Matrícula / Registro"
+                            {...field}
+                            onBlur={(e) => {
+                              field.onBlur()
+                              handleRegistroBlur()
+                            }}
+                          />
                           {isSearchingMotorista && (
                             <div className="absolute right-3 top-1/2 -translate-y-1/2">
                               <Loader2 className="h-4 w-4 animate-spin text-slate-400" />

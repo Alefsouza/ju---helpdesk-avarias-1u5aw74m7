@@ -1,12 +1,12 @@
 {
   "_versions": {
-    "manage-users": 10,
-    "transferir-chamado": 10,
-    "gerar-pdf": 42,
-    "criar-chamado-vistoria": 9,
-    "processar-documento-uazapi": 5,
-    "unificar-chamados": 18,
-    "verificar-inatividade-chamados": 5,
-    "importar-frota-xlsx": 5
+    "manage-users": 11,
+    "transferir-chamado": 11,
+    "gerar-pdf": 43,
+    "criar-chamado-vistoria": 10,
+    "processar-documento-uazapi": 6,
+    "unificar-chamados": 19,
+    "verificar-inatividade-chamados": 6,
+    "importar-frota-xlsx": 6
   }
 }

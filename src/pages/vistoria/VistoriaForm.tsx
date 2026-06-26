@@ -40,24 +40,26 @@ const formSchema = z.object({
 
 type FormValues = z.infer<typeof formSchema>
 
-let registrosCache: Array<{ registro: string | number; nome: string }> | null = null
+let registrosCache: Array<{ registro: string; nome: string }> | null = null
 
 const getRegistros = () => {
-  if (registrosCache !== null) return registrosCache
+  if (registrosCache !== null && registrosCache.length > 0) return registrosCache
   try {
     const raw = import.meta.env.VITE_REGISTROS
     if (!raw) {
-      registrosCache = []
-      return registrosCache
+      console.warn('[Diagnostic] VITE_REGISTROS is empty or undefined')
+      return []
     }
 
-    let parsed = JSON.parse(raw)
-
+    let parsed: any = raw
+    let attempts = 0
     // Handle multiple layers of stringification
-    while (typeof parsed === 'string') {
+    while (typeof parsed === 'string' && attempts < 5) {
       try {
         parsed = JSON.parse(parsed)
+        attempts++
       } catch (e) {
+        console.error('[Diagnostic] Error parsing VITE_REGISTROS at attempt', attempts, e)
         break
       }
     }
@@ -68,25 +70,40 @@ const getRegistros = () => {
       items = parsed.items
     } else if (Array.isArray(parsed)) {
       items = parsed
+    } else {
+      console.error('[Diagnostic] Unexpected JSON structure for VITE_REGISTROS:', parsed)
     }
 
-    registrosCache = items.map((item: any) => {
-      if (!item || typeof item !== 'object') return { registro: '', nome: '' }
+    const processed = items
+      .map((item: any) => {
+        if (!item || typeof item !== 'object') return { registro: '', nome: '' }
 
-      const keys = Object.keys(item)
-      const registroKey = keys.find((k) => k.toLowerCase() === 'registro')
-      const nomeKey = keys.find((k) => k.toLowerCase() === 'nome')
+        const keys = Object.keys(item)
+        const registroKey = keys.find((k) => k.toLowerCase().trim() === 'registro')
+        const nomeKey = keys.find((k) => k.toLowerCase().trim() === 'nome')
 
-      return {
-        registro: registroKey ? String(item[registroKey]).trim() : '',
-        nome: nomeKey ? String(item[nomeKey]).trim() : '',
-      }
-    })
+        return {
+          registro: registroKey ? String(item[registroKey]).trim().toLowerCase() : '',
+          nome: nomeKey ? String(item[nomeKey]).trim() : '',
+        }
+      })
+      .filter((item) => item.registro || item.nome)
+
+    if (processed.length > 0) {
+      registrosCache = processed
+      console.log(
+        `[Diagnostic] Successfully loaded ${registrosCache.length} records from VITE_REGISTROS.`,
+      )
+    } else {
+      console.warn('[Diagnostic] No valid records found in VITE_REGISTROS.')
+    }
+
+    return processed
   } catch (e) {
-    console.error('Failed to parse VITE_REGISTROS', e)
-    registrosCache = []
+    console.error('[Diagnostic] Fatal error parsing VITE_REGISTROS:', e)
+    // Removal of static cache lock: do not set registrosCache to [] permanently on failure
+    return []
   }
-  return registrosCache
 }
 
 export default function VistoriaForm() {
@@ -116,7 +133,29 @@ export default function VistoriaForm() {
   const registroMotorista = form.watch('registro_motorista')
 
   useEffect(() => {
+    if (!registroMotorista) return
+    const searchReg = String(registroMotorista).trim().toLowerCase()
+    if (!searchReg) return
+
+    const records = getRegistros()
+    const found = records.find((r) => r.registro === searchReg)
+
+    if (found && found.nome) {
+      console.log(`[Diagnostic] Search phase: found "${found.nome}" for registro "${searchReg}"`)
+      const current = form.getValues('nome_motorista')
+      if (current !== found.nome) {
+        form.setValue('nome_motorista', found.nome, { shouldValidate: true })
+      }
+    } else {
+      console.log(
+        `[Diagnostic] Search phase: no match for registro "${searchReg}". Leaving field available for manual fallback.`,
+      )
+    }
+  }, [registroMotorista, form])
+
+  useEffect(() => {
     const fetchNomeMotorista = () => {
+      return
       const registro = registroMotorista?.trim()
       if (!registro) return
 

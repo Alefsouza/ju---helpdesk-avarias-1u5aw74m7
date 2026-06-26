@@ -27,7 +27,7 @@ import {
 } from '@/components/ui/select'
 import { Checkbox } from '@/components/ui/checkbox'
 import { toast } from 'sonner'
-import { Loader2, UploadCloud, X, File as FileIcon } from 'lucide-react'
+import { Loader2, UploadCloud, X, File as FileIcon, AlertCircle } from 'lucide-react'
 
 const formSchema = z.object({
   descricao: z.string().min(5, 'A descrição é obrigatória'),
@@ -72,6 +72,78 @@ export default function NovoChamadoCoc() {
   const carro = form.watch('carro')
   const [garagemIdentificada, setGaragemIdentificada] = useState<string | null>(null)
   const [isVerificandoCarro, setIsVerificandoCarro] = useState(false)
+
+  const registroMotorista = form.watch('registro_motorista')
+  const [isVerificandoMotorista, setIsVerificandoMotorista] = useState(false)
+  const [motoristaEncontrado, setMotoristaEncontrado] = useState<boolean | null>(null)
+
+  const registroCobrador = form.watch('registro_cobrador')
+  const [isVerificandoCobrador, setIsVerificandoCobrador] = useState(false)
+  const [cobradorEncontrado, setCobradorEncontrado] = useState<boolean | null>(null)
+
+  useEffect(() => {
+    async function verificarMotorista() {
+      if (!registroMotorista || registroMotorista.trim().length === 0) {
+        setMotoristaEncontrado(null)
+        return
+      }
+      setIsVerificandoMotorista(true)
+      try {
+        const normalized = registroMotorista.replace(/^0+/, '') || '0'
+        const { data } = await supabase
+          .from('registros')
+          .select('nome')
+          .eq('registro', normalized)
+          .maybeSingle()
+
+        if (data) {
+          form.setValue('nome_motorista', data.nome, { shouldValidate: true })
+          setMotoristaEncontrado(true)
+        } else {
+          setMotoristaEncontrado(false)
+        }
+      } catch (err) {
+        console.error(err)
+        setMotoristaEncontrado(false)
+      } finally {
+        setIsVerificandoMotorista(false)
+      }
+    }
+    const timer = setTimeout(verificarMotorista, 500)
+    return () => clearTimeout(timer)
+  }, [registroMotorista, form])
+
+  useEffect(() => {
+    async function verificarCobrador() {
+      if (!registroCobrador || registroCobrador.trim().length === 0) {
+        setCobradorEncontrado(null)
+        return
+      }
+      setIsVerificandoCobrador(true)
+      try {
+        const normalized = registroCobrador.replace(/^0+/, '') || '0'
+        const { data } = await supabase
+          .from('registros')
+          .select('nome')
+          .eq('registro', normalized)
+          .maybeSingle()
+
+        if (data) {
+          form.setValue('nome_cobrador', data.nome, { shouldValidate: true })
+          setCobradorEncontrado(true)
+        } else {
+          setCobradorEncontrado(false)
+        }
+      } catch (err) {
+        console.error(err)
+        setCobradorEncontrado(false)
+      } finally {
+        setIsVerificandoCobrador(false)
+      }
+    }
+    const timer = setTimeout(verificarCobrador, 500)
+    return () => clearTimeout(timer)
+  }, [registroCobrador, form])
 
   useEffect(() => {
     async function verificarCarro() {
@@ -245,6 +317,19 @@ export default function NovoChamadoCoc() {
                       <FormControl>
                         <Input placeholder="Ex: 12345" {...field} />
                       </FormControl>
+                      {isVerificandoMotorista ? (
+                        <p className="text-xs text-slate-500 flex items-center gap-1 mt-1">
+                          <Loader2 className="w-3 h-3 animate-spin" /> Buscando...
+                        </p>
+                      ) : motoristaEncontrado === false ? (
+                        <p className="text-xs text-amber-600 font-medium mt-1">
+                          Registro não encontrado. Preencha o nome manualmente.
+                        </p>
+                      ) : motoristaEncontrado === true ? (
+                        <p className="text-xs text-green-600 font-medium mt-1">
+                          Motorista encontrado!
+                        </p>
+                      ) : null}
                       <FormMessage />
                     </FormItem>
                   )}
@@ -273,6 +358,19 @@ export default function NovoChamadoCoc() {
                       <FormControl>
                         <Input placeholder="Ex: 54321" {...field} />
                       </FormControl>
+                      {isVerificandoCobrador ? (
+                        <p className="text-xs text-slate-500 flex items-center gap-1 mt-1">
+                          <Loader2 className="w-3 h-3 animate-spin" /> Buscando...
+                        </p>
+                      ) : cobradorEncontrado === false ? (
+                        <p className="text-xs text-amber-600 font-medium mt-1">
+                          Registro não encontrado. Preencha o nome manualmente.
+                        </p>
+                      ) : cobradorEncontrado === true ? (
+                        <p className="text-xs text-green-600 font-medium mt-1">
+                          Cobrador encontrado!
+                        </p>
+                      ) : null}
                       <FormMessage />
                     </FormItem>
                   )}

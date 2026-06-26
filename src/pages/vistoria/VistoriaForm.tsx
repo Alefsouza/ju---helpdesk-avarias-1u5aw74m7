@@ -5,7 +5,7 @@ import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { supabase } from '@/lib/supabase/client'
 import { toast } from 'sonner'
-import { Camera, X, Loader2, ImagePlus, AlertCircle } from 'lucide-react'
+import { Camera, X, Loader2, ImagePlus, AlertCircle, CheckCircle2 } from 'lucide-react'
 import { useAuth } from '@/hooks/use-auth'
 import { useDraft } from '@/hooks/use-draft'
 
@@ -28,7 +28,7 @@ import {
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
-import logoColorido from '@/assets/whatsapp-image-2023-08-10-at-16.17.31-0b937.jpeg'
+import logoBranco from '@/assets/logo_branco_transparente_nitido-80a6a.png'
 
 const formSchema = z.object({
   linha: z.string().min(1, 'Campo obrigatório'),
@@ -39,78 +39,6 @@ const formSchema = z.object({
 })
 
 type FormValues = z.infer<typeof formSchema>
-
-let registrosCache: Array<{ registro: string; nome: string }> | null = null
-
-const getRegistros = () => {
-  if (registrosCache !== null && registrosCache.length > 0) return registrosCache
-  try {
-    const raw = import.meta.env.REGISTROS as string | undefined
-    if (!raw) {
-      console.warn('[Diagnostic] REGISTROS is empty or undefined')
-      return []
-    }
-
-    let parsed: any = raw
-    let attempts = 0
-    // Handle multiple layers of stringification
-    while (typeof parsed === 'string' && attempts < 5) {
-      try {
-        parsed = JSON.parse(parsed)
-        attempts++
-      } catch (e) {
-        console.error('[Diagnostic] Error parsing REGISTROS at attempt', attempts, e)
-        console.error('[Diagnostic] Raw secret content:', raw)
-        break
-      }
-    }
-
-    let items: any[] = []
-
-    if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
-      if (Array.isArray(parsed.items)) {
-        items = parsed.items
-      } else {
-        // Treat as a dictionary of key-value pairs where keys are registrations
-        items = Object.entries(parsed).map(([key, value]) => ({ registro: key, nome: value }))
-      }
-    } else if (Array.isArray(parsed)) {
-      items = parsed
-    } else {
-      console.error('[Diagnostic] Unexpected JSON structure for REGISTROS:', parsed)
-    }
-
-    const processed = items
-      .map((item: any) => {
-        if (!item || typeof item !== 'object') return { registro: '', nome: '' }
-
-        const keys = Object.keys(item)
-        const registroKey = keys.find((k) => k.toLowerCase().trim() === 'registro')
-        const nomeKey = keys.find((k) => k.toLowerCase().trim() === 'nome')
-
-        return {
-          registro: registroKey ? String(item[registroKey]).trim().toLowerCase() : '',
-          nome: nomeKey ? String(item[nomeKey]).trim() : '',
-        }
-      })
-      .filter((item) => item.registro || item.nome)
-
-    if (processed.length > 0) {
-      registrosCache = processed
-      console.log(
-        `[Diagnostic] Successfully loaded ${registrosCache.length} records from REGISTROS.`,
-      )
-    } else {
-      console.warn('[Diagnostic] No valid records found in REGISTROS.')
-    }
-
-    return processed
-  } catch (e) {
-    console.error('[Diagnostic] Fatal error parsing REGISTROS:', e)
-    // Removal of static cache lock: do not set registrosCache to [] permanently on failure
-    return []
-  }
-}
 
 export default function VistoriaForm() {
   const navigate = useNavigate()
@@ -136,37 +64,75 @@ export default function VistoriaForm() {
   const draftKey = `draft-vistoria-${chamadoId || 'new'}`
   const { draftRestored, clearDraft, setDraftRestored } = useDraft(form, draftKey)
 
+  const [isSearchingMotorista, setIsSearchingMotorista] = useState(false)
+  const [motoristaEncontrado, setMotoristaEncontrado] = useState<boolean | null>(null)
+
   const registroMotorista = form.watch('registro_motorista')
 
   useEffect(() => {
-    if (!registroMotorista) return
+    const syncRegistros = async () => {
+      try {
+        const { error } = await supabase.functions.invoke('sync-external-registros')
+        if (error) {
+          console.error('Erro na sincronização de registros (Timeout ou falha na API):', error)
+          // Falhas silenciosas para não travar o fluxo do usuário (fallback para digitação manual)
+        }
+      } catch (e) {
+        console.error('Erro na chamada da Edge Function sync-external-registros:', e)
+      }
+    }
+    syncRegistros()
+  }, [])
 
-    const timeoutId = setTimeout(() => {
-      const searchReg = String(registroMotorista).trim().toLowerCase()
+  useEffect(() => {
+    if (!registroMotorista) {
+      setMotoristaEncontrado(null)
+      return
+    }
+
+    const timeoutId = setTimeout(async () => {
+      const searchReg = String(registroMotorista).trim()
       if (!searchReg) return
 
-      const searchRegNormalized = searchReg.replace(/^0+(?!$)/, '')
-      const records = getRegistros()
+      setIsSearchingMotorista(true)
+      setMotoristaEncontrado(null)
 
-      const found = records.find((r) => {
-        const recordRegNormalized = r.registro.replace(/^0+(?!$)/, '')
-        return recordRegNormalized === searchRegNormalized
-      })
+      try {
+        const searchRegNormalized = searchReg.replace(/^0+(?!$)/, '')
 
-      if (found && found.nome) {
-        console.log(
-          `[Diagnostic] Search phase: found "${found.nome}" for registro "${searchReg}" (normalized: "${searchRegNormalized}")`,
-        )
-        const current = form.getValues('nome_motorista')
-        if (current !== found.nome) {
-          form.setValue('nome_motorista', found.nome, { shouldValidate: true, shouldDirty: true })
+        const { data, error } = await supabase
+          .from('registros')
+          .select('registro, nome')
+          .ilike('registro', `${searchRegNormalized}%`)
+          .limit(20)
+
+        if (error) throw error
+
+        if (data && data.length > 0) {
+          const found = data.find((r) => r.registro.replace(/^0+(?!$)/, '') === searchRegNormalized)
+
+          if (found && found.nome) {
+            const current = form.getValues('nome_motorista')
+            if (current !== found.nome) {
+              form.setValue('nome_motorista', found.nome, {
+                shouldValidate: true,
+                shouldDirty: true,
+              })
+            }
+            setMotoristaEncontrado(true)
+          } else {
+            setMotoristaEncontrado(false)
+          }
+        } else {
+          setMotoristaEncontrado(false)
         }
-      } else {
-        console.log(
-          `[Diagnostic] Search phase: no match for registro "${searchReg}" (normalized: "${searchRegNormalized}"). Leaving field available for manual fallback.`,
-        )
+      } catch (err) {
+        console.error('Erro ao buscar motorista:', err)
+        setMotoristaEncontrado(false)
+      } finally {
+        setIsSearchingMotorista(false)
       }
-    }, 400)
+    }, 500)
 
     return () => clearTimeout(timeoutId)
   }, [registroMotorista, form])
@@ -277,12 +243,8 @@ export default function VistoriaForm() {
 
   return (
     <div className="max-w-3xl mx-auto space-y-6 pb-12">
-      <div className="flex justify-center mb-6">
-        <img
-          src={logoColorido}
-          alt="Via Sudeste"
-          className="h-20 w-auto object-contain rounded-xl shadow-sm"
-        />
+      <div className="flex justify-center mb-6 bg-[#225f3d] p-4 rounded-xl shadow-sm">
+        <img src={logoBranco} alt="Via Sudeste" className="h-16 w-auto object-contain" />
       </div>
 
       {draftRestored && (
@@ -402,8 +364,28 @@ export default function VistoriaForm() {
                     <FormItem>
                       <FormLabel>Registro do Motorista</FormLabel>
                       <FormControl>
-                        <Input placeholder="Matrícula / Registro" {...field} />
+                        <div className="relative">
+                          <Input placeholder="Matrícula / Registro" {...field} />
+                          {isSearchingMotorista && (
+                            <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                              <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+                            </div>
+                          )}
+                          {!isSearchingMotorista && motoristaEncontrado === true && (
+                            <div
+                              className="absolute right-3 top-1/2 -translate-y-1/2"
+                              title="Motorista localizado"
+                            >
+                              <CheckCircle2 className="h-4 w-4 text-green-500" />
+                            </div>
+                          )}
+                        </div>
                       </FormControl>
+                      {motoristaEncontrado === true && (
+                        <p className="text-[0.8rem] text-green-600 font-medium">
+                          Motorista localizado na base de dados.
+                        </p>
+                      )}
                       <FormMessage />
                     </FormItem>
                   )}

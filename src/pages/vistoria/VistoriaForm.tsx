@@ -56,15 +56,12 @@ const getRegistros = () => {
     if (parsed && typeof parsed === 'object' && Array.isArray(parsed.items)) {
       items = parsed.items
     } else if (Array.isArray(parsed)) {
-      items = parsed.map((item) => ({
-        registro: item.registro || item.REGISTRO,
-        nome: item.nome || item.NOME,
-      }))
+      items = parsed
     }
 
     registrosCache = items.map((item: any) => ({
-      registro: item.registro,
-      nome: item.nome,
+      registro: item.registro || item.REGISTRO,
+      nome: item.nome || item.NOME,
     }))
   } catch (e) {
     console.error('Failed to parse VITE_REGISTROS', e)
@@ -97,7 +94,6 @@ export default function VistoriaForm() {
   const draftKey = `draft-vistoria-${chamadoId || 'new'}`
   const { draftRestored, clearDraft, setDraftRestored } = useDraft(form, draftKey)
 
-  const [isSearchingMotorista, setIsSearchingMotorista] = useState(false)
   const registroMotorista = form.watch('registro_motorista')
 
   useEffect(() => {
@@ -105,24 +101,23 @@ export default function VistoriaForm() {
       const registro = registroMotorista?.trim()
       if (!registro) return
 
-      setIsSearchingMotorista(true)
       try {
         const registros = getRegistros()
-        const match = registros.find((r) => String(r.registro) === registro)
+        const match = registros.find(
+          (r) => String(r.registro).trim().toLowerCase() === registro.toLowerCase(),
+        )
 
         if (match && match.nome) {
           form.setValue('nome_motorista', match.nome, { shouldValidate: true, shouldDirty: true })
         }
       } catch (err) {
         console.error('Erro ao buscar motorista:', err)
-      } finally {
-        setIsSearchingMotorista(false)
       }
     }
 
     const debounceTimer = setTimeout(() => {
       fetchNomeMotorista()
-    }, 500)
+    }, 300)
 
     return () => clearTimeout(debounceTimer)
   }, [registroMotorista, form])
@@ -130,16 +125,17 @@ export default function VistoriaForm() {
   const handleRegistroBlur = () => {
     const registro = form.getValues('registro_motorista')?.trim()
     if (registro) {
-      setIsSearchingMotorista(true)
       try {
         const registros = getRegistros()
-        const match = registros.find((r) => String(r.registro) === registro)
+        const match = registros.find(
+          (r) => String(r.registro).trim().toLowerCase() === registro.toLowerCase(),
+        )
 
         if (match && match.nome) {
           form.setValue('nome_motorista', match.nome, { shouldValidate: true, shouldDirty: true })
         }
-      } finally {
-        setIsSearchingMotorista(false)
+      } catch (err) {
+        console.error('Erro ao buscar motorista no blur:', err)
       }
     }
   }
@@ -375,21 +371,14 @@ export default function VistoriaForm() {
                     <FormItem>
                       <FormLabel>Registro do Motorista</FormLabel>
                       <FormControl>
-                        <div className="relative">
-                          <Input
-                            placeholder="Matrícula / Registro"
-                            {...field}
-                            onBlur={(e) => {
-                              field.onBlur()
-                              handleRegistroBlur()
-                            }}
-                          />
-                          {isSearchingMotorista && (
-                            <div className="absolute right-3 top-1/2 -translate-y-1/2">
-                              <Loader2 className="h-4 w-4 animate-spin text-slate-400" />
-                            </div>
-                          )}
-                        </div>
+                        <Input
+                          placeholder="Matrícula / Registro"
+                          {...field}
+                          onBlur={(e) => {
+                            field.onBlur()
+                            handleRegistroBlur()
+                          }}
+                        />
                       </FormControl>
                       <FormMessage />
                     </FormItem>

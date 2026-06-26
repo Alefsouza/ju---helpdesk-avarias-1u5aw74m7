@@ -60,6 +60,7 @@ const getRegistros = () => {
         attempts++
       } catch (e) {
         console.error('[Diagnostic] Error parsing VITE_REGISTROS at attempt', attempts, e)
+        console.error('[Diagnostic] Raw secret content:', raw)
         break
       }
     }
@@ -144,7 +145,7 @@ export default function VistoriaForm() {
       console.log(`[Diagnostic] Search phase: found "${found.nome}" for registro "${searchReg}"`)
       const current = form.getValues('nome_motorista')
       if (current !== found.nome) {
-        form.setValue('nome_motorista', found.nome, { shouldValidate: true })
+        form.setValue('nome_motorista', found.nome, { shouldValidate: true, shouldDirty: true })
       }
     } else {
       console.log(
@@ -152,51 +153,6 @@ export default function VistoriaForm() {
       )
     }
   }, [registroMotorista, form])
-
-  useEffect(() => {
-    const fetchNomeMotorista = () => {
-      return
-      const registro = registroMotorista?.trim()
-      if (!registro) return
-
-      try {
-        const registros = getRegistros()
-        const match = registros.find(
-          (r) => String(r.registro).trim().toLowerCase() === registro.toLowerCase(),
-        )
-
-        if (match && match.nome) {
-          form.setValue('nome_motorista', match.nome, { shouldValidate: true, shouldDirty: true })
-        }
-      } catch (err) {
-        console.error('Erro ao buscar motorista:', err)
-      }
-    }
-
-    const debounceTimer = setTimeout(() => {
-      fetchNomeMotorista()
-    }, 300)
-
-    return () => clearTimeout(debounceTimer)
-  }, [registroMotorista, form])
-
-  const handleRegistroBlur = () => {
-    const registro = form.getValues('registro_motorista')?.trim()
-    if (registro) {
-      try {
-        const registros = getRegistros()
-        const match = registros.find(
-          (r) => String(r.registro).trim().toLowerCase() === registro.toLowerCase(),
-        )
-
-        if (match && match.nome) {
-          form.setValue('nome_motorista', match.nome, { shouldValidate: true, shouldDirty: true })
-        }
-      } catch (err) {
-        console.error('Erro ao buscar motorista no blur:', err)
-      }
-    }
-  }
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!e.target.files) return
@@ -429,14 +385,7 @@ export default function VistoriaForm() {
                     <FormItem>
                       <FormLabel>Registro do Motorista</FormLabel>
                       <FormControl>
-                        <Input
-                          placeholder="Matrícula / Registro"
-                          {...field}
-                          onBlur={(e) => {
-                            field.onBlur()
-                            handleRegistroBlur()
-                          }}
-                        />
+                        <Input placeholder="Matrícula / Registro" {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>

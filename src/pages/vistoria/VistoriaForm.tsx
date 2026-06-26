@@ -45,9 +45,9 @@ let registrosCache: Array<{ registro: string; nome: string }> | null = null
 const getRegistros = () => {
   if (registrosCache !== null && registrosCache.length > 0) return registrosCache
   try {
-    const raw = import.meta.env.VITE_REGISTROS
+    const raw = import.meta.env.REGISTROS as string | undefined
     if (!raw) {
-      console.warn('[Diagnostic] VITE_REGISTROS is empty or undefined')
+      console.warn('[Diagnostic] REGISTROS is empty or undefined')
       return []
     }
 
@@ -59,7 +59,7 @@ const getRegistros = () => {
         parsed = JSON.parse(parsed)
         attempts++
       } catch (e) {
-        console.error('[Diagnostic] Error parsing VITE_REGISTROS at attempt', attempts, e)
+        console.error('[Diagnostic] Error parsing REGISTROS at attempt', attempts, e)
         console.error('[Diagnostic] Raw secret content:', raw)
         break
       }
@@ -67,12 +67,17 @@ const getRegistros = () => {
 
     let items: any[] = []
 
-    if (parsed && typeof parsed === 'object' && Array.isArray(parsed.items)) {
-      items = parsed.items
+    if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
+      if (Array.isArray(parsed.items)) {
+        items = parsed.items
+      } else {
+        // Treat as a dictionary of key-value pairs where keys are registrations
+        items = Object.entries(parsed).map(([key, value]) => ({ registro: key, nome: value }))
+      }
     } else if (Array.isArray(parsed)) {
       items = parsed
     } else {
-      console.error('[Diagnostic] Unexpected JSON structure for VITE_REGISTROS:', parsed)
+      console.error('[Diagnostic] Unexpected JSON structure for REGISTROS:', parsed)
     }
 
     const processed = items
@@ -93,15 +98,15 @@ const getRegistros = () => {
     if (processed.length > 0) {
       registrosCache = processed
       console.log(
-        `[Diagnostic] Successfully loaded ${registrosCache.length} records from VITE_REGISTROS.`,
+        `[Diagnostic] Successfully loaded ${registrosCache.length} records from REGISTROS.`,
       )
     } else {
-      console.warn('[Diagnostic] No valid records found in VITE_REGISTROS.')
+      console.warn('[Diagnostic] No valid records found in REGISTROS.')
     }
 
     return processed
   } catch (e) {
-    console.error('[Diagnostic] Fatal error parsing VITE_REGISTROS:', e)
+    console.error('[Diagnostic] Fatal error parsing REGISTROS:', e)
     // Removal of static cache lock: do not set registrosCache to [] permanently on failure
     return []
   }

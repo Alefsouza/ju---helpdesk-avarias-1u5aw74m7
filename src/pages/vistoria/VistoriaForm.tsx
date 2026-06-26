@@ -50,8 +50,19 @@ const getRegistros = () => {
       registrosCache = []
       return registrosCache
     }
-    const parsed = JSON.parse(raw)
-    let items = []
+
+    let parsed = JSON.parse(raw)
+
+    // Handle multiple layers of stringification
+    while (typeof parsed === 'string') {
+      try {
+        parsed = JSON.parse(parsed)
+      } catch (e) {
+        break
+      }
+    }
+
+    let items: any[] = []
 
     if (parsed && typeof parsed === 'object' && Array.isArray(parsed.items)) {
       items = parsed.items
@@ -59,10 +70,18 @@ const getRegistros = () => {
       items = parsed
     }
 
-    registrosCache = items.map((item: any) => ({
-      registro: item.registro || item.REGISTRO,
-      nome: item.nome || item.NOME,
-    }))
+    registrosCache = items.map((item: any) => {
+      if (!item || typeof item !== 'object') return { registro: '', nome: '' }
+
+      const keys = Object.keys(item)
+      const registroKey = keys.find((k) => k.toLowerCase() === 'registro')
+      const nomeKey = keys.find((k) => k.toLowerCase() === 'nome')
+
+      return {
+        registro: registroKey ? String(item[registroKey]).trim() : '',
+        nome: nomeKey ? String(item[nomeKey]).trim() : '',
+      }
+    })
   } catch (e) {
     console.error('Failed to parse VITE_REGISTROS', e)
     registrosCache = []

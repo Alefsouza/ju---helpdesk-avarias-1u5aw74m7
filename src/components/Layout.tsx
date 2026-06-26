@@ -680,31 +680,7 @@ export default function Layout() {
 
   // Auth Layout
   if (isAuthRoute) {
-    return (
-      <main className="min-h-screen relative flex items-center justify-center px-4 sm:px-8 py-8">
-        <div
-          className="absolute inset-0 z-0 bg-cover bg-center bg-no-repeat"
-          style={{
-            backgroundImage: 'url(https://img.usecurling.com/p/1920/1080?q=electric%20bus)',
-          }}
-        />
-        <div className="absolute inset-0 z-0 bg-[#225f3d]/30 mix-blend-multiply" />
-        <div className="absolute inset-0 z-0 bg-black/60" />
-
-        <div className="relative z-10 w-full max-w-[400px] animate-fade-in-up">
-          {location.pathname !== '/' && (
-            <div className="mb-8 flex items-center justify-center">
-              <img
-                src={logoBranco}
-                alt="Via Sudeste"
-                className="w-[180px] h-auto object-contain drop-shadow-lg"
-              />
-            </div>
-          )}
-          <Outlet />
-        </div>
-      </main>
-    )
+    return <Outlet />
   }
 
   // App Layout

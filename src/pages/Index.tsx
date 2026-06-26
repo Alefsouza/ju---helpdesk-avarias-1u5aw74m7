@@ -28,14 +28,32 @@ export default function Index() {
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [isBgLoaded, setIsBgLoaded] = useState(false)
+  const [bgUrl, setBgUrl] = useState<string>('')
 
   useEffect(() => {
+    const supabaseBg = supabase.storage.from('assets').getPublicUrl('background-bus.png')
+      .data.publicUrl
+
     const img = new Image()
-    img.src = localBgImage
-    if (img.complete) {
+    img.src = supabaseBg
+
+    img.onload = () => {
+      setBgUrl(supabaseBg)
       setIsBgLoaded(true)
-    } else {
-      img.onload = () => setIsBgLoaded(true)
+    }
+
+    img.onerror = () => {
+      const fallbackImg = new Image()
+      fallbackImg.src = localBgImage
+      if (fallbackImg.complete) {
+        setBgUrl(localBgImage)
+        setIsBgLoaded(true)
+      } else {
+        fallbackImg.onload = () => {
+          setBgUrl(localBgImage)
+          setIsBgLoaded(true)
+        }
+      }
     }
   }, [])
 
@@ -98,7 +116,7 @@ export default function Index() {
   return (
     <div
       className="fixed inset-0 w-full h-full flex items-center justify-center p-4 bg-white bg-cover bg-center bg-no-repeat transition-all duration-700"
-      style={isBgLoaded ? { backgroundImage: `url('${localBgImage}')` } : undefined}
+      style={isBgLoaded ? { backgroundImage: `url('${bgUrl}')` } : undefined}
     >
       <div
         className={cn(

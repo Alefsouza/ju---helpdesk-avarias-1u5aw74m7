@@ -7,6 +7,7 @@ import { Check, X, Loader2, AlertCircle } from 'lucide-react'
 import { toast } from 'sonner'
 import { Link } from 'react-router-dom'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
+import { cn } from '@/lib/utils'
 
 export default function AutorizarParcelas() {
   const { user, profile } = useAuth()
@@ -139,7 +140,12 @@ export default function AutorizarParcelas() {
                         }).format(s.valor_orcamento)}
                         <Tooltip>
                           <TooltipTrigger asChild>
-                            <AlertCircle className="w-4 h-4 text-amber-500 cursor-help" />
+                            <AlertCircle
+                              className={cn(
+                                'w-4 h-4 cursor-help',
+                                s.desconto_aplicado ? 'text-emerald-500' : 'text-amber-500',
+                              )}
+                            />
                           </TooltipTrigger>
                           <TooltipContent>
                             <p>

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { supabase } from '@/lib/supabase/client'
 import { Card, CardContent } from '@/components/ui/card'
 import {
@@ -22,6 +22,10 @@ import {
   Eye,
   AlertCircle,
   FileX2,
+  Search,
+  X,
+  Calendar as CalendarIcon,
+  Filter,
 } from 'lucide-react'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 import {
@@ -34,11 +38,82 @@ import {
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
+import { Calendar } from '@/components/ui/calendar'
+import { cn } from '@/lib/utils'
 
 export default function SecretariaTecnica() {
   const [documentos, setDocumentos] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const { toast } = useToast()
+
+  // Filter States
+  const [searchTerm, setSearchTerm] = useState('')
+  const [garageFilter, setGarageFilter] = useState<string>('all')
+  const [dateFilter, setDateFilter] = useState<Date | undefined>(undefined)
+  const [garages, setGarages] = useState<string[]>([])
+
+  const hasActiveFilters = !!searchTerm || garageFilter !== 'all' || !!dateFilter
+
+  const handleClearFilters = () => {
+    setSearchTerm('')
+    setGarageFilter('all')
+    setDateFilter(undefined)
+  }
+
+  const filteredDocumentos = useMemo(() => {
+    if (!hasActiveFilters) return documentos
+
+    return documentos.filter((doc) => {
+      const docOs = (doc.numero_os || doc.chamados?.numero_os || '').toLowerCase()
+      const docCarro = (doc.numero_carro || doc.chamados?.carro || '').toLowerCase()
+      const docRa = (doc.chamados?.registro_motorista || doc.registro_motorista || '').toLowerCase()
+      const docDescricao = (doc.descricao_danos || doc.chamados?.descricao || '').toLowerCase()
+
+      const matchesSearch = searchTerm
+        ? docOs.includes(searchTerm.toLowerCase()) ||
+          docCarro.includes(searchTerm.toLowerCase()) ||
+          docRa.includes(searchTerm.toLowerCase()) ||
+          docDescricao.includes(searchTerm.toLowerCase())
+        : true
+
+      const docGaragem = doc.garagem || doc.chamados?.garagem || ''
+      const matchesGarage = garageFilter !== 'all' ? docGaragem === garageFilter : true
+
+      const docDate = doc.data || doc.chamados?.data_ocorrencia
+      const matchesDate = dateFilter
+        ? docDate
+          ? format(new Date(docDate + 'T12:00:00'), 'yyyy-MM-dd') ===
+            format(dateFilter, 'yyyy-MM-dd')
+          : false
+        : true
+
+      return matchesSearch && matchesGarage && matchesDate
+    })
+  }, [documentos, searchTerm, garageFilter, dateFilter, hasActiveFilters])
+
+  const fetchGaragens = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('frota_veiculos')
+        .select('garagem')
+        .not('garagem', 'is', null)
+
+      if (!error && data) {
+        const uniqueGarages = [...new Set(data.map((g) => g.garagem).filter(Boolean))] as string[]
+        setGarages(uniqueGarages.sort())
+      }
+    } catch {
+      // silent fail - garage filter will just be empty
+    }
+  }
 
   // Modal States
   const [photosModalOpen, setPhotosModalOpen] = useState(false)
@@ -180,6 +255,7 @@ export default function SecretariaTecnica() {
   }
 
   useEffect(() => {
+    fetchGaragens()
     fetchDocumentos()
 
     // Real-time updates
@@ -458,6 +534,81 @@ export default function SecretariaTecnica() {
         <p className="text-slate-500">Análise de orçamentos e OS de Manutenção com evidências.</p>
       </div>
 
+      <Card className="p-4">
+        <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
+          <div className="relative flex-1 min-w-[200px]">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+            <Input
+              placeholder="Buscar por OS, carro, RA ou descrição..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-9 h-9"
+            />
+            {searchTerm && (
+              <button
+                onClick={() => setSearchTerm('')}
+                className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            )}
+          </div>
+
+          <Select value={garageFilter} onValueChange={setGarageFilter}>
+            <SelectTrigger className="w-full sm:w-[180px] h-9">
+              <Filter className="w-3.5 h-3.5 mr-2 text-slate-400" />
+              <SelectValue placeholder="Garagem" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todas as garagens</SelectItem>
+              {garages.map((g) => (
+                <SelectItem key={g} value={g}>
+                  {g}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button
+                variant="outline"
+                className={cn(
+                  'h-9 w-full sm:w-[200px] justify-start text-left font-normal',
+                  !dateFilter && 'text-slate-500',
+                )}
+              >
+                <CalendarIcon className="w-3.5 h-3.5 mr-2 text-slate-400" />
+                {dateFilter ? format(dateFilter, 'dd/MM/yyyy') : 'Filtrar por data'}
+                {dateFilter && (
+                  <X
+                    className="w-3.5 h-3.5 ml-auto text-slate-400 hover:text-slate-600"
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      setDateFilter(undefined)
+                    }}
+                  />
+                )}
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-auto p-0" align="start">
+              <Calendar mode="single" selected={dateFilter} onSelect={setDateFilter} initialFocus />
+            </PopoverContent>
+          </Popover>
+
+          {hasActiveFilters && (
+            <Button
+              variant="ghost"
+              onClick={handleClearFilters}
+              className="h-9 text-slate-600 hover:text-slate-900"
+            >
+              <X className="w-3.5 h-3.5 mr-1" />
+              Limpar Filtros
+            </Button>
+          )}
+        </div>
+      </Card>
+
       <Card>
         <CardContent className="p-0">
           <Table>
@@ -480,14 +631,16 @@ export default function SecretariaTecnica() {
                     Carregando registros...
                   </TableCell>
                 </TableRow>
-              ) : documentos.length === 0 ? (
+              ) : filteredDocumentos.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={7} className="text-center py-8 text-slate-500">
-                    Nenhum registro com evidências ou orçamento encontrado.
+                    {hasActiveFilters
+                      ? 'Nenhum registro encontrado.'
+                      : 'Nenhum registro com evidências ou orçamento encontrado.'}
                   </TableCell>
                 </TableRow>
               ) : (
-                documentos.map((doc) => (
+                filteredDocumentos.map((doc) => (
                   <TableRow key={doc.id}>
                     <TableCell className="font-medium text-slate-700">
                       {doc.chamados?.pia || '-'}
@@ -504,7 +657,7 @@ export default function SecretariaTecnica() {
                           <TooltipProvider>
                             <Tooltip>
                               <TooltipTrigger asChild>
-                                <AlertCircle className="h-3 w-3 text-red-500 cursor-help" />
+                                <AlertCircle className="w-4 h-4 text-red-500 cursor-help" />
                               </TooltipTrigger>
                               <TooltipContent className="max-w-[250px] bg-red-50 border-red-200 text-red-900">
                                 <p className="font-bold text-xs mb-1">Orçamento Devolvido</p>
@@ -530,42 +683,42 @@ export default function SecretariaTecnica() {
                       </div>
                     </TableCell>
                     <TableCell className="text-right">
-                      <div className="flex justify-end gap-1">
+                      <div className="flex justify-end gap-2">
                         <Button
                           variant="outline"
                           size="sm"
                           onClick={() => setViewDoc(doc)}
                           title="Ver Espelho/OS"
-                          className="flex items-center justify-center"
+                          className="h-9 w-9 p-2 flex items-center justify-center"
                         >
-                          <FileText className="w-3 h-3" />
+                          <FileText className="w-4 h-4" />
                         </Button>
                         <Button
                           variant="outline"
                           size="sm"
                           onClick={() => handleOpenPhotos(doc)}
                           title="Ver Fotos da OS"
-                          className="flex items-center justify-center"
+                          className="h-9 w-9 p-2 flex items-center justify-center"
                         >
-                          <ImageIcon className="w-3 h-3" />
+                          <ImageIcon className="w-4 h-4" />
                         </Button>
                         <Button
                           variant="default"
                           size="sm"
                           onClick={() => handleUploadClick(doc)}
                           title={doc.orcamento_url ? 'Atualizar Orçamento' : 'Anexar Orçamento'}
-                          className="flex items-center justify-center"
+                          className="h-9 w-9 p-2 flex items-center justify-center"
                         >
-                          <Upload className="w-3 h-3" />
+                          <Upload className="w-4 h-4" />
                         </Button>
                         <Button
                           variant="outline"
                           size="sm"
                           onClick={() => handleJustificativaClick(doc)}
                           title="Não Houve Orçamento"
-                          className="text-amber-600 border-amber-200 hover:bg-amber-50 flex items-center justify-center"
+                          className="h-9 w-9 p-2 text-amber-600 border-amber-200 hover:bg-amber-50 flex items-center justify-center"
                         >
-                          <FileX2 className="w-3 h-3" />
+                          <FileX2 className="w-4 h-4" />
                         </Button>
                       </div>
                     </TableCell>

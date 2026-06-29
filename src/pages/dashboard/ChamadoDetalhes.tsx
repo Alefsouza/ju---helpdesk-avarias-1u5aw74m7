@@ -801,37 +801,6 @@ function GerarValeModal({
 
       const qtyParcelas = parseInt(parcelas) || 1
 
-      // Atualizar ou inserir na solicitacoes_parcelamento para salvar o desconto
-      const { data: existingSol } = await supabase
-        .from('solicitacoes_parcelamento')
-        .select('id')
-        .eq('chamado_id', chamadoId)
-        .maybeSingle()
-
-      if (existingSol) {
-        await supabase
-          .from('solicitacoes_parcelamento')
-          .update({
-            desconto_aplicado: aplicarDesconto,
-            valor_orcamento: valorFinal,
-            quantidade_parcelas: qtyParcelas,
-            status: 'aprovado',
-            atualizado_em: new Date().toISOString(),
-          })
-          .eq('id', existingSol.id)
-      } else {
-        await supabase.from('solicitacoes_parcelamento').insert({
-          chamado_id: chamadoId,
-          usuario_id: userId,
-          desconto_aplicado: aplicarDesconto,
-          valor_orcamento: valorFinal,
-          quantidade_parcelas: qtyParcelas,
-          status: 'aprovado',
-          registro: chamado?.registro_motorista || solicitante?.registro || '',
-          nome: chamado?.nome_motorista || solicitante?.nome_completo || '',
-        })
-      }
-
       // Inserir na tabela parcelas_vales
       const valorParcela = valorFinal / qtyParcelas
       const parcelasToInsert = Array.from({ length: qtyParcelas }).map((_, idx) => {
@@ -1048,21 +1017,12 @@ function EditDocModal({
 }: any) {
   const { loadingRegistros, buscarNome } = useRegistroNome()
 
-  const handleBuscarVistoriador = async () => {
-    const registro = docFormData.registro_vistoriador
-    if (!registro || registro.trim().length < 2) return
-    const nome = await buscarNome(registro, 'vistoriador')
+  const handleRegistroBlur = async (tipo: 'vistoriador' | 'motorista') => {
+    const registro = (docFormData[`registro_${tipo}`] as string) || ''
+    if (!registro.trim() || registro.trim().length < 2) return
+    const nome = await buscarNome(registro, tipo)
     if (nome) {
-      setDocFormData((prev: any) => ({ ...prev, nome_vistoriador: nome }))
-    }
-  }
-
-  const handleBuscarMotorista = async () => {
-    const registro = docFormData.registro_motorista
-    if (!registro || registro.trim().length < 2) return
-    const nome = await buscarNome(registro, 'motorista')
-    if (nome) {
-      setDocFormData((prev: any) => ({ ...prev, nome_motorista: nome }))
+      setDocFormData((prev: any) => ({ ...prev, [`nome_${tipo}`]: nome }))
     }
   }
 
@@ -1334,57 +1294,57 @@ function EditDocModal({
               <div className="grid grid-cols-2 gap-4 border-t pt-4">
                 <div className="space-y-2">
                   <Label>Registro Vistoriador</Label>
-                  <div className="relative">
-                    <Input
-                      value={docFormData.registro_vistoriador || ''}
-                      onChange={(e) =>
-                        setDocFormData({ ...docFormData, registro_vistoriador: e.target.value })
-                      }
-                      onBlur={handleBuscarVistoriador}
-                      disabled={savingDoc}
-                      className="pr-9"
-                    />
-                    {loadingRegistros.vistoriador && (
-                      <Loader2 className="absolute right-2.5 top-1/2 -translate-y-1/2 h-4 w-4 animate-spin text-slate-400" />
-                    )}
-                  </div>
+                  <Input
+                    value={docFormData.registro_vistoriador || ''}
+                    onChange={(e) =>
+                      setDocFormData({ ...docFormData, registro_vistoriador: e.target.value })
+                    }
+                    onBlur={() => handleRegistroBlur('vistoriador')}
+                    disabled={savingDoc}
+                  />
                 </div>
                 <div className="space-y-2">
                   <Label>Nome Vistoriador</Label>
-                  <Input
-                    value={docFormData.nome_vistoriador || ''}
-                    onChange={(e) =>
-                      setDocFormData({ ...docFormData, nome_vistoriador: e.target.value })
-                    }
-                    disabled={savingDoc}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label>Registro Motorista</Label>
                   <div className="relative">
                     <Input
-                      value={docFormData.registro_motorista || ''}
+                      value={docFormData.nome_vistoriador || ''}
                       onChange={(e) =>
-                        setDocFormData({ ...docFormData, registro_motorista: e.target.value })
+                        setDocFormData({ ...docFormData, nome_vistoriador: e.target.value })
                       }
-                      onBlur={handleBuscarMotorista}
-                      disabled={savingDoc}
-                      className="pr-9"
+                      disabled={savingDoc || loadingRegistros['vistoriador']}
+                      className={loadingRegistros['vistoriador'] ? 'pr-9' : ''}
                     />
-                    {loadingRegistros.motorista && (
-                      <Loader2 className="absolute right-2.5 top-1/2 -translate-y-1/2 h-4 w-4 animate-spin text-slate-400" />
+                    {loadingRegistros['vistoriador'] && (
+                      <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 animate-spin text-slate-400" />
                     )}
                   </div>
                 </div>
                 <div className="space-y-2">
-                  <Label>Nome Motorista</Label>
+                  <Label>Registro Motorista</Label>
                   <Input
-                    value={docFormData.nome_motorista || ''}
+                    value={docFormData.registro_motorista || ''}
                     onChange={(e) =>
-                      setDocFormData({ ...docFormData, nome_motorista: e.target.value })
+                      setDocFormData({ ...docFormData, registro_motorista: e.target.value })
                     }
+                    onBlur={() => handleRegistroBlur('motorista')}
                     disabled={savingDoc}
                   />
+                </div>
+                <div className="space-y-2">
+                  <Label>Nome Motorista</Label>
+                  <div className="relative">
+                    <Input
+                      value={docFormData.nome_motorista || ''}
+                      onChange={(e) =>
+                        setDocFormData({ ...docFormData, nome_motorista: e.target.value })
+                      }
+                      disabled={savingDoc || loadingRegistros['motorista']}
+                      className={loadingRegistros['motorista'] ? 'pr-9' : ''}
+                    />
+                    {loadingRegistros['motorista'] && (
+                      <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 animate-spin text-slate-400" />
+                    )}
+                  </div>
                 </div>
               </div>
             </div>

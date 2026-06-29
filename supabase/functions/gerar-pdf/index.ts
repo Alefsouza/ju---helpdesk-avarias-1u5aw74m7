@@ -19,6 +19,32 @@ const corsHeaders = {
     'authorization, x-client-info, x-supabase-client-platform, apikey, content-type',
 }
 
+function getJpegDimensions(bytes: ArrayBuffer): { width: number; height: number } {
+  const view = new DataView(bytes)
+  if (view.byteLength < 4 || view.getUint16(0) !== 0xffd8) {
+    return { width: 200, height: 80 }
+  }
+  let offset = 2
+  while (offset < view.byteLength - 9) {
+    const marker = view.getUint16(offset)
+    offset += 2
+    if (
+      marker >= 0xffc0 &&
+      marker <= 0xffcf &&
+      marker !== 0xffc4 &&
+      marker !== 0xffc8 &&
+      marker !== 0xffcc
+    ) {
+      const height = view.getUint16(offset + 3)
+      const width = view.getUint16(offset + 5)
+      return { width, height }
+    }
+    const length = view.getUint16(offset)
+    offset += length
+  }
+  return { width: 200, height: 80 }
+}
+
 Deno.serve(async (req: Request) => {
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders })
@@ -180,7 +206,7 @@ Deno.serve(async (req: Request) => {
       let logoBytes: ArrayBuffer | null = null
       try {
         const logoRes = await fetch(
-          'https://img.usecurling.com/i?q=company+logo&color=white&shape=fill',
+          'https://wrnhfpncasqifaisvyaf.supabase.co/storage/v1/object/public/assets/WhatsApp%20Image%202023-08-10%20at%2016.16.26.jpeg',
         )
         if (logoRes.ok) {
           logoBytes = await logoRes.arrayBuffer()
@@ -290,15 +316,27 @@ Deno.serve(async (req: Request) => {
 
       const headerChildren: any[] = []
       if (logoBytes) {
+        let logoWidth = 150
+        let logoHeight = 60
+        try {
+          const dims = getJpegDimensions(logoBytes)
+          if (dims.width > 0 && dims.height > 0) {
+            const aspectRatio = dims.height / dims.width
+            logoHeight = Math.round(logoWidth * aspectRatio)
+          }
+        } catch (dimErr) {
+          console.error('Error parsing logo dimensions', dimErr)
+        }
         headerChildren.push(
           new Paragraph({
             children: [
               new ImageRun({
                 data: logoBytes,
-                transformation: { width: 80, height: 80 },
+                transformation: { width: logoWidth, height: logoHeight },
               }),
             ],
             alignment: AlignmentType.LEFT,
+            spacing: { after: 200 },
           }),
         )
       }

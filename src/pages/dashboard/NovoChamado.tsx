@@ -560,6 +560,31 @@ export default function NovoChamado() {
     return () => clearTimeout(searchTimer)
   }, [placaOnibus])
 
+  const handleValidationError = (errors: typeof form.formState.errors) => {
+    const fieldOrder: (keyof FormValues)[] = [
+      'tipoChamado',
+      'placaOnibus',
+      'titulo',
+      'dataOcorrencia',
+      'descricao',
+    ]
+    for (const fieldName of fieldOrder) {
+      if (errors[fieldName]) {
+        const element = document.getElementById(`field-${fieldName}`)
+        if (element) {
+          element.scrollIntoView({ behavior: 'smooth', block: 'center' })
+          setTimeout(() => {
+            const input = element.querySelector(
+              'input, textarea, button, [role="combobox"]',
+            ) as HTMLElement | null
+            if (input) input.focus()
+          }, 400)
+        }
+        break
+      }
+    }
+  }
+
   const onSubmit = form.handleSubmit(async (values) => {
     if (!user) return
 
@@ -740,7 +765,7 @@ export default function NovoChamado() {
     } finally {
       setIsSubmitting(false)
     }
-  })
+  }, handleValidationError)
 
   const isSubmitDisabled =
     isSubmitting ||
@@ -797,7 +822,7 @@ export default function NovoChamado() {
         <form onSubmit={onSubmit}>
           <CardContent className="space-y-8 pt-6">
             <div className="space-y-4">
-              <div className="space-y-2">
+              <div className="space-y-2 scroll-mt-24" id="field-tipoChamado">
                 <Label htmlFor="tipoChamado">Tipo de Ocorrência *</Label>
                 <Controller
                   control={form.control}
@@ -837,7 +862,7 @@ export default function NovoChamado() {
             {tipoChamado && (
               <div className="space-y-8 animate-fade-in">
                 <div className="space-y-4">
-                  <div className="space-y-2">
+                  <div className="space-y-2 scroll-mt-24" id="field-placaOnibus">
                     <Label htmlFor="placaOnibus">Placa do nosso ônibus *</Label>
                     <Controller
                       control={form.control}
@@ -885,7 +910,7 @@ export default function NovoChamado() {
                       )}
                   </div>
 
-                  <div className="space-y-2">
+                  <div className="space-y-2 scroll-mt-24" id="field-titulo">
                     <Label htmlFor="titulo">Título *</Label>
                     <Input
                       id="titulo"
@@ -899,7 +924,7 @@ export default function NovoChamado() {
                     />
                   </div>
 
-                  <div className="space-y-2 flex flex-col">
+                  <div className="space-y-2 flex flex-col scroll-mt-24" id="field-dataOcorrencia">
                     <Label htmlFor="dataOcorrencia">Data da Ocorrência *</Label>
                     <Controller
                       control={form.control}
@@ -942,9 +967,14 @@ export default function NovoChamado() {
                         </Popover>
                       )}
                     />
+                    {form.formState.errors.dataOcorrencia && (
+                      <p className="text-sm font-medium text-red-500">
+                        {form.formState.errors.dataOcorrencia.message as string}
+                      </p>
+                    )}
                   </div>
 
-                  <div className="space-y-2">
+                  <div className="space-y-2 scroll-mt-24" id="field-descricao">
                     <Label htmlFor="descricao">Descrição *</Label>
                     <Textarea
                       id="descricao"

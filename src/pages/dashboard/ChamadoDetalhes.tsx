@@ -73,6 +73,7 @@ import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
 import { UnificarChamadoModal } from '@/components/UnificarChamadoModal'
 import { useDocumentAction } from '@/hooks/use-document-action'
+import { useRegistroNome } from '@/hooks/use-registro-nome'
 import { Checkbox } from '@/components/ui/checkbox'
 
 type Chamado = any
@@ -1045,6 +1046,26 @@ function EditDocModal({
   savingDoc,
   handleSaveDocEdit,
 }: any) {
+  const { loadingRegistros, buscarNome } = useRegistroNome()
+
+  const handleBuscarVistoriador = async () => {
+    const registro = docFormData.registro_vistoriador
+    if (!registro || registro.trim().length < 2) return
+    const nome = await buscarNome(registro, 'vistoriador')
+    if (nome) {
+      setDocFormData((prev: any) => ({ ...prev, nome_vistoriador: nome }))
+    }
+  }
+
+  const handleBuscarMotorista = async () => {
+    const registro = docFormData.registro_motorista
+    if (!registro || registro.trim().length < 2) return
+    const nome = await buscarNome(registro, 'motorista')
+    if (nome) {
+      setDocFormData((prev: any) => ({ ...prev, nome_motorista: nome }))
+    }
+  }
+
   if (!editingDoc) return null
 
   return (
@@ -1312,6 +1333,23 @@ function EditDocModal({
 
               <div className="grid grid-cols-2 gap-4 border-t pt-4">
                 <div className="space-y-2">
+                  <Label>Registro Vistoriador</Label>
+                  <div className="relative">
+                    <Input
+                      value={docFormData.registro_vistoriador || ''}
+                      onChange={(e) =>
+                        setDocFormData({ ...docFormData, registro_vistoriador: e.target.value })
+                      }
+                      onBlur={handleBuscarVistoriador}
+                      disabled={savingDoc}
+                      className="pr-9"
+                    />
+                    {loadingRegistros.vistoriador && (
+                      <Loader2 className="absolute right-2.5 top-1/2 -translate-y-1/2 h-4 w-4 animate-spin text-slate-400" />
+                    )}
+                  </div>
+                </div>
+                <div className="space-y-2">
                   <Label>Nome Vistoriador</Label>
                   <Input
                     value={docFormData.nome_vistoriador || ''}
@@ -1322,14 +1360,21 @@ function EditDocModal({
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label>Registro Vistoriador</Label>
-                  <Input
-                    value={docFormData.registro_vistoriador || ''}
-                    onChange={(e) =>
-                      setDocFormData({ ...docFormData, registro_vistoriador: e.target.value })
-                    }
-                    disabled={savingDoc}
-                  />
+                  <Label>Registro Motorista</Label>
+                  <div className="relative">
+                    <Input
+                      value={docFormData.registro_motorista || ''}
+                      onChange={(e) =>
+                        setDocFormData({ ...docFormData, registro_motorista: e.target.value })
+                      }
+                      onBlur={handleBuscarMotorista}
+                      disabled={savingDoc}
+                      className="pr-9"
+                    />
+                    {loadingRegistros.motorista && (
+                      <Loader2 className="absolute right-2.5 top-1/2 -translate-y-1/2 h-4 w-4 animate-spin text-slate-400" />
+                    )}
+                  </div>
                 </div>
                 <div className="space-y-2">
                   <Label>Nome Motorista</Label>
@@ -1337,16 +1382,6 @@ function EditDocModal({
                     value={docFormData.nome_motorista || ''}
                     onChange={(e) =>
                       setDocFormData({ ...docFormData, nome_motorista: e.target.value })
-                    }
-                    disabled={savingDoc}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label>Registro Motorista</Label>
-                  <Input
-                    value={docFormData.registro_motorista || ''}
-                    onChange={(e) =>
-                      setDocFormData({ ...docFormData, registro_motorista: e.target.value })
                     }
                     disabled={savingDoc}
                   />

@@ -21,6 +21,7 @@ import {
   Loader2,
   Eye,
   AlertCircle,
+  FileX2,
 } from 'lucide-react'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 import {
@@ -50,6 +51,10 @@ export default function SecretariaTecnica() {
   const [valorOrcamento, setValorOrcamento] = useState('')
   const [detalhesOrcamento, setDetalhesOrcamento] = useState('')
   const [viewDoc, setViewDoc] = useState<any>(null)
+  const [justificativaModalOpen, setJustificativaModalOpen] = useState(false)
+  const [justificativaDoc, setJustificativaDoc] = useState<any | null>(null)
+  const [justificativaObs, setJustificativaObs] = useState('')
+  const [savingJustificativa, setSavingJustificativa] = useState(false)
 
   const handleValorChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     let value = e.target.value.replace(/\D/g, '')
@@ -368,6 +373,71 @@ export default function SecretariaTecnica() {
     }
   }
 
+  const handleJustificativaClick = (doc: any) => {
+    setJustificativaDoc(doc)
+    setJustificativaObs('')
+    setJustificativaModalOpen(true)
+  }
+
+  const handleJustificativaSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!justificativaObs.trim() || !justificativaDoc) return
+
+    try {
+      setSavingJustificativa(true)
+
+      const {
+        data: { user },
+      } = await supabase.auth.getUser()
+      if (!user) throw new Error('Usuário não autenticado.')
+
+      let chamadoId = justificativaDoc.chamados?.id || justificativaDoc.chamado_id
+
+      if (!chamadoId) {
+        const docOs =
+          (justificativaDoc.numero_os || justificativaDoc.chamados?.numero_os)?.trim() || ''
+        if (docOs) {
+          const { data } = await supabase
+            .from('chamados')
+            .select('id, numero_os, status')
+            .eq('numero_os', docOs)
+            .not('status', 'in', '("finalizado","operacao","unificado")')
+            .order('criado_em', { ascending: false })
+
+          if (data && data.length > 0) {
+            const emAtendimento = data.find((c) => c.status?.toLowerCase() === 'em_atendimento')
+            chamadoId = (emAtendimento || data[0]).id
+          }
+        }
+      }
+
+      if (!chamadoId) {
+        throw new Error('Não foi possível identificar o chamado relacionado.')
+      }
+
+      const { error: histError } = await supabase.from('historico_chamado').insert({
+        chamado_id: chamadoId,
+        usuario_id: user.id,
+        acao: 'Justificativa: Não Houve Orçamento',
+        detalhes: justificativaObs.trim(),
+      })
+
+      if (histError) throw histError
+
+      toast({ title: 'Sucesso', description: 'Justificativa registrada com sucesso!' })
+      setJustificativaModalOpen(false)
+      fetchDocumentos()
+    } catch (error: any) {
+      toast({
+        title: 'Erro',
+        description: error.message || 'Erro ao registrar justificativa.',
+        variant: 'destructive',
+      })
+    } finally {
+      setSavingJustificativa(false)
+    }
+  }
+
   const formatDate = (dateStr: string | null) => {
     if (!dateStr) return '-'
     const parts = dateStr.split('-')
@@ -406,7 +476,7 @@ export default function SecretariaTecnica() {
               {loading ? (
                 <TableRow>
                   <TableCell colSpan={7} className="text-center py-8 text-slate-500">
-                    <Loader2 className="w-6 h-6 animate-spin mx-auto mb-2" />
+                    <Loader2 className="w-3.5 h-3.5 animate-spin mx-auto mb-2" />
                     Carregando registros...
                   </TableCell>
                 </TableRow>
@@ -434,7 +504,7 @@ export default function SecretariaTecnica() {
                           <TooltipProvider>
                             <Tooltip>
                               <TooltipTrigger asChild>
-                                <AlertCircle className="h-4 w-4 text-red-500 cursor-help" />
+                                <AlertCircle className="h-3 w-3 text-red-500 cursor-help" />
                               </TooltipTrigger>
                               <TooltipContent className="max-w-[250px] bg-red-50 border-red-200 text-red-900">
                                 <p className="font-bold text-xs mb-1">Orçamento Devolvido</p>
@@ -460,30 +530,42 @@ export default function SecretariaTecnica() {
                       </div>
                     </TableCell>
                     <TableCell className="text-right">
-                      <div className="flex justify-end gap-2">
+                      <div className="flex justify-end gap-1">
                         <Button
                           variant="outline"
                           size="sm"
                           onClick={() => setViewDoc(doc)}
                           title="Ver Espelho/OS"
+                          className="flex items-center justify-center"
                         >
-                          <FileText className="w-4 h-4" />
+                          <FileText className="w-3 h-3" />
                         </Button>
                         <Button
                           variant="outline"
                           size="sm"
                           onClick={() => handleOpenPhotos(doc)}
                           title="Ver Fotos da OS"
+                          className="flex items-center justify-center"
                         >
-                          <ImageIcon className="w-4 h-4" />
+                          <ImageIcon className="w-3 h-3" />
                         </Button>
                         <Button
                           variant="default"
                           size="sm"
                           onClick={() => handleUploadClick(doc)}
                           title={doc.orcamento_url ? 'Atualizar Orçamento' : 'Anexar Orçamento'}
+                          className="flex items-center justify-center"
                         >
-                          <Upload className="w-4 h-4" />
+                          <Upload className="w-3 h-3" />
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleJustificativaClick(doc)}
+                          title="Não Houve Orçamento"
+                          className="text-amber-600 border-amber-200 hover:bg-amber-50 flex items-center justify-center"
+                        >
+                          <FileX2 className="w-3 h-3" />
                         </Button>
                       </div>
                     </TableCell>
@@ -557,7 +639,7 @@ export default function SecretariaTecnica() {
                           >
                             {item.type === 'pdf' ? (
                               <div className="flex flex-col items-center justify-center p-4">
-                                <FileText className="w-8 h-8 text-slate-400 mb-2" />
+                                <FileText className="w-3.5 h-3.5 text-slate-400 mb-2" />
                                 <span className="text-sm font-medium text-slate-600 text-center">
                                   PDF
                                 </span>
@@ -600,7 +682,7 @@ export default function SecretariaTecnica() {
                           >
                             {item.type === 'pdf' ? (
                               <div className="flex flex-col items-center justify-center p-4">
-                                <FileText className="w-8 h-8 text-purple-400 mb-2" />
+                                <FileText className="w-3.5 h-3.5 text-purple-400 mb-2" />
                                 <span className="text-sm font-medium text-purple-600 text-center">
                                   Orçamento PDF
                                 </span>
@@ -691,12 +773,12 @@ export default function SecretariaTecnica() {
               >
                 {uploading ? (
                   <>
-                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    <Loader2 className="w-3.5 h-3.5 mr-2 animate-spin" />
                     Enviando...
                   </>
                 ) : (
                   <>
-                    <Paperclip className="w-4 h-4 mr-2" />
+                    <Paperclip className="w-3.5 h-3.5 mr-2" />
                     Anexar Orçamento
                   </>
                 )}
@@ -705,6 +787,54 @@ export default function SecretariaTecnica() {
           </form>
         </DialogContent>
       </Dialog>
+      <Dialog
+        open={justificativaModalOpen}
+        onOpenChange={(open) => !savingJustificativa && setJustificativaModalOpen(open)}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Justificar Ausência de Orçamento</DialogTitle>
+          </DialogHeader>
+          <form onSubmit={handleJustificativaSubmit} className="space-y-4 mt-4">
+            <div className="space-y-2">
+              <Label>Observação *</Label>
+              <Textarea
+                value={justificativaObs}
+                onChange={(e) => setJustificativaObs(e.target.value)}
+                placeholder="Descreva o motivo da ausência de orçamento..."
+                disabled={savingJustificativa}
+                required
+                className="min-h-[120px]"
+              />
+            </div>
+            <div className="flex justify-end gap-2 mt-6">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setJustificativaModalOpen(false)}
+                disabled={savingJustificativa}
+              >
+                Cancelar
+              </Button>
+              <Button
+                type="submit"
+                disabled={!justificativaObs.trim() || savingJustificativa}
+                className="bg-amber-600 hover:bg-amber-700 text-white"
+              >
+                {savingJustificativa ? (
+                  <>
+                    <Loader2 className="w-3.5 h-3.5 mr-2 animate-spin" />
+                    Enviando...
+                  </>
+                ) : (
+                  'Enviar'
+                )}
+              </Button>
+            </div>
+          </form>
+        </DialogContent>
+      </Dialog>
+
       <Dialog open={!!viewDoc} onOpenChange={(open) => !open && setViewDoc(null)}>
         <DialogContent className="sm:max-w-[600px] max-h-[85vh] overflow-y-auto">
           <DialogHeader>
@@ -807,7 +937,7 @@ export default function SecretariaTecnica() {
                               className="object-cover w-full h-full transition-transform duration-300 group-hover:scale-105"
                             />
                             <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors flex items-center justify-center">
-                              <Eye className="text-white opacity-0 group-hover:opacity-100 transition-opacity" />
+                              <Eye className="w-3.5 h-3.5 text-white opacity-0 group-hover:opacity-100 transition-opacity" />
                             </div>
                           </a>
                         ))}
@@ -846,12 +976,12 @@ export default function SecretariaTecnica() {
                             ) : (
                               <img
                                 src={url}
-                                alt={`Evidência Manutenção ${idx + 1}`}
+                                alt={`Requisição ${idx + 1}`}
                                 className="object-cover w-full h-full transition-transform duration-300 group-hover:scale-105"
                               />
                             )}
                             <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors flex items-center justify-center">
-                              <Eye className="text-white opacity-0 group-hover:opacity-100 transition-opacity" />
+                              <Eye className="w-3.5 h-3.5 text-white opacity-0 group-hover:opacity-100 transition-opacity" />
                             </div>
                           </a>
                         ))}
@@ -881,12 +1011,12 @@ export default function SecretariaTecnica() {
                           ) : (
                             <img
                               src={url}
-                              alt={`Requisição ${idx + 1}`}
+                              alt={`Evidência Manutenção ${idx + 1}`}
                               className="object-cover w-full h-full transition-transform duration-300 group-hover:scale-105"
                             />
                           )}
                           <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors flex items-center justify-center">
-                            <Eye className="text-white opacity-0 group-hover:opacity-100 transition-opacity" />
+                            <Eye className="w-3.5 h-3.5 text-white opacity-0 group-hover:opacity-100 transition-opacity" />
                           </div>
                         </a>
                       ))}
@@ -895,7 +1025,7 @@ export default function SecretariaTecnica() {
                 )}
               </div>
             </div>
-          )}
+          )}{' '}
           <DialogFooter className="flex justify-end gap-2 sm:justify-end">
             <Button
               variant="outline"

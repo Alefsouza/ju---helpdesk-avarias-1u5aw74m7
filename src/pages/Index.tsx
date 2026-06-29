@@ -135,10 +135,13 @@ export default function Index() {
           )}
         >
           <CardContent className="pb-8 pt-8 px-6">
-            <div className="flex justify-center mb-6">
+            <div className="flex flex-col items-center gap-2 mb-6">
               <h1 className="text-xl sm:text-2xl font-bold text-white tracking-widest text-center drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]">
                 ABERTURA DE SINISTRO
               </h1>
+              <p className="text-sm font-normal text-white/80 text-center drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]">
+                Insira suas credenciais para acessar sua conta
+              </p>
             </div>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-5">
               {error && (

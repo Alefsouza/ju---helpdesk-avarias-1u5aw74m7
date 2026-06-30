@@ -213,6 +213,7 @@ const formSchema = z.object({
   tipoChamado: z.enum(['Colisão', 'Lesão Corporal', 'Seguradora', ''], {
     required_error: 'Tipo de chamado é obrigatório',
   }),
+  situacaoProcesso: z.string().optional(),
   titulo: z.string().min(1, 'Título é obrigatório'),
   dataOcorrencia: z
     .any()
@@ -241,6 +242,7 @@ export default function NovoChamado() {
     resolver: zodResolver(formSchema),
     defaultValues: {
       tipoChamado: initialDraft?.tipoChamado || '',
+      situacaoProcesso: initialDraft?.situacaoProcesso || '',
       titulo: initialDraft?.titulo || '',
       descricao: initialDraft?.descricao || '',
       placaOnibus: initialDraft?.placaOnibus || '',
@@ -588,7 +590,7 @@ export default function NovoChamado() {
   const onSubmit = form.handleSubmit(async (values) => {
     if (!user) return
 
-    const { tipoChamado, titulo, dataOcorrencia, descricao, placaOnibus } = values
+    const { tipoChamado, situacaoProcesso, titulo, dataOcorrencia, descricao, placaOnibus } = values
 
     const hasIncomplete = files.some((f) => f.status !== 'success')
     if (hasIncomplete) {
@@ -681,6 +683,7 @@ export default function NovoChamado() {
           garagem: identifiedGaragem !== 'NOT_FOUND' ? identifiedGaragem : null,
           carro: placaOnibus,
           data_ocorrencia: format(new Date(dataOcorrencia), 'yyyy-MM-dd'),
+          situacao_processo: situacaoProcesso || null,
           criado_em: new Date().toISOString(),
         } as any)
         .select()
@@ -862,6 +865,36 @@ export default function NovoChamado() {
             {tipoChamado && (
               <div className="space-y-8 animate-fade-in">
                 <div className="space-y-4">
+                  {profile && ['admin', 'juridico', 'sinistro'].includes(profile?.tipo_usuario) && (
+                    <div className="space-y-2 scroll-mt-24" id="field-situacaoProcesso">
+                      <Label htmlFor="situacaoProcesso">Situação do Processo (Opcional)</Label>
+                      <Controller
+                        control={form.control}
+                        name="situacaoProcesso"
+                        render={({ field }) => (
+                          <Select value={field.value || ''} onValueChange={field.onChange}>
+                            <SelectTrigger id="situacaoProcesso" className="bg-white">
+                              <SelectValue placeholder="Selecione a situação do processo" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="Aguardando Julgamento">
+                                Aguardando Julgamento
+                              </SelectItem>
+                              <SelectItem value="Arquivado">Arquivado</SelectItem>
+                              <SelectItem value="Cobrar Terceiro">Cobrar Terceiro</SelectItem>
+                              <SelectItem value="Convocação do Operador">
+                                Convocação do Operador
+                              </SelectItem>
+                              <SelectItem value="Notificação Extrajudicial">
+                                Notificação Extrajudicial
+                              </SelectItem>
+                              <SelectItem value="Subjúdice">Subjúdice</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        )}
+                      />
+                    </div>
+                  )}
                   <div className="space-y-2 scroll-mt-24" id="field-placaOnibus">
                     <Label htmlFor="placaOnibus">Placa do nosso ônibus *</Label>
                     <Controller

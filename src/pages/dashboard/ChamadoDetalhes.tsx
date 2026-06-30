@@ -1390,6 +1390,8 @@ export default function ChamadoDetalhes() {
   const [savingPrioridade, setSavingPrioridade] = useState(false)
   const [tipoChamado, setTipoChamado] = useState('')
   const [savingTipoChamado, setSavingTipoChamado] = useState(false)
+  const [situacaoProcesso, setSituacaoProcesso] = useState('')
+  const [savingSituacaoProcesso, setSavingSituacaoProcesso] = useState(false)
 
   const [files, setFiles] = useState<FileItem[]>([])
   const [isDragActive, setIsDragActive] = useState(false)
@@ -1456,6 +1458,7 @@ export default function ChamadoDetalhes() {
     setPia(chamadoData.pia || '')
     setPrioridade(chamadoData.prioridade || '')
     setTipoChamado(chamadoData.tipo_chamado || '')
+    setSituacaoProcesso(chamadoData.situacao_processo || '')
 
     const { data: solicitanteData } = await supabase
       .from('perfil_usuario')
@@ -1953,6 +1956,9 @@ export default function ChamadoDetalhes() {
           }
           if (payload.new.tipo_chamado !== undefined) {
             setTipoChamado(payload.new.tipo_chamado || '')
+          }
+          if (payload.new.situacao_processo !== undefined) {
+            setSituacaoProcesso(payload.new.situacao_processo || '')
           }
         },
       )
@@ -2967,6 +2973,31 @@ export default function ChamadoDetalhes() {
     }
   }
 
+  const handleSalvarSituacaoProcesso = async (novaSituacao: string) => {
+    const canEdit =
+      currentUserProfile?.tipo_usuario === 'admin' ||
+      currentUserProfile?.tipo_usuario === 'juridico' ||
+      currentUserProfile?.tipo_usuario === 'sinistro'
+
+    if (!canEdit) return
+
+    setSavingSituacaoProcesso(true)
+    setSituacaoProcesso(novaSituacao)
+    setChamado((prev: any) => (prev ? { ...prev, situacao_processo: novaSituacao } : prev))
+
+    const { error } = await supabase
+      .from('chamados')
+      .update({ situacao_processo: novaSituacao, atualizado_em: new Date().toISOString() } as any)
+      .eq('id', id as string)
+
+    setSavingSituacaoProcesso(false)
+    if (error) {
+      toast.error('Erro ao atualizar Situação do Processo. Tente novamente')
+    } else {
+      toast.success('Situação do Processo atualizada com sucesso')
+    }
+  }
+
   const handleSalvarTipoChamado = async (novoTipo: string) => {
     const isSupportUser =
       currentUserProfile?.tipo_usuario === 'responsavel' ||
@@ -3307,6 +3338,10 @@ export default function ChamadoDetalhes() {
     chamado.status !== 'unificado'
 
   const canEditRA = isSupport
+  const canEditSituacaoProcesso =
+    currentUserProfile?.tipo_usuario === 'admin' ||
+    currentUserProfile?.tipo_usuario === 'juridico' ||
+    currentUserProfile?.tipo_usuario === 'sinistro'
   const canUnify = isSupport && chamado.status !== 'finalizado' && chamado.status !== 'unificado'
   const isJuridico = currentUserProfile?.tipo_usuario === 'juridico'
 
@@ -3498,6 +3533,19 @@ export default function ChamadoDetalhes() {
                 </Badge>
               </div>
             )}
+            {chamado.situacao_processo && (
+              <div className="flex items-center gap-2 mb-2">
+                <span className="text-[10px] font-bold text-slate-500 tracking-wider">
+                  SITUAÇÃO:
+                </span>
+                <Badge
+                  variant="outline"
+                  className="px-2.5 py-0.5 uppercase text-[10px] font-bold tracking-wider bg-teal-100 text-teal-800 border-teal-200"
+                >
+                  {chamado.situacao_processo}
+                </Badge>
+              </div>
+            )}
             <h1 className="text-lg sm:text-xl font-bold text-slate-900">{chamado.titulo}</h1>
           </div>
           <div className="text-xs text-slate-500 flex flex-col sm:items-end gap-0.5 bg-slate-50 p-2 rounded-md border">
@@ -3565,6 +3613,44 @@ export default function ChamadoDetalhes() {
                               Vandalismo sem vítima
                             </SelectItem>
                             <SelectItem value="Seguradora">Seguradora</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+                    <div className="flex flex-col sm:flex-row sm:items-center gap-2">
+                      <div className="flex items-center gap-1 shrink-0 sm:w-28">
+                        <AlertCircle className="h-3.5 w-3.5 text-orange-700" />
+                        <h3 className="text-xs font-semibold text-orange-800 uppercase tracking-wider">
+                          Situação do Processo
+                        </h3>
+                      </div>
+                      <div className="w-full">
+                        <Select
+                          value={situacaoProcesso || undefined}
+                          onValueChange={handleSalvarSituacaoProcesso}
+                          disabled={
+                            savingSituacaoProcesso ||
+                            !canEditSituacaoProcesso ||
+                            chamado.status === 'finalizado' ||
+                            chamado.status === 'unificado'
+                          }
+                        >
+                          <SelectTrigger className="bg-white border-orange-200 focus:ring-orange-400 h-8 text-xs">
+                            <SelectValue placeholder="Selecione a situação" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="Aguardando Julgamento">
+                              Aguardando Julgamento
+                            </SelectItem>
+                            <SelectItem value="Arquivado">Arquivado</SelectItem>
+                            <SelectItem value="Cobrar Terceiro">Cobrar Terceiro</SelectItem>
+                            <SelectItem value="Convocação do Operador">
+                              Convocação do Operador
+                            </SelectItem>
+                            <SelectItem value="Notificação Extrajudicial">
+                              Notificação Extrajudicial
+                            </SelectItem>
+                            <SelectItem value="Subjúdice">Subjúdice</SelectItem>
                           </SelectContent>
                         </Select>
                       </div>

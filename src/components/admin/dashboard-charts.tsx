@@ -137,6 +137,31 @@ export function DashboardCharts({
       .map((d) => ({ ...d, fill: '#225f3d' }))
   }, [baseChamados])
 
+  const situacaoProcessoData = useMemo(() => {
+    const options = [
+      'Aguardando Julgamento',
+      'Arquivado',
+      'Cobrar Terceiro',
+      'Convocação do Operador',
+      'Notificação Extrajudicial',
+      'Subjúdice',
+    ]
+    const counts: Record<string, number> = {}
+    options.forEach((opt) => {
+      counts[opt] = 0
+    })
+    baseChamados.forEach((c) => {
+      if (c.situacao_processo) {
+        counts[c.situacao_processo] = (counts[c.situacao_processo] || 0) + 1
+      }
+    })
+    const colors = ['#225f3d', '#c8e6c9', '#4caf50', '#81c784', '#a5d6a7', '#66bb6a']
+    return Object.entries(counts)
+      .filter(([, value]) => value > 0)
+      .map(([name, value], idx) => ({ id: name, name, value, fill: colors[idx % colors.length] }))
+      .sort((a, b) => b.value - a.value)
+  }, [baseChamados])
+
   const timelineData = useMemo(() => {
     const counts: Record<string, number> = {}
 
@@ -462,6 +487,52 @@ export function DashboardCharts({
                     )}
                   />
                 </BarChart>
+              </ResponsiveContainer>
+            </ChartContainer>
+          </CardContent>
+        </Card>
+
+        <Card className="border-[#f0f0f0] transition-all duration-200 hover:shadow-subtle">
+          <CardHeader className="p-6 pb-2">
+            <CardTitle className="text-[24px] font-semibold text-[#225f3d]">
+              Situação do Processo
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <ChartContainer
+              config={{ situacao: { label: 'Situação', color: '#225f3d' } }}
+              className="h-[300px] w-full"
+            >
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie
+                    data={situacaoProcessoData}
+                    dataKey="value"
+                    nameKey="name"
+                    cx="50%"
+                    cy="50%"
+                    innerRadius={60}
+                    outerRadius={80}
+                    paddingAngle={2}
+                    stroke="none"
+                  >
+                    {situacaoProcessoData.map((entry, index) => (
+                      <Cell
+                        className="cursor-pointer transition-opacity duration-200"
+                        key={index}
+                        fill={entry.fill}
+                      />
+                    ))}
+                  </Pie>
+                  <ChartTooltip content={<ChartTooltipContent />} />
+                  <Legend
+                    formatter={(value) => (
+                      <span style={{ color: '#212121', fontSize: '12px', fontWeight: 500 }}>
+                        {value}
+                      </span>
+                    )}
+                  />
+                </PieChart>
               </ResponsiveContainer>
             </ChartContainer>
           </CardContent>

@@ -286,12 +286,17 @@ Deno.serve(async (req: Request) => {
       const numParcelasRequested = parseInt(body.parcelas || '1', 10)
       addRow('Quantidade de Parcelas', `${numParcelasRequested}x`)
 
+      const valorPorParcela = Math.trunc((valorFinal / numParcelasRequested) * 100) / 100
       for (let i = 0; i < numParcelasRequested; i++) {
+        const parcelaValor =
+          i === numParcelasRequested - 1
+            ? Math.round((valorFinal - valorPorParcela * (numParcelasRequested - 1)) * 100) / 100
+            : valorPorParcela
         children.push(
           new Paragraph({
             children: [
               new TextRun({
-                text: `  Parcela ${i + 1}/${numParcelasRequested}: ${formatCurrency(valorFinal / numParcelasRequested)}`,
+                text: `  Parcela ${i + 1}/${numParcelasRequested}: ${formatCurrency(parcelaValor)}`,
                 size: 24,
               }),
             ],

@@ -194,9 +194,9 @@ export default function ValesAprovacao() {
             .eq('chamado_id', selectedChamado.id)
 
           if (!existingParcelas || existingParcelas.length === 0) {
-            // O valor totalValue já é o final value da solicitacao_parcelamento
-            // Então não precisamos aplicar o desconto novamente
-            const finalValue = totalValue
+            // Apply the same discount logic used by the gerar-pdf edge function
+            // When desconto_aplicado is true, a 10% discount is applied to the original value
+            const finalValue = hasDiscount ? Math.trunc(totalValue * 0.9 * 100) / 100 : totalValue
 
             const today = new Date()
             const baseDateStr = new Date(today.getFullYear(), today.getMonth(), 1)

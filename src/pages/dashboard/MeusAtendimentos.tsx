@@ -154,6 +154,8 @@ export default function MeusAtendimentos() {
 
       if (profile.tipo_usuario === 'juridico') {
         query = query.eq('responsavel_id', user.id)
+      } else {
+        query = query.is('status_juridico', null)
       }
 
       const { data, error: err } = await query

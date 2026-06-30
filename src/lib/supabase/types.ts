@@ -133,6 +133,7 @@ export type Database = {
           registro_cobrador: string | null
           registro_motorista: string | null
           responsavel_id: string | null
+          situacao_processo: string | null
           status: string
           status_aprovacao: string | null
           status_interno: string | null
@@ -161,6 +162,7 @@ export type Database = {
           registro_cobrador?: string | null
           registro_motorista?: string | null
           responsavel_id?: string | null
+          situacao_processo?: string | null
           status?: string
           status_aprovacao?: string | null
           status_interno?: string | null
@@ -189,6 +191,7 @@ export type Database = {
           registro_cobrador?: string | null
           registro_motorista?: string | null
           responsavel_id?: string | null
+          situacao_processo?: string | null
           status?: string
           status_aprovacao?: string | null
           status_interno?: string | null

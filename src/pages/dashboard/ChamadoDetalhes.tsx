@@ -3579,108 +3579,102 @@ export default function ChamadoDetalhes() {
             <div className="flex flex-col gap-3">
               {isSupport && (
                 <div className="border border-orange-200 bg-orange-50/40 rounded-md p-2 sm:p-3">
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    <div className="flex flex-col sm:flex-row sm:items-center gap-2">
-                      <div className="flex items-center gap-1 shrink-0 sm:w-28">
-                        <AlertCircle className="h-3.5 w-3.5 text-orange-700" />
+                  <div className="grid grid-cols-1 lg:grid-cols-3 gap-3">
+                    <div className="flex flex-col gap-1.5">
+                      <div className="flex items-center gap-1">
+                        <AlertCircle className="h-3.5 w-3.5 text-orange-700 shrink-0" />
                         <h3 className="text-xs font-semibold text-orange-800 uppercase tracking-wider">
                           Tipo de Chamado
                         </h3>
                       </div>
-                      <div className="w-full">
-                        <Select
-                          value={tipoChamado || undefined}
-                          onValueChange={handleSalvarTipoChamado}
-                          disabled={
-                            savingTipoChamado ||
-                            chamado.status === 'finalizado' ||
-                            chamado.status === 'unificado'
-                          }
-                        >
-                          <SelectTrigger className="bg-white border-orange-200 focus:ring-orange-400 h-8 text-xs">
-                            <SelectValue placeholder="Selecione o tipo" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="Acidente Interno">Acidente Interno</SelectItem>
-                            <SelectItem value="Atropelamento">Atropelamento</SelectItem>
-                            <SelectItem value="Avaria">Avaria</SelectItem>
-                            <SelectItem value="Colisão">Colisão</SelectItem>
-                            <SelectItem value="Colisão com vítima">Colisão com vítima</SelectItem>
-                            <SelectItem value="Colisão sem vítima">Colisão sem vítima</SelectItem>
-                            <SelectItem value="Lesão Corporal">Lesão Corporal</SelectItem>
-                            <SelectItem value="Queda do usuário">Queda do usuário</SelectItem>
-                            <SelectItem value="Vandalismo sem vítima">
-                              Vandalismo sem vítima
-                            </SelectItem>
-                            <SelectItem value="Seguradora">Seguradora</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
+                      <Select
+                        value={tipoChamado || undefined}
+                        onValueChange={handleSalvarTipoChamado}
+                        disabled={
+                          savingTipoChamado ||
+                          chamado.status === 'finalizado' ||
+                          chamado.status === 'unificado'
+                        }
+                      >
+                        <SelectTrigger className="bg-white border-orange-200 focus:ring-orange-400 h-8 text-xs w-full">
+                          <SelectValue placeholder="Selecione o tipo" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="Acidente Interno">Acidente Interno</SelectItem>
+                          <SelectItem value="Atropelamento">Atropelamento</SelectItem>
+                          <SelectItem value="Avaria">Avaria</SelectItem>
+                          <SelectItem value="Colisão">Colisão</SelectItem>
+                          <SelectItem value="Colisão com vítima">Colisão com vítima</SelectItem>
+                          <SelectItem value="Colisão sem vítima">Colisão sem vítima</SelectItem>
+                          <SelectItem value="Lesão Corporal">Lesão Corporal</SelectItem>
+                          <SelectItem value="Queda do usuário">Queda do usuário</SelectItem>
+                          <SelectItem value="Vandalismo sem vítima">
+                            Vandalismo sem vítima
+                          </SelectItem>
+                          <SelectItem value="Seguradora">Seguradora</SelectItem>
+                        </SelectContent>
+                      </Select>
                     </div>
-                    <div className="flex flex-col sm:flex-row sm:items-center gap-2">
-                      <div className="flex items-center gap-1 shrink-0 sm:w-28">
-                        <AlertCircle className="h-3.5 w-3.5 text-orange-700" />
+                    <div className="flex flex-col gap-1.5">
+                      <div className="flex items-center gap-1">
+                        <AlertCircle className="h-3.5 w-3.5 text-orange-700 shrink-0" />
                         <h3 className="text-xs font-semibold text-orange-800 uppercase tracking-wider">
                           Situação do Processo
                         </h3>
                       </div>
-                      <div className="w-full">
-                        <Select
-                          value={situacaoProcesso || undefined}
-                          onValueChange={handleSalvarSituacaoProcesso}
-                          disabled={
-                            savingSituacaoProcesso ||
-                            !canEditSituacaoProcesso ||
-                            chamado.status === 'finalizado' ||
-                            chamado.status === 'unificado'
-                          }
-                        >
-                          <SelectTrigger className="bg-white border-orange-200 focus:ring-orange-400 h-8 text-xs">
-                            <SelectValue placeholder="Selecione a situação" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="Aguardando Julgamento">
-                              Aguardando Julgamento
-                            </SelectItem>
-                            <SelectItem value="Arquivado">Arquivado</SelectItem>
-                            <SelectItem value="Cobrar Terceiro">Cobrar Terceiro</SelectItem>
-                            <SelectItem value="Convocação do Operador">
-                              Convocação do Operador
-                            </SelectItem>
-                            <SelectItem value="Notificação Extrajudicial">
-                              Notificação Extrajudicial
-                            </SelectItem>
-                            <SelectItem value="Subjúdice">Subjúdice</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
+                      <Select
+                        value={situacaoProcesso || undefined}
+                        onValueChange={handleSalvarSituacaoProcesso}
+                        disabled={
+                          savingSituacaoProcesso ||
+                          !canEditSituacaoProcesso ||
+                          chamado.status === 'finalizado' ||
+                          chamado.status === 'unificado'
+                        }
+                      >
+                        <SelectTrigger className="bg-white border-orange-200 focus:ring-orange-400 h-8 text-xs w-full">
+                          <SelectValue placeholder="Selecione a situação" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="Aguardando Julgamento">
+                            Aguardando Julgamento
+                          </SelectItem>
+                          <SelectItem value="Arquivado">Arquivado</SelectItem>
+                          <SelectItem value="Cobrar Terceiro">Cobrar Terceiro</SelectItem>
+                          <SelectItem value="Convocação do Operador">
+                            Convocação do Operador
+                          </SelectItem>
+                          <SelectItem value="Notificação Extrajudicial">
+                            Notificação Extrajudicial
+                          </SelectItem>
+                          <SelectItem value="Subjúdice">Subjúdice</SelectItem>
+                        </SelectContent>
+                      </Select>
                     </div>
-                    <div className="flex flex-col sm:flex-row sm:items-center gap-2">
-                      <div className="flex items-center gap-1 shrink-0 sm:w-24">
-                        <AlertCircle className="h-3.5 w-3.5 text-orange-700" />
+                    <div className="flex flex-col gap-1.5">
+                      <div className="flex items-center gap-1">
+                        <AlertCircle className="h-3.5 w-3.5 text-orange-700 shrink-0" />
                         <h3 className="text-xs font-semibold text-orange-800 uppercase tracking-wider">
                           Prioridade
                         </h3>
                       </div>
-                      <div className="w-full">
-                        <Select
-                          value={prioridade || undefined}
-                          onValueChange={handleSalvarPrioridade}
-                          disabled={
-                            savingPrioridade ||
-                            chamado.status === 'finalizado' ||
-                            chamado.status === 'unificado'
-                          }
-                        >
-                          <SelectTrigger className="bg-white border-orange-200 focus:ring-orange-400 h-8 text-xs">
-                            <SelectValue placeholder="Selecione uma prioridade" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="media">Média</SelectItem>
-                            <SelectItem value="urgente">Urgente</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
+                      <Select
+                        value={prioridade || undefined}
+                        onValueChange={handleSalvarPrioridade}
+                        disabled={
+                          savingPrioridade ||
+                          chamado.status === 'finalizado' ||
+                          chamado.status === 'unificado'
+                        }
+                      >
+                        <SelectTrigger className="bg-white border-orange-200 focus:ring-orange-400 h-8 text-xs w-full">
+                          <SelectValue placeholder="Selecione uma prioridade" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="media">Média</SelectItem>
+                          <SelectItem value="urgente">Urgente</SelectItem>
+                        </SelectContent>
+                      </Select>
                     </div>
                   </div>
                 </div>

@@ -273,7 +273,7 @@ export function DashboardCharts({
           </Button>
         </div>
       )}
-      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+      <div className="grid gap-4 grid-cols-1 lg:grid-cols-3">
         <Card className="border-[#f0f0f0] transition-all duration-200 hover:shadow-subtle">
           <CardHeader className="p-6 pb-2">
             <CardTitle className="text-[24px] font-semibold text-[#225f3d]">
@@ -492,7 +492,7 @@ export function DashboardCharts({
           </CardContent>
         </Card>
 
-        <Card className="border-[#f0f0f0] transition-all duration-200 hover:shadow-subtle">
+        <Card className="border-[#f0f0f0] transition-all duration-200 hover:shadow-subtle lg:col-span-2">
           <CardHeader className="p-6 pb-2">
             <CardTitle className="text-[24px] font-semibold text-[#225f3d]">
               Situação do Processo

@@ -7,6 +7,7 @@
     "processar-documento-uazapi": 8,
     "unificar-chamados": 21,
     "verificar-inatividade-chamados": 8,
+    "importar-frota-xlsx": 8,
     "sync-external-registros": 5
   }
 }

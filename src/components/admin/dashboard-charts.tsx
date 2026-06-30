@@ -277,118 +277,6 @@ export function DashboardCharts({
         <Card className="border-[#f0f0f0] transition-all duration-200 hover:shadow-subtle h-full">
           <CardHeader className="p-6 pb-2">
             <CardTitle className="text-[24px] font-semibold text-[#225f3d]">
-              Situação do Processo
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <ChartContainer
-              config={{ situacao: { label: 'Situação', color: '#225f3d' } }}
-              className="h-[300px] w-full"
-            >
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie
-                    data={situacaoProcessoData}
-                    dataKey="value"
-                    nameKey="name"
-                    cx="50%"
-                    cy="50%"
-                    innerRadius={60}
-                    outerRadius={80}
-                    paddingAngle={2}
-                    stroke="none"
-                  >
-                    {situacaoProcessoData.map((entry, index) => (
-                      <Cell
-                        className="cursor-pointer transition-opacity duration-200"
-                        key={index}
-                        fill={entry.fill}
-                      />
-                    ))}
-                  </Pie>
-                  <ChartTooltip content={<ChartTooltipContent />} />
-                  <Legend
-                    formatter={(value) => (
-                      <span style={{ color: '#212121', fontSize: '12px', fontWeight: 500 }}>
-                        {value}
-                      </span>
-                    )}
-                  />
-                </PieChart>
-              </ResponsiveContainer>
-            </ChartContainer>
-          </CardContent>
-        </Card>
-
-        <Card className="border-[#f0f0f0] transition-all duration-200 hover:shadow-subtle lg:col-span-2 h-full">
-          <CardHeader className="p-6 pb-2">
-            <CardTitle className="text-[24px] font-semibold text-[#225f3d]">
-              Chamados por Responsável
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <ChartContainer
-              config={{ responsavel: { label: 'Responsável', color: '#225f3d' } }}
-              className="h-[300px] w-full"
-            >
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart
-                  data={respData}
-                  layout="vertical"
-                  margin={{ top: 20, right: 20, bottom: 20, left: 0 }}
-                >
-                  <XAxis
-                    type="number"
-                    fontSize={12}
-                    tickLine={false}
-                    axisLine={false}
-                    tick={{ fill: '#212121' }}
-                  />
-                  <YAxis
-                    type="category"
-                    dataKey="name"
-                    fontSize={12}
-                    tickLine={false}
-                    axisLine={false}
-                    tick={{ fill: '#212121' }}
-                    width={90}
-                    tickFormatter={(value) =>
-                      value.length > 12 ? value.substring(0, 10) + '...' : value
-                    }
-                  />
-                  <ChartTooltip content={<ChartTooltipContent />} />
-                  <Bar dataKey="value" radius={[0, 4, 4, 0]} maxBarSize={30}>
-                    {respData.map((entry, index) => (
-                      <Cell
-                        key={index}
-                        fill={entry.fill}
-                        className="cursor-pointer transition-opacity duration-200"
-                        onClick={() => onChartClick('responsavel', entry.id)}
-                        style={{
-                          opacity:
-                            chartFilters.responsavel && chartFilters.responsavel !== entry.id
-                              ? 0.3
-                              : 1,
-                        }}
-                      />
-                    ))}
-                  </Bar>
-                  <Legend
-                    formatter={() => (
-                      <span style={{ color: '#212121', fontSize: '12px', fontWeight: 500 }}>
-                        Quantidade
-                      </span>
-                    )}
-                  />
-                </BarChart>
-              </ResponsiveContainer>
-            </ChartContainer>
-          </CardContent>
-        </Card>
-
-        <Card className="border-[#f0f0f0] transition-all duration-200 hover:shadow-subtle h-full">
-          <CardHeader className="p-6 pb-2">
-            <CardTitle className="text-[24px] font-semibold text-[#225f3d]">
               Distribuição por Status
             </CardTitle>
           </CardHeader>
@@ -533,6 +421,118 @@ export function DashboardCharts({
                     )}
                   />
                 </PieChart>
+              </ResponsiveContainer>
+            </ChartContainer>
+          </CardContent>
+        </Card>
+
+        <Card className="border-[#f0f0f0] transition-all duration-200 hover:shadow-subtle h-full">
+          <CardHeader className="p-6 pb-2">
+            <CardTitle className="text-[24px] font-semibold text-[#225f3d]">
+              Situação do Processo
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <ChartContainer
+              config={{ situacao: { label: 'Situação', color: '#225f3d' } }}
+              className="h-[300px] w-full"
+            >
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie
+                    data={situacaoProcessoData}
+                    dataKey="value"
+                    nameKey="name"
+                    cx="50%"
+                    cy="50%"
+                    innerRadius={60}
+                    outerRadius={80}
+                    paddingAngle={2}
+                    stroke="none"
+                  >
+                    {situacaoProcessoData.map((entry, index) => (
+                      <Cell
+                        className="cursor-pointer transition-opacity duration-200"
+                        key={index}
+                        fill={entry.fill}
+                      />
+                    ))}
+                  </Pie>
+                  <ChartTooltip content={<ChartTooltipContent />} />
+                  <Legend
+                    formatter={(value) => (
+                      <span style={{ color: '#212121', fontSize: '12px', fontWeight: 500 }}>
+                        {value}
+                      </span>
+                    )}
+                  />
+                </PieChart>
+              </ResponsiveContainer>
+            </ChartContainer>
+          </CardContent>
+        </Card>
+
+        <Card className="border-[#f0f0f0] transition-all duration-200 hover:shadow-subtle lg:col-span-2 h-full">
+          <CardHeader className="p-6 pb-2">
+            <CardTitle className="text-[24px] font-semibold text-[#225f3d]">
+              Chamados por Responsável
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <ChartContainer
+              config={{ responsavel: { label: 'Responsável', color: '#225f3d' } }}
+              className="h-[300px] w-full"
+            >
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart
+                  data={respData}
+                  layout="vertical"
+                  margin={{ top: 20, right: 20, bottom: 20, left: 0 }}
+                >
+                  <XAxis
+                    type="number"
+                    fontSize={12}
+                    tickLine={false}
+                    axisLine={false}
+                    tick={{ fill: '#212121' }}
+                  />
+                  <YAxis
+                    type="category"
+                    dataKey="name"
+                    fontSize={12}
+                    tickLine={false}
+                    axisLine={false}
+                    tick={{ fill: '#212121' }}
+                    width={90}
+                    tickFormatter={(value) =>
+                      value.length > 12 ? value.substring(0, 10) + '...' : value
+                    }
+                  />
+                  <ChartTooltip content={<ChartTooltipContent />} />
+                  <Bar dataKey="value" radius={[0, 4, 4, 0]} maxBarSize={30}>
+                    {respData.map((entry, index) => (
+                      <Cell
+                        key={index}
+                        fill={entry.fill}
+                        className="cursor-pointer transition-opacity duration-200"
+                        onClick={() => onChartClick('responsavel', entry.id)}
+                        style={{
+                          opacity:
+                            chartFilters.responsavel && chartFilters.responsavel !== entry.id
+                              ? 0.3
+                              : 1,
+                        }}
+                      />
+                    ))}
+                  </Bar>
+                  <Legend
+                    formatter={() => (
+                      <span style={{ color: '#212121', fontSize: '12px', fontWeight: 500 }}>
+                        Quantidade
+                      </span>
+                    )}
+                  />
+                </BarChart>
               </ResponsiveContainer>
             </ChartContainer>
           </CardContent>

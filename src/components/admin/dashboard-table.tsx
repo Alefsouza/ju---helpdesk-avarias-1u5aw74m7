@@ -56,7 +56,7 @@ export function DashboardTable({
   const [period, setPeriod] = useState('all')
   const [dateRange, setDateRange] = useState<{ from?: Date; to?: Date } | undefined>()
   const [status, setStatus] = useState('all')
-  const [prioridade, setPrioridade] = useState('all')
+  const [situacaoProcesso, setSituacaoProcesso] = useState('all')
   const [statusInterno, setStatusInterno] = useState('all')
   const [resp, setResp] = useState('all')
 
@@ -70,7 +70,16 @@ export function DashboardTable({
 
   useEffect(() => {
     setPage(1)
-  }, [debouncedSearch, status, prioridade, statusInterno, resp, period, dateRange, chartFilters])
+  }, [
+    debouncedSearch,
+    status,
+    situacaoProcesso,
+    statusInterno,
+    resp,
+    period,
+    dateRange,
+    chartFilters,
+  ])
 
   const {
     chamados: paginatedChamados,
@@ -82,7 +91,7 @@ export function DashboardTable({
     limit,
     search: debouncedSearch,
     status,
-    prioridade,
+    situacaoProcesso,
     statusInterno,
     responsavel: resp,
     period,
@@ -103,6 +112,15 @@ export function DashboardTable({
     return Array.from(statuses).sort()
   }, [allChamados, paginatedChamados])
 
+  const uniqueSituacaoProcesso = useMemo(() => {
+    const statuses = new Set<string>()
+    const source = allChamados && allChamados.length > 0 ? allChamados : paginatedChamados
+    source.forEach((c) => {
+      if (c.situacao_processo) statuses.add(c.situacao_processo)
+    })
+    return Array.from(statuses).sort()
+  }, [allChamados, paginatedChamados])
+
   const statusColor: Record<string, string> = {
     aberto: 'bg-blue-100 text-blue-800 hover:bg-blue-100',
     em_atendimento: 'bg-yellow-100 text-yellow-800 hover:bg-yellow-100',
@@ -110,11 +128,13 @@ export function DashboardTable({
     unificado: 'bg-purple-100 text-purple-800 hover:bg-purple-100',
   }
 
-  const prioColor: Record<string, string> = {
-    baixa: 'bg-[#404040] text-white hover:bg-[#404040]/90 border-transparent',
-    media: 'bg-orange-100 text-orange-800 hover:bg-orange-100',
-    alta: 'bg-red-100 text-red-800 hover:bg-red-100',
-    urgente: 'bg-red-600 text-white hover:bg-red-700',
+  const situacaoProcessoColor: Record<string, string> = {
+    'Aguardando Julgamento': 'bg-blue-100 text-blue-800 hover:bg-blue-100',
+    Arquivado: 'bg-gray-200 text-gray-800 hover:bg-gray-200',
+    'Cobrar Terceiro': 'bg-orange-100 text-orange-800 hover:bg-orange-100',
+    'Convocação do Operador': 'bg-purple-100 text-purple-800 hover:bg-purple-100',
+    'Notificação Extrajudicial': 'bg-yellow-100 text-yellow-800 hover:bg-yellow-100',
+    Subjúdice: 'bg-red-100 text-red-800 hover:bg-red-100',
   }
 
   const statusLabel: Record<string, string> = {
@@ -123,17 +143,11 @@ export function DashboardTable({
     finalizado: 'Finalizado',
     unificado: 'Unificado',
   }
-  const prioLabel: Record<string, string> = {
-    baixa: 'Baixa',
-    media: 'Média',
-    alta: 'Alta',
-    urgente: 'Urgente',
-  }
 
   const clearFilters = () => {
     setSearch('')
     setStatus('all')
-    setPrioridade('all')
+    setSituacaoProcesso('all')
     setStatusInterno('all')
     setResp('all')
     setPeriod('all')
@@ -317,14 +331,35 @@ export function DashboardTable({
               <SelectItem value="unificado">Unificado</SelectItem>
             </SelectContent>
           </Select>
-          <Select value={prioridade} onValueChange={setPrioridade}>
+          <Select value={situacaoProcesso} onValueChange={setSituacaoProcesso}>
             <SelectTrigger className="bg-[#f0f0f0] border-[#f0f0f0] text-[#212121]">
-              <SelectValue placeholder="Prioridade" />
+              <SelectValue placeholder="Situação do Processo" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">Todas as Prioridades</SelectItem>
-              <SelectItem value="media">Média</SelectItem>
-              <SelectItem value="urgente">Urgente</SelectItem>
+              <SelectItem value="all">Todas as Situações</SelectItem>
+              <SelectItem value="Aguardando Julgamento">Aguardando Julgamento</SelectItem>
+              <SelectItem value="Arquivado">Arquivado</SelectItem>
+              <SelectItem value="Cobrar Terceiro">Cobrar Terceiro</SelectItem>
+              <SelectItem value="Convocação do Operador">Convocação do Operador</SelectItem>
+              <SelectItem value="Notificação Extrajudicial">Notificação Extrajudicial</SelectItem>
+              <SelectItem value="Subjúdice">Subjúdice</SelectItem>
+              {uniqueSituacaoProcesso
+                .filter(
+                  (s) =>
+                    ![
+                      'Aguardando Julgamento',
+                      'Arquivado',
+                      'Cobrar Terceiro',
+                      'Convocação do Operador',
+                      'Notificação Extrajudicial',
+                      'Subjúdice',
+                    ].includes(s),
+                )
+                .map((s) => (
+                  <SelectItem key={s} value={s}>
+                    {s}
+                  </SelectItem>
+                ))}
             </SelectContent>
           </Select>
           <Select value={statusInterno} onValueChange={setStatusInterno}>
@@ -385,7 +420,7 @@ export function DashboardTable({
                       Status
                     </TableHead>
                     <TableHead className="hidden lg:table-cell text-[#225f3d] font-semibold text-[14px]">
-                      Prioridade
+                      Situação do Processo
                     </TableHead>
                     <TableHead className="text-[#225f3d] font-semibold text-[14px]">
                       Responsável
@@ -433,9 +468,15 @@ export function DashboardTable({
                         </Badge>
                       </TableCell>
                       <TableCell className="hidden lg:table-cell">
-                        {c.prioridade ? (
-                          <Badge className={prioColor[c.prioridade]} variant="secondary">
-                            {prioLabel[c.prioridade]}
+                        {c.situacao_processo ? (
+                          <Badge
+                            className={
+                              situacaoProcessoColor[c.situacao_processo] ||
+                              'bg-gray-100 text-gray-800 hover:bg-gray-100'
+                            }
+                            variant="secondary"
+                          >
+                            {c.situacao_processo}
                           </Badge>
                         ) : (
                           <span className="text-slate-400 text-sm">-</span>
@@ -506,9 +547,15 @@ export function DashboardTable({
                       <Badge className={statusColor[c.status]} variant="secondary">
                         {statusLabel[c.status]}
                       </Badge>
-                      {c.prioridade && (
-                        <Badge className={prioColor[c.prioridade]} variant="secondary">
-                          {prioLabel[c.prioridade]}
+                      {c.situacao_processo && (
+                        <Badge
+                          className={
+                            situacaoProcessoColor[c.situacao_processo] ||
+                            'bg-gray-100 text-gray-800 hover:bg-gray-100'
+                          }
+                          variant="secondary"
+                        >
+                          {c.situacao_processo}
                         </Badge>
                       )}
                     </div>

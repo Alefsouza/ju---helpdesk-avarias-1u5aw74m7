@@ -9,6 +9,7 @@ export interface ChamadosFilters {
   search?: string
   status?: string
   prioridade?: string
+  situacaoProcesso?: string
   statusInterno?: string
   responsavel?: string
   period?: string
@@ -43,6 +44,8 @@ export function useChamadosDashboard(filters: ChamadosFilters = {}) {
       if (filters.status && filters.status !== 'all') query = query.eq('status', filters.status)
       if (filters.prioridade && filters.prioridade !== 'all')
         query = query.eq('prioridade', filters.prioridade)
+      if (filters.situacaoProcesso && filters.situacaoProcesso !== 'all')
+        query = query.eq('situacao_processo', filters.situacaoProcesso)
       if (filters.statusInterno && filters.statusInterno !== 'all')
         query = query.eq('status_interno', filters.statusInterno)
 

@@ -149,7 +149,7 @@ export default function MeusAtendimentos() {
       let query = supabase
         .from('chamados')
         .select('*')
-        .in('status', ['em_atendimento', 'aberto'])
+        .eq('status', 'em_atendimento')
         .order('criado_em', { ascending: false })
 
       if (profile.tipo_usuario === 'juridico') {
@@ -239,7 +239,7 @@ export default function MeusAtendimentos() {
       const { data, error: updateError } = await supabase
         .from('chamados')
         .update({
-          status: 'aberto',
+          status: 'em_atendimento',
           responsavel_id: user?.id,
           atualizado_em: new Date().toISOString(),
         })
@@ -259,7 +259,7 @@ export default function MeusAtendimentos() {
       toast({ title: 'Chamado reaberto com sucesso!' })
       setChamados((prev) =>
         prev.map((c) =>
-          c.id === chamadoId ? { ...c, status: 'aberto', responsavel_id: user?.id } : c,
+          c.id === chamadoId ? { ...c, status: 'em_atendimento', responsavel_id: user?.id } : c,
         ),
       )
 

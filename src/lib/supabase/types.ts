@@ -517,6 +517,38 @@ export type Database = {
           },
         ]
       }
+      mensagens_internas_chamado: {
+        Row: {
+          chamado_id: string
+          criado_em: string
+          id: string
+          mensagem: string
+          usuario_id: string
+        }
+        Insert: {
+          chamado_id: string
+          criado_em?: string
+          id?: string
+          mensagem: string
+          usuario_id: string
+        }
+        Update: {
+          chamado_id?: string
+          criado_em?: string
+          id?: string
+          mensagem?: string
+          usuario_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: 'mensagens_internas_chamado_chamado_id_fkey'
+            columns: ['chamado_id']
+            isOneToOne: false
+            referencedRelation: 'chamados'
+            referencedColumns: ['id']
+          },
+        ]
+      }
       notificacoes: {
         Row: {
           criado_em: string

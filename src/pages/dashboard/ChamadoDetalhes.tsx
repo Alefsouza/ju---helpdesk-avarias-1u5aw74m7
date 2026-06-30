@@ -75,6 +75,7 @@ import { UnificarChamadoModal } from '@/components/UnificarChamadoModal'
 import { useDocumentAction } from '@/hooks/use-document-action'
 import { useRegistroNome } from '@/hooks/use-registro-nome'
 import { Checkbox } from '@/components/ui/checkbox'
+import { ChatInternoChamado } from '@/components/ChatInternoChamado'
 
 type Chamado = any
 type Perfil = any
@@ -3155,7 +3156,7 @@ export default function ChamadoDetalhes() {
       const { data, error: updateError } = await supabase
         .from('chamados')
         .update({
-          status: 'aberto',
+          status: 'em_atendimento',
           responsavel_id: user?.id,
           status_interno: currentUserProfile?.departamento || null,
           atualizado_em: new Date().toISOString(),
@@ -3179,7 +3180,7 @@ export default function ChamadoDetalhes() {
         prev
           ? {
               ...prev,
-              status: 'aberto',
+              status: 'em_atendimento',
               responsavel_id: user?.id,
               status_interno: currentUserProfile?.departamento || null,
             }
@@ -4169,6 +4170,12 @@ export default function ChamadoDetalhes() {
           </div>
         )}
       </div>
+
+      {isPrivilegedTransfer && (
+        <div className="animate-fade-in-up">
+          <ChatInternoChamado chamadoId={id as string} />
+        </div>
+      )}
 
       <div className="space-y-2">
         <h3 className="text-base font-bold text-slate-900 px-1">Histórico de Interações</h3>

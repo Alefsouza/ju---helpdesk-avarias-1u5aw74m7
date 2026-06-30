@@ -273,123 +273,22 @@ export function DashboardCharts({
           </Button>
         </div>
       )}
-      <div className="grid gap-4 grid-cols-1 lg:grid-cols-3">
-        <Card className="border-[#f0f0f0] transition-all duration-200 hover:shadow-subtle">
+      <div className="grid gap-4 grid-cols-1 lg:grid-cols-3 items-stretch">
+        <Card className="border-[#f0f0f0] transition-all duration-200 hover:shadow-subtle h-full">
           <CardHeader className="p-6 pb-2">
             <CardTitle className="text-[24px] font-semibold text-[#225f3d]">
-              Distribuição por Status
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <ChartContainer config={statusConfig} className="h-[300px] w-full">
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie
-                    data={statusData}
-                    dataKey="value"
-                    nameKey="name"
-                    cx="50%"
-                    cy="50%"
-                    innerRadius={60}
-                    outerRadius={80}
-                    paddingAngle={2}
-                    stroke="none"
-                  >
-                    {statusData.map((entry, index) => (
-                      <Cell
-                        className="shadow-[0px_0px_6px_0px_#000000] border-[inherit] cursor-pointer transition-opacity duration-200"
-                        key={index}
-                        fill={entry.fill}
-                        onClick={() => onChartClick('status', entry.id)}
-                        style={{
-                          opacity:
-                            chartFilters.status && chartFilters.status !== entry.id ? 0.3 : 1,
-                        }}
-                      />
-                    ))}
-                  </Pie>
-                  <ChartTooltip content={<ChartTooltipContent />} />
-                  <Legend
-                    formatter={(value) => (
-                      <span style={{ color: '#212121', fontSize: '12px', fontWeight: 500 }}>
-                        {value}
-                      </span>
-                    )}
-                  />
-                </PieChart>
-              </ResponsiveContainer>
-            </ChartContainer>
-          </CardContent>
-        </Card>
-
-        <Card className="border-[#f0f0f0] transition-all duration-200 hover:shadow-subtle">
-          <CardHeader className="p-6 pb-2">
-            <CardTitle className="text-[24px] font-semibold text-[#225f3d]">
-              Chamados por Prioridade
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <ChartContainer config={prioConfig} className="h-[300px] w-full">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={prioData} margin={{ top: 20, right: 20, bottom: 20, left: 0 }}>
-                  <XAxis
-                    dataKey="name"
-                    fontSize={12}
-                    tickLine={false}
-                    axisLine={false}
-                    tick={{ fill: '#212121' }}
-                  />
-                  <YAxis
-                    fontSize={12}
-                    tickLine={false}
-                    axisLine={false}
-                    tick={{ fill: '#212121' }}
-                  />
-                  <ChartTooltip content={<ChartTooltipContent />} />
-                  <Bar dataKey="value" radius={[4, 4, 0, 0]} maxBarSize={50}>
-                    {prioData.map((entry, index) => (
-                      <Cell
-                        key={index}
-                        fill={entry.fill}
-                        className="cursor-pointer transition-opacity duration-200"
-                        onClick={() => onChartClick('prioridade', entry.id)}
-                        style={{
-                          opacity:
-                            chartFilters.prioridade && chartFilters.prioridade !== entry.id
-                              ? 0.3
-                              : 1,
-                        }}
-                      />
-                    ))}
-                  </Bar>
-                  <Legend
-                    formatter={() => (
-                      <span style={{ color: '#212121', fontSize: '12px', fontWeight: 500 }}>
-                        Quantidade
-                      </span>
-                    )}
-                  />
-                </BarChart>
-              </ResponsiveContainer>
-            </ChartContainer>
-          </CardContent>
-        </Card>
-
-        <Card className="border-[#f0f0f0] transition-all duration-200 hover:shadow-subtle">
-          <CardHeader className="p-6 pb-2">
-            <CardTitle className="text-[24px] font-semibold text-[#225f3d]">
-              Distribuição por Garagem
+              Situação do Processo
             </CardTitle>
           </CardHeader>
           <CardContent>
             <ChartContainer
-              config={{ garagem: { label: 'Garagem', color: '#225f3d' } }}
+              config={{ situacao: { label: 'Situação', color: '#225f3d' } }}
               className="h-[300px] w-full"
             >
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
                   <Pie
-                    data={garageData}
+                    data={situacaoProcessoData}
                     dataKey="value"
                     nameKey="name"
                     cx="50%"
@@ -399,16 +298,11 @@ export function DashboardCharts({
                     paddingAngle={2}
                     stroke="none"
                   >
-                    {garageData.map((entry, index) => (
+                    {situacaoProcessoData.map((entry, index) => (
                       <Cell
-                        className="shadow-[0px_0px_6px_0px_#000000] border-[inherit] cursor-pointer transition-opacity duration-200"
+                        className="cursor-pointer transition-opacity duration-200"
                         key={index}
                         fill={entry.fill}
-                        onClick={() => onChartClick('garagem', entry.id)}
-                        style={{
-                          opacity:
-                            chartFilters.garagem && chartFilters.garagem !== entry.id ? 0.3 : 1,
-                        }}
                       />
                     ))}
                   </Pie>
@@ -426,7 +320,7 @@ export function DashboardCharts({
           </CardContent>
         </Card>
 
-        <Card className="border-[#f0f0f0] transition-all duration-200 hover:shadow-subtle">
+        <Card className="border-[#f0f0f0] transition-all duration-200 hover:shadow-subtle lg:col-span-2 h-full">
           <CardHeader className="p-6 pb-2">
             <CardTitle className="text-[24px] font-semibold text-[#225f3d]">
               Chamados por Responsável
@@ -492,21 +386,18 @@ export function DashboardCharts({
           </CardContent>
         </Card>
 
-        <Card className="border-[#f0f0f0] transition-all duration-200 hover:shadow-subtle lg:col-span-2">
+        <Card className="border-[#f0f0f0] transition-all duration-200 hover:shadow-subtle h-full">
           <CardHeader className="p-6 pb-2">
             <CardTitle className="text-[24px] font-semibold text-[#225f3d]">
-              Situação do Processo
+              Distribuição por Status
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <ChartContainer
-              config={{ situacao: { label: 'Situação', color: '#225f3d' } }}
-              className="h-[300px] w-full"
-            >
+            <ChartContainer config={statusConfig} className="h-[300px] w-full">
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
                   <Pie
-                    data={situacaoProcessoData}
+                    data={statusData}
                     dataKey="value"
                     nameKey="name"
                     cx="50%"
@@ -516,11 +407,120 @@ export function DashboardCharts({
                     paddingAngle={2}
                     stroke="none"
                   >
-                    {situacaoProcessoData.map((entry, index) => (
+                    {statusData.map((entry, index) => (
                       <Cell
-                        className="cursor-pointer transition-opacity duration-200"
+                        className="shadow-[0px_0px_6px_0px_#000000] border-[inherit] cursor-pointer transition-opacity duration-200"
                         key={index}
                         fill={entry.fill}
+                        onClick={() => onChartClick('status', entry.id)}
+                        style={{
+                          opacity:
+                            chartFilters.status && chartFilters.status !== entry.id ? 0.3 : 1,
+                        }}
+                      />
+                    ))}
+                  </Pie>
+                  <ChartTooltip content={<ChartTooltipContent />} />
+                  <Legend
+                    formatter={(value) => (
+                      <span style={{ color: '#212121', fontSize: '12px', fontWeight: 500 }}>
+                        {value}
+                      </span>
+                    )}
+                  />
+                </PieChart>
+              </ResponsiveContainer>
+            </ChartContainer>
+          </CardContent>
+        </Card>
+
+        <Card className="border-[#f0f0f0] transition-all duration-200 hover:shadow-subtle h-full">
+          <CardHeader className="p-6 pb-2">
+            <CardTitle className="text-[24px] font-semibold text-[#225f3d]">
+              Chamados por Prioridade
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <ChartContainer config={prioConfig} className="h-[300px] w-full">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={prioData} margin={{ top: 20, right: 20, bottom: 20, left: 0 }}>
+                  <XAxis
+                    dataKey="name"
+                    fontSize={12}
+                    tickLine={false}
+                    axisLine={false}
+                    tick={{ fill: '#212121' }}
+                  />
+                  <YAxis
+                    fontSize={12}
+                    tickLine={false}
+                    axisLine={false}
+                    tick={{ fill: '#212121' }}
+                  />
+                  <ChartTooltip content={<ChartTooltipContent />} />
+                  <Bar dataKey="value" radius={[4, 4, 0, 0]} maxBarSize={50}>
+                    {prioData.map((entry, index) => (
+                      <Cell
+                        key={index}
+                        fill={entry.fill}
+                        className="cursor-pointer transition-opacity duration-200"
+                        onClick={() => onChartClick('prioridade', entry.id)}
+                        style={{
+                          opacity:
+                            chartFilters.prioridade && chartFilters.prioridade !== entry.id
+                              ? 0.3
+                              : 1,
+                        }}
+                      />
+                    ))}
+                  </Bar>
+                  <Legend
+                    formatter={() => (
+                      <span style={{ color: '#212121', fontSize: '12px', fontWeight: 500 }}>
+                        Quantidade
+                      </span>
+                    )}
+                  />
+                </BarChart>
+              </ResponsiveContainer>
+            </ChartContainer>
+          </CardContent>
+        </Card>
+
+        <Card className="border-[#f0f0f0] transition-all duration-200 hover:shadow-subtle h-full">
+          <CardHeader className="p-6 pb-2">
+            <CardTitle className="text-[24px] font-semibold text-[#225f3d]">
+              Distribuição por Garagem
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <ChartContainer
+              config={{ garagem: { label: 'Garagem', color: '#225f3d' } }}
+              className="h-[300px] w-full"
+            >
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie
+                    data={garageData}
+                    dataKey="value"
+                    nameKey="name"
+                    cx="50%"
+                    cy="50%"
+                    innerRadius={60}
+                    outerRadius={80}
+                    paddingAngle={2}
+                    stroke="none"
+                  >
+                    {garageData.map((entry, index) => (
+                      <Cell
+                        className="shadow-[0px_0px_6px_0px_#000000] border-[inherit] cursor-pointer transition-opacity duration-200"
+                        key={index}
+                        fill={entry.fill}
+                        onClick={() => onChartClick('garagem', entry.id)}
+                        style={{
+                          opacity:
+                            chartFilters.garagem && chartFilters.garagem !== entry.id ? 0.3 : 1,
+                        }}
                       />
                     ))}
                   </Pie>

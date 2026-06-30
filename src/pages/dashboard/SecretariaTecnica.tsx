@@ -167,6 +167,7 @@ export default function SecretariaTecnica() {
         .in('tipo_documento', ['Vistoria', 'Espelho de Danos'])
         .not('numero_os', 'is', null)
         .neq('numero_os', '')
+        .neq('status_liberacao', 'sem_orcamento')
         .order('criado_em', { ascending: false })
 
       if (error) throw error
@@ -500,9 +501,20 @@ export default function SecretariaTecnica() {
 
       if (histError) throw histError
 
-      toast({ title: 'Sucesso', description: 'Justificativa registrada com sucesso!' })
+      const { error: docUpdateError } = await supabase
+        .from('documentos')
+        .update({ status_liberacao: 'sem_orcamento' })
+        .eq('id', justificativaDoc.id)
+
+      if (docUpdateError) throw docUpdateError
+
+      setDocumentos((prev) => prev.filter((doc) => doc.id !== justificativaDoc.id))
+
+      toast({
+        title: 'Sucesso',
+        description: 'Justificativa registrada e item removido da lista!',
+      })
       setJustificativaModalOpen(false)
-      fetchDocumentos()
     } catch (error: any) {
       toast({
         title: 'Erro',

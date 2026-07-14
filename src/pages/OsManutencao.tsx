@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef } from 'react'
+import { useEffect, useState, useRef, useMemo } from 'react'
 import { supabase } from '@/lib/supabase/client'
 import {
   Table,
@@ -43,6 +43,167 @@ interface OsManutencaoProps {
   title?: string
 }
 
+interface GroupedOs {
+  numero_os: string
+  ids: string[]
+  records: any[]
+  data: string | null
+  horario: string | null
+  numero_carro: string | null
+  nome_responsavel: string | null
+  registro_responsavel: string | null
+  nome_motorista: string | null
+  registro_motorista: string | null
+  garagem: string | null
+  linha: string | null
+  descricao_danos: string | null
+  ocorrencia: string | null
+  status_liberacao: string | null
+  arquivo_url: string | null
+  foto_url: string | null
+  fotos_urls: string[]
+  fotos_manutencao: string[]
+  fotos_requisicao: string[]
+  chamado_id: string | null
+  mostRecentRecord: any
+}
+
+const normArr = (v: any): string[] => {
+  if (!v) return []
+  if (Array.isArray(v)) return v.filter((x: any) => typeof x === 'string' && x.trim() !== '')
+  if (typeof v === 'string') {
+    try {
+      const parsed = JSON.parse(v)
+      if (Array.isArray(parsed)) return parsed.filter((x: any) => typeof x === 'string')
+    } catch {
+      return [v]
+    }
+  }
+  return []
+}
+
+const pickMostRecent = (records: any[]): any => {
+  if (records.length === 0) return null
+  return [...records].sort((a, b) => {
+    const da = new Date(a.atualizado_em || a.criado_em || 0).getTime()
+    const db = new Date(b.atualizado_em || b.criado_em || 0).getTime()
+    return db - da
+  })[0]
+}
+
+const pickBestDescription = (
+  records: any[],
+  field: 'descricao_danos' | 'ocorrencia',
+): string | null => {
+  const values = records
+    .map((r) => r[field])
+    .filter((v) => v && typeof v === 'string' && v.trim() !== '')
+  if (values.length === 0) return null
+  const unique = Array.from(new Set(values.map((v) => v.trim())))
+  if (unique.length === 1) return unique[0]
+  return unique.join('\n---\n')
+}
+
+const groupByOs = (docs: any[]): GroupedOs[] => {
+  const map = new Map<string, any[]>()
+
+  for (const doc of docs) {
+    const os = (doc.numero_os || '').toString().trim()
+    if (!os) {
+      const key = `__no_os_${doc.id}`
+      if (!map.has(key)) map.set(key, [])
+      map.get(key)!.push(doc)
+      continue
+    }
+    if (!map.has(os)) map.set(os, [])
+    map.get(os)!.push(doc)
+  }
+
+  const groups: GroupedOs[] = []
+
+  for (const [os, records] of Array.from(map.entries())) {
+    const mostRecent = pickMostRecent(records)
+
+    const fotos_urls = Array.from(new Set(records.flatMap((r) => normArr(r.fotos_urls))))
+    const fotos_manutencao = Array.from(
+      new Set(records.flatMap((r) => normArr(r.fotos_manutencao))),
+    )
+    const fotos_requisicao = Array.from(
+      new Set(records.flatMap((r) => normArr(r.fotos_requisicao))),
+    )
+    const foto_urls = records.map((r) => r.foto_url).filter((v) => v && typeof v === 'string')
+    const unique_foto_url = foto_urls.length > 0 ? foto_urls[0] : null
+
+    const merged_fotos_urls = Array.from(new Set([...fotos_urls, ...foto_urls]))
+
+    const descricao_danos = pickBestDescription(records, 'descricao_danos')
+    const ocorrencia = pickBestDescription(records, 'ocorrencia')
+
+    const status_liberacao =
+      records.map((r) => r.status_liberacao).find((v) => v && typeof v === 'string') ||
+      mostRecent?.status_liberacao ||
+      null
+
+    const arquivo_url =
+      records.map((r) => r.arquivo_url).find((v) => v && typeof v === 'string' && v !== '') || null
+
+    groups.push({
+      numero_os: os.startsWith('__no_os_') ? '' : os,
+      ids: records.map((r) => r.id),
+      records,
+      data: mostRecent?.data || null,
+      horario: mostRecent?.horario || null,
+      numero_carro:
+        records.map((r) => r.numero_carro).find((v) => v && typeof v === 'string') ||
+        mostRecent?.numero_carro ||
+        null,
+      nome_responsavel:
+        records.map((r) => r.nome_responsavel).find((v) => v && typeof v === 'string') ||
+        mostRecent?.nome_responsavel ||
+        null,
+      registro_responsavel:
+        records.map((r) => r.registro_responsavel).find((v) => v && typeof v === 'string') ||
+        mostRecent?.registro_responsavel ||
+        null,
+      nome_motorista:
+        records.map((r) => r.nome_motorista).find((v) => v && typeof v === 'string') ||
+        mostRecent?.nome_motorista ||
+        null,
+      registro_motorista:
+        records.map((r) => r.registro_motorista).find((v) => v && typeof v === 'string') ||
+        mostRecent?.registro_motorista ||
+        null,
+      garagem: mostRecent?.garagem || null,
+      linha:
+        records.map((r) => r.linha).find((v) => v && typeof v === 'string') ||
+        mostRecent?.linha ||
+        null,
+      descricao_danos,
+      ocorrencia,
+      status_liberacao,
+      arquivo_url,
+      foto_url: unique_foto_url,
+      fotos_urls: merged_fotos_urls,
+      fotos_manutencao,
+      fotos_requisicao,
+      chamado_id: mostRecent?.chamado_id || null,
+      mostRecentRecord: mostRecent,
+    })
+  }
+
+  groups.sort((a, b) => {
+    const da = new Date(
+      a.mostRecentRecord?.atualizado_em || a.mostRecentRecord?.criado_em || 0,
+    ).getTime()
+    const db = new Date(
+      b.mostRecentRecord?.atualizado_em || b.mostRecentRecord?.criado_em || 0,
+    ).getTime()
+    return db - da
+  })
+
+  return groups
+}
+
 export default function OsManutencao({
   garagemFilter = 'Cursino',
   title = 'OS - Manutenção',
@@ -50,18 +211,18 @@ export default function OsManutencao({
   const [documentos, setDocumentos] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
-  const [docToRelease, setDocToRelease] = useState<any>(null)
+  const [docToRelease, setDocToRelease] = useState<GroupedOs | null>(null)
   const [isReleasing, setIsReleasing] = useState(false)
-  const [viewDoc, setViewDoc] = useState<any>(null)
+  const [viewDoc, setViewDoc] = useState<GroupedOs | null>(null)
 
   const [isModalOpen, setIsModalOpen] = useState(false)
-  const [selectedDoc, setSelectedDoc] = useState<any>(null)
+  const [selectedDoc, setSelectedDoc] = useState<GroupedOs | null>(null)
   const [numeroOS, setNumeroOS] = useState('')
   const [isSaving, setIsSaving] = useState(false)
   const [duplicateAlertOpen, setDuplicateAlertOpen] = useState(false)
   const [duplicateSubmitAction, setDuplicateSubmitAction] = useState<(() => void) | null>(null)
   const [isPhotoManagerOpen, setIsPhotoManagerOpen] = useState(false)
-  const [photoManagerDoc, setPhotoManagerDoc] = useState<any>(null)
+  const [photoManagerDoc, setPhotoManagerDoc] = useState<GroupedOs | null>(null)
 
   const [stagedNewPhotos, setStagedNewPhotos] = useState<File[]>([])
   const [stagedNewPhotoUrls, setStagedNewPhotoUrls] = useState<string[]>([])
@@ -83,6 +244,8 @@ export default function OsManutencao({
   const fileInputRef = useRef<HTMLInputElement>(null)
   const { toast } = useToast()
 
+  const groupedDocs = useMemo(() => groupByOs(documentos), [documentos])
+
   const fetchDocumentos = async () => {
     try {
       setLoading(true)
@@ -98,8 +261,7 @@ export default function OsManutencao({
 
       if (error) throw error
 
-      const fetchedDocs = data || []
-      setDocumentos(fetchedDocs)
+      setDocumentos(data || [])
     } catch (error) {
       console.error('Erro ao buscar documentos:', error)
     } finally {
@@ -211,7 +373,7 @@ export default function OsManutencao({
     }
   }, [garagemFilter])
 
-  const filteredDocs = documentos.filter(
+  const filteredDocs = groupedDocs.filter(
     (doc) =>
       doc.numero_os?.toLowerCase().includes(search.toLowerCase()) ||
       doc.numero_carro?.toLowerCase().includes(search.toLowerCase()) ||
@@ -219,13 +381,14 @@ export default function OsManutencao({
       doc.descricao_danos?.toLowerCase().includes(search.toLowerCase()),
   )
 
-  const handleDownload = (url: string, e: React.MouseEvent) => {
+  const handleDownload = (url: string | null, e: React.MouseEvent) => {
     e.preventDefault()
+    if (!url) return
     const downloadUrl = url + (url.includes('?') ? '&download=' : '?download=')
     window.open(downloadUrl, '_blank')
   }
 
-  const handleOpenPhotoManager = (doc: any) => {
+  const handleOpenPhotoManager = (doc: GroupedOs) => {
     setPhotoManagerDoc(doc)
     setStagedNewPhotos([])
     setStagedNewPhotoUrls([])
@@ -316,7 +479,7 @@ export default function OsManutencao({
       for (let i = 0; i < stagedNewPhotos.length; i++) {
         const file = stagedNewPhotos[i]
         const fileExt = file.name.split('.').pop()
-        const fileName = `os_foto_${photoManagerDoc.id}_${Date.now()}_${i}.${fileExt}`
+        const fileName = `os_foto_${photoManagerDoc.numero_os}_${Date.now()}_${i}.${fileExt}`
 
         const { error: uploadError } = await supabase.storage
           .from('documentos')
@@ -332,7 +495,7 @@ export default function OsManutencao({
       for (let i = 0; i < stagedNewPhotosReq.length; i++) {
         const file = stagedNewPhotosReq[i]
         const fileExt = file.name.split('.').pop()
-        const fileName = `os_req_${photoManagerDoc.id}_${Date.now()}_${i}.${fileExt}`
+        const fileName = `os_req_${photoManagerDoc.numero_os}_${Date.now()}_${i}.${fileExt}`
 
         const { error: uploadError } = await supabase.storage
           .from('documentos')
@@ -357,15 +520,13 @@ export default function OsManutencao({
         }
       }
 
-      const existingFotos = Array.isArray(photoManagerDoc.fotos_manutencao)
-        ? photoManagerDoc.fotos_manutencao
-        : []
-      const keptFotos = existingFotos.filter((url: string) => !stagedDeletedPhotos.includes(url))
-      const finalFotosManutencao = [...keptFotos, ...uploadedUrlsManutencao]
+      const existingFotosManutencao = photoManagerDoc.fotos_manutencao
+      const keptFotosManutencao = existingFotosManutencao.filter(
+        (url: string) => !stagedDeletedPhotos.includes(url),
+      )
+      const finalFotosManutencao = [...keptFotosManutencao, ...uploadedUrlsManutencao]
 
-      const existingReq = Array.isArray(photoManagerDoc.fotos_requisicao)
-        ? photoManagerDoc.fotos_requisicao
-        : []
+      const existingReq = photoManagerDoc.fotos_requisicao
       const keptReq = existingReq.filter((url: string) => !stagedDeletedPhotosReq.includes(url))
       const finalFotosReq = [...keptReq, ...uploadedUrlsReq]
 
@@ -376,7 +537,7 @@ export default function OsManutencao({
           fotos_requisicao: finalFotosReq,
           atualizado_em: new Date().toISOString(),
         })
-        .eq('id', photoManagerDoc.id)
+        .in('id', photoManagerDoc.ids)
 
       if (updateError) throw updateError
 
@@ -400,11 +561,14 @@ export default function OsManutencao({
       })
 
       setDocumentos((docs) =>
-        docs.map((d) =>
-          d.id === photoManagerDoc.id
-            ? { ...d, fotos_manutencao: finalFotosManutencao, fotos_requisicao: finalFotosReq }
-            : d,
-        ),
+        docs.map((d) => {
+          if (!photoManagerDoc.ids.includes(d.id)) return d
+          return {
+            ...d,
+            fotos_manutencao: finalFotosManutencao,
+            fotos_requisicao: finalFotosReq,
+          }
+        }),
       )
 
       handleClosePhotoManager()
@@ -424,11 +588,14 @@ export default function OsManutencao({
     if (!docToRelease) return
     try {
       setIsReleasing(true)
-      const { error } = await supabase.rpc('liberar_veiculo_manutencao' as any, {
-        p_id: docToRelease.id,
-        p_status: status,
-      })
-      if (error) throw error
+
+      for (const id of docToRelease.ids) {
+        const { error } = await supabase.rpc('liberar_veiculo_manutencao' as any, {
+          p_id: id,
+          p_status: status,
+        })
+        if (error) throw error
+      }
 
       toast({
         title: 'Sucesso',
@@ -438,10 +605,10 @@ export default function OsManutencao({
       setDocumentos((docs) => {
         if (status === 'Liberado com Pendência') {
           return docs.map((d) =>
-            d.id === docToRelease.id ? { ...d, status_liberacao: status } : d,
+            docToRelease.ids.includes(d.id) ? { ...d, status_liberacao: status } : d,
           )
         }
-        return docs.filter((d) => d.id !== docToRelease.id)
+        return docs.filter((d) => !docToRelease.ids.includes(d.id))
       })
     } catch (error: any) {
       console.error('Erro ao ocultar documento:', error)
@@ -456,7 +623,7 @@ export default function OsManutencao({
     }
   }
 
-  const handleOpenModal = (doc: any) => {
+  const handleOpenModal = (doc: GroupedOs) => {
     setSelectedDoc(doc)
     setNumeroOS(doc.numero_os || '')
     setIsModalOpen(true)
@@ -509,7 +676,7 @@ export default function OsManutencao({
           .eq('numero_carro', selectedDoc.numero_carro)
           .eq('excluido_manutencao', false)
           .in('tipo_documento', ['Espelho de Danos', 'Vistoria', 'OS de Manutenção'])
-          .neq('id', selectedDoc.id)
+          .not('id', 'in', `(${selectedDoc.ids.map((id) => `"${id}"`).join(',')})`)
 
         if (duplicates && duplicates.length > 0) {
           setDuplicateSubmitAction(() => () => handleSaveOS(true))
@@ -518,9 +685,12 @@ export default function OsManutencao({
           return
         }
       }
+
+      const primaryDoc = selectedDoc.mostRecentRecord
+
       const { data: pdfData, error: pdfError } = await supabase.functions.invoke('gerar-pdf', {
         body: {
-          id: selectedDoc.id,
+          id: primaryDoc?.id,
           garagem: selectedDoc.garagem,
           linha: selectedDoc.linha,
           numero_carro: selectedDoc.numero_carro,
@@ -533,7 +703,12 @@ export default function OsManutencao({
           registro_vistoriador: selectedDoc.registro_responsavel,
           nome_motorista: selectedDoc.nome_motorista,
           registro_motorista: selectedDoc.registro_motorista,
-          fotos: selectedDoc.fotos_urls || (selectedDoc.foto_url ? [selectedDoc.foto_url] : []),
+          fotos:
+            selectedDoc.fotos_urls.length > 0
+              ? selectedDoc.fotos_urls
+              : selectedDoc.foto_url
+                ? [selectedDoc.foto_url]
+                : [],
         },
       })
 
@@ -550,7 +725,7 @@ export default function OsManutencao({
           nome_arquivo: nome_arquivo || `Espelho_Danos_OS_${numeroOS.trim()}.pdf`,
           tipo_documento: 'Espelho de Danos',
         })
-        .eq('id', selectedDoc.id)
+        .in('id', selectedDoc.ids)
         .select()
         .maybeSingle()
 
@@ -563,7 +738,9 @@ export default function OsManutencao({
 
       setDocumentos((docs) =>
         docs.map((d) =>
-          d.id === selectedDoc.id ? { ...d, numero_os: numeroOS.trim(), arquivo_url: url } : d,
+          selectedDoc.ids.includes(d.id)
+            ? { ...d, numero_os: numeroOS.trim(), arquivo_url: url }
+            : d,
         ),
       )
 
@@ -669,7 +846,10 @@ export default function OsManutencao({
                       </TableRow>
                     ) : (
                       filteredDocs.map((doc) => (
-                        <TableRow key={doc.id} className="hover:bg-slate-50/50 transition-colors">
+                        <TableRow
+                          key={doc.numero_os || doc.ids[0]}
+                          className="hover:bg-slate-50/50 transition-colors"
+                        >
                           <TableCell>
                             <Badge variant="outline" className="font-mono text-sm bg-white">
                               {doc.numero_os}
@@ -700,7 +880,7 @@ export default function OsManutencao({
                           </TableCell>
                           <TableCell>
                             <div className="whitespace-pre-wrap text-sm text-slate-600 break-words leading-relaxed py-2">
-                              {doc.descricao_danos || '-'}
+                              {doc.descricao_danos || doc.ocorrencia || '-'}
                             </div>
                           </TableCell>
                           <TableCell className="text-right">
@@ -719,6 +899,7 @@ export default function OsManutencao({
                                 size="icon"
                                 className="h-8 w-8 text-slate-500 hover:text-primary hover:bg-primary/10"
                                 onClick={(e) => handleDownload(doc.arquivo_url, e)}
+                                disabled={!doc.arquivo_url}
                                 title="Baixar PDF"
                               >
                                 <Download className="h-4 w-4" />
@@ -733,15 +914,14 @@ export default function OsManutencao({
                                 >
                                   <Camera className="h-4 w-4" />
                                 </Button>
-                                {Array.isArray(doc.fotos_manutencao) &&
-                                  doc.fotos_manutencao.length > 0 && (
-                                    <span
-                                      className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-blue-100 text-[10px] font-bold text-blue-600 border border-white"
-                                      title={`${doc.fotos_manutencao.length} foto(s) anexada(s)`}
-                                    >
-                                      {doc.fotos_manutencao.length}
-                                    </span>
-                                  )}
+                                {doc.fotos_manutencao.length > 0 && (
+                                  <span
+                                    className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-blue-100 text-[10px] font-bold text-blue-600 border border-white"
+                                    title={`${doc.fotos_manutencao.length} foto(s) anexada(s)`}
+                                  >
+                                    {doc.fotos_manutencao.length}
+                                  </span>
+                                )}
                               </div>
                               {doc.status_liberacao === 'Liberado com Pendência' && (
                                 <Tooltip>
@@ -907,15 +1087,10 @@ export default function OsManutencao({
         </DialogContent>
       </Dialog>
 
-      {/* Modal Visualizar Detalhes */}
       <Dialog open={!!viewDoc} onOpenChange={(open) => !open && setViewDoc(null)}>
         <DialogContent className="sm:max-w-[600px] max-h-[85vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle className="text-xl font-bold">
-              {viewDoc?.tipo_documento === 'Vistoria'
-                ? 'Detalhes da Vistoria'
-                : 'Detalhes do Documento'}
-            </DialogTitle>
+            <DialogTitle className="text-xl font-bold">Detalhes da OS</DialogTitle>
           </DialogHeader>
           {viewDoc && (
             <div className="space-y-6 py-4">
@@ -956,6 +1131,10 @@ export default function OsManutencao({
                     {viewDoc.registro_motorista ? ` (${viewDoc.registro_motorista})` : ''}
                   </p>
                 </div>
+                <div>
+                  <p className="text-[#333333] font-bold mb-1">Registros Agrupados</p>
+                  <p className="text-[#333333]">{viewDoc.records.length}</p>
+                </div>
               </div>
 
               <div>
@@ -975,95 +1154,77 @@ export default function OsManutencao({
               <div className="space-y-6">
                 <div>
                   <p className="text-[#333333] font-bold mb-3 text-sm border-b pb-1">
-                    Fotos da Vistoria
+                    Fotos da Vistoria ({viewDoc.fotos_urls.length})
                   </p>
-                  {(() => {
-                    const fotosVistoria = []
-                    if (viewDoc.foto_url) fotosVistoria.push(viewDoc.foto_url)
-                    if (Array.isArray(viewDoc.fotos_urls)) {
-                      fotosVistoria.push(...viewDoc.fotos_urls)
-                    }
-
-                    if (fotosVistoria.length === 0) {
-                      return <p className="text-sm text-[#333333] italic">Nenhuma foto anexada.</p>
-                    }
-
-                    return (
-                      <div className="grid grid-cols-2 gap-4">
-                        {fotosVistoria.map((url, idx) => (
-                          <a
-                            key={idx}
-                            href={url}
-                            target="_blank"
-                            rel="noreferrer"
-                            className="block relative aspect-video bg-slate-100 rounded-md overflow-hidden border group"
-                          >
-                            <img
-                              src={url}
-                              alt={`Foto Vistoria ${idx + 1}`}
-                              className="object-cover w-full h-full transition-transform duration-300 group-hover:scale-105"
-                            />
-                            <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors flex items-center justify-center">
-                              <Eye className="text-white opacity-0 group-hover:opacity-100 transition-opacity" />
-                            </div>
-                          </a>
-                        ))}
-                      </div>
-                    )
-                  })()}
+                  {viewDoc.fotos_urls.length === 0 ? (
+                    <p className="text-sm text-[#333333] italic">Nenhuma foto anexada.</p>
+                  ) : (
+                    <div className="grid grid-cols-2 gap-4">
+                      {viewDoc.fotos_urls.map((url, idx) => (
+                        <a
+                          key={idx}
+                          href={url}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="block relative aspect-video bg-slate-100 rounded-md overflow-hidden border group"
+                        >
+                          <img
+                            src={url}
+                            alt={`Foto Vistoria ${idx + 1}`}
+                            className="object-cover w-full h-full transition-transform duration-300 group-hover:scale-105"
+                          />
+                          <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors flex items-center justify-center">
+                            <Eye className="text-white opacity-0 group-hover:opacity-100 transition-opacity" />
+                          </div>
+                        </a>
+                      ))}
+                    </div>
+                  )}
                 </div>
 
                 <div>
                   <p className="text-[#333333] font-bold mb-3 text-sm border-b pb-1">
-                    Evidências de Manutenção
+                    Evidências de Manutenção ({viewDoc.fotos_manutencao.length})
                   </p>
-                  {(() => {
-                    const fotosManutencao = Array.isArray(viewDoc.fotos_manutencao)
-                      ? viewDoc.fotos_manutencao
-                      : []
-
-                    if (fotosManutencao.length === 0) {
-                      return <p className="text-sm text-[#333333] italic">Nenhuma foto anexada.</p>
-                    }
-
-                    return (
-                      <div className="grid grid-cols-2 gap-4">
-                        {fotosManutencao.map((url, idx) => (
-                          <a
-                            key={idx}
-                            href={url}
-                            target="_blank"
-                            rel="noreferrer"
-                            className="block relative aspect-video bg-slate-100 rounded-md overflow-hidden border group"
-                          >
-                            {url.toLowerCase().endsWith('.pdf') ? (
-                              <div className="flex items-center justify-center w-full h-full bg-slate-200">
-                                <span className="text-xs font-bold text-slate-500">PDF</span>
-                              </div>
-                            ) : (
-                              <img
-                                src={url}
-                                alt={`Evidência Manutenção ${idx + 1}`}
-                                className="object-cover w-full h-full transition-transform duration-300 group-hover:scale-105"
-                              />
-                            )}
-                            <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors flex items-center justify-center">
-                              <Eye className="text-white opacity-0 group-hover:opacity-100 transition-opacity" />
+                  {viewDoc.fotos_manutencao.length === 0 ? (
+                    <p className="text-sm text-[#333333] italic">Nenhuma foto anexada.</p>
+                  ) : (
+                    <div className="grid grid-cols-2 gap-4">
+                      {viewDoc.fotos_manutencao.map((url, idx) => (
+                        <a
+                          key={idx}
+                          href={url}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="block relative aspect-video bg-slate-100 rounded-md overflow-hidden border group"
+                        >
+                          {url.toLowerCase().endsWith('.pdf') ? (
+                            <div className="flex items-center justify-center w-full h-full bg-slate-200">
+                              <span className="text-xs font-bold text-slate-500">PDF</span>
                             </div>
-                          </a>
-                        ))}
-                      </div>
-                    )
-                  })()}
+                          ) : (
+                            <img
+                              src={url}
+                              alt={`Evidência Manutenção ${idx + 1}`}
+                              className="object-cover w-full h-full transition-transform duration-300 group-hover:scale-105"
+                            />
+                          )}
+                          <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors flex items-center justify-center">
+                            <Eye className="text-white opacity-0 group-hover:opacity-100 transition-opacity" />
+                          </div>
+                        </a>
+                      ))}
+                    </div>
+                  )}
                 </div>
 
-                {Array.isArray(viewDoc.fotos_requisicao) && viewDoc.fotos_requisicao.length > 0 && (
+                {viewDoc.fotos_requisicao.length > 0 && (
                   <div>
                     <p className="text-[#333333] font-bold mb-3 text-sm border-b pb-1 mt-4">
-                      Requisições Anexadas
+                      Requisições Anexadas ({viewDoc.fotos_requisicao.length})
                     </p>
                     <div className="grid grid-cols-2 gap-4">
-                      {viewDoc.fotos_requisicao.map((url: string, idx: number) => (
+                      {viewDoc.fotos_requisicao.map((url, idx) => (
                         <a
                           key={`req-${idx}`}
                           href={url}
@@ -1105,7 +1266,6 @@ export default function OsManutencao({
         </DialogContent>
       </Dialog>
 
-      {/* Modal Preencher OS */}
       <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
         <DialogContent className="sm:max-w-[425px]">
           <DialogHeader>
@@ -1149,6 +1309,11 @@ export default function OsManutencao({
                 <p className="line-clamp-2" title={selectedDoc.descricao_danos || ''}>
                   <strong>Danos:</strong> {truncateText(selectedDoc.descricao_danos, 80)}
                 </p>
+                {selectedDoc.records.length > 1 && (
+                  <p>
+                    <strong>Registros agrupados:</strong> {selectedDoc.records.length}
+                  </p>
+                )}
               </div>
             )}
           </div>
@@ -1251,17 +1416,19 @@ export default function OsManutencao({
                   OS: {photoManagerDoc?.numero_os || '-'}
                 </p>
                 <p className="text-xs text-slate-500">
-                  Carro: {photoManagerDoc?.numero_carro || '-'}
+                  Carro: {photoManagerDoc?.numero_carro || '-'} • Registros:{' '}
+                  {photoManagerDoc?.records.length || 0}
                 </p>
               </div>
             </div>
 
-            {/* SEÇÃO 1: Fotos do Carro (Manutenção) */}
             <div className="space-y-4">
               <div className="flex items-center justify-between border-b pb-2">
                 <div>
                   <h3 className="font-bold text-slate-800">Fotos do Carro</h3>
-                  <p className="text-xs text-slate-500">Fotos anexadas sincronizam com o chamado</p>
+                  <p className="text-xs text-slate-500">
+                    Fotos anexadas sincronizam com todos os registros da OS
+                  </p>
                 </div>
                 <Button
                   variant="outline"
@@ -1274,9 +1441,7 @@ export default function OsManutencao({
               </div>
 
               {(() => {
-                const existingFotos = Array.isArray(photoManagerDoc?.fotos_manutencao)
-                  ? photoManagerDoc.fotos_manutencao
-                  : []
+                const existingFotos = photoManagerDoc?.fotos_manutencao || []
                 const activeExistingFotos = existingFotos.filter(
                   (url: string) => !stagedDeletedPhotos.includes(url),
                 )
@@ -1361,13 +1526,12 @@ export default function OsManutencao({
               })()}
             </div>
 
-            {/* SEÇÃO 2: Requisições */}
             <div className="space-y-4">
               <div className="flex items-center justify-between border-b pb-2">
                 <div>
                   <h3 className="font-bold text-slate-800">Anexar Requisição</h3>
                   <p className="text-xs text-slate-500">
-                    Requisões internas (não sincronizam com o chamado)
+                    Requisições internas (sincronizam com todos os registros da OS)
                   </p>
                 </div>
                 <Button
@@ -1381,9 +1545,7 @@ export default function OsManutencao({
               </div>
 
               {(() => {
-                const existingReq = Array.isArray(photoManagerDoc?.fotos_requisicao)
-                  ? photoManagerDoc.fotos_requisicao
-                  : []
+                const existingReq = photoManagerDoc?.fotos_requisicao || []
                 const activeExistingReq = existingReq.filter(
                   (url: string) => !stagedDeletedPhotosReq.includes(url),
                 )

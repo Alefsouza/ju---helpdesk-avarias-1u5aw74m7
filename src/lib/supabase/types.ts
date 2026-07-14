@@ -594,6 +594,7 @@ export type Database = {
           data_referencia: string
           id: string
           is_data_referencia_fixed: boolean | null
+          status: string
           valor_parcela: number
         }
         Insert: {
@@ -604,6 +605,7 @@ export type Database = {
           data_referencia: string
           id?: string
           is_data_referencia_fixed?: boolean | null
+          status?: string
           valor_parcela: number
         }
         Update: {
@@ -614,6 +616,7 @@ export type Database = {
           data_referencia?: string
           id?: string
           is_data_referencia_fixed?: boolean | null
+          status?: string
           valor_parcela?: number
         }
         Relationships: [

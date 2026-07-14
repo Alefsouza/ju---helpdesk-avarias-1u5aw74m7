@@ -26,6 +26,7 @@ import { Checkbox } from '@/components/ui/checkbox'
 import { Check, X, FileText, Loader2, AlertCircle, FileSignature } from 'lucide-react'
 import { toast } from 'sonner'
 import { format } from 'date-fns'
+import { Link } from 'react-router-dom'
 
 export default function ValesAprovacao() {
   const { user, profile } = useAuth()
@@ -465,7 +466,12 @@ export default function ValesAprovacao() {
                       <TableRow key={chamado.id}>
                         <TableCell>
                           <div className="flex flex-col">
-                            <span className="font-medium">{chamado.titulo || '-'}</span>
+                            <Link
+                              to={`/dashboard/chamados/${chamado.id}`}
+                              className="font-medium text-primary hover:underline transition-colors"
+                            >
+                              {chamado.titulo || '-'}
+                            </Link>
                           </div>
                         </TableCell>
                         <TableCell>{driver.registro}</TableCell>

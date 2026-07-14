@@ -42,7 +42,7 @@ export function ValesAprovacaoAlex() {
     const { data, error } = await supabase
       .from('chamados')
       .select(
-        `id, titulo, criado_em, atualizado_em, responsavel_id, usuario_id, status_aprovacao_alex, status_interno, status, registro_motorista, nome_motorista, data_ocorrencia, anexos_chamado_interno ( id, nome_arquivo )`,
+        `id, titulo, criado_em, atualizado_em, responsavel_id, usuario_id, status_aprovacao_alex, status_interno, status, registro_motorista, nome_motorista, data_ocorrencia, anexos_chamado_interno ( id, nome_arquivo ), formularios_espelho_danos ( registro_motorista, nome_motorista )`,
       )
       .eq('status', 'finalizado')
       .eq('status_aprovacao_alex', 'pendente')
@@ -179,6 +179,17 @@ export function ValesAprovacaoAlex() {
     }
   }
 
+  const getDriverData = (chamado: any) => {
+    const espelhoData = Array.isArray(chamado.formularios_espelho_danos)
+      ? chamado.formularios_espelho_danos[0]
+      : chamado.formularios_espelho_danos
+
+    return {
+      registro: espelhoData?.registro_motorista || chamado.registro_motorista || '-',
+      nome: espelhoData?.nome_motorista || chamado.nome_motorista || '-',
+    }
+  }
+
   return (
     <Card>
       <CardContent className="p-0">
@@ -206,59 +217,62 @@ export function ValesAprovacaoAlex() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {chamados.map((chamado) => (
-                  <TableRow key={chamado.id}>
-                    <TableCell>
-                      <Link
-                        to={`/dashboard/chamados/${chamado.id}`}
-                        className="font-medium text-primary hover:underline transition-colors"
-                      >
-                        {chamado.titulo || chamado.id}
-                      </Link>
-                    </TableCell>
-                    <TableCell>{chamado.registro_motorista || '-'}</TableCell>
-                    <TableCell>{chamado.nome_motorista || '-'}</TableCell>
-                    <TableCell>
-                      {chamado.data_ocorrencia
-                        ? format(new Date(chamado.data_ocorrencia + 'T12:00:00'), 'dd/MM/yyyy')
-                        : '-'}
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <div className="flex justify-end gap-2">
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <Button
-                              variant="outline"
-                              size="icon"
-                              className="text-green-600 border-green-200 hover:bg-green-50 hover:text-green-700"
-                              onClick={() => handleApproveClick(chamado)}
-                            >
-                              <Check className="h-4 w-4" />
-                            </Button>
-                          </TooltipTrigger>
-                          <TooltipContent>
-                            <p>Aprovar</p>
-                          </TooltipContent>
-                        </Tooltip>
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <Button
-                              variant="outline"
-                              size="icon"
-                              className="text-red-600 border-red-200 hover:bg-red-50 hover:text-red-700"
-                              onClick={() => handleRejectClick(chamado)}
-                            >
-                              <X className="h-4 w-4" />
-                            </Button>
-                          </TooltipTrigger>
-                          <TooltipContent>
-                            <p>Desaprovar</p>
-                          </TooltipContent>
-                        </Tooltip>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))}
+                {chamados.map((chamado) => {
+                  const driver = getDriverData(chamado)
+                  return (
+                    <TableRow key={chamado.id}>
+                      <TableCell>
+                        <Link
+                          to={`/dashboard/chamados/${chamado.id}`}
+                          className="font-medium text-primary hover:underline transition-colors"
+                        >
+                          {chamado.titulo || chamado.id}
+                        </Link>
+                      </TableCell>
+                      <TableCell>{driver.registro}</TableCell>
+                      <TableCell>{driver.nome}</TableCell>
+                      <TableCell>
+                        {chamado.data_ocorrencia
+                          ? format(new Date(chamado.data_ocorrencia + 'T12:00:00'), 'dd/MM/yyyy')
+                          : '-'}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <div className="flex justify-end gap-2">
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button
+                                variant="outline"
+                                size="icon"
+                                className="text-green-600 border-green-200 hover:bg-green-50 hover:text-green-700"
+                                onClick={() => handleApproveClick(chamado)}
+                              >
+                                <Check className="h-4 w-4" />
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p>Aprovar</p>
+                            </TooltipContent>
+                          </Tooltip>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button
+                                variant="outline"
+                                size="icon"
+                                className="text-red-600 border-red-200 hover:bg-red-50 hover:text-red-700"
+                                onClick={() => handleRejectClick(chamado)}
+                              >
+                                <X className="h-4 w-4" />
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p>Desaprovar</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  )
+                })}
               </TableBody>
             </Table>
           </div>

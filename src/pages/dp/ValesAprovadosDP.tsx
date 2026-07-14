@@ -18,6 +18,7 @@ import {
   FileText,
   FileSignature,
   Search,
+  XCircle,
 } from 'lucide-react'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import {
@@ -27,6 +28,16 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog'
 import { supabase } from '@/lib/supabase/client'
 import { toast } from 'sonner'
 import { format } from 'date-fns'
@@ -42,6 +53,8 @@ export default function ValesAprovadosDP() {
   const [downloadMonth, setDownloadMonth] = useState(() => format(new Date(), 'yyyy-MM'))
   const [searchTerm, setSearchTerm] = useState('')
   const [garageFilter, setGarageFilter] = useState('Todas')
+  const [cancelTarget, setCancelTarget] = useState<{ chamadoId: string; totalParcelas: number } | null>(null)
+  const [cancelLoading, setCancelLoading] = useState(false)
 
   useEffect(() => {
     fetchData()
@@ -82,6 +95,7 @@ export default function ValesAprovadosDP() {
         anexos_chamado_interno ( id, nome_arquivo, arquivo_url, criado_em )
       )
     `)
+      .eq('status', 'ativo')
       .gte('data_referencia', startDate)
       .lte('data_referencia', endDate)
       .order('data_referencia', { ascending: true })
@@ -265,12 +279,19 @@ export default function ValesAprovadosDP() {
         autorizacaoId,
         autorizacaoNome,
       }
-    })
+     }
+ 
+    const parcelaCountByChamado = new Map<string, number>()
+    for (const p of formatted) {
+      parcelaCountByChamado.set(p.chamado_id, (parcelaCountByChamado.get(p.chamado_id) || 0) + 1)
+    }
+    for (const p of formatted) {
+      ;(p as any).totalParcelasChamado = parcelaCountByChamado.get(p.chamado_id) || 1
+    }
 
-    setParcelas(formatted)
-    setLoading(false)
-  }
-
+     setParcelas(formatted)
+     setLoading(false)
+   }
   const filteredParcelas = parcelas.filter((p) => {
     const searchLower = searchTerm.toLowerCase()
     const matchesSearch =
@@ -284,6 +305,31 @@ export default function ValesAprovadosDP() {
 
     return matchesSearch && matchesGarage
   })
+
+  const handleCancelParcelas = async () => {
+    if (!cancelTarget) return
+    setCancelLoading(true)
+
+    try {
+      const { error: updateError } = await supabase
+        .from('parcelas_vales')
+        .update({ status: 'cancelado' })
+        .eq('chamado_id', cancelTarget.chamadoId)
+
+      if (updateError) {
+        throw updateError
+      }
+
+      toast.success('Parcelas canceladas com sucesso. O histórico foi preservado.')
+      setCancelTarget(null)
+      await fetchData()
+    } catch (error) {
+      console.error('Erro ao cancelar parcelas:', error)
+      toast.error('Erro ao cancelar parcelas. Tente novamente.')
+    } finally {
+      setCancelLoading(false)
+    }
+  }
 
   const handleDownload = () => {
     const exportableParcelas = filteredParcelas
@@ -414,18 +460,19 @@ export default function ValesAprovadosDP() {
                 <TableHead>Parcela</TableHead>
                 <TableHead>Aprovado Em</TableHead>
                 <TableHead className="pr-6 text-right">Documentos</TableHead>
+                <TableHead className="text-right">Ações</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {loading ? (
                 <TableRow>
-                  <TableCell colSpan={9} className="text-center py-8">
+                  <TableCell colSpan={10} className="text-center py-8">
                     <Loader2 className="w-6 h-6 animate-spin mx-auto text-slate-400" />
                   </TableCell>
                 </TableRow>
               ) : filteredParcelas.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={9} className="text-center py-8 text-slate-500">
+                  <TableCell colSpan={10} className="text-center py-8 text-slate-500">
                     Nenhuma parcela de vale encontrada para os filtros aplicados.
                   </TableCell>
                 </TableRow>
@@ -549,6 +596,28 @@ export default function ValesAprovadosDP() {
                         )}
                       </div>
                     </TableCell>
+                    <TableCell className="pr-6 text-right">
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 text-red-500 hover:text-red-700 hover:bg-red-50 p-0"
+                            onClick={() =>
+                              setCancelTarget({
+                                chamadoId: p.chamado_id,
+                                totalParcelas: (p as any).totalParcelasChamado || 1,
+                              })
+                            }
+                          >
+                            <XCircle className="h-4 w-4" />
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>Cancelar parcelas deste chamado</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TableCell>
                   </TableRow>
                 ))
               )}
@@ -556,6 +625,44 @@ export default function ValesAprovadosDP() {
           </Table>
         </CardContent>
       </Card>
+
+      <AlertDialog
+        open={!!cancelTarget}
+        onOpenChange={(open) => {
+          if (!cancelLoading) setCancelTarget(open ? cancelTarget : null)
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Confirmar Cancelamento</AlertDialogTitle>
+            <AlertDialogDescription>
+              {cancelTarget
+                ? `Deseja cancelar o pagamento? Esta ação cancelará todas as ${cancelTarget.totalParcelas} parcelas vinculadas a este chamado e não pode ser desfeita.`
+                : ''}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={cancelLoading}>Voltar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={(e) => {
+                e.preventDefault()
+                handleCancelParcelas()
+              }}
+              disabled={cancelLoading}
+              className="bg-red-600 hover:bg-red-700 text-white"
+            >
+              {cancelLoading ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  Cancelando...
+                </>
+              ) : (
+                'Confirmar Cancelamento'
+              )}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   )
 }

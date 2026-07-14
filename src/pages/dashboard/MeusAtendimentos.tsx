@@ -75,7 +75,8 @@ export default function MeusAtendimentos() {
     profile?.tipo_usuario === 'responsavel' ||
     profile?.tipo_usuario === 'sinistro' ||
     profile?.tipo_usuario === 'admin' ||
-    profile?.tipo_usuario === 'juridico'
+    profile?.tipo_usuario === 'juridico' ||
+    user?.email === 'alex.fontes@viasudeste.com'
 
   const defaultWidths: Record<string, number> = {
     pia: 120,
@@ -85,7 +86,7 @@ export default function MeusAtendimentos() {
     colaborador: 180,
     status: 160,
     atualizacao: 160,
-    acoes: 140,
+    acoes: 180,
   }
 
   const [columnWidths, setColumnWidths] = useState<Record<string, number>>(() => {
@@ -152,7 +153,7 @@ export default function MeusAtendimentos() {
         .eq('status', 'em_atendimento')
         .order('criado_em', { ascending: false })
 
-      if (profile.tipo_usuario === 'juridico') {
+      if (profile.tipo_usuario === 'juridico' || user?.email === 'alex.fontes@viasudeste.com') {
         query = query.eq('responsavel_id', user.id)
       } else {
         query = query.is('status_juridico', null)
@@ -163,7 +164,7 @@ export default function MeusAtendimentos() {
       if (err) throw err
 
       let fetchedData = data || []
-      if (profile.tipo_usuario === 'juridico') {
+      if (profile.tipo_usuario === 'juridico' && user?.email !== 'alex.fontes@viasudeste.com') {
         fetchedData = fetchedData.filter(
           (c) =>
             c.status_juridico !== 'Cobrança de Terceiros' &&
@@ -535,8 +536,11 @@ export default function MeusAtendimentos() {
                     />
                   </TableHead>
 
-                  <TableHead className="relative text-right" style={{ width: columnWidths.acoes }}>
-                    <div className="pr-2 break-words whitespace-normal">Ações</div>
+                  <TableHead
+                    className="relative text-right whitespace-nowrap"
+                    style={{ width: columnWidths.acoes }}
+                  >
+                    <div className="pr-2 whitespace-nowrap">Ações</div>
                   </TableHead>
                 </TableRow>
               </TableHeader>
@@ -616,22 +620,22 @@ export default function MeusAtendimentos() {
                     <TableCell className="align-middle text-sm text-slate-500 break-words whitespace-normal">
                       {formatDate(c.atualizado_em)}
                     </TableCell>
-                    <TableCell className="align-middle text-right">
-                      <div className="flex justify-end gap-2 flex-wrap">
+                    <TableCell className="align-middle text-right whitespace-nowrap">
+                      <div className="flex justify-end gap-1 flex-nowrap whitespace-nowrap">
                         <Button
                           variant="outline"
                           size="sm"
                           onClick={() => navigateToDetails(c.id)}
                           title="Abrir Atendimento"
-                          className="px-2"
+                          className="h-8 w-8 p-0 shrink-0"
                         >
-                          <ArrowRight className="h-4 w-4" />
+                          <ArrowRight className="h-3.5 w-3.5" />
                         </Button>
                         {c.responsavel_id === user?.id && c.status !== 'finalizado' && (
                           <Button
                             variant="outline"
                             size="sm"
-                            className="px-2"
+                            className="h-8 w-8 p-0 shrink-0"
                             onClick={(e) => {
                               e.stopPropagation()
                               setConfirmFinalizarId(c.id)
@@ -639,14 +643,14 @@ export default function MeusAtendimentos() {
                             disabled={completingId === c.id}
                             title="Finalizar"
                           >
-                            <Check className="h-4 w-4" />
+                            <Check className="h-3.5 w-3.5" />
                           </Button>
                         )}
                         {c.status === 'finalizado' && isSupport && (
                           <Button
                             variant="outline"
                             size="sm"
-                            className="px-2"
+                            className="h-8 w-8 p-0 shrink-0"
                             onClick={(e) => {
                               e.stopPropagation()
                               setConfirmReabrirId(c.id)
@@ -654,14 +658,14 @@ export default function MeusAtendimentos() {
                             disabled={completingId === c.id}
                             title="Reabrir Chamado"
                           >
-                            <RotateCcw className="h-4 w-4" />
+                            <RotateCcw className="h-3.5 w-3.5" />
                           </Button>
                         )}
                         {c.status !== 'finalizado' && isSupport && (
                           <Button
                             variant="outline"
                             size="sm"
-                            className="px-2"
+                            className="h-8 w-8 p-0 shrink-0"
                             onClick={(e) => {
                               e.stopPropagation()
                               setUnificarChamado({ id: c.id, titulo: c.titulo, pia: c.pia })
@@ -669,7 +673,7 @@ export default function MeusAtendimentos() {
                             disabled={completingId === c.id}
                             title="Unificar Chamado"
                           >
-                            <LinkIcon className="h-4 w-4" />
+                            <LinkIcon className="h-3.5 w-3.5" />
                           </Button>
                         )}
                       </div>

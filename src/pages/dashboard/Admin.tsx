@@ -23,7 +23,7 @@ export default function AdminDashboard() {
       .eq('id', user.id)
       .single()
       .then(({ data }) => {
-        setIsAdmin(data?.tipo_usuario === 'admin')
+        setIsAdmin(data?.tipo_usuario === 'admin' || user?.email === 'alex.fontes@viasudeste.com')
       })
   }, [user])
 

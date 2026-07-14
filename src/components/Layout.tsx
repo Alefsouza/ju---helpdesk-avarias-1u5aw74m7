@@ -55,6 +55,7 @@ function AppSidebar() {
   const isSecretariaTecnica = tipo === 'secretaria_tecnica'
   const isDiretoria = profile?.departamento === 'Diretoria'
   const isDp = tipo === 'dp'
+  const isAlexFontes = user?.email === 'alex.fontes@viasudeste.com'
 
   if (isDp) return null
 
@@ -105,6 +106,59 @@ function AppSidebar() {
                 </>
               )}
 
+              {isAlexFontes && (
+                <>
+                  <SidebarMenuItem>
+                    <SidebarMenuButton
+                      asChild
+                      isActive={location.pathname === '/dashboard/admin'}
+                      className="data-[active=true]:bg-transparent data-[active=true]:text-[#c8e6c9] hover:bg-[#c8e6c9]/10 hover:text-[#c8e6c9] text-white transition-colors"
+                    >
+                      <Link to="/dashboard/admin">
+                        <ShieldAlert />
+                        <span>Painel Admin</span>
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                  <SidebarMenuItem>
+                    <SidebarMenuButton
+                      asChild
+                      isActive={location.pathname === '/dashboard/relatorios'}
+                      className="data-[active=true]:bg-transparent data-[active=true]:text-[#c8e6c9] hover:bg-[#c8e6c9]/10 hover:text-[#c8e6c9] text-white transition-colors"
+                    >
+                      <Link to="/dashboard/relatorios">
+                        <FileBarChart />
+                        <span>Relatórios</span>
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                  <SidebarMenuItem>
+                    <SidebarMenuButton
+                      asChild
+                      isActive={location.pathname === '/dashboard/meus-atendimentos'}
+                      className="data-[active=true]:bg-transparent data-[active=true]:text-[#c8e6c9] hover:bg-[#c8e6c9]/10 hover:text-[#c8e6c9] text-white transition-colors"
+                    >
+                      <Link to="/dashboard/meus-atendimentos">
+                        <PlayCircle />
+                        <span>Atendimentos</span>
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                  <SidebarMenuItem>
+                    <SidebarMenuButton
+                      asChild
+                      isActive={location.pathname === '/dashboard/autorizar-parcelas'}
+                      className="data-[active=true]:bg-transparent data-[active=true]:text-[#c8e6c9] hover:bg-[#c8e6c9]/10 hover:text-[#c8e6c9] text-white transition-colors"
+                    >
+                      <Link to="/dashboard/autorizar-parcelas">
+                        <CheckCircle />
+                        <span>Autorizar Parcelas</span>
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                </>
+              )}
+
               {(isResponsavel || isJuridico) && (
                 <>
                   {isResponsavel && (
@@ -133,18 +187,20 @@ function AppSidebar() {
                       </Link>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
-                  <SidebarMenuItem>
-                    <SidebarMenuButton
-                      asChild
-                      isActive={location.pathname === '/dashboard/finalizados'}
-                      className="data-[active=true]:bg-transparent data-[active=true]:text-[#c8e6c9] hover:bg-[#c8e6c9]/10 hover:text-[#c8e6c9] text-white transition-colors"
-                    >
-                      <Link to="/dashboard/finalizados">
-                        <Archive />
-                        <span>Finalizados</span>
-                      </Link>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
+                  {(isResponsavel || isJuridico) && (
+                    <SidebarMenuItem>
+                      <SidebarMenuButton
+                        asChild
+                        isActive={location.pathname === '/dashboard/finalizados'}
+                        className="data-[active=true]:bg-transparent data-[active=true]:text-[#c8e6c9] hover:bg-[#c8e6c9]/10 hover:text-[#c8e6c9] text-white transition-colors"
+                      >
+                        <Link to="/dashboard/finalizados">
+                          <Archive />
+                          <span>Finalizados</span>
+                        </Link>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  )}
                   {isJuridico && (
                     <>
                       <SidebarMenuItem>
@@ -173,18 +229,20 @@ function AppSidebar() {
                       </SidebarMenuItem>
                     </>
                   )}
-                  <SidebarMenuItem>
-                    <SidebarMenuButton
-                      asChild
-                      isActive={location.pathname === '/dashboard/novo-chamado'}
-                      className="data-[active=true]:bg-transparent data-[active=true]:text-[#c8e6c9] hover:bg-[#c8e6c9]/10 hover:text-[#c8e6c9] text-white transition-colors"
-                    >
-                      <Link to="/dashboard/novo-chamado">
-                        <PlusCircle />
-                        <span>Abrir Chamado</span>
-                      </Link>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
+                  {(isResponsavel || isJuridico) && (
+                    <SidebarMenuItem>
+                      <SidebarMenuButton
+                        asChild
+                        isActive={location.pathname === '/dashboard/novo-chamado'}
+                        className="data-[active=true]:bg-transparent data-[active=true]:text-[#c8e6c9] hover:bg-[#c8e6c9]/10 hover:text-[#c8e6c9] text-white transition-colors"
+                      >
+                        <Link to="/dashboard/novo-chamado">
+                          <PlusCircle />
+                          <span>Abrir Chamado</span>
+                        </Link>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  )}
                 </>
               )}
 
@@ -237,21 +295,6 @@ function AppSidebar() {
                     <Link to="/dashboard/vales-aprovacao">
                       <CheckCircle />
                       <span>Vales para aprovação</span>
-                    </Link>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              )}
-
-              {user?.email === 'alex.fontes@viasudeste.com' && (
-                <SidebarMenuItem>
-                  <SidebarMenuButton
-                    asChild
-                    isActive={location.pathname === '/dashboard/autorizar-parcelas'}
-                    className="data-[active=true]:bg-transparent data-[active=true]:text-[#c8e6c9] hover:bg-[#c8e6c9]/10 hover:text-[#c8e6c9] text-white transition-colors"
-                  >
-                    <Link to="/dashboard/autorizar-parcelas">
-                      <CheckCircle />
-                      <span>Autorizar Parcelas</span>
                     </Link>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
@@ -405,7 +448,7 @@ function AppSidebar() {
           </SidebarGroupContent>
         </SidebarGroup>
 
-        {(isResponsavel || isJuridico) && (
+        {(isResponsavel || isJuridico || isAlexFontes) && (
           <SidebarGroup className="mt-auto">
             <SidebarGroupContent>
               <SidebarMenu>
@@ -589,6 +632,9 @@ export default function Layout() {
 
   // Redirect authenticated users from auth routes
   if (user && isAuthRoute) {
+    if (user?.email === 'alex.fontes@viasudeste.com') {
+      return <Navigate to="/dashboard/admin" replace />
+    }
     if (profile?.tipo_usuario === 'vistoriador') {
       return <Navigate to="/vistoria/novo" replace />
     }
@@ -649,6 +695,15 @@ export default function Layout() {
     location.pathname === '/dashboard/chamados-abertos'
   ) {
     return <Navigate to="/dashboard/meus-atendimentos" replace />
+  }
+
+  // Redirect Alex Fontes from Fila de Atendimento to Admin Panel
+  if (
+    user &&
+    user?.email === 'alex.fontes@viasudeste.com' &&
+    location.pathname === '/dashboard/chamados-abertos'
+  ) {
+    return <Navigate to="/dashboard/admin" replace />
   }
 
   // Prevent unauthorized users from accessing Autorizar Parcelas

@@ -43,10 +43,13 @@ import { AuthProvider, useAuth } from './hooks/use-auth'
 import SecretariaTecnica from './pages/dashboard/SecretariaTecnica'
 
 const DashboardRoute = () => {
-  const { profile, loading } = useAuth()
+  const { user, profile, loading } = useAuth()
   const navigate = useNavigate()
 
   useEffect(() => {
+    if (!loading && user?.email === 'alex.fontes@viasudeste.com') {
+      navigate('/dashboard/admin', { replace: true })
+    }
     if (!loading && profile?.tipo_usuario === 'juridico') {
       navigate('/dashboard/meus-atendimentos', { replace: true })
     }
@@ -56,10 +59,11 @@ const DashboardRoute = () => {
     if (!loading && (profile?.tipo_usuario === 'dp' || profile?.departamento === 'DP')) {
       navigate('/vales-aprovados', { replace: true })
     }
-  }, [profile, loading, navigate])
+  }, [user, profile, loading, navigate])
 
   if (
     loading ||
+    user?.email === 'alex.fontes@viasudeste.com' ||
     profile?.tipo_usuario === 'juridico' ||
     profile?.tipo_usuario === 'secretaria_tecnica' ||
     profile?.tipo_usuario === 'dp' ||

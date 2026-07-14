@@ -42,10 +42,14 @@ export function ValesAprovacaoAlex() {
     const { data, error } = await supabase
       .from('chamados')
       .select(
-        `id, titulo, criado_em, atualizado_em, responsavel_id, usuario_id, status_aprovacao_alex, status_interno, status, registro_motorista, nome_motorista, data_ocorrencia, anexos_chamado_interno ( id, nome_arquivo ), formularios_espelho_danos ( registro_motorista, nome_motorista, data )`,
+        `id, titulo, criado_em, atualizado_em, responsavel_id, usuario_id, status_aprovacao_alex, status_interno, status, registro_motorista, nome_motorista, data_ocorrencia, anexos_chamado_interno!inner ( id, nome_arquivo ), formularios_espelho_danos ( registro_motorista, nome_motorista, data )`,
       )
       .eq('status', 'finalizado')
       .eq('status_aprovacao_alex', 'pendente')
+      .or(
+        'nome_arquivo.ilike.%autorização%,nome_arquivo.ilike.%autorizacao%,nome_arquivo.ilike.%escaneado%',
+        { referencedTable: 'anexos_chamado_interno' },
+      )
       .order('atualizado_em', { ascending: false })
 
     if (error) {
@@ -54,17 +58,7 @@ export function ValesAprovacaoAlex() {
       return
     }
 
-    const filtered = (data || []).filter((c: any) => {
-      const anexos = c.anexos_chamado_interno || []
-      return anexos.some((a: any) => {
-        const nome = (a.nome_arquivo || '').toLowerCase()
-        return (
-          nome.includes('escaneado') || nome.includes('autorizacao') || nome.includes('autorização')
-        )
-      })
-    })
-
-    setChamados(filtered)
+    setChamados(data || [])
     setLoading(false)
   }
 

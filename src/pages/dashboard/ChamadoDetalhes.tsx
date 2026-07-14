@@ -802,21 +802,34 @@ function GerarValeModal({
 
       const qtyParcelas = parseInt(parcelas) || 1
 
-      // Inserir na tabela parcelas_vales
-      const valorParcela = valorFinal / qtyParcelas
-      const parcelasToInsert = Array.from({ length: qtyParcelas }).map((_, idx) => {
-        const today = new Date()
-        const targetDate = new Date(today.getFullYear(), today.getMonth() + idx, 1)
-        const targetYear = targetDate.getFullYear()
-        const targetMonth = targetDate.getMonth() + 1
-        return {
-          chamado_id: chamadoId,
-          valor_parcela: valorParcela,
-          data_referencia: `${targetYear}-${targetMonth.toString().padStart(2, '0')}-01`,
-        }
+      // Use the RPC function to calculate precise installments
+      // This ensures the sum of all installments equals the total budget exactly
+      // by adding the remainder to the last installment
+      const today = new Date()
+      const baseDateStr = new Date(today.getFullYear(), today.getMonth(), 1)
+        .toISOString()
+        .split('T')[0]
+
+      const { data: calculadas, error: calcError } = await supabase.rpc('calcular_parcelas_vale', {
+        p_valor_base: valorFinal,
+        p_quantidade_parcelas: qtyParcelas,
+        p_data_base: baseDateStr,
       })
-      await supabase.from('parcelas_vales').delete().eq('chamado_id', chamadoId)
-      await supabase.from('parcelas_vales').insert(parcelasToInsert)
+
+      if (calcError) {
+        console.error('Erro ao calcular parcelas:', calcError)
+      } else if (calculadas && calculadas.length > 0) {
+        const parcelasToInsert = calculadas.map((p: any) => ({
+          chamado_id: chamadoId,
+          valor_parcela: p.valor_parcela,
+          data_referencia: p.data_referencia,
+        }))
+        await supabase.from('parcelas_vales').delete().eq('chamado_id', chamadoId)
+        const { error: parcelasError } = await supabase
+          .from('parcelas_vales')
+          .insert(parcelasToInsert)
+        if (parcelasError) console.error('Error creating parcelas:', parcelasError)
+      }
 
       try {
         toast.info('Gerando autorização...', { id: 'gerar-vale-toast' })

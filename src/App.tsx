@@ -17,6 +17,7 @@ import CobrancaTerceiros from './pages/dashboard/CobrancaTerceiros'
 import DemandaJudicial from './pages/dashboard/DemandaJudicial'
 import Documentos from './pages/dashboard/Documentos'
 import ValesAprovacao from './pages/dashboard/ValesAprovacao'
+import ValesAprovacaoAlexPage from './pages/dashboard/ValesAprovacaoAlexPage'
 import AutorizarParcelas from './pages/dashboard/AutorizarParcelas'
 import ValesAprovadosDP from './pages/dp/ValesAprovadosDP'
 import Perfil from './pages/dashboard/Perfil'
@@ -100,6 +101,7 @@ const App = () => (
             <Route path="/dashboard/perfil" element={<Perfil />} />
             <Route path="/dashboard/secretaria-tecnica" element={<SecretariaTecnica />} />
             <Route path="/dashboard/vales-aprovacao" element={<ValesAprovacao />} />
+            <Route path="/dashboard/vales-aprovacao-alex" element={<ValesAprovacaoAlexPage />} />
             <Route path="/dashboard/autorizar-parcelas" element={<AutorizarParcelas />} />
             <Route path="/vales-aprovados" element={<ValesAprovadosDP />} />
             <Route path="/vistoria/novo" element={<VistoriaForm />} />

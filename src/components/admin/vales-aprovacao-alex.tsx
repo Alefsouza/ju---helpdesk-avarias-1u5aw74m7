@@ -42,8 +42,9 @@ export function ValesAprovacaoAlex() {
     const { data, error } = await supabase
       .from('chamados')
       .select(
-        `id, titulo, criado_em, atualizado_em, responsavel_id, usuario_id, status_aprovacao_alex, status_interno`,
+        `id, titulo, criado_em, atualizado_em, responsavel_id, usuario_id, status_aprovacao_alex, status_interno, status, anexos_chamado_interno ( id, nome_arquivo )`,
       )
+      .eq('status', 'finalizado')
       .eq('status_aprovacao_alex', 'pendente')
       .order('atualizado_em', { ascending: false })
 
@@ -53,7 +54,15 @@ export function ValesAprovacaoAlex() {
       return
     }
 
-    const userIds = [...new Set((data || []).map((c) => c.usuario_id).filter(Boolean))]
+    const filtered = (data || []).filter((c: any) => {
+      const anexos = c.anexos_chamado_interno || []
+      return anexos.some((a: any) => {
+        const nome = (a.nome_arquivo || '').toLowerCase()
+        return nome.includes('escaneado') || nome.includes('autorizacao')
+      })
+    })
+
+    const userIds = [...new Set(filtered.map((c) => c.usuario_id).filter(Boolean))]
     let profilesMap: Record<string, any> = {}
     if (userIds.length > 0) {
       const { data: profiles } = await supabase
@@ -65,7 +74,7 @@ export function ValesAprovacaoAlex() {
       })
     }
 
-    const formatted = (data || []).map((c) => ({
+    const formatted = filtered.map((c) => ({
       ...c,
       solicitante: profilesMap[c.usuario_id] || null,
     }))

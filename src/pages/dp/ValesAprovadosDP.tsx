@@ -19,6 +19,7 @@ import {
   FileSignature,
   Search,
   XCircle,
+  FileSpreadsheet,
 } from 'lucide-react'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import {
@@ -44,6 +45,7 @@ import { format } from 'date-fns'
 import { Link } from 'react-router-dom'
 import { useAuth } from '@/hooks/use-auth'
 import { useDocumentAction } from '@/hooks/use-document-action'
+import { downloadExcelFile } from '@/lib/excel-export'
 
 export default function ValesAprovadosDP() {
   const { profile, loading: authLoading } = useAuth()
@@ -334,6 +336,42 @@ export default function ValesAprovadosDP() {
     }
   }
 
+  const handleExportReport = () => {
+    if (filteredParcelas.length === 0) {
+      return toast.info('Nenhuma parcela encontrada para exportação.')
+    }
+
+    toast.loading('Gerando relatório Excel...', { id: 'export-xls' })
+
+    try {
+      const rows = filteredParcelas.map((p) => ({
+        values: [
+          p.registro !== 'N/A' ? p.registro : '',
+          p.nome !== 'N/A' ? p.nome : '',
+          format(new Date(p.data_referencia + 'T00:00:00'), 'MM/yyyy'),
+          p.parcelaInfo || '-',
+          Number(p.valor_parcela),
+        ],
+      }))
+
+      const columns = [
+        { header: 'Registro', width: 120 },
+        { header: 'Nome', width: 220 },
+        { header: 'Referência', width: 100 },
+        { header: 'Parcela', width: 80 },
+        { header: 'Valor Parcela', width: 130, format: 'Currency' },
+      ]
+
+      const today = format(new Date(), 'dd-MM-yyyy')
+      downloadExcelFile(columns, rows, `Relatorio_Vales_Aprovados_${today}.xls`, 'Vales Aprovados')
+
+      toast.success('Relatório Excel gerado com sucesso!', { id: 'export-xls' })
+    } catch (error) {
+      console.error('Erro ao gerar relatório Excel:', error)
+      toast.error('Erro ao gerar relatório Excel.', { id: 'export-xls' })
+    }
+  }
+
   const handleDownload = () => {
     const exportableParcelas = filteredParcelas
 
@@ -445,6 +483,13 @@ export default function ValesAprovadosDP() {
             className="w-full sm:w-auto bg-[#225f3d] hover:bg-[#1a4a2f]"
           >
             <Download className="w-4 h-4 mr-2" /> Exportar TXT
+          </Button>
+          <Button
+            onClick={handleExportReport}
+            variant="outline"
+            className="w-full sm:w-auto border-[#225f3d] text-[#225f3d] hover:bg-[#225f3d] hover:text-white"
+          >
+            <FileSpreadsheet className="w-4 h-4 mr-2" /> Exportar Relatório
           </Button>
         </div>
       </div>

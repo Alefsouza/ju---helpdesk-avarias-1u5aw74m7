@@ -1,11 +1,12 @@
 import { useEffect, useState } from 'react'
 import { Navigate } from 'react-router-dom'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { Activity, UserCog, Users, Bus } from 'lucide-react'
+import { Activity, UserCog, Users, Bus, FileCheck } from 'lucide-react'
 import { VisaoGeral } from '@/components/admin/visao-geral'
 import { GestaoEquipe } from '@/components/admin/gestao-equipe'
 import { GerenciarUsuarios } from '@/components/admin/gerenciar-usuarios'
 import { ImportarFrota } from '@/components/admin/importar-frota'
+import { ValesAprovacaoAlex } from '@/components/admin/vales-aprovacao-alex'
 import { useAuth } from '@/hooks/use-auth'
 import { supabase } from '@/lib/supabase/client'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -73,6 +74,9 @@ export default function AdminDashboard() {
           <TabsTrigger value="usuarios" className="flex gap-2">
             <Users className="h-4 w-4" /> Todos Usuários
           </TabsTrigger>
+          <TabsTrigger value="vales-alex" className="flex gap-2">
+            <FileCheck className="h-4 w-4" /> Vales para Aprovação
+          </TabsTrigger>
           {user?.email === 'ti@viasudeste.com' && (
             <TabsTrigger value="frota" className="flex gap-2">
               <Bus className="h-4 w-4" /> Gestão de Frota
@@ -90,6 +94,10 @@ export default function AdminDashboard() {
 
         <TabsContent value="usuarios" className="space-y-6">
           <GerenciarUsuarios />
+        </TabsContent>
+
+        <TabsContent value="vales-alex" className="space-y-6">
+          <ValesAprovacaoAlex />
         </TabsContent>
 
         {user?.email === 'ti@viasudeste.com' && (

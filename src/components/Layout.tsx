@@ -47,7 +47,7 @@ function AppSidebar() {
   const tipo = profile?.tipo_usuario
   const isBasico = tipo === 'basico'
   const isResponsavel = tipo === 'responsavel' || tipo === 'sinistro'
-  const isAdmin = tipo === 'admin'
+  const isAdmin = tipo === 'admin' && user?.email !== 'alex.fontes@viasudeste.com'
   const isVistoriador = tipo === 'vistoriador'
   const isCoc = tipo === 'coc'
   const isSos = tipo === 'sos'

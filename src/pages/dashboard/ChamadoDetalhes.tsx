@@ -4128,6 +4128,12 @@ export default function ChamadoDetalhes() {
           </div>
         )}
 
+        {isPrivilegedTransfer && (
+          <div className="animate-fade-in-up">
+            <ChatInternoChamado chamadoId={id as string} />
+          </div>
+        )}
+
         {(anexos.length > 0 ||
           documentosChamado.filter((d) => d.tipo_documento !== 'Espelho de Danos').length > 0) && (
           <div className="pt-3 border-t">
@@ -4250,12 +4256,6 @@ export default function ChamadoDetalhes() {
           </div>
         )}
       </div>
-
-      {isPrivilegedTransfer && (
-        <div className="animate-fade-in-up">
-          <ChatInternoChamado chamadoId={id as string} />
-        </div>
-      )}
 
       <div className="space-y-2">
         <h3 className="text-base font-bold text-slate-900 px-1">Histórico de Interações</h3>

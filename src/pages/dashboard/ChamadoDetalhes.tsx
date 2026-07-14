@@ -3279,7 +3279,8 @@ export default function ChamadoDetalhes() {
     }
 
     if (hasApprovalTrigger) {
-      updatePayload.status_aprovacao = 'aprovacao_parcial'
+      updatePayload.status_interno = 'AGUARDANDO_ALEX'
+      updatePayload.status_aprovacao_alex = 'pendente'
     }
 
     const { data, error: updateError } = await supabase
@@ -3311,7 +3312,7 @@ export default function ChamadoDetalhes() {
         acao: 'respondido',
         usuario_id: user?.id as string,
         detalhes:
-          'Chamado finalizado e encaminhado para aprovação da diretoria (documento de autorização/escaneado detectado).',
+          'Chamado finalizado e encaminhado para aprovação do Alex (documento de autorização/escaneado detectado).',
       })
     }
 
@@ -3321,7 +3322,8 @@ export default function ChamadoDetalhes() {
             ...prev,
             status: 'finalizado',
             atualizado_em: new Date().toISOString(),
-            status_aprovacao: hasApprovalTrigger ? 'aprovacao_parcial' : prev.status_aprovacao,
+            status_interno: hasApprovalTrigger ? 'AGUARDANDO_ALEX' : prev.status_interno,
+            status_aprovacao_alex: hasApprovalTrigger ? 'pendente' : prev.status_aprovacao_alex,
           }
         : prev,
     )
@@ -3329,7 +3331,7 @@ export default function ChamadoDetalhes() {
     setCompleting(false)
     toast.success(
       hasApprovalTrigger
-        ? 'Chamado finalizado e enviado para aprovação da diretoria.'
+        ? 'Chamado finalizado e enviado para aprovação do Alex.'
         : 'Chamado finalizado com sucesso',
     )
   }

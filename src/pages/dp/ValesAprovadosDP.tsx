@@ -53,7 +53,10 @@ export default function ValesAprovadosDP() {
   const [downloadMonth, setDownloadMonth] = useState(() => format(new Date(), 'yyyy-MM'))
   const [searchTerm, setSearchTerm] = useState('')
   const [garageFilter, setGarageFilter] = useState('Todas')
-  const [cancelTarget, setCancelTarget] = useState<{ chamadoId: string; totalParcelas: number } | null>(null)
+  const [cancelTarget, setCancelTarget] = useState<{
+    chamadoId: string
+    totalParcelas: number
+  } | null>(null)
   const [cancelLoading, setCancelLoading] = useState(false)
 
   useEffect(() => {
@@ -279,8 +282,8 @@ export default function ValesAprovadosDP() {
         autorizacaoId,
         autorizacaoNome,
       }
-     }
- 
+    })
+
     const parcelaCountByChamado = new Map<string, number>()
     for (const p of formatted) {
       parcelaCountByChamado.set(p.chamado_id, (parcelaCountByChamado.get(p.chamado_id) || 0) + 1)
@@ -289,9 +292,9 @@ export default function ValesAprovadosDP() {
       ;(p as any).totalParcelasChamado = parcelaCountByChamado.get(p.chamado_id) || 1
     }
 
-     setParcelas(formatted)
-     setLoading(false)
-   }
+    setParcelas(formatted)
+    setLoading(false)
+  }
   const filteredParcelas = parcelas.filter((p) => {
     const searchLower = searchTerm.toLowerCase()
     const matchesSearch =

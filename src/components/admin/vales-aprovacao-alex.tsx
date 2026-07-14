@@ -42,7 +42,7 @@ export function ValesAprovacaoAlex() {
     const { data, error } = await supabase
       .from('chamados')
       .select(
-        `id, titulo, criado_em, atualizado_em, responsavel_id, usuario_id, status_aprovacao_alex, status_interno, status, anexos_chamado_interno ( id, nome_arquivo )`,
+        `id, titulo, criado_em, atualizado_em, responsavel_id, usuario_id, status_aprovacao_alex, status_interno, status, registro_motorista, nome_motorista, data_ocorrencia, anexos_chamado_interno ( id, nome_arquivo )`,
       )
       .eq('status', 'finalizado')
       .eq('status_aprovacao_alex', 'pendente')
@@ -62,24 +62,7 @@ export function ValesAprovacaoAlex() {
       })
     })
 
-    const userIds = [...new Set(filtered.map((c) => c.usuario_id).filter(Boolean))]
-    let profilesMap: Record<string, any> = {}
-    if (userIds.length > 0) {
-      const { data: profiles } = await supabase
-        .from('perfil_usuario')
-        .select('id, nome_completo, email')
-        .in('id', userIds)
-      profiles?.forEach((p) => {
-        profilesMap[p.id] = p
-      })
-    }
-
-    const formatted = filtered.map((c) => ({
-      ...c,
-      solicitante: profilesMap[c.usuario_id] || null,
-    }))
-
-    setChamados(formatted)
+    setChamados(filtered)
     setLoading(false)
   }
 
@@ -216,8 +199,9 @@ export function ValesAprovacaoAlex() {
               <TableHeader>
                 <TableRow>
                   <TableHead>Chamado</TableHead>
-                  <TableHead>Solicitante</TableHead>
-                  <TableHead>Data</TableHead>
+                  <TableHead>Registro do Motorista</TableHead>
+                  <TableHead>Nome do Motorista</TableHead>
+                  <TableHead>Data da Ocorrência</TableHead>
                   <TableHead className="text-right">Ações</TableHead>
                 </TableRow>
               </TableHeader>
@@ -229,12 +213,15 @@ export function ValesAprovacaoAlex() {
                         to={`/dashboard/chamados/${chamado.id}`}
                         className="font-medium text-primary hover:underline transition-colors"
                       >
-                        {chamado.titulo || '-'}
+                        {chamado.titulo || chamado.id}
                       </Link>
                     </TableCell>
-                    <TableCell>{chamado.solicitante?.nome_completo || '-'}</TableCell>
+                    <TableCell>{chamado.registro_motorista || '-'}</TableCell>
+                    <TableCell>{chamado.nome_motorista || '-'}</TableCell>
                     <TableCell>
-                      {format(new Date(chamado.atualizado_em), 'dd/MM/yyyy HH:mm')}
+                      {chamado.data_ocorrencia
+                        ? format(new Date(chamado.data_ocorrencia + 'T12:00:00'), 'dd/MM/yyyy')
+                        : '-'}
                     </TableCell>
                     <TableCell className="text-right">
                       <div className="flex justify-end gap-2">

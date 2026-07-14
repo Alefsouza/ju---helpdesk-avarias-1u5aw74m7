@@ -77,7 +77,7 @@ export default function ValesAprovadosDP() {
         aprovacoes_diretoria,
         garagem,
         formularios_espelho_danos ( registro_motorista, nome_motorista ),
-        solicitacoes_parcelamento ( registro, nome ),
+        solicitacoes_parcelamento ( registro, nome, quantidade_parcelas ),
         documentos ( id, nome_arquivo, arquivo_url, tipo_documento, orcamento_url, criado_em ),
         anexos_chamado_interno ( id, nome_arquivo, arquivo_url, criado_em )
       )
@@ -238,11 +238,13 @@ export default function ValesAprovadosDP() {
 
       const valorCalculado = Number(p.valor_parcela)
 
-      const totalParcelas = solicitacaoData?.quantidade_parcelas || null
       const seqMap = parcelaSequenceMap.get(p.chamado_id)
       const currentParcela = seqMap ? seqMap.get(p.data_referencia) : null
+      const totalFromSolicitacao = solicitacaoData?.quantidade_parcelas || null
+      const totalFromSequence = seqMap ? seqMap.size : null
+      const totalParcelas = totalFromSolicitacao || totalFromSequence || null
       const parcelaInfo =
-        totalParcelas && currentParcela ? `${currentParcela}/${totalParcelas}` : ''
+        currentParcela && totalParcelas ? `${currentParcela}/${totalParcelas}` : ''
 
       return {
         id: p.id,

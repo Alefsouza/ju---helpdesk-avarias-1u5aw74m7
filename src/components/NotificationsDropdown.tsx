@@ -44,7 +44,7 @@ export function NotificationsDropdown({ className }: { className?: string }) {
 
     if (isAlexFontes) {
       query = query.or(
-        'titulo.ilike.%autoriz%,mensagem.ilike.%autoriz%,link.ilike.%/autorizar-parcelas%,titulo.ilike.%parcela%,mensagem.ilike.%parcela%',
+        'titulo.ilike.%autoriz%,mensagem.ilike.%autoriz%,link.ilike.%/autorizar-parcelas%,titulo.ilike.%parcela%,mensagem.ilike.%parcela%,titulo.ilike.%transferido%,mensagem.ilike.%transferido%',
       )
     } else if (isRestrictedUser) {
       query = query.or('titulo.ilike.%Vale%,mensagem.ilike.%Vale%')
@@ -81,13 +81,15 @@ export function NotificationsDropdown({ className }: { className?: string }) {
             const lTitle = newNotif.titulo.toLowerCase()
             const lMsg = newNotif.mensagem.toLowerCase()
             const lLink = (newNotif.link || '').toLowerCase()
-            const isAutoriz =
+            const isRelevant =
               lTitle.includes('autoriz') ||
               lMsg.includes('autoriz') ||
               lTitle.includes('parcela') ||
               lMsg.includes('parcela') ||
-              lLink.includes('/autorizar-parcelas')
-            if (!isAutoriz) return
+              lLink.includes('/autorizar-parcelas') ||
+              lTitle.includes('transferido') ||
+              lMsg.includes('transferido')
+            if (!isRelevant) return
           } else if (isRestrictedUser) {
             const isVale =
               newNotif.titulo.toLowerCase().includes('vale') ||

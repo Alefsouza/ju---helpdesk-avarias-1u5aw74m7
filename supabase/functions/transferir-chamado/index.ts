@@ -40,7 +40,6 @@ Deno.serve(async (req: Request) => {
       throw new Error('Missing required fields')
     }
 
-    // Verify caller permissions
     const { data: profile } = await supabaseAdmin
       .from('perfil_usuario')
       .select('tipo_usuario')
@@ -58,7 +57,6 @@ Deno.serve(async (req: Request) => {
       )
     }
 
-    // Get current ticket
     const { data: chamado, error: chamadoError } = await supabaseAdmin
       .from('chamados')
       .select('responsavel_id, status')
@@ -69,12 +67,10 @@ Deno.serve(async (req: Request) => {
       throw new Error('Chamado not found')
     }
 
-    // Check if the caller is the specific person responsible for the ticket (bypass for privileged users)
     if (!isPrivileged && chamado.responsavel_id !== user.id) {
       throw new Error('Forbidden: You are not the responsible for this ticket')
     }
 
-    // Get new responsavel details
     const { data: novoResponsavel, error: novoRespError } = await supabaseAdmin
       .from('perfil_usuario')
       .select('nome_completo, departamento')
@@ -85,7 +81,6 @@ Deno.serve(async (req: Request) => {
       throw new Error('Novo responsável não encontrado')
     }
 
-    // Update the ticket to change responsible
     const { error: updateError } = await supabaseAdmin
       .from('chamados')
       .update({
@@ -97,7 +92,6 @@ Deno.serve(async (req: Request) => {
 
     if (updateError) throw updateError
 
-    // Add history record
     const detalhes = observacao?.trim()
       ? `Transferido para ${novoResponsavel.nome_completo}. Motivo: ${observacao}`
       : `Transferido para ${novoResponsavel.nome_completo}.`
@@ -111,7 +105,20 @@ Deno.serve(async (req: Request) => {
 
     if (historyError) {
       console.error('Error inserting history:', historyError)
-      // Continue anyway as the main transfer was successful
+    }
+
+    const shortId = chamado_id.split('-')[0].toUpperCase()
+
+    const { error: notifError } = await supabaseAdmin.from('notificacoes').insert({
+      usuario_id: novo_responsavel_id,
+      titulo: 'Chamado Transferido',
+      mensagem: `O chamado #${shortId} foi transferido para sua responsabilidade.`,
+      link: `/dashboard/chamados/${chamado_id}`,
+      lida: false,
+    })
+
+    if (notifError) {
+      console.error('Error inserting transfer notification:', notifError)
     }
 
     return new Response(JSON.stringify({ success: true }), {

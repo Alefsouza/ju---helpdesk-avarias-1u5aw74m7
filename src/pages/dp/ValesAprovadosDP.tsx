@@ -131,6 +131,31 @@ export default function ValesAprovadosDP() {
       usersMap = new Map((usersData || []).map((u) => [u.id, u]))
     }
 
+    const chamadoIds = [...new Set(validParcelas.map((p: any) => p.chamado_id).filter(Boolean))]
+
+    let parcelaSequenceMap = new Map<string, Map<string, number>>()
+    if (chamadoIds.length > 0) {
+      const { data: allParcelas } = await supabase
+        .from('parcelas_vales')
+        .select('chamado_id, data_referencia')
+        .in('chamado_id', chamadoIds)
+        .order('data_referencia', { ascending: true })
+
+      if (allParcelas) {
+        const byChamado = new Map<string, string[]>()
+        for (const ap of allParcelas) {
+          const arr = byChamado.get(ap.chamado_id) || []
+          arr.push(ap.data_referencia)
+          byChamado.set(ap.chamado_id, arr)
+        }
+        for (const [cid, dates] of byChamado.entries()) {
+          const seqMap = new Map<string, number>()
+          dates.forEach((d, idx) => seqMap.set(d, idx + 1))
+          parcelaSequenceMap.set(cid, seqMap)
+        }
+      }
+    }
+
     const formatted = validParcelas.map((p: any) => {
       const chamado = p.chamados
       const user = chamado?.usuario_id ? usersMap.get(chamado.usuario_id) : null
@@ -213,6 +238,12 @@ export default function ValesAprovadosDP() {
 
       const valorCalculado = Number(p.valor_parcela)
 
+      const totalParcelas = solicitacaoData?.quantidade_parcelas || null
+      const seqMap = parcelaSequenceMap.get(p.chamado_id)
+      const currentParcela = seqMap ? seqMap.get(p.data_referencia) : null
+      const parcelaInfo =
+        totalParcelas && currentParcela ? `${currentParcela}/${totalParcelas}` : ''
+
       return {
         id: p.id,
         chamado_id: p.chamado_id,
@@ -224,6 +255,7 @@ export default function ValesAprovadosDP() {
         nome,
         registro,
         garagem,
+        parcelaInfo,
         orcamentoUrl,
         orcamentoId,
         orcamentoNome,
@@ -377,6 +409,7 @@ export default function ValesAprovadosDP() {
                 <TableHead>Garagem</TableHead>
                 <TableHead>Valor Parcela</TableHead>
                 <TableHead>Referência</TableHead>
+                <TableHead>Parcela</TableHead>
                 <TableHead>Aprovado Em</TableHead>
                 <TableHead className="pr-6 text-right">Documentos</TableHead>
               </TableRow>
@@ -384,13 +417,13 @@ export default function ValesAprovadosDP() {
             <TableBody>
               {loading ? (
                 <TableRow>
-                  <TableCell colSpan={8} className="text-center py-8">
+                  <TableCell colSpan={9} className="text-center py-8">
                     <Loader2 className="w-6 h-6 animate-spin mx-auto text-slate-400" />
                   </TableCell>
                 </TableRow>
               ) : filteredParcelas.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={8} className="text-center py-8 text-slate-500">
+                  <TableCell colSpan={9} className="text-center py-8 text-slate-500">
                     Nenhuma parcela de vale encontrada para os filtros aplicados.
                   </TableCell>
                 </TableRow>
@@ -416,6 +449,15 @@ export default function ValesAprovadosDP() {
                     <TableCell>R$ {Number(p.valor_parcela).toFixed(2)}</TableCell>
                     <TableCell>
                       {format(new Date(p.data_referencia + 'T00:00:00'), 'dd/MM/yyyy')}
+                    </TableCell>
+                    <TableCell>
+                      {p.parcelaInfo ? (
+                        <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-emerald-50 text-emerald-700">
+                          {p.parcelaInfo}
+                        </span>
+                      ) : (
+                        <span className="text-slate-400 text-sm">-</span>
+                      )}
                     </TableCell>
                     <TableCell>
                       {p.aprovado_em ? format(new Date(p.aprovado_em), 'dd/MM/yyyy HH:mm') : '-'}

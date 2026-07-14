@@ -42,7 +42,7 @@ export function ValesAprovacaoAlex() {
     const { data, error } = await supabase
       .from('chamados')
       .select(
-        `id, titulo, criado_em, atualizado_em, responsavel_id, usuario_id, status_aprovacao_alex, status_interno, status, registro_motorista, nome_motorista, data_ocorrencia, anexos_chamado_interno ( id, nome_arquivo ), formularios_espelho_danos ( registro_motorista, nome_motorista )`,
+        `id, titulo, criado_em, atualizado_em, responsavel_id, usuario_id, status_aprovacao_alex, status_interno, status, registro_motorista, nome_motorista, data_ocorrencia, anexos_chamado_interno ( id, nome_arquivo ), formularios_espelho_danos ( registro_motorista, nome_motorista, data )`,
       )
       .eq('status', 'finalizado')
       .eq('status_aprovacao_alex', 'pendente')
@@ -58,7 +58,9 @@ export function ValesAprovacaoAlex() {
       const anexos = c.anexos_chamado_interno || []
       return anexos.some((a: any) => {
         const nome = (a.nome_arquivo || '').toLowerCase()
-        return nome.includes('escaneado') || nome.includes('autorizacao')
+        return (
+          nome.includes('escaneado') || nome.includes('autorizacao') || nome.includes('autorização')
+        )
       })
     })
 
@@ -184,10 +186,30 @@ export function ValesAprovacaoAlex() {
       ? chamado.formularios_espelho_danos[0]
       : chamado.formularios_espelho_danos
 
-    return {
-      registro: espelhoData?.registro_motorista || chamado.registro_motorista || '-',
-      nome: espelhoData?.nome_motorista || chamado.nome_motorista || '-',
+    if (!espelhoData) {
+      return { registro: '-', nome: '-' }
     }
+
+    return {
+      registro: espelhoData.registro_motorista || '-',
+      nome: espelhoData.nome_motorista || '-',
+    }
+  }
+
+  const getOccurrenceDate = (chamado: any) => {
+    if (chamado.data_ocorrencia) {
+      return format(new Date(chamado.data_ocorrencia + 'T12:00:00'), 'dd/MM/yyyy')
+    }
+
+    const espelhoData = Array.isArray(chamado.formularios_espelho_danos)
+      ? chamado.formularios_espelho_danos[0]
+      : chamado.formularios_espelho_danos
+
+    if (espelhoData?.data) {
+      return format(new Date(espelhoData.data + 'T12:00:00'), 'dd/MM/yyyy')
+    }
+
+    return '-'
   }
 
   return (
@@ -231,11 +253,7 @@ export function ValesAprovacaoAlex() {
                       </TableCell>
                       <TableCell>{driver.registro}</TableCell>
                       <TableCell>{driver.nome}</TableCell>
-                      <TableCell>
-                        {chamado.data_ocorrencia
-                          ? format(new Date(chamado.data_ocorrencia + 'T12:00:00'), 'dd/MM/yyyy')
-                          : '-'}
-                      </TableCell>
+                      <TableCell>{getOccurrenceDate(chamado)}</TableCell>
                       <TableCell className="text-right">
                         <div className="flex justify-end gap-2">
                           <Tooltip>

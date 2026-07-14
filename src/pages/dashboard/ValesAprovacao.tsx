@@ -53,6 +53,7 @@ export default function ValesAprovacao() {
         solicitacoes_parcelamento ( id, valor_orcamento, quantidade_parcelas, status, desconto_aplicado )
       `)
       .eq('status', 'finalizado')
+      .eq('status_aprovacao_alex', 'aprovado')
       .or('status_aprovacao.is.null,status_aprovacao.eq.aprovacao_parcial')
       .order('atualizado_em', { ascending: false })
 

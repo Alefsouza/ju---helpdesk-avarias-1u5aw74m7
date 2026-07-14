@@ -3260,9 +3260,31 @@ export default function ChamadoDetalhes() {
   const handleFinalizar = async () => {
     if (!window.confirm('Tem certeza que deseja finalizar este chamado?')) return
     setCompleting(true)
+
+    const { data: internalAnexos } = await supabase
+      .from('anexos_chamado_interno')
+      .select('nome_arquivo')
+      .eq('chamado_id', id as string)
+
+    const hasApprovalTrigger = (internalAnexos || []).some((a: any) => {
+      const nome = (a.nome_arquivo || '').toLowerCase()
+      return (
+        nome.includes('autorização') || nome.includes('autorizacao') || nome.includes('escaneado')
+      )
+    })
+
+    const updatePayload: any = {
+      status: 'finalizado',
+      atualizado_em: new Date().toISOString(),
+    }
+
+    if (hasApprovalTrigger) {
+      updatePayload.status_aprovacao = 'aprovacao_parcial'
+    }
+
     const { data, error: updateError } = await supabase
       .from('chamados')
-      .update({ status: 'finalizado', atualizado_em: new Date().toISOString() })
+      .update(updatePayload)
       .eq('id', id)
       .select('id')
       .single()
@@ -3283,12 +3305,33 @@ export default function ChamadoDetalhes() {
       usuario_id: user?.id,
     })
 
+    if (hasApprovalTrigger) {
+      await supabase.from('historico_chamado').insert({
+        chamado_id: id as string,
+        acao: 'respondido',
+        usuario_id: user?.id as string,
+        detalhes:
+          'Chamado finalizado e encaminhado para aprovação da diretoria (documento de autorização/escaneado detectado).',
+      })
+    }
+
     setChamado((prev) =>
-      prev ? { ...prev, status: 'finalizado', atualizado_em: new Date().toISOString() } : prev,
+      prev
+        ? {
+            ...prev,
+            status: 'finalizado',
+            atualizado_em: new Date().toISOString(),
+            status_aprovacao: hasApprovalTrigger ? 'aprovacao_parcial' : prev.status_aprovacao,
+          }
+        : prev,
     )
 
     setCompleting(false)
-    toast.success('Chamado finalizado com sucesso')
+    toast.success(
+      hasApprovalTrigger
+        ? 'Chamado finalizado e enviado para aprovação da diretoria.'
+        : 'Chamado finalizado com sucesso',
+    )
   }
 
   if (loading) {

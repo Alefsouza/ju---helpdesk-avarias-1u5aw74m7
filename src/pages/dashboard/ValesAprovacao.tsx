@@ -64,12 +64,17 @@ export default function ValesAprovacao() {
     const filtered =
       data?.filter((c: any) => {
         const anexos = c.anexos_chamado_interno || []
-        const hasAutorizacao = anexos.some((a: any) => {
-          const nome = a.nome_arquivo.toLowerCase()
-          return nome.includes('autorização') || nome.includes('autorizacao')
+        const hasApprovalTrigger = anexos.some((a: any) => {
+          const nome = (a.nome_arquivo || '').toLowerCase()
+          return (
+            nome.includes('autorização') ||
+            nome.includes('autorizacao') ||
+            nome.includes('desconto') ||
+            nome.includes('escaneado')
+          )
         })
 
-        return hasAutorizacao
+        return hasApprovalTrigger
       }) || []
 
     setChamados(filtered)
@@ -388,8 +393,13 @@ export default function ValesAprovacao() {
   const getAutorizacaoUrl = (chamado: any) => {
     if (!chamado.anexos_chamado_interno || chamado.anexos_chamado_interno.length === 0) return null
     const autorizacoes = chamado.anexos_chamado_interno.filter((a: any) => {
-      const nome = a.nome_arquivo.toLowerCase()
-      return nome.includes('autorização') || nome.includes('autorizacao')
+      const nome = (a.nome_arquivo || '').toLowerCase()
+      return (
+        nome.includes('autorização') ||
+        nome.includes('autorizacao') ||
+        nome.includes('desconto') ||
+        nome.includes('escaneado')
+      )
     })
     if (autorizacoes.length > 0) {
       return autorizacoes[0].arquivo_url

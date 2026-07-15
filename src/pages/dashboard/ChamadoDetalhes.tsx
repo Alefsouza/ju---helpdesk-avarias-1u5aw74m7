@@ -64,6 +64,7 @@ import {
   RotateCcw,
   Pencil,
   CornerUpLeft,
+  Edit,
 } from 'lucide-react'
 import { supabase } from '@/lib/supabase/client'
 import { useAuth } from '@/hooks/use-auth'
@@ -1447,6 +1448,10 @@ export default function ChamadoDetalhes() {
   const [motivoRecusa, setMotivoRecusa] = useState('')
   const [recusandoOrcamento, setRecusandoOrcamento] = useState(false)
 
+  const [renameAnexo, setRenameAnexo] = useState<AnexoInterno | null>(null)
+  const [renameValue, setRenameValue] = useState('')
+  const [renaming, setRenaming] = useState(false)
+
   const { handleDocumentAction, loadingAction } = useDocumentAction()
 
   const fileInputRef = useRef<HTMLInputElement>(null)
@@ -2795,6 +2800,28 @@ export default function ChamadoDetalhes() {
     }
   }
 
+  const handleRenameSubmit = async () => {
+    if (!renameAnexo || !renameValue.trim()) return
+    setRenaming(true)
+    try {
+      const { error } = await supabase
+        .from('anexos_chamado_interno')
+        .update({ nome_arquivo: renameValue.trim() })
+        .eq('id', renameAnexo.id)
+      if (error) throw error
+      setAnexosInternos((prev) =>
+        prev.map((a) => (a.id === renameAnexo.id ? { ...a, nome_arquivo: renameValue.trim() } : a)),
+      )
+      toast.success('Arquivo renomeado com sucesso!')
+      setRenameAnexo(null)
+      setRenameValue('')
+    } catch (e: any) {
+      toast.error('Erro ao renomear arquivo: ' + e.message)
+    } finally {
+      setRenaming(false)
+    }
+  }
+
   const handleDeleteAnexo = async (anexoId: string, url: string) => {
     if (!window.confirm('Tem certeza que deseja deletar este anexo?')) return
 
@@ -4091,6 +4118,25 @@ export default function ChamadoDetalhes() {
                             }
                             return null
                           })()}
+                        {isSupport && (
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            className="h-8 w-8 text-slate-500 hover:text-blue-600"
+                            onClick={() => {
+                              setRenameAnexo(anexo)
+                              setRenameValue(anexo.nome_arquivo)
+                            }}
+                            disabled={
+                              loadingAction === `${anexo.id}-download` ||
+                              loadingAction === `${anexo.id}-view` ||
+                              (savingDoc && editingDoc?.anexo.id === anexo.id)
+                            }
+                            title="Renomear arquivo"
+                          >
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                        )}
                         <Button
                           size="icon"
                           variant="ghost"
@@ -4686,6 +4732,58 @@ export default function ChamadoDetalhes() {
             >
               {recusandoOrcamento && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               Confirmar Devolução
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        open={!!renameAnexo}
+        onOpenChange={(open) => {
+          if (!open) {
+            setRenameAnexo(null)
+            setRenameValue('')
+          }
+        }}
+      >
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Renomear Arquivo</DialogTitle>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="space-y-2">
+              <Label>Nome do Arquivo</Label>
+              <Input
+                value={renameValue}
+                onChange={(e) => setRenameValue(e.target.value)}
+                placeholder="Novo nome do arquivo"
+                disabled={renaming}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && renameValue.trim()) {
+                    handleRenameSubmit()
+                  }
+                }}
+              />
+              <p className="text-[11px] text-slate-500">
+                Dica: arquivos contendo "autorização" ou "escaneado" no nome acionarão o fluxo de
+                aprovação do Alex ao finalizar o chamado.
+              </p>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setRenameAnexo(null)
+                setRenameValue('')
+              }}
+              disabled={renaming}
+            >
+              Cancelar
+            </Button>
+            <Button onClick={handleRenameSubmit} disabled={renaming || !renameValue.trim()}>
+              {renaming && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              {renaming ? 'Salvando...' : 'Salvar'}
             </Button>
           </DialogFooter>
         </DialogContent>

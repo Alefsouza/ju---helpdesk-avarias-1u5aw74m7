@@ -1,4 +1,5 @@
 import { useState, useMemo, useEffect } from 'react'
+import type { Dispatch, SetStateAction } from 'react'
 import { Link } from 'react-router-dom'
 import {
   Table,
@@ -34,134 +35,149 @@ import {
   PaginationNext,
   PaginationPrevious,
 } from '@/components/ui/pagination'
-import { useChamadosDashboard, type ChartFilters } from '@/hooks/use-chamados-dashboard'
+import type { ChartFilters } from '@/hooks/use-chamados-dashboard'
+
+export interface TableFilters {
+  search: string
+  debouncedSearch: string
+  period: string
+  dateRange: { from?: Date; to?: Date } | undefined
+  status: string
+  situacaoProcesso: string
+  statusInterno: string
+  responsavel: string
+}
+
+const INITIAL_TABLE_FILTERS: TableFilters = {
+  search: '',
+  debouncedSearch: '',
+  period: 'all',
+  dateRange: undefined,
+  status: 'all',
+  situacaoProcesso: 'all',
+  statusInterno: 'all',
+  responsavel: 'all',
+}
+
+const statusColor: Record<string, string> = {
+  aberto: 'bg-blue-100 text-blue-800 hover:bg-blue-100',
+  em_atendimento: 'bg-yellow-100 text-yellow-800 hover:bg-yellow-100',
+  finalizado: 'bg-[#404040] text-white hover:bg-[#404040]/90 border-transparent',
+  unificado: 'bg-purple-100 text-purple-800 hover:bg-purple-100',
+}
+
+const statusLabel: Record<string, string> = {
+  aberto: 'Aberto',
+  em_atendimento: 'Em Atendimento',
+  finalizado: 'Finalizado',
+  unificado: 'Unificado',
+}
+
+const situacaoProcessoColor: Record<string, string> = {
+  'Aguardando Julgamento': 'bg-blue-100 text-blue-800 hover:bg-blue-100',
+  Arquivado: 'bg-gray-200 text-gray-800 hover:bg-gray-200',
+  'Cobrar Terceiro': 'bg-orange-100 text-orange-800 hover:bg-orange-100',
+  'Convocação do Operador': 'bg-purple-100 text-purple-800 hover:bg-purple-100',
+  'Notificação Extrajudicial': 'bg-yellow-100 text-yellow-800 hover:bg-yellow-100',
+  Subjúdice: 'bg-red-100 text-red-800 hover:bg-red-100',
+}
+
+const SITUACAO_OPTIONS = [
+  'Aguardando Julgamento',
+  'Arquivado',
+  'Cobrar Terceiro',
+  'Convocação do Operador',
+  'Notificação Extrajudicial',
+  'Subjúdice',
+]
 
 export function DashboardTable({
-  chamados: allChamados,
-  responsaveis: allResponsaveis,
+  chamados,
+  responsaveis,
   chartFilters,
+  tableFilters,
+  onTableFiltersChange,
+  loading,
 }: {
-  chamados?: any[]
-  responsaveis?: any[]
+  chamados: any[]
+  responsaveis: any[]
   chartFilters?: ChartFilters
+  tableFilters: TableFilters
+  onTableFiltersChange: Dispatch<SetStateAction<TableFilters>>
+  loading?: boolean
 }) {
-  const [search, setSearch] = useState('')
-  const [debouncedSearch, setDebouncedSearch] = useState('')
-  const [period, setPeriod] = useState('all')
-  const [dateRange, setDateRange] = useState<{ from?: Date; to?: Date } | undefined>()
-  const [status, setStatus] = useState('all')
-  const [situacaoProcesso, setSituacaoProcesso] = useState('all')
-  const [statusInterno, setStatusInterno] = useState('all')
-  const [resp, setResp] = useState('all')
-
   const [page, setPage] = useState(1)
   const limit = 20
 
+  const update = (patch: Partial<TableFilters>) =>
+    onTableFiltersChange((prev) => ({ ...prev, ...patch }))
+
   useEffect(() => {
-    const timer = setTimeout(() => setDebouncedSearch(search), 300)
+    const timer = setTimeout(() => {
+      onTableFiltersChange((prev) =>
+        prev.debouncedSearch === prev.search ? prev : { ...prev, debouncedSearch: prev.search },
+      )
+    }, 300)
     return () => clearTimeout(timer)
-  }, [search])
+  }, [tableFilters.search, onTableFiltersChange])
 
   useEffect(() => {
     setPage(1)
   }, [
-    debouncedSearch,
-    status,
-    situacaoProcesso,
-    statusInterno,
-    resp,
-    period,
-    dateRange,
+    tableFilters.debouncedSearch,
+    tableFilters.status,
+    tableFilters.situacaoProcesso,
+    tableFilters.statusInterno,
+    tableFilters.responsavel,
+    tableFilters.period,
+    tableFilters.dateRange,
     chartFilters,
   ])
 
-  const {
-    chamados: paginatedChamados,
-    responsaveis: hookResponsaveis,
-    loading,
-    totalCount,
-  } = useChamadosDashboard({
-    page,
-    limit,
-    search: debouncedSearch,
-    status,
-    situacaoProcesso,
-    statusInterno,
-    responsavel: resp,
-    period,
-    dateRange,
-    chartFilters,
-  })
-
-  const displayChamados = paginatedChamados || []
-  const displayResponsaveis =
-    allResponsaveis && allResponsaveis.length > 0 ? allResponsaveis : hookResponsaveis
-
   const uniqueStatusInterno = useMemo(() => {
-    const statuses = new Set<string>()
-    const source = allChamados && allChamados.length > 0 ? allChamados : paginatedChamados
-    source.forEach((c) => {
-      if (c.status_interno) statuses.add(c.status_interno)
+    const s = new Set<string>()
+    chamados.forEach((c) => {
+      if (c.status_interno) s.add(c.status_interno)
     })
-    return Array.from(statuses).sort()
-  }, [allChamados, paginatedChamados])
+    return Array.from(s).sort()
+  }, [chamados])
 
   const uniqueSituacaoProcesso = useMemo(() => {
-    const statuses = new Set<string>()
-    const source = allChamados && allChamados.length > 0 ? allChamados : paginatedChamados
-    source.forEach((c) => {
-      if (c.situacao_processo) statuses.add(c.situacao_processo)
+    const s = new Set<string>()
+    chamados.forEach((c) => {
+      if (c.situacao_processo) s.add(c.situacao_processo)
     })
-    return Array.from(statuses).sort()
-  }, [allChamados, paginatedChamados])
-
-  const statusColor: Record<string, string> = {
-    aberto: 'bg-blue-100 text-blue-800 hover:bg-blue-100',
-    em_atendimento: 'bg-yellow-100 text-yellow-800 hover:bg-yellow-100',
-    finalizado: 'bg-[#404040] text-white hover:bg-[#404040]/90 border-transparent',
-    unificado: 'bg-purple-100 text-purple-800 hover:bg-purple-100',
-  }
-
-  const situacaoProcessoColor: Record<string, string> = {
-    'Aguardando Julgamento': 'bg-blue-100 text-blue-800 hover:bg-blue-100',
-    Arquivado: 'bg-gray-200 text-gray-800 hover:bg-gray-200',
-    'Cobrar Terceiro': 'bg-orange-100 text-orange-800 hover:bg-orange-100',
-    'Convocação do Operador': 'bg-purple-100 text-purple-800 hover:bg-purple-100',
-    'Notificação Extrajudicial': 'bg-yellow-100 text-yellow-800 hover:bg-yellow-100',
-    Subjúdice: 'bg-red-100 text-red-800 hover:bg-red-100',
-  }
-
-  const statusLabel: Record<string, string> = {
-    aberto: 'Aberto',
-    em_atendimento: 'Em Atendimento',
-    finalizado: 'Finalizado',
-    unificado: 'Unificado',
-  }
+    return Array.from(s).sort()
+  }, [chamados])
 
   const clearFilters = () => {
-    setSearch('')
-    setStatus('all')
-    setSituacaoProcesso('all')
-    setStatusInterno('all')
-    setResp('all')
-    setPeriod('all')
-    setDateRange(undefined)
+    onTableFiltersChange(INITIAL_TABLE_FILTERS)
     setPage(1)
   }
 
-  const totalPages = Math.ceil(totalCount / limit)
+  const totalCount = chamados.length
+  const totalPages = Math.max(1, Math.ceil(totalCount / limit))
+  const safePage = Math.min(page, totalPages)
+  const start = (safePage - 1) * limit
+  const displayChamados = chamados.slice(start, start + limit)
+
+  const hasLocalFilters =
+    tableFilters.search !== '' ||
+    tableFilters.period !== 'all' ||
+    !!tableFilters.dateRange ||
+    tableFilters.status !== 'all' ||
+    tableFilters.situacaoProcesso !== 'all' ||
+    tableFilters.statusInterno !== 'all' ||
+    tableFilters.responsavel !== 'all'
 
   const renderPagination = () => {
     if (totalPages <= 1) return null
-
     const maxPagesToShow = 5
-    let startPage = Math.max(1, page - 2)
+    let startPage = Math.max(1, safePage - 2)
     let endPage = Math.min(totalPages, startPage + maxPagesToShow - 1)
-
     if (endPage - startPage + 1 < maxPagesToShow) {
       startPage = Math.max(1, endPage - maxPagesToShow + 1)
     }
-
     const pages = Array.from({ length: endPage - startPage + 1 }, (_, i) => startPage + i)
 
     return (
@@ -172,12 +188,11 @@ export function DashboardTable({
               href="#"
               onClick={(e) => {
                 e.preventDefault()
-                if (page > 1) setPage(page - 1)
+                if (safePage > 1) setPage(safePage - 1)
               }}
-              className={cn(page === 1 && 'pointer-events-none opacity-50')}
+              className={cn(safePage === 1 && 'pointer-events-none opacity-50')}
             />
           </PaginationItem>
-
           {startPage > 1 && (
             <>
               <PaginationItem>
@@ -198,12 +213,11 @@ export function DashboardTable({
               )}
             </>
           )}
-
           {pages.map((p) => (
             <PaginationItem key={p}>
               <PaginationLink
                 href="#"
-                isActive={p === page}
+                isActive={p === safePage}
                 onClick={(e) => {
                   e.preventDefault()
                   setPage(p)
@@ -213,7 +227,6 @@ export function DashboardTable({
               </PaginationLink>
             </PaginationItem>
           ))}
-
           {endPage < totalPages && (
             <>
               {endPage < totalPages - 1 && (
@@ -234,15 +247,14 @@ export function DashboardTable({
               </PaginationItem>
             </>
           )}
-
           <PaginationItem>
             <PaginationNext
               href="#"
               onClick={(e) => {
                 e.preventDefault()
-                if (page < totalPages) setPage(page + 1)
+                if (safePage < totalPages) setPage(safePage + 1)
               }}
-              className={cn(page === totalPages && 'pointer-events-none opacity-50')}
+              className={cn(safePage === totalPages && 'pointer-events-none opacity-50')}
             />
           </PaginationItem>
         </PaginationContent>
@@ -253,18 +265,35 @@ export function DashboardTable({
   return (
     <Card className="flex-1 shadow-sm border-[#f0f0f0] transition-all duration-200 hover:shadow-subtle">
       <CardContent className="p-4 sm:p-6 space-y-6">
+        <div className="flex items-center justify-between gap-2 flex-wrap">
+          <h3 className="text-lg font-semibold text-[#225f3d]">
+            Chamados Filtrados
+            <span className="ml-2 text-sm font-normal text-slate-500">({totalCount} no total)</span>
+          </h3>
+          {hasLocalFilters && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={clearFilters}
+              className="text-slate-500 hover:text-slate-700"
+            >
+              <FilterX className="h-4 w-4 mr-1" /> Limpar filtros da tabela
+            </Button>
+          )}
+        </div>
+
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
           <div className="relative">
             <Search className="absolute left-3 top-3 h-4 w-4 text-slate-400" />
             <Input
               className="pl-9 bg-[#f0f0f0] border-[#f0f0f0] text-[#212121] placeholder:text-slate-500"
               placeholder="Buscar por Título ou ID..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
+              value={tableFilters.search}
+              onChange={(e) => update({ search: e.target.value })}
             />
           </div>
           <div className="flex gap-2 w-full">
-            <Select value={period} onValueChange={setPeriod}>
+            <Select value={tableFilters.period} onValueChange={(v) => update({ period: v })}>
               <SelectTrigger className="bg-[#f0f0f0] border-[#f0f0f0] text-[#212121] flex-1">
                 <SelectValue placeholder="Período" />
               </SelectTrigger>
@@ -276,24 +305,27 @@ export function DashboardTable({
                 <SelectItem value="custom">Personalizado</SelectItem>
               </SelectContent>
             </Select>
-            {period === 'custom' && (
+            {tableFilters.period === 'custom' && (
               <Popover>
                 <PopoverTrigger asChild>
                   <Button
                     variant="outline"
                     className={cn(
                       'justify-start text-left font-normal bg-[#f0f0f0] border-[#f0f0f0] text-[#212121] flex-1 px-3',
-                      !dateRange && 'text-slate-500',
+                      !tableFilters.dateRange && 'text-slate-500',
                     )}
                   >
                     <CalendarIcon className="mr-2 h-4 w-4" />
-                    {dateRange?.from ? (
-                      dateRange.to ? (
+                    {tableFilters.dateRange?.from ? (
+                      tableFilters.dateRange.to ? (
                         <span className="text-xs truncate">
-                          {format(dateRange.from, 'dd/MM/yy')} - {format(dateRange.to, 'dd/MM/yy')}
+                          {format(tableFilters.dateRange.from, 'dd/MM/yy')} -{' '}
+                          {format(tableFilters.dateRange.to, 'dd/MM/yy')}
                         </span>
                       ) : (
-                        <span className="text-xs">{format(dateRange.from, 'dd/MM/yy')}</span>
+                        <span className="text-xs">
+                          {format(tableFilters.dateRange.from, 'dd/MM/yy')}
+                        </span>
                       )
                     ) : (
                       <span className="text-xs">Selecione...</span>
@@ -304,16 +336,16 @@ export function DashboardTable({
                   <Calendar
                     initialFocus
                     mode="range"
-                    defaultMonth={dateRange?.from}
-                    selected={dateRange}
-                    onSelect={setDateRange}
+                    defaultMonth={tableFilters.dateRange?.from}
+                    selected={tableFilters.dateRange}
+                    onSelect={(range) => update({ dateRange: range ?? undefined })}
                     numberOfMonths={1}
                   />
                 </PopoverContent>
               </Popover>
             )}
           </div>
-          <Select value={status} onValueChange={setStatus}>
+          <Select value={tableFilters.status} onValueChange={(v) => update({ status: v })}>
             <SelectTrigger className="bg-[#f0f0f0] border-[#f0f0f0] text-[#212121]">
               <SelectValue placeholder="Status" />
             </SelectTrigger>
@@ -325,30 +357,22 @@ export function DashboardTable({
               <SelectItem value="unificado">Unificado</SelectItem>
             </SelectContent>
           </Select>
-          <Select value={situacaoProcesso} onValueChange={setSituacaoProcesso}>
+          <Select
+            value={tableFilters.situacaoProcesso}
+            onValueChange={(v) => update({ situacaoProcesso: v })}
+          >
             <SelectTrigger className="bg-[#f0f0f0] border-[#f0f0f0] text-[#212121]">
               <SelectValue placeholder="Situação do Processo" />
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">Todas as Situações</SelectItem>
-              <SelectItem value="Aguardando Julgamento">Aguardando Julgamento</SelectItem>
-              <SelectItem value="Arquivado">Arquivado</SelectItem>
-              <SelectItem value="Cobrar Terceiro">Cobrar Terceiro</SelectItem>
-              <SelectItem value="Convocação do Operador">Convocação do Operador</SelectItem>
-              <SelectItem value="Notificação Extrajudicial">Notificação Extrajudicial</SelectItem>
-              <SelectItem value="Subjúdice">Subjúdice</SelectItem>
+              {SITUACAO_OPTIONS.map((s) => (
+                <SelectItem key={s} value={s}>
+                  {s}
+                </SelectItem>
+              ))}
               {uniqueSituacaoProcesso
-                .filter(
-                  (s) =>
-                    ![
-                      'Aguardando Julgamento',
-                      'Arquivado',
-                      'Cobrar Terceiro',
-                      'Convocação do Operador',
-                      'Notificação Extrajudicial',
-                      'Subjúdice',
-                    ].includes(s),
-                )
+                .filter((s) => !SITUACAO_OPTIONS.includes(s))
                 .map((s) => (
                   <SelectItem key={s} value={s}>
                     {s}
@@ -356,7 +380,10 @@ export function DashboardTable({
                 ))}
             </SelectContent>
           </Select>
-          <Select value={statusInterno} onValueChange={setStatusInterno}>
+          <Select
+            value={tableFilters.statusInterno}
+            onValueChange={(v) => update({ statusInterno: v })}
+          >
             <SelectTrigger className="bg-[#f0f0f0] border-[#f0f0f0] text-[#212121]">
               <SelectValue placeholder="Status Interno" />
             </SelectTrigger>
@@ -369,14 +396,17 @@ export function DashboardTable({
               ))}
             </SelectContent>
           </Select>
-          <Select value={resp} onValueChange={setResp}>
+          <Select
+            value={tableFilters.responsavel}
+            onValueChange={(v) => update({ responsavel: v })}
+          >
             <SelectTrigger className="bg-[#f0f0f0] border-[#f0f0f0] text-[#212121]">
               <SelectValue placeholder="Responsável" />
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">Todos os Responsáveis</SelectItem>
               <SelectItem value="unassigned">Sem Responsável</SelectItem>
-              {displayResponsaveis.map((r) => (
+              {responsaveis.map((r) => (
                 <SelectItem key={r.id} value={r.id}>
                   {r.nome_completo}
                 </SelectItem>

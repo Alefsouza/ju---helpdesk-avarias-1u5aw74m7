@@ -14,13 +14,16 @@ export interface ChamadosFilters {
   responsavel?: string
   period?: string
   dateRange?: { from?: Date; to?: Date }
-  chartFilters?: {
-    status?: string
-    prioridade?: string
-    garagem?: string
-    responsavel?: string
-    data?: string
-  }
+  chartFilters?: ChartFilters
+}
+
+export interface ChartFilters {
+  status?: string[]
+  prioridade?: string[]
+  garagem?: string[]
+  responsavel?: string[]
+  data?: string[]
+  overdue?: boolean
 }
 
 export function useChamadosDashboard(filters: ChamadosFilters = {}) {
@@ -67,21 +70,42 @@ export function useChamadosDashboard(filters: ChamadosFilters = {}) {
 
       if (filters.chartFilters) {
         const cf = filters.chartFilters
-        if (cf.status) query = query.eq('status', cf.status)
-        if (cf.prioridade) query = query.eq('prioridade', cf.prioridade)
-        if (cf.garagem) {
-          if (cf.garagem === 'Não Informada') query = query.is('garagem', null)
-          else query = query.eq('garagem', cf.garagem)
+        if (cf.status && cf.status.length > 0) query = query.in('status', cf.status)
+        if (cf.prioridade && cf.prioridade.length > 0) query = query.in('prioridade', cf.prioridade)
+        if (cf.garagem && cf.garagem.length > 0) {
+          const hasNull = cf.garagem.includes('Não Informada')
+          const named = cf.garagem.filter((g) => g !== 'Não Informada')
+          if (hasNull && named.length > 0) {
+            query = query.or(`garagem.is.null,garagem.in.(${named.join(',')})`)
+          } else if (hasNull) {
+            query = query.is('garagem', null)
+          } else {
+            query = query.in('garagem', named)
+          }
         }
-        if (cf.responsavel) {
-          if (cf.responsavel === 'unassigned') query = query.is('responsavel_id', null)
-          else query = query.eq('responsavel_id', cf.responsavel)
+        if (cf.responsavel && cf.responsavel.length > 0) {
+          const hasUnassigned = cf.responsavel.includes('unassigned')
+          const ids = cf.responsavel.filter((r) => r !== 'unassigned')
+          if (hasUnassigned && ids.length > 0) {
+            query = query.or(`responsavel_id.is.null,responsavel_id.in.(${ids.join(',')})`)
+          } else if (hasUnassigned) {
+            query = query.is('responsavel_id', null)
+          } else {
+            query = query.in('responsavel_id', ids)
+          }
         }
-        if (cf.data) {
-          const [y, m, d] = cf.data.split('-').map(Number)
-          const dateObj = new Date(y, m - 1, d)
-          query = query.gte('criado_em', startOfDay(dateObj).toISOString())
-          query = query.lte('criado_em', endOfDay(dateObj).toISOString())
+        if (cf.data && cf.data.length > 0) {
+          const dateConds = cf.data.map((d) => {
+            const [y, m, dd] = d.split('-').map(Number)
+            const dateObj = new Date(y, m - 1, dd)
+            return `and(criado_em.gte.${startOfDay(dateObj).toISOString()},criado_em.lte.${endOfDay(dateObj).toISOString()})`
+          })
+          query = query.or(dateConds.join(','))
+        }
+        if (cf.overdue) {
+          query = query
+            .neq('status', 'finalizado')
+            .lt('criado_em', subDays(new Date(), 30).toISOString())
         }
       }
 

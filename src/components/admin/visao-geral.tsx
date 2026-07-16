@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useChamadosDashboard } from '@/hooks/use-chamados-dashboard'
+import { useChamadosDashboard, type ChartFilters } from '@/hooks/use-chamados-dashboard'
 import { DashboardCards } from './dashboard-cards'
 import { DashboardCharts } from './dashboard-charts'
 import { DashboardTable } from './dashboard-table'
@@ -10,22 +10,28 @@ import { AlertCircle } from 'lucide-react'
 export function VisaoGeral() {
   const { chamados, responsaveis, loading, error, refetch } = useChamadosDashboard()
 
-  const [chartFilters, setChartFilters] = useState<{
-    status?: string
-    prioridade?: string
-    garagem?: string
-    responsavel?: string
-    data?: string
-  }>({})
+  const [chartFilters, setChartFilters] = useState<ChartFilters>({})
 
   const handleChartClick = (
-    type: 'status' | 'prioridade' | 'garagem' | 'responsavel' | 'data',
+    type: 'status' | 'prioridade' | 'garagem' | 'responsavel' | 'data' | 'overdue' | 'clear',
     value: string,
+    multiSelect: boolean = false,
   ) => {
-    setChartFilters((prev) => ({
-      ...prev,
-      [type]: prev[type] === value ? undefined : value,
-    }))
+    setChartFilters((prev) => {
+      if (type === 'clear') return {}
+      if (type === 'overdue') return { ...prev, overdue: !prev.overdue }
+      const current = (prev[type] as string[] | undefined) || []
+      if (multiSelect) {
+        const next = current.includes(value)
+          ? current.filter((v) => v !== value)
+          : [...current, value]
+        return { ...prev, [type]: next.length > 0 ? next : undefined }
+      }
+      if (current.length === 1 && current[0] === value) {
+        return { ...prev, [type]: undefined }
+      }
+      return { ...prev, [type]: [value] }
+    })
   }
 
   const handleClearFilters = () => {
@@ -65,7 +71,11 @@ export function VisaoGeral() {
 
   return (
     <div className="space-y-6 animate-fade-in">
-      <DashboardCards chamados={chamados} chartFilters={chartFilters} />
+      <DashboardCards
+        chamados={chamados}
+        chartFilters={chartFilters}
+        onCardClick={handleChartClick}
+      />
       <DashboardCharts
         chamados={chamados}
         chartFilters={chartFilters}

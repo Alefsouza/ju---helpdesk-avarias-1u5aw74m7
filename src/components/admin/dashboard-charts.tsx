@@ -17,18 +17,48 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart'
 import { Button } from '@/components/ui/button'
 import { FilterX } from 'lucide-react'
-import { format } from 'date-fns'
+import { format, subDays, isBefore } from 'date-fns'
+import type { ChartFilters } from '@/hooks/use-chamados-dashboard'
 
 const statusColors = {
-  aberto: '#225f3d', // verde escuro
-  em_atendimento: '#c8e6c9', // verde claro
-  finalizado: '#808080', // cinza médio
-  unificado: '#a855f7', // purple
+  aberto: '#225f3d',
+  em_atendimento: '#c8e6c9',
+  finalizado: '#808080',
+  unificado: '#a855f7',
 }
 
 const priorityColors = {
-  media: '#c8e6c9', // verde claro
-  urgente: '#ef4444', // vermelho
+  media: '#c8e6c9',
+  urgente: '#ef4444',
+}
+
+function filterChamados(data: any[], cf: ChartFilters, excludeKey?: string): any[] {
+  return data.filter((c) => {
+    if (excludeKey !== 'status' && cf.status?.length && !cf.status.includes(c.status)) return false
+    if (
+      excludeKey !== 'prioridade' &&
+      cf.prioridade?.length &&
+      !cf.prioridade.includes(c.prioridade)
+    )
+      return false
+    if (excludeKey !== 'garagem' && cf.garagem?.length) {
+      const g = c.garagem || 'Não Informada'
+      if (!cf.garagem.includes(g)) return false
+    }
+    if (excludeKey !== 'responsavel' && cf.responsavel?.length) {
+      const respId = c.responsavel?.id || 'unassigned'
+      if (!cf.responsavel.includes(respId)) return false
+    }
+    if (excludeKey !== 'data' && cf.data?.length) {
+      if (!c.criado_em) return false
+      if (!cf.data.includes(c.criado_em.substring(0, 10))) return false
+    }
+    if (excludeKey !== 'overdue' && cf.overdue) {
+      if (c.status === 'finalizado') return false
+      if (!isBefore(new Date(c.criado_em), subDays(new Date(), 30))) return false
+    }
+    return true
+  })
 }
 
 export function DashboardCharts({
@@ -38,71 +68,66 @@ export function DashboardCharts({
   onClearFilters,
 }: {
   chamados: any[]
-  chartFilters: {
-    status?: string
-    prioridade?: string
-    garagem?: string
-    responsavel?: string
-    data?: string
-  }
+  chartFilters: ChartFilters
   onChartClick: (
-    type: 'status' | 'prioridade' | 'garagem' | 'responsavel' | 'data',
+    type: 'status' | 'prioridade' | 'garagem' | 'responsavel' | 'data' | 'overdue',
     value: string,
+    multiSelect?: boolean,
   ) => void
   onClearFilters: () => void
 }) {
-  const baseChamados = useMemo(() => {
-    if (!chartFilters.data) return chamados
-    return chamados.filter(
-      (c) => c.criado_em && format(new Date(c.criado_em), 'yyyy-MM-dd') === chartFilters.data,
-    )
-  }, [chamados, chartFilters.data])
+  const statusData = useMemo(() => {
+    const data = filterChamados(chamados, chartFilters, 'status')
+    return [
+      {
+        id: 'aberto',
+        name: 'Aberto',
+        value: data.filter((c) => c.status === 'aberto').length,
+        fill: statusColors.aberto,
+      },
+      {
+        id: 'em_atendimento',
+        name: 'Em Atendimento',
+        value: data.filter((c) => c.status === 'em_atendimento').length,
+        fill: statusColors.em_atendimento,
+      },
+      {
+        id: 'finalizado',
+        name: 'Finalizado',
+        value: data.filter((c) => c.status === 'finalizado').length,
+        fill: statusColors.finalizado,
+      },
+      {
+        id: 'unificado',
+        name: 'Unificado',
+        value: data.filter((c) => c.status === 'unificado').length,
+        fill: statusColors.unificado,
+      },
+    ]
+  }, [chamados, chartFilters])
 
-  const statusData = [
-    {
-      id: 'aberto',
-      name: 'Aberto',
-      value: baseChamados.filter((c) => c.status === 'aberto').length,
-      fill: statusColors.aberto,
-    },
-    {
-      id: 'em_atendimento',
-      name: 'Em Atendimento',
-      value: baseChamados.filter((c) => c.status === 'em_atendimento').length,
-      fill: statusColors.em_atendimento,
-    },
-    {
-      id: 'finalizado',
-      name: 'Finalizado',
-      value: baseChamados.filter((c) => c.status === 'finalizado').length,
-      fill: statusColors.finalizado,
-    },
-    {
-      id: 'unificado',
-      name: 'Unificado',
-      value: baseChamados.filter((c) => c.status === 'unificado').length,
-      fill: statusColors.unificado,
-    },
-  ]
-
-  const prioData = [
-    {
-      id: 'media',
-      name: 'Média',
-      value: baseChamados.filter((c) => c.prioridade === 'media').length,
-      fill: priorityColors.media,
-    },
-    {
-      id: 'urgente',
-      name: 'Urgente',
-      value: baseChamados.filter((c) => c.prioridade === 'urgente').length,
-      fill: priorityColors.urgente,
-    },
-  ]
+  const prioData = useMemo(() => {
+    const data = filterChamados(chamados, chartFilters, 'prioridade')
+    return [
+      {
+        id: 'media',
+        name: 'Média',
+        value: data.filter((c) => c.prioridade === 'media').length,
+        fill: priorityColors.media,
+      },
+      {
+        id: 'urgente',
+        name: 'Urgente',
+        value: data.filter((c) => c.prioridade === 'urgente').length,
+        fill: priorityColors.urgente,
+      },
+    ]
+  }, [chamados, chartFilters])
 
   const garageData = useMemo(() => {
+    const data = filterChamados(chamados, chartFilters, 'garagem')
     const counts: Record<string, number> = {}
-    baseChamados.forEach((c) => {
+    data.forEach((c) => {
       const g = c.garagem || 'Não Informada'
       counts[g] = (counts[g] || 0) + 1
     })
@@ -120,24 +145,24 @@ export function DashboardCharts({
     return Object.entries(counts)
       .map(([name, value], idx) => ({ id: name, name, value, fill: colors[idx % colors.length] }))
       .sort((a, b) => b.value - a.value)
-  }, [baseChamados])
+  }, [chamados, chartFilters])
 
   const respData = useMemo(() => {
+    const data = filterChamados(chamados, chartFilters, 'responsavel')
     const counts: Record<string, { name: string; value: number; id: string }> = {}
-    baseChamados.forEach((c) => {
+    data.forEach((c) => {
       const respId = c.responsavel?.id || 'unassigned'
       const respName = c.responsavel?.nome_completo || 'Sem Responsável'
-      if (!counts[respId]) {
-        counts[respId] = { id: respId, name: respName, value: 0 }
-      }
+      if (!counts[respId]) counts[respId] = { id: respId, name: respName, value: 0 }
       counts[respId].value += 1
     })
     return Object.values(counts)
       .sort((a, b) => b.value - a.value)
       .map((d) => ({ ...d, fill: '#225f3d' }))
-  }, [baseChamados])
+  }, [chamados, chartFilters])
 
   const situacaoProcessoData = useMemo(() => {
+    const data = filterChamados(chamados, chartFilters)
     const options = [
       'Aguardando Julgamento',
       'Arquivado',
@@ -150,53 +175,29 @@ export function DashboardCharts({
     options.forEach((opt) => {
       counts[opt] = 0
     })
-    baseChamados.forEach((c) => {
-      if (c.situacao_processo) {
-        counts[c.situacao_processo] = (counts[c.situacao_processo] || 0) + 1
-      }
+    data.forEach((c) => {
+      if (c.situacao_processo) counts[c.situacao_processo] = (counts[c.situacao_processo] || 0) + 1
     })
     const colors = ['#225f3d', '#c8e6c9', '#4caf50', '#81c784', '#a5d6a7', '#66bb6a']
     return Object.entries(counts)
       .filter(([, value]) => value > 0)
       .map(([name, value], idx) => ({ id: name, name, value, fill: colors[idx % colors.length] }))
       .sort((a, b) => b.value - a.value)
-  }, [baseChamados])
+  }, [chamados, chartFilters])
 
   const timelineData = useMemo(() => {
+    const data = filterChamados(chamados, chartFilters, 'data')
     const counts: Record<string, number> = {}
-
-    const filtered = chamados.filter((c) => {
-      if (chartFilters.status && c.status !== chartFilters.status) return false
-      if (chartFilters.prioridade && c.prioridade !== chartFilters.prioridade) return false
-      if (chartFilters.garagem && c.garagem !== chartFilters.garagem) return false
-      if (chartFilters.responsavel) {
-        const respId = c.responsavel?.id || 'unassigned'
-        if (respId !== chartFilters.responsavel) return false
-      }
-      // Note: We deliberately DO NOT filter by chartFilters.data here
-      // so the line chart continues to show the full timeline history
-      return true
-    })
-
-    filtered.forEach((c) => {
+    data.forEach((c) => {
       if (!c.criado_em) return
-      const sortKey = format(new Date(c.criado_em), 'yyyy-MM-dd')
-
-      if (!counts[sortKey]) {
-        counts[sortKey] = 0
-      }
-      counts[sortKey] += 1
+      const sortKey = c.criado_em.substring(0, 10)
+      counts[sortKey] = (counts[sortKey] || 0) + 1
     })
-
     return Object.entries(counts)
       .sort(([keyA], [keyB]) => keyA.localeCompare(keyB))
       .map(([sortKey, value]) => {
-        const [yy, mm, dd] = sortKey.split('-')
-        return {
-          date: `${dd}/${mm}`,
-          fullDate: sortKey,
-          value,
-        }
+        const [, mm, dd] = sortKey.split('-')
+        return { date: `${dd}/${mm}`, fullDate: sortKey, value }
       })
   }, [chamados, chartFilters])
 
@@ -212,7 +213,9 @@ export function DashboardCharts({
     urgente: { label: 'Urgente', color: priorityColors.urgente },
   }
 
-  const hasActiveFilters = Object.values(chartFilters).some(Boolean)
+  const hasActiveFilters = Object.entries(chartFilters).some(([k, v]) =>
+    k === 'overdue' ? v === true : Array.isArray(v) && v.length > 0,
+  )
 
   const formatFilterValue = (type: string, value: string) => {
     if (type === 'data') {
@@ -232,35 +235,46 @@ export function DashboardCharts({
     return value
   }
 
+  const filterChips: { type: string; value: string; label: string }[] = []
+  if (chartFilters.overdue) {
+    filterChips.push({ type: 'overdue', value: 'true', label: 'Overdue: Sim' })
+  }
+  const labelMap: Record<string, string> = {
+    status: 'Status',
+    prioridade: 'Prioridade',
+    garagem: 'Garagem',
+    responsavel: 'Resp',
+    data: 'Data',
+  }
+  ;(['status', 'prioridade', 'garagem', 'responsavel', 'data'] as const).forEach((key) => {
+    const arr = chartFilters[key]
+    if (!arr) return
+    arr.forEach((v) => {
+      filterChips.push({
+        type: key,
+        value: v,
+        label: `${labelMap[key]}: ${formatFilterValue(key, v)}`,
+      })
+    })
+  })
+
   return (
     <div className="space-y-4 mb-6">
       {hasActiveFilters && (
         <div className="flex flex-wrap items-center justify-between gap-4 animate-fade-in bg-slate-50 p-3 rounded-lg border border-slate-200">
           <div className="flex flex-wrap items-center gap-2">
             <span className="text-sm font-medium text-slate-600">Filtros ativos:</span>
-            {Object.entries(chartFilters).map(([key, value]) => {
-              if (!value) return null
-              return (
-                <div
-                  key={key}
-                  className="bg-[#225f3d]/10 text-[#225f3d] px-2.5 py-1 rounded-full text-xs font-medium border border-[#225f3d]/20 flex items-center gap-1 cursor-pointer hover:bg-[#225f3d]/20 transition-colors"
-                  onClick={() => onChartClick(key as any, value as string)}
-                  title="Clique para remover o filtro"
-                >
-                  {key === 'status'
-                    ? 'Status: '
-                    : key === 'prioridade'
-                      ? 'Prioridade: '
-                      : key === 'garagem'
-                        ? 'Garagem: '
-                        : key === 'data'
-                          ? 'Data: '
-                          : 'Resp: '}
-                  {formatFilterValue(key, value as string)}
-                  <FilterX className="h-3 w-3 ml-1 opacity-70" />
-                </div>
-              )
-            })}
+            {filterChips.map((chip, i) => (
+              <div
+                key={i}
+                className="bg-[#225f3d]/10 text-[#225f3d] px-2.5 py-1 rounded-full text-xs font-medium border border-[#225f3d]/20 flex items-center gap-1 cursor-pointer hover:bg-[#225f3d]/20 transition-colors"
+                onClick={() => onChartClick(chip.type as any, chip.value, true)}
+                title="Clique para remover o filtro"
+              >
+                {chip.label}
+                <FilterX className="h-3 w-3 ml-1 opacity-70" />
+              </div>
+            ))}
           </div>
           <Button
             variant="outline"
@@ -300,10 +314,12 @@ export function DashboardCharts({
                         className="shadow-[0px_0px_6px_0px_#000000] border-[inherit] cursor-pointer transition-opacity duration-200"
                         key={index}
                         fill={entry.fill}
-                        onClick={() => onChartClick('status', entry.id)}
+                        onClick={(e) => onChartClick('status', entry.id, e.ctrlKey || e.metaKey)}
                         style={{
                           opacity:
-                            chartFilters.status && chartFilters.status !== entry.id ? 0.3 : 1,
+                            chartFilters.status?.length && !chartFilters.status.includes(entry.id)
+                              ? 0.3
+                              : 1,
                         }}
                       />
                     ))}
@@ -352,10 +368,13 @@ export function DashboardCharts({
                         key={index}
                         fill={entry.fill}
                         className="cursor-pointer transition-opacity duration-200"
-                        onClick={() => onChartClick('prioridade', entry.id)}
+                        onClick={(e) =>
+                          onChartClick('prioridade', entry.id, e.ctrlKey || e.metaKey)
+                        }
                         style={{
                           opacity:
-                            chartFilters.prioridade && chartFilters.prioridade !== entry.id
+                            chartFilters.prioridade?.length &&
+                            !chartFilters.prioridade.includes(entry.id)
                               ? 0.3
                               : 1,
                         }}
@@ -404,10 +423,12 @@ export function DashboardCharts({
                         className="shadow-[0px_0px_6px_0px_#000000] border-[inherit] cursor-pointer transition-opacity duration-200"
                         key={index}
                         fill={entry.fill}
-                        onClick={() => onChartClick('garagem', entry.id)}
+                        onClick={(e) => onChartClick('garagem', entry.id, e.ctrlKey || e.metaKey)}
                         style={{
                           opacity:
-                            chartFilters.garagem && chartFilters.garagem !== entry.id ? 0.3 : 1,
+                            chartFilters.garagem?.length && !chartFilters.garagem.includes(entry.id)
+                              ? 0.3
+                              : 1,
                         }}
                       />
                     ))}
@@ -515,10 +536,13 @@ export function DashboardCharts({
                         key={index}
                         fill={entry.fill}
                         className="cursor-pointer transition-opacity duration-200"
-                        onClick={() => onChartClick('responsavel', entry.id)}
+                        onClick={(e) =>
+                          onChartClick('responsavel', entry.id, e.ctrlKey || e.metaKey)
+                        }
                         style={{
                           opacity:
-                            chartFilters.responsavel && chartFilters.responsavel !== entry.id
+                            chartFilters.responsavel?.length &&
+                            !chartFilters.responsavel.includes(entry.id)
                               ? 0.3
                               : 1,
                         }}
@@ -556,7 +580,7 @@ export function DashboardCharts({
                 margin={{ top: 20, right: 20, bottom: 20, left: 0 }}
                 onClick={(data: any) => {
                   if (data?.activePayload?.[0]?.payload?.fullDate) {
-                    onChartClick('data', data.activePayload[0].payload.fullDate)
+                    onChartClick('data', data.activePayload[0].payload.fullDate, false)
                   }
                 }}
                 style={{ cursor: 'pointer' }}
@@ -585,7 +609,7 @@ export function DashboardCharts({
                   strokeWidth={3}
                   dot={(props: any) => {
                     const { cx, cy, payload } = props
-                    const isSelected = chartFilters.data === payload.fullDate
+                    const isSelected = chartFilters.data?.includes(payload.fullDate) ?? false
                     return (
                       <circle
                         key={`dot-${payload.fullDate}`}
@@ -596,9 +620,9 @@ export function DashboardCharts({
                         stroke={isSelected ? '#225f3d' : '#fff'}
                         strokeWidth={2}
                         className="transition-all duration-200 cursor-pointer"
-                        onClick={(e) => {
+                        onClick={(e: any) => {
                           e.stopPropagation()
-                          onChartClick('data', payload.fullDate)
+                          onChartClick('data', payload.fullDate, e.ctrlKey || e.metaKey)
                         }}
                       />
                     )
@@ -615,9 +639,9 @@ export function DashboardCharts({
                         stroke="#fff"
                         strokeWidth={2}
                         className="cursor-pointer"
-                        onClick={(e) => {
+                        onClick={(e: any) => {
                           e.stopPropagation()
-                          onChartClick('data', payload.fullDate)
+                          onChartClick('data', payload.fullDate, e.ctrlKey || e.metaKey)
                         }}
                       />
                     )

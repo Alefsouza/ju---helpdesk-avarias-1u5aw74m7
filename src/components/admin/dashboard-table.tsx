@@ -34,7 +34,7 @@ import {
   PaginationNext,
   PaginationPrevious,
 } from '@/components/ui/pagination'
-import { useChamadosDashboard } from '@/hooks/use-chamados-dashboard'
+import { useChamadosDashboard, type ChartFilters } from '@/hooks/use-chamados-dashboard'
 
 export function DashboardTable({
   chamados: allChamados,
@@ -43,13 +43,7 @@ export function DashboardTable({
 }: {
   chamados?: any[]
   responsaveis?: any[]
-  chartFilters?: {
-    status?: string
-    prioridade?: string
-    garagem?: string
-    responsavel?: string
-    data?: string
-  }
+  chartFilters?: ChartFilters
 }) {
   const [search, setSearch] = useState('')
   const [debouncedSearch, setDebouncedSearch] = useState('')

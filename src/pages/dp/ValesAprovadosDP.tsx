@@ -351,6 +351,7 @@ export default function ValesAprovadosDP() {
         values: [
           p.registro !== 'N/A' ? p.registro : '',
           p.nome !== 'N/A' ? p.nome : '',
+          p.garagem !== 'N/A' ? p.garagem : '',
           format(new Date(p.data_referencia + 'T00:00:00'), 'MM/yyyy'),
           p.parcelaInfo || '-',
           Number(p.valor_parcela),
@@ -360,6 +361,7 @@ export default function ValesAprovadosDP() {
       const columns = [
         { header: 'Registro', width: 120 },
         { header: 'Nome', width: 220 },
+        { header: 'Garagem', width: 120 },
         { header: 'Referência', width: 100 },
         { header: 'Parcela', width: 80 },
         { header: 'Valor Parcela', width: 130, format: 'Currency' },

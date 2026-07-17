@@ -389,6 +389,7 @@ function SolicitarParcelasModal({
       }
       fetchOrcamento()
       setParcelas('1')
+      setValeUnificado(false)
     }
   }, [open, chamadoId, orcamentoDoc, anexosInternos, documentosChamado, chamado])
 
@@ -620,6 +621,7 @@ function GerarValeModal({
   const [parcelas, setParcelas] = useState('1')
   const [loading, setLoading] = useState(false)
   const [aplicarDesconto, setAplicarDesconto] = useState(true)
+  const [valeUnificado, setValeUnificado] = useState(false)
 
   useEffect(() => {
     if (open) {
@@ -824,6 +826,7 @@ function GerarValeModal({
           chamado_id: chamadoId,
           valor_parcela: p.valor_parcela,
           data_referencia: p.data_referencia,
+          vale_unificado: valeUnificado,
         }))
         await supabase.from('parcelas_vales').delete().eq('chamado_id', chamadoId)
         const { error: parcelasError } = await supabase
@@ -849,6 +852,7 @@ function GerarValeModal({
               valor_final: valorFinal,
               parcelas,
               com_desconto: aplicarDesconto,
+              vale_unificado: valeUnificado,
             },
             headers: {
               Authorization: `Bearer ${token}`,
@@ -997,6 +1001,18 @@ function GerarValeModal({
                 )}
               </div>
             )}
+          </div>
+
+          <div className="flex items-center space-x-2 bg-amber-50 p-3 rounded-lg border border-amber-200">
+            <Checkbox
+              id="vale-unificado"
+              checked={valeUnificado}
+              onCheckedChange={(checked) => setValeUnificado(!!checked)}
+              disabled={loading}
+            />
+            <Label htmlFor="vale-unificado" className="text-sm cursor-pointer leading-none">
+              Vale Unificado
+            </Label>
           </div>
         </div>
         <DialogFooter className="flex-col sm:flex-row gap-2">

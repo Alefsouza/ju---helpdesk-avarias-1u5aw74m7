@@ -28,7 +28,13 @@ function getJpegDimensions(bytes: ArrayBuffer): { width: number; height: number 
   while (offset < view.byteLength - 9) {
     const marker = view.getUint16(offset)
     offset += 2
-    if ((marker >= 0xffc0 && marker <= 0xffcf) && marker !== 0xffc4 && marker !== 0xffc8 && marker !== 0xffcc) {
+    if (
+      marker >= 0xffc0 &&
+      marker <= 0xffcf &&
+      marker !== 0xffc4 &&
+      marker !== 0xffc8 &&
+      marker !== 0xffcc
+    ) {
       const height = view.getUint16(offset + 3)
       const width = view.getUint16(offset + 5)
       return { width, height }
@@ -191,6 +197,7 @@ Deno.serve(async (req: Request) => {
       const valorBase = body.valor_base || 0
       const valorFinal = body.valor_final || body.valor_orcamento || 0
       const parcelas = parseInt(body.parcelas || '1', 10)
+      const valeUnificado = body.vale_unificado === true
       const numeroOsFinal = chamado?.numero_os || body.numero_os || '-'
       const piaFinal = chamado?.pia || body.pia || '-'
 
@@ -282,9 +289,10 @@ Deno.serve(async (req: Request) => {
 
       const valorPorParcela = Math.trunc((valorFinal / numParcelasRequested) * 100) / 100
       for (let i = 0; i < numParcelasRequested; i++) {
-        const parcelaValor = i === numParcelasRequested - 1
-          ? Math.round((valorFinal - valorPorParcela * (numParcelasRequested - 1)) * 100) / 100
-          : valorPorParcela
+        const parcelaValor =
+          i === numParcelasRequested - 1
+            ? Math.round((valorFinal - valorPorParcela * (numParcelasRequested - 1)) * 100) / 100
+            : valorPorParcela
         children.push(
           new Paragraph({
             children: [
@@ -294,6 +302,16 @@ Deno.serve(async (req: Request) => {
               }),
             ],
             spacing: { after: 120 },
+          }),
+        )
+      }
+
+      if (valeUnificado) {
+        children.push(
+          new Paragraph({
+            children: [new TextRun({ text: 'Vale Unificado', bold: true, size: 28 })],
+            alignment: AlignmentType.CENTER,
+            spacing: { before: 400, after: 200 },
           }),
         )
       }

@@ -20,8 +20,9 @@ import {
   Search,
   XCircle,
   FileSpreadsheet,
+  AlertTriangle,
 } from 'lucide-react'
-import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
+import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from '@/components/ui/tooltip'
 import {
   Select,
   SelectContent,
@@ -81,8 +82,9 @@ export default function ValesAprovadosDP() {
       .select(`
       id, 
       valor_parcela, 
-      data_referencia, 
+      data_referencia,
       aprovado_em,
+      vale_unificado,
       chamado_id, 
       aprovado_diretoria,
       chamados (
@@ -271,6 +273,7 @@ export default function ValesAprovadosDP() {
         chamado_titulo: chamado?.titulo || '-',
         valor_parcela: valorCalculado,
         data_referencia: p.data_referencia,
+        vale_unificado: (p as any).vale_unificado || false,
         aprovado_em: p.aprovado_em,
         aprovado_diretoria: p.aprovado_diretoria,
         nome,
@@ -529,7 +532,23 @@ export default function ValesAprovadosDP() {
                   <TableRow key={p.id}>
                     <TableCell className="pl-6">
                       <div className="flex flex-col">
-                        <span className="font-medium">{p.chamado_titulo}</span>
+                        <span className="font-medium">
+                          {p.vale_unificado && (
+                            <TooltipProvider>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <span className="inline-flex items-center mr-1 align-middle">
+                                    <AlertTriangle className="h-4 w-4 text-amber-500" />
+                                  </span>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  <p>Vale unificado, favor verificar.</p>
+                                </TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
+                          )}
+                          {p.chamado_titulo}
+                        </span>
                       </div>
                     </TableCell>
                     <TableCell>{p.registro}</TableCell>

@@ -449,66 +449,67 @@ export default function ValesAprovadosDP() {
         </div>
       )}
 
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-6">
         <div>
           <h1 className="text-2xl font-bold text-slate-800">Vales Aprovados</h1>
           <p className="text-sm text-slate-500 mt-1">
             Acompanhe as parcelas de vales e gere o relatório de descontos.
           </p>
         </div>
-        <div className="flex flex-col sm:flex-row items-center gap-4 w-full md:w-auto">
-          <div className="relative w-full sm:w-64">
-            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-slate-500" />
-            <Input
-              placeholder="Buscar registro, nome..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-9 bg-white border-slate-200"
-            />
-          </div>
+        <div className="flex flex-col w-full md:w-auto gap-4">
+          <div className="flex flex-col sm:flex-row items-stretch gap-4 w-full">
+            <div className="relative w-full sm:w-64">
+              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500 pointer-events-none" />
+              <Input
+                placeholder="Buscar registro, nome..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-9 bg-white border-slate-200 h-10"
+              />
+            </div>
 
-          <Select value={garageFilter} onValueChange={setGarageFilter}>
-            <SelectTrigger className="w-full sm:w-40 bg-white border-slate-200">
-              <SelectValue placeholder="Garagem" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="Todas">Todas as Garagens</SelectItem>
-              <SelectItem value="Cursino">Cursino</SelectItem>
-              <SelectItem value="Sapopemba">Sapopemba</SelectItem>
-            </SelectContent>
-          </Select>
+            <Select value={garageFilter} onValueChange={setGarageFilter}>
+              <SelectTrigger className="w-full sm:w-44 bg-white border-slate-200 h-10">
+                <SelectValue placeholder="Garagem" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="Todas">Todas as Garagens</SelectItem>
+                <SelectItem value="Cursino">Cursino</SelectItem>
+                <SelectItem value="Sapopemba">Sapopemba</SelectItem>
+              </SelectContent>
+            </Select>
 
-          <div className="flex flex-col gap-1 w-full sm:w-40">
-            <span className="text-xs font-medium text-slate-600">Data Inicial</span>
             <Input
               type="date"
+              placeholder="Data Inicial"
               value={startDate}
               onChange={(e) => setStartDate(e.target.value)}
-              className="bg-white border-slate-200"
+              className="w-full sm:w-44 bg-white border-slate-200 h-10"
             />
-          </div>
-          <div className="flex flex-col gap-1 w-full sm:w-40">
-            <span className="text-xs font-medium text-slate-600">Data Final</span>
             <Input
               type="date"
+              placeholder="Data Final"
               value={endDate}
               onChange={(e) => setEndDate(e.target.value)}
-              className="bg-white border-slate-200"
+              className="w-full sm:w-44 bg-white border-slate-200 h-10"
             />
           </div>
-          <Button
-            onClick={handleDownload}
-            className="w-full sm:w-auto bg-[#225f3d] hover:bg-[#1a4a2f]"
-          >
-            <Download className="w-4 h-4 mr-2" /> Exportar TXT
-          </Button>
-          <Button
-            onClick={handleExportReport}
-            variant="outline"
-            className="w-full sm:w-auto border-[#225f3d] text-[#225f3d] hover:bg-[#225f3d] hover:text-white"
-          >
-            <FileSpreadsheet className="w-4 h-4 mr-2" /> Exportar Relatório
-          </Button>
+
+          <div className="flex flex-col sm:flex-row items-stretch gap-4 w-full sm:w-auto sm:justify-end">
+            <Button
+              onClick={handleDownload}
+              className="w-full sm:w-auto bg-[#225f3d] hover:bg-[#1a4a2f] h-10"
+            >
+              <Download className="w-4 h-4 mr-2" /> Exportar TXT
+            </Button>
+            <Button
+              onClick={handleExportReport}
+              variant="outline"
+              className="w-full sm:w-auto border-[#225f3d] text-[#225f3d] hover:bg-[#225f3d] hover:text-white h-10"
+            >
+              <FileSpreadsheet className="w-4 h-4 mr-2" /> Exportar Relatório
+            </Button>
+          </div>
         </div>
       </div>
 

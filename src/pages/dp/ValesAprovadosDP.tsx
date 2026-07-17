@@ -449,50 +449,62 @@ export default function ValesAprovadosDP() {
         </div>
       )}
 
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-6">
+      <div className="flex flex-col gap-6">
         <div>
           <h1 className="text-2xl font-bold text-slate-800">Vales Aprovados</h1>
           <p className="text-sm text-slate-500 mt-1">
             Acompanhe as parcelas de vales e gere o relatório de descontos.
           </p>
         </div>
-        <div className="flex flex-col w-full md:w-auto gap-4">
+
+        <div className="flex flex-col gap-4">
           <div className="flex flex-col sm:flex-row items-stretch gap-4 w-full">
-            <div className="relative w-full sm:w-64">
-              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500 pointer-events-none" />
+            <div className="flex flex-col gap-1.5 w-full sm:w-64">
+              <label className="text-xs font-medium text-slate-600">Busca</label>
+              <div className="relative">
+                <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500 pointer-events-none" />
+                <Input
+                  placeholder="Buscar registro, nome..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-9 bg-white border-slate-200 h-10"
+                />
+              </div>
+            </div>
+
+            <div className="flex flex-col gap-1.5 w-full sm:w-44">
+              <label className="text-xs font-medium text-slate-600">Garagem</label>
+              <Select value={garageFilter} onValueChange={setGarageFilter}>
+                <SelectTrigger className="w-full bg-white border-slate-200 h-10">
+                  <SelectValue placeholder="Garagem" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Todas">Todas as Garagens</SelectItem>
+                  <SelectItem value="Cursino">Cursino</SelectItem>
+                  <SelectItem value="Sapopemba">Sapopemba</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="flex flex-col gap-1.5 w-full sm:w-44">
+              <label className="text-xs font-medium text-slate-600">Data Inicial</label>
               <Input
-                placeholder="Buscar registro, nome..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-9 bg-white border-slate-200 h-10"
+                type="date"
+                value={startDate}
+                onChange={(e) => setStartDate(e.target.value)}
+                className="w-full bg-white border-slate-200 h-10"
               />
             </div>
 
-            <Select value={garageFilter} onValueChange={setGarageFilter}>
-              <SelectTrigger className="w-full sm:w-44 bg-white border-slate-200 h-10">
-                <SelectValue placeholder="Garagem" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="Todas">Todas as Garagens</SelectItem>
-                <SelectItem value="Cursino">Cursino</SelectItem>
-                <SelectItem value="Sapopemba">Sapopemba</SelectItem>
-              </SelectContent>
-            </Select>
-
-            <Input
-              type="date"
-              placeholder="Data Inicial"
-              value={startDate}
-              onChange={(e) => setStartDate(e.target.value)}
-              className="w-full sm:w-44 bg-white border-slate-200 h-10"
-            />
-            <Input
-              type="date"
-              placeholder="Data Final"
-              value={endDate}
-              onChange={(e) => setEndDate(e.target.value)}
-              className="w-full sm:w-44 bg-white border-slate-200 h-10"
-            />
+            <div className="flex flex-col gap-1.5 w-full sm:w-44">
+              <label className="text-xs font-medium text-slate-600">Data Final</label>
+              <Input
+                type="date"
+                value={endDate}
+                onChange={(e) => setEndDate(e.target.value)}
+                className="w-full bg-white border-slate-200 h-10"
+              />
+            </div>
           </div>
 
           <div className="flex flex-col sm:flex-row items-stretch gap-4 w-full sm:w-auto sm:justify-end">

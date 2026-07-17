@@ -76,6 +76,7 @@ export default function MeusAtendimentos() {
     profile?.tipo_usuario === 'sinistro' ||
     profile?.tipo_usuario === 'admin' ||
     profile?.tipo_usuario === 'juridico' ||
+    profile?.tipo_usuario === 'dp' ||
     user?.email === 'alex.fontes@viasudeste.com'
 
   const defaultWidths: Record<string, number> = {
@@ -153,7 +154,11 @@ export default function MeusAtendimentos() {
         .eq('status', 'em_atendimento')
         .order('criado_em', { ascending: false })
 
-      if (profile.tipo_usuario === 'juridico' || user?.email === 'alex.fontes@viasudeste.com') {
+      if (
+        profile.tipo_usuario === 'juridico' ||
+        profile.tipo_usuario === 'dp' ||
+        user?.email === 'alex.fontes@viasudeste.com'
+      ) {
         query = query.eq('responsavel_id', user.id)
       } else {
         query = query.is('status_juridico', null)

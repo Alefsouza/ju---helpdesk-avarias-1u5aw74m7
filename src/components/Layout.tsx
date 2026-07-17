@@ -58,8 +58,6 @@ function AppSidebar() {
   const isDp = tipo === 'dp'
   const isAlexFontes = user?.email === 'alex.fontes@viasudeste.com'
 
-  if (isDp) return null
-
   return (
     <Sidebar className="border-r-0">
       <SidebarHeader className="py-4 flex items-center justify-center border-b border-white/10 bg-[#225f3d]">
@@ -445,6 +443,35 @@ function AppSidebar() {
                 </>
               )}
 
+              {isDp && (
+                <>
+                  <SidebarMenuItem>
+                    <SidebarMenuButton
+                      asChild
+                      isActive={location.pathname === '/vales-aprovados'}
+                      className="data-[active=true]:bg-transparent data-[active=true]:text-[#c8e6c9] hover:bg-[#c8e6c9]/10 hover:text-[#c8e6c9] text-white transition-colors"
+                    >
+                      <Link to="/vales-aprovados">
+                        <CheckCircle />
+                        <span>Vales Aprovados</span>
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                  <SidebarMenuItem>
+                    <SidebarMenuButton
+                      asChild
+                      isActive={location.pathname === '/dashboard/meus-atendimentos'}
+                      className="data-[active=true]:bg-transparent data-[active=true]:text-[#c8e6c9] hover:bg-[#c8e6c9]/10 hover:text-[#c8e6c9] text-white transition-colors"
+                    >
+                      <Link to="/dashboard/meus-atendimentos">
+                        <PlayCircle />
+                        <span>Atendimentos</span>
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                </>
+              )}
+
               <SidebarMenuItem>
                 <SidebarMenuButton
                   asChild
@@ -621,7 +648,7 @@ function useRealtimeNotifications(
 }
 
 export default function Layout() {
-  const { user, profile, loading, signOut } = useAuth()
+  const { user, profile, loading } = useAuth()
   const location = useLocation()
   const isAuthRoute = location.pathname === '/' || location.pathname === '/cadastro'
 
@@ -749,7 +776,10 @@ export default function Layout() {
 
   // Redirect DP from other areas
   if (user && profile?.tipo_usuario === 'dp') {
-    const isDpRoute = location.pathname === '/vales-aprovados'
+    const isDpRoute =
+      location.pathname === '/vales-aprovados' ||
+      location.pathname === '/dashboard/meus-atendimentos' ||
+      location.pathname === '/dashboard/perfil'
     if (!isDpRoute) {
       return <Navigate to="/vales-aprovados" replace />
     }
@@ -758,40 +788,6 @@ export default function Layout() {
   // Auth Layout
   if (isAuthRoute) {
     return <Outlet />
-  }
-
-  // App Layout
-  if (profile?.tipo_usuario === 'dp') {
-    return (
-      <div className="flex flex-col min-h-screen bg-slate-50">
-        <header className="flex h-16 shrink-0 items-center justify-between px-4 sm:px-6 bg-[#225f3d] text-white sticky top-0 z-10 shadow-md">
-          <div className="flex items-center gap-4">
-            <img src={logoBranco} alt="Via Sudeste" className="h-8 w-auto object-contain" />
-            <span className="font-semibold text-lg hidden sm:block">Departamento Pessoal</span>
-          </div>
-          <div className="flex items-center gap-2 sm:gap-4">
-            <NotificationsDropdown className="text-white hover:text-white hover:bg-white/10" />
-            <div className="text-sm font-medium hidden sm:flex items-center gap-2">
-              <span className="w-8 h-8 rounded-full bg-white/20 text-white flex items-center justify-center font-bold uppercase">
-                {(profile?.nome_completo || user?.email)?.[0]}
-              </span>
-              {profile?.nome_completo || user?.email}
-            </div>
-            <Button
-              variant="ghost"
-              className="text-white hover:text-white hover:bg-white/10"
-              onClick={signOut}
-            >
-              <LogOut className="h-4 w-4 sm:mr-2" />
-              <span className="hidden sm:inline">Sair</span>
-            </Button>
-          </div>
-        </header>
-        <main className="flex-1 p-4 sm:p-6 lg:p-8 overflow-auto animate-fade-in">
-          <Outlet />
-        </main>
-      </div>
-    )
   }
 
   return (

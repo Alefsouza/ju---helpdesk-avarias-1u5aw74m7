@@ -53,7 +53,15 @@ export default function ValesAprovadosDP() {
   const { handleDocumentAction, loadingAction } = useDocumentAction()
   const [parcelas, setParcelas] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
-  const [downloadMonth, setDownloadMonth] = useState(() => format(new Date(), 'yyyy-MM'))
+  const [startDate, setStartDate] = useState(() => {
+    const now = new Date()
+    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-01`
+  })
+  const [endDate, setEndDate] = useState(() => {
+    const now = new Date()
+    const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate()
+    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`
+  })
   const [searchTerm, setSearchTerm] = useState('')
   const [garageFilter, setGarageFilter] = useState('Todas')
   const [cancelTarget, setCancelTarget] = useState<{
@@ -64,18 +72,11 @@ export default function ValesAprovadosDP() {
 
   useEffect(() => {
     fetchData()
-  }, [downloadMonth])
+  }, [startDate, endDate])
 
   const fetchData = async () => {
-    if (!downloadMonth) return
+    if (!startDate || !endDate) return
     setLoading(true)
-
-    const [yearStr, monthStr] = downloadMonth.split('-')
-    const yearNum = Number(yearStr)
-    const monthNum = Number(monthStr)
-
-    const startDate = `${yearNum}-${monthNum.toString().padStart(2, '0')}-01`
-    const endDate = new Date(yearNum, monthNum, 0).toISOString().split('T')[0]
 
     const { data: parcelasData, error } = await supabase
       .from('parcelas_vales')
@@ -477,12 +478,24 @@ export default function ValesAprovadosDP() {
             </SelectContent>
           </Select>
 
-          <Input
-            type="month"
-            value={downloadMonth}
-            onChange={(e) => setDownloadMonth(e.target.value)}
-            className="w-full sm:w-48 bg-white border-slate-200"
-          />
+          <div className="flex flex-col gap-1 w-full sm:w-40">
+            <span className="text-xs font-medium text-slate-600">Data Inicial</span>
+            <Input
+              type="date"
+              value={startDate}
+              onChange={(e) => setStartDate(e.target.value)}
+              className="bg-white border-slate-200"
+            />
+          </div>
+          <div className="flex flex-col gap-1 w-full sm:w-40">
+            <span className="text-xs font-medium text-slate-600">Data Final</span>
+            <Input
+              type="date"
+              value={endDate}
+              onChange={(e) => setEndDate(e.target.value)}
+              className="bg-white border-slate-200"
+            />
+          </div>
           <Button
             onClick={handleDownload}
             className="w-full sm:w-auto bg-[#225f3d] hover:bg-[#1a4a2f]"
@@ -526,7 +539,7 @@ export default function ValesAprovadosDP() {
               ) : filteredParcelas.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={10} className="text-center py-8 text-slate-500">
-                    Nenhuma parcela de vale encontrada para os filtros aplicados.
+                    Nenhum registro encontrado.
                   </TableCell>
                 </TableRow>
               ) : (

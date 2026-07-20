@@ -3749,6 +3749,7 @@ export default function ChamadoDetalhes() {
                             Notificação Extrajudicial
                           </SelectItem>
                           <SelectItem value="Subjúdice">Subjúdice</SelectItem>
+                          <SelectItem value="Desconto em folha">Desconto em folha</SelectItem>
                         </SelectContent>
                       </Select>
                     </div>

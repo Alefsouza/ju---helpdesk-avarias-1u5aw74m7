@@ -160,15 +160,16 @@ export default function Finalizados() {
         .limit(200)
 
       if (isMaria) {
-        query = query.not('status_juridico', 'is', null)
+        const statusValues = statusFilter === 'all' ? ['finalizado', 'unificado'] : [statusFilter]
+        const statusList = statusValues.join(',')
+        query = query.or(`status_juridico.not.is.null,status.in.(${statusList})`)
       } else {
         query = query.is('status_juridico', null)
-      }
-
-      if (statusFilter === 'all') {
-        query = query.in('status', ['finalizado', 'unificado'])
-      } else {
-        query = query.eq('status', statusFilter)
+        if (statusFilter === 'all') {
+          query = query.in('status', ['finalizado', 'unificado'])
+        } else {
+          query = query.eq('status', statusFilter)
+        }
       }
 
       if (debouncedSearch) {

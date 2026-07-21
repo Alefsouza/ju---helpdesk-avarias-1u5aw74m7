@@ -4,7 +4,8 @@ import { createClient } from 'jsr:@supabase/supabase-js@2'
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, x-supabase-client-platform, apikey, content-type',
+  'Access-Control-Allow-Headers':
+    'authorization, x-client-info, x-supabase-client-platform, apikey, content-type',
 }
 
 Deno.serve(async (req: Request) => {
@@ -14,9 +15,7 @@ Deno.serve(async (req: Request) => {
 
   try {
     const baseUrl =
-      Deno.env.get('REGISTROS_URL') ??
-      Deno.env.get('REGISTROS') ??
-      Deno.env.get('VITE_REGISTROS')
+      Deno.env.get('REGISTROS_URL') ?? Deno.env.get('REGISTROS') ?? Deno.env.get('VITE_REGISTROS')
 
     if (!baseUrl) {
       throw new Error('URL de registros não configurada.')
@@ -111,17 +110,18 @@ Deno.serve(async (req: Request) => {
       const { error: upsertError } = await supabaseAdmin
         .from('registros')
         .upsert(batch, { onConflict: 'registro' })
-        
+
       if (upsertError) {
         console.error(`Bulk upsert error at batch ${i}:`, upsertError)
-        throw new Error(`Erro ao salvar os registros no banco de dados (batch ${i}): ${upsertError.message}`)
+        throw new Error(
+          `Erro ao salvar os registros no banco de dados (batch ${i}): ${upsertError.message}`,
+        )
       }
     }
 
-    return new Response(
-      JSON.stringify({ success: true, count: processed.length }),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
-    )
+    return new Response(JSON.stringify({ success: true, count: processed.length }), {
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    })
   } catch (error: any) {
     console.error('Sync Error:', error)
     return new Response(JSON.stringify({ error: error.message }), {

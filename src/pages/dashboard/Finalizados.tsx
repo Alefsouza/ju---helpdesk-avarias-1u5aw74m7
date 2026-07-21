@@ -37,6 +37,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { cn } from '@/lib/utils'
+import { isMariaJuridico } from '@/lib/juridico-access'
 import { useToast } from '@/hooks/use-toast'
 import {
   AlertDialog,
@@ -150,12 +151,19 @@ export default function Finalizados() {
     setLoading(true)
     setError(false)
     try {
+      const isMaria = isMariaJuridico(user?.email)
+
       let query = supabase
         .from('chamados')
         .select('*')
-        .is('status_juridico', null)
         .order('atualizado_em', { ascending: false })
         .limit(200)
+
+      if (isMaria) {
+        query = query.not('status_juridico', 'is', null)
+      } else {
+        query = query.is('status_juridico', null)
+      }
 
       if (statusFilter === 'all') {
         query = query.in('status', ['finalizado', 'unificado'])

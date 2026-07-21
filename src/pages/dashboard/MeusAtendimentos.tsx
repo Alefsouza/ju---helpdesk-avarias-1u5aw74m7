@@ -29,6 +29,7 @@ import { UnificarChamadoModal } from '@/components/UnificarChamadoModal'
 import { Badge } from '@/components/ui/badge'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 import { isDuplicateTicket } from '@/lib/utils'
+import { isMariaJuridico } from '@/lib/juridico-access'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -70,6 +71,8 @@ export default function MeusAtendimentos() {
   const [sortConfig, setSortConfig] = useState<{ key: string; direction: 'asc' | 'desc' } | null>(
     null,
   )
+
+  const isMaria = isMariaJuridico(user?.email)
 
   const isSupport =
     profile?.tipo_usuario === 'responsavel' ||
@@ -154,7 +157,9 @@ export default function MeusAtendimentos() {
         .eq('status', 'em_atendimento')
         .order('criado_em', { ascending: false })
 
-      if (
+      if (isMaria) {
+        query = query.not('status_juridico', 'is', null)
+      } else if (
         profile.tipo_usuario === 'juridico' ||
         profile.tipo_usuario === 'dp' ||
         user?.email === 'alex.fontes@viasudeste.com'
@@ -169,7 +174,11 @@ export default function MeusAtendimentos() {
       if (err) throw err
 
       let fetchedData = data || []
-      if (profile.tipo_usuario === 'juridico' && user?.email !== 'alex.fontes@viasudeste.com') {
+      if (
+        profile.tipo_usuario === 'juridico' &&
+        !isMaria &&
+        user?.email !== 'alex.fontes@viasudeste.com'
+      ) {
         fetchedData = fetchedData.filter(
           (c) =>
             c.status_juridico !== 'Cobrança de Terceiros' &&

@@ -30,6 +30,7 @@ import { DateRange } from 'react-day-picker'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { Calendar } from '@/components/ui/calendar'
 import { cn } from '@/lib/utils'
+import { isMariaJuridico } from '@/lib/juridico-access'
 import { useToast } from '@/hooks/use-toast'
 import {
   AlertDialog,
@@ -75,11 +76,14 @@ export default function CobrancaTerceiros() {
     }
   }, [user])
 
+  const isMaria = isMariaJuridico(user?.email)
+
   const isSupport =
     currentUserProfile?.tipo_usuario === 'responsavel' ||
     currentUserProfile?.tipo_usuario === 'sinistro' ||
     currentUserProfile?.tipo_usuario === 'admin' ||
-    currentUserProfile?.tipo_usuario === 'juridico'
+    currentUserProfile?.tipo_usuario === 'juridico' ||
+    isMaria
 
   const defaultWidths: Record<string, number> = {
     pia: 120,

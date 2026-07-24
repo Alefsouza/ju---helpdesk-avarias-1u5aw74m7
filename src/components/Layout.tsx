@@ -57,6 +57,7 @@ function AppSidebar() {
   const isDiretoria = profile?.departamento === 'Diretoria'
   const isDp = tipo === 'dp'
   const isAlexFontes = user?.email === 'alex.fontes@viasudeste.com'
+  const isDanielBrotas = user?.email === 'daniel.brotas@viasudeste.com'
 
   return (
     <Sidebar className="border-r-0">
@@ -170,7 +171,22 @@ function AppSidebar() {
                 </>
               )}
 
-              {(isResponsavel || isJuridico) && (
+              {isDanielBrotas && (
+                <SidebarMenuItem>
+                  <SidebarMenuButton
+                    asChild
+                    isActive={location.pathname === '/dashboard/cobranca-terceiros'}
+                    className="data-[active=true]:bg-transparent data-[active=true]:text-[#c8e6c9] hover:bg-[#c8e6c9]/10 hover:text-[#c8e6c9] text-white transition-colors"
+                  >
+                    <Link to="/dashboard/cobranca-terceiros">
+                      <Briefcase />
+                      <span>Cobrança de Terceiros</span>
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              )}
+
+              {(isResponsavel || isJuridico) && !isDanielBrotas && (
                 <>
                   {isResponsavel && (
                     <SidebarMenuItem>
@@ -488,7 +504,7 @@ function AppSidebar() {
           </SidebarGroupContent>
         </SidebarGroup>
 
-        {(isResponsavel || isJuridico || isAlexFontes) && (
+        {(isResponsavel || isJuridico || isAlexFontes) && !isDanielBrotas && (
           <SidebarGroup className="mt-auto">
             <SidebarGroupContent>
               <SidebarMenu>
@@ -783,6 +799,16 @@ export default function Layout() {
     if (!isDpRoute) {
       return <Navigate to="/vales-aprovados" replace />
     }
+  }
+
+  // Redirect Daniel Brotas to Cobrança de Terceiros only
+  if (
+    user &&
+    user?.email === 'daniel.brotas@viasudeste.com' &&
+    location.pathname !== '/dashboard/cobranca-terceiros' &&
+    location.pathname !== '/dashboard/perfil'
+  ) {
+    return <Navigate to="/dashboard/cobranca-terceiros" replace />
   }
 
   // Auth Layout

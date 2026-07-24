@@ -1527,7 +1527,8 @@ export default function ChamadoDetalhes() {
         currUser.tipo_usuario === 'sinistro' ||
         currUser.tipo_usuario === 'admin' ||
         currUser.tipo_usuario === 'juridico' ||
-        currUser.tipo_usuario === 'secretaria_tecnica')
+        currUser.tipo_usuario === 'secretaria_tecnica' ||
+        isDaniel)
     ) {
       const { data: anexosInt } = await supabase
         .from('anexos_chamado_interno')
@@ -4253,6 +4254,73 @@ export default function ChamadoDetalhes() {
                   </Button>
                 </div>
               )}
+          </div>
+        )}
+
+        {isDaniel && anexosInternos.length > 0 && (
+          <div className="pt-3 border-t" id="anexos-internos-daniel">
+            <div>
+              <h3 className="text-xs font-bold text-slate-900 mb-2 uppercase tracking-wider flex items-center gap-1.5">
+                Anexos Internos{' '}
+                <Badge variant="secondary" className="bg-amber-100 text-amber-800 px-1.5 py-0">
+                  {anexosInternos.length}
+                </Badge>
+              </h3>
+              <div className="flex flex-col gap-1.5">
+                {anexosInternos.map((anexo) => (
+                  <div
+                    key={anexo.id}
+                    className="flex items-center justify-between p-2 rounded-md border bg-amber-50/30"
+                  >
+                    <div className="flex items-center gap-2 min-w-0">
+                      <FileText className="h-4 w-4 text-amber-600 shrink-0" />
+                      <div className="min-w-0">
+                        <p
+                          className="text-xs font-medium text-slate-900 truncate"
+                          title={anexo.nome_arquivo}
+                        >
+                          {anexo.nome_arquivo}
+                        </p>
+                        <p className="text-[10px] text-slate-500">
+                          {(anexo.tamanho_bytes / 1024 / 1024).toFixed(2)} MB •{' '}
+                          {format(new Date(anexo.criado_em), "dd/MM/yyyy 'às' HH:mm")}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2 shrink-0 ml-4">
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        className="h-8 w-8 text-slate-500 hover:text-slate-900"
+                        onClick={() => handleDownloadInternal(anexo)}
+                        disabled={loadingAction === `${anexo.id}-download`}
+                        title="Baixar anexo"
+                      >
+                        {loadingAction === `${anexo.id}-download` ? (
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                        ) : (
+                          <Download className="h-4 w-4" />
+                        )}
+                      </Button>
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        className="h-8 w-8 text-slate-500 hover:text-slate-900"
+                        onClick={() => handleViewInternal(anexo)}
+                        disabled={loadingAction === `${anexo.id}-view`}
+                        title="Visualizar anexo"
+                      >
+                        {loadingAction === `${anexo.id}-view` ? (
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                        ) : (
+                          <Eye className="h-4 w-4" />
+                        )}
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
           </div>
         )}
 

@@ -691,6 +691,9 @@ export default function Layout() {
     if (user?.email === 'alex.fontes@viasudeste.com') {
       return <Navigate to="/dashboard/admin" replace />
     }
+    if (user?.email === 'daniel.brotas@viasudeste.com') {
+      return <Navigate to="/dashboard/cobranca-terceiros" replace />
+    }
     if (profile?.tipo_usuario === 'vistoriador') {
       return <Navigate to="/vistoria/novo" replace />
     }
@@ -801,12 +804,13 @@ export default function Layout() {
     }
   }
 
-  // Redirect Daniel Brotas to Cobrança de Terceiros only
+  // Redirect Daniel Brotas to Cobrança de Terceiros only (allow chamado details & profile)
   if (
     user &&
     user?.email === 'daniel.brotas@viasudeste.com' &&
     location.pathname !== '/dashboard/cobranca-terceiros' &&
-    location.pathname !== '/dashboard/perfil'
+    location.pathname !== '/dashboard/perfil' &&
+    !location.pathname.startsWith('/dashboard/chamados/')
   ) {
     return <Navigate to="/dashboard/cobranca-terceiros" replace />
   }

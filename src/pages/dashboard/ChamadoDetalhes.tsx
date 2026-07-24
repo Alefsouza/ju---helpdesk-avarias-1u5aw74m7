@@ -72,6 +72,7 @@ import { format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
+import { isDanielBrotas } from '@/lib/juridico-access'
 import { UnificarChamadoModal } from '@/components/UnificarChamadoModal'
 import { useDocumentAction } from '@/hooks/use-document-action'
 import { useRegistroNome } from '@/hooks/use-registro-nome'
@@ -1399,6 +1400,7 @@ export default function ChamadoDetalhes() {
   const { id } = useParams()
   const navigate = useNavigate()
   const { user } = useAuth()
+  const isDaniel = isDanielBrotas(user?.email)
 
   const [chamado, setChamado] = useState<Chamado | null>(null)
   const [isParticipant, setIsParticipant] = useState(false)
@@ -3415,36 +3417,40 @@ export default function ChamadoDetalhes() {
   }
 
   const canAnexarOrcamento =
-    currentUserProfile?.tipo_usuario === 'secretaria_tecnica' ||
-    currentUserProfile?.tipo_usuario === 'responsavel'
+    (currentUserProfile?.tipo_usuario === 'secretaria_tecnica' ||
+      currentUserProfile?.tipo_usuario === 'responsavel') &&
+    !isDaniel
   const isSupport =
-    currentUserProfile?.tipo_usuario === 'responsavel' ||
-    currentUserProfile?.tipo_usuario === 'sinistro' ||
-    currentUserProfile?.tipo_usuario === 'admin' ||
-    currentUserProfile?.tipo_usuario === 'juridico' ||
-    currentUserProfile?.tipo_usuario === 'secretaria_tecnica'
+    (currentUserProfile?.tipo_usuario === 'responsavel' ||
+      currentUserProfile?.tipo_usuario === 'sinistro' ||
+      currentUserProfile?.tipo_usuario === 'admin' ||
+      currentUserProfile?.tipo_usuario === 'juridico' ||
+      currentUserProfile?.tipo_usuario === 'secretaria_tecnica') &&
+    !isDaniel
   const isResponsible = chamado.responsavel_id === user?.id
   const isSolicitante = chamado.usuario_id === user?.id
 
-  const canReply = isSolicitante || isResponsible || isSupport || isParticipant
+  const canReply = (isSolicitante || isResponsible || isSupport || isParticipant) && !isDaniel
   const canFinalize = isSupport && chamado.status !== 'finalizado' && chamado.status !== 'unificado'
 
   const isPrivilegedTransfer =
-    currentUserProfile?.tipo_usuario === 'admin' ||
-    currentUserProfile?.tipo_usuario === 'sinistro' ||
-    currentUserProfile?.tipo_usuario === 'juridico'
+    (currentUserProfile?.tipo_usuario === 'admin' ||
+      currentUserProfile?.tipo_usuario === 'sinistro' ||
+      currentUserProfile?.tipo_usuario === 'juridico') &&
+    !isDaniel
   const canTransfer =
     (isResponsible || isPrivilegedTransfer) &&
     chamado.status !== 'finalizado' &&
     chamado.status !== 'unificado'
 
-  const canEditRA = isSupport
+  const canEditRA = isSupport && !isDaniel
   const canEditSituacaoProcesso =
-    currentUserProfile?.tipo_usuario === 'admin' ||
-    currentUserProfile?.tipo_usuario === 'juridico' ||
-    currentUserProfile?.tipo_usuario === 'sinistro'
+    (currentUserProfile?.tipo_usuario === 'admin' ||
+      currentUserProfile?.tipo_usuario === 'juridico' ||
+      currentUserProfile?.tipo_usuario === 'sinistro') &&
+    !isDaniel
   const canUnify = isSupport && chamado.status !== 'finalizado' && chamado.status !== 'unificado'
-  const isJuridico = currentUserProfile?.tipo_usuario === 'juridico'
+  const isJuridico = currentUserProfile?.tipo_usuario === 'juridico' && !isDaniel
 
   const orcamentoDoc = documentosChamado.find((d) => d.tipo_documento === 'Orçamento')
   const hasOrcamentoInterno = anexosInternos.some((a) => {
@@ -4226,26 +4232,27 @@ export default function ChamadoDetalhes() {
             {(currentUserProfile?.tipo_usuario === 'secretaria_tecnica' ||
               currentUserProfile?.tipo_usuario === 'admin' ||
               currentUserProfile?.tipo_usuario === 'sinistro' ||
-              currentUserProfile?.tipo_usuario === 'responsavel') && (
-              <div className="flex flex-col sm:flex-row justify-end gap-2 pt-2">
-                <Button
-                  onClick={() => setSolicitarParcelasModalOpen(true)}
-                  disabled={!canGenerateVale || completing}
-                  className="bg-amber-600 hover:bg-amber-700 text-white"
-                >
-                  <FileText className="mr-2 h-4 w-4" />
-                  Solicitar Autorização de Parcelas
-                </Button>
-                <Button
-                  onClick={() => setGerarValeModalOpen(true)}
-                  disabled={!canGenerateVale || completing}
-                  className="bg-emerald-600 hover:bg-emerald-700 text-white"
-                >
-                  <FileText className="mr-2 h-4 w-4" />
-                  Gerar Autorização de Desconto
-                </Button>
-              </div>
-            )}
+              currentUserProfile?.tipo_usuario === 'responsavel') &&
+              !isDaniel && (
+                <div className="flex flex-col sm:flex-row justify-end gap-2 pt-2">
+                  <Button
+                    onClick={() => setSolicitarParcelasModalOpen(true)}
+                    disabled={!canGenerateVale || completing}
+                    className="bg-amber-600 hover:bg-amber-700 text-white"
+                  >
+                    <FileText className="mr-2 h-4 w-4" />
+                    Solicitar Autorização de Parcelas
+                  </Button>
+                  <Button
+                    onClick={() => setGerarValeModalOpen(true)}
+                    disabled={!canGenerateVale || completing}
+                    className="bg-emerald-600 hover:bg-emerald-700 text-white"
+                  >
+                    <FileText className="mr-2 h-4 w-4" />
+                    Gerar Autorização de Desconto
+                  </Button>
+                </div>
+              )}
           </div>
         )}
 

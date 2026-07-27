@@ -137,6 +137,7 @@ export type Database = {
           status: string
           status_aprovacao: string | null
           status_aprovacao_alex: string | null
+          status_aprovacao_claudinei: string | null
           status_interno: string | null
           status_juridico: string | null
           tipo_chamado: string | null
@@ -167,6 +168,7 @@ export type Database = {
           status?: string
           status_aprovacao?: string | null
           status_aprovacao_alex?: string | null
+          status_aprovacao_claudinei?: string | null
           status_interno?: string | null
           status_juridico?: string | null
           tipo_chamado?: string | null
@@ -197,6 +199,7 @@ export type Database = {
           status?: string
           status_aprovacao?: string | null
           status_aprovacao_alex?: string | null
+          status_aprovacao_claudinei?: string | null
           status_interno?: string | null
           status_juridico?: string | null
           tipo_chamado?: string | null

@@ -48,7 +48,10 @@ function AppSidebar() {
   const tipo = profile?.tipo_usuario
   const isBasico = tipo === 'basico'
   const isResponsavel = tipo === 'responsavel' || tipo === 'sinistro'
-  const isAdmin = tipo === 'admin' && user?.email !== 'alex.fontes@viasudeste.com'
+  const isAdmin =
+    tipo === 'admin' &&
+    user?.email !== 'alex.fontes@viasudeste.com' &&
+    user?.email !== 'claudinei.mariano@viasudeste.com'
   const isVistoriador = tipo === 'vistoriador'
   const isCoc = tipo === 'coc'
   const isSos = tipo === 'sos'
@@ -188,18 +191,44 @@ function AppSidebar() {
               )}
 
               {isClaudinei && (
-                <SidebarMenuItem>
-                  <SidebarMenuButton
-                    asChild
-                    isActive={location.pathname === '/dashboard/autorizacao-vales-claudinei'}
-                    className="data-[active=true]:bg-transparent data-[active=true]:text-[#c8e6c9] hover:bg-[#c8e6c9]/10 hover:text-[#c8e6c9] text-white transition-colors"
-                  >
-                    <Link to="/dashboard/autorizacao-vales-claudinei">
-                      <FileCheck />
-                      <span>Autorização de Vales</span>
-                    </Link>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
+                <>
+                  <SidebarMenuItem>
+                    <SidebarMenuButton
+                      asChild
+                      isActive={location.pathname === '/dashboard'}
+                      className="data-[active=true]:bg-transparent data-[active=true]:text-[#c8e6c9] hover:bg-[#c8e6c9]/10 hover:text-[#c8e6c9] text-white transition-colors"
+                    >
+                      <Link to="/dashboard">
+                        <LayoutDashboard />
+                        <span>Dashboard</span>
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                  <SidebarMenuItem>
+                    <SidebarMenuButton
+                      asChild
+                      isActive={location.pathname === '/dashboard/relatorios'}
+                      className="data-[active=true]:bg-transparent data-[active=true]:text-[#c8e6c9] hover:bg-[#c8e6c9]/10 hover:text-[#c8e6c9] text-white transition-colors"
+                    >
+                      <Link to="/dashboard/relatorios">
+                        <FileBarChart />
+                        <span>Relatórios</span>
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                  <SidebarMenuItem>
+                    <SidebarMenuButton
+                      asChild
+                      isActive={location.pathname === '/dashboard/autorizacao-vales-claudinei'}
+                      className="data-[active=true]:bg-transparent data-[active=true]:text-[#c8e6c9] hover:bg-[#c8e6c9]/10 hover:text-[#c8e6c9] text-white transition-colors"
+                    >
+                      <Link to="/dashboard/autorizacao-vales-claudinei">
+                        <FileCheck />
+                        <span>Autorização de Vales</span>
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                </>
               )}
 
               {(isResponsavel || isJuridico) && !isDanielBrotas && (
@@ -711,7 +740,7 @@ export default function Layout() {
       return <Navigate to="/dashboard/cobranca-terceiros" replace />
     }
     if (user?.email === 'claudinei.mariano@viasudeste.com') {
-      return <Navigate to="/dashboard/autorizacao-vales-claudinei" replace />
+      return <Navigate to="/dashboard" replace />
     }
     if (profile?.tipo_usuario === 'vistoriador') {
       return <Navigate to="/vistoria/novo" replace />
@@ -832,17 +861,6 @@ export default function Layout() {
     !location.pathname.startsWith('/dashboard/chamados/')
   ) {
     return <Navigate to="/dashboard/cobranca-terceiros" replace />
-  }
-
-  // Redirect Claudinei to Autorização de Vales only (allow chamado details & profile)
-  if (
-    user &&
-    user?.email === 'claudinei.mariano@viasudeste.com' &&
-    location.pathname !== '/dashboard/autorizacao-vales-claudinei' &&
-    location.pathname !== '/dashboard/perfil' &&
-    !location.pathname.startsWith('/dashboard/chamados/')
-  ) {
-    return <Navigate to="/dashboard/autorizacao-vales-claudinei" replace />
   }
 
   // Auth Layout

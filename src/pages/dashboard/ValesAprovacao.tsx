@@ -44,7 +44,7 @@ export default function ValesAprovacao() {
     const { data, error } = await supabase
       .from('chamados')
       .select(`
-        id, titulo, descricao, status_aprovacao, aprovacoes_diretoria, criado_em,
+        id, titulo, descricao, status_aprovacao, status_aprovacao_claudinei, aprovacoes_diretoria, criado_em,
         registro_motorista, nome_motorista, data_ocorrencia,
         anexos_chamado_interno ( id, nome_arquivo, arquivo_url, criado_em ),
         documentos ( id, nome_arquivo, arquivo_url, tipo_documento, orcamento_url, valor_orcamento, criado_em ),
@@ -53,7 +53,7 @@ export default function ValesAprovacao() {
         solicitacoes_parcelamento ( id, valor_orcamento, quantidade_parcelas, status, desconto_aplicado )
       `)
       .eq('status', 'finalizado')
-      .eq('status_aprovacao_alex', 'aprovado')
+      .or('status_aprovacao_alex.eq.aprovado,status_aprovacao_claudinei.eq.aprovado')
       .or('status_aprovacao.is.null,status_aprovacao.eq.aprovacao_parcial')
       .order('atualizado_em', { ascending: false })
 
@@ -66,14 +66,22 @@ export default function ValesAprovacao() {
     const filtered =
       data?.filter((c: any) => {
         const anexos = c.anexos_chamado_interno || []
+        const claudineiKeywords = [
+          'vale',
+          'quitação',
+          'quitacao',
+          'recibo',
+          'nf',
+          'nota fiscal',
+          'boleto',
+          'escaneado',
+          'autorização',
+          'autorizacao',
+          'desconto',
+        ]
         const hasApprovalTrigger = anexos.some((a: any) => {
           const nome = (a.nome_arquivo || '').toLowerCase()
-          return (
-            nome.includes('autorização') ||
-            nome.includes('autorizacao') ||
-            nome.includes('desconto') ||
-            nome.includes('escaneado')
-          )
+          return claudineiKeywords.some((kw) => nome.includes(kw))
         })
 
         return hasApprovalTrigger
@@ -175,74 +183,100 @@ export default function ValesAprovacao() {
       }
 
       if (isFinished && isFullyApproved) {
-        let totalValue = 0
-        let parcelsCount = 1
+        const ednaKeywords = ['vale', 'escaneado', 'desconto', 'autorização', 'autorizacao']
+        const ednaAnexos = selectedChamado.anexos_chamado_interno || []
+        const hasEdnaKeywords = ednaAnexos.some((a: any) => {
+          const nome = (a.nome_arquivo || '').toLowerCase()
+          return ednaKeywords.some((kw) => nome.includes(kw))
+        })
 
-        if (
-          selectedChamado.solicitacoes_parcelamento &&
-          selectedChamado.solicitacoes_parcelamento.length > 0
-        ) {
-          const sol = selectedChamado.solicitacoes_parcelamento[0]
-          totalValue = Number(sol.valor_orcamento) || 0
-          parcelsCount = Number(sol.quantidade_parcelas) || 1
+        if (!hasEdnaKeywords) {
+          await supabase
+            .from('chamados')
+            .update({
+              status_interno: 'aguardando_financeiro',
+              atualizado_em: new Date().toISOString(),
+            })
+            .eq('id', selectedChamado.id)
+
+          await supabase.from('historico_chamado').insert({
+            chamado_id: selectedChamado.id,
+            usuario_id: user!.id,
+            acao: 'Aprovação Diretor',
+            detalhes:
+              'Aprovação final da diretoria concluída. Chamado aguardando Financeiro/Contábil (sem documentos de Vale/Escaneado/Desconto/Autorização).',
+          })
         } else {
-          const docOrcamento = selectedChamado.documentos?.find(
-            (d: any) => (d.tipo_documento === 'orcamento' || d.orcamento_url) && d.valor_orcamento,
-          )
-          if (docOrcamento) {
-            totalValue = Number(docOrcamento.valor_orcamento) || 0
-          }
-        }
+          let totalValue = 0
+          let parcelsCount = 1
 
-        if (totalValue > 0) {
-          const { data: existingParcelas } = await supabase
-            .from('parcelas_vales')
-            .select('id')
-            .eq('chamado_id', selectedChamado.id)
-
-          if (!existingParcelas || existingParcelas.length === 0) {
-            // Apply the same discount logic used by the gerar-pdf edge function
-            // When desconto_aplicado is true, a 10% discount is applied to the original value
-            const finalValue = hasDiscount ? Math.trunc(totalValue * 0.9 * 100) / 100 : totalValue
-
-            const today = new Date()
-            const baseDateStr = new Date(today.getFullYear(), today.getMonth(), 1)
-              .toISOString()
-              .split('T')[0]
-
-            const { data: calculadas, error: calcError } = await supabase.rpc(
-              'calcular_parcelas_vale',
-              {
-                p_valor_base: finalValue,
-                p_quantidade_parcelas: parcelsCount,
-                p_data_base: baseDateStr,
-              },
+          if (
+            selectedChamado.solicitacoes_parcelamento &&
+            selectedChamado.solicitacoes_parcelamento.length > 0
+          ) {
+            const sol = selectedChamado.solicitacoes_parcelamento[0]
+            totalValue = Number(sol.valor_orcamento) || 0
+            parcelsCount = Number(sol.quantidade_parcelas) || 1
+          } else {
+            const docOrcamento = selectedChamado.documentos?.find(
+              (d: any) =>
+                (d.tipo_documento === 'orcamento' || d.orcamento_url) && d.valor_orcamento,
             )
+            if (docOrcamento) {
+              totalValue = Number(docOrcamento.valor_orcamento) || 0
+            }
+          }
 
-            if (calcError) {
-              console.error('Erro ao calcular parcelas:', calcError)
-            } else if (calculadas && calculadas.length > 0) {
-              const parcelas = calculadas.map((p) => ({
-                chamado_id: selectedChamado.id,
-                valor_parcela: p.valor_parcela,
-                data_referencia: p.data_referencia,
-                aprovado_diretoria: true,
-                aprovado_em: new Date().toISOString(),
-              }))
+          if (totalValue > 0) {
+            const { data: existingParcelas } = await supabase
+              .from('parcelas_vales')
+              .select('id')
+              .eq('chamado_id', selectedChamado.id)
 
-              const { error: parcelasError } = await supabase
-                .from('parcelas_vales')
-                .insert(parcelas)
-              if (parcelasError) console.error('Error creating parcelas:', parcelasError)
+            if (!existingParcelas || existingParcelas.length === 0) {
+              // Apply the same discount logic used by the gerar-pdf edge function
+              // When desconto_aplicado is true, a 10% discount is applied to the original value
+              const finalValue = hasDiscount ? Math.trunc(totalValue * 0.9 * 100) / 100 : totalValue
 
-              if (
-                selectedChamado.solicitacoes_parcelamento &&
-                selectedChamado.solicitacoes_parcelamento.length > 0
-              ) {
-                await supabase
-                  .from('solicitacoes_parcelamento')
-                  .update({ status: 'aprovado', atualizado_em: new Date().toISOString() })
-                  .eq('id', selectedChamado.solicitacoes_parcelamento[0].id)
+              const today = new Date()
+              const baseDateStr = new Date(today.getFullYear(), today.getMonth(), 1)
+                .toISOString()
+                .split('T')[0]
+
+              const { data: calculadas, error: calcError } = await supabase.rpc(
+                'calcular_parcelas_vale',
+                {
+                  p_valor_base: finalValue,
+                  p_quantidade_parcelas: parcelsCount,
+                  p_data_base: baseDateStr,
+                },
+              )
+
+              if (calcError) {
+                console.error('Erro ao calcular parcelas:', calcError)
+              } else if (calculadas && calculadas.length > 0) {
+                const parcelas = calculadas.map((p) => ({
+                  chamado_id: selectedChamado.id,
+                  valor_parcela: p.valor_parcela,
+                  data_referencia: p.data_referencia,
+                  aprovado_diretoria: true,
+                  aprovado_em: new Date().toISOString(),
+                }))
+
+                const { error: parcelasError } = await supabase
+                  .from('parcelas_vales')
+                  .insert(parcelas)
+                if (parcelasError) console.error('Error creating parcelas:', parcelasError)
+
+                if (
+                  selectedChamado.solicitacoes_parcelamento &&
+                  selectedChamado.solicitacoes_parcelamento.length > 0
+                ) {
+                  await supabase
+                    .from('solicitacoes_parcelamento')
+                    .update({ status: 'aprovado', atualizado_em: new Date().toISOString() })
+                    .eq('id', selectedChamado.solicitacoes_parcelamento[0].id)
+                }
               }
             }
           }
@@ -264,7 +298,7 @@ export default function ValesAprovacao() {
       toast.success(
         isFinished
           ? isFullyApproved
-            ? 'Vale aprovado e parcelas geradas com sucesso!'
+            ? 'Aprovação final da diretoria concluída!'
             : 'Vale reprovado finalizado!'
           : 'Aprovação registrada! Aguardando segundo diretor.',
       )

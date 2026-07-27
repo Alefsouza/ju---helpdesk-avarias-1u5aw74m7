@@ -3325,21 +3325,48 @@ export default function ChamadoDetalhes() {
       .select('nome_arquivo')
       .eq('chamado_id', id as string)
 
-    const hasApprovalTrigger = (internalAnexos || []).some((a: any) => {
+    const claudineiKeywords = [
+      'vale',
+      'quitação',
+      'quitacao',
+      'recibo',
+      'nf',
+      'nota fiscal',
+      'boleto',
+      'escaneado',
+      'autorização',
+      'autorizacao',
+      'desconto',
+    ]
+    const alexKeywords = ['autorização', 'autorizacao', 'escaneado']
+
+    const hasClaudineiTrigger = (internalAnexos || []).some((a: any) => {
       const nome = (a.nome_arquivo || '').toLowerCase()
-      return (
-        nome.includes('autorização') || nome.includes('autorizacao') || nome.includes('escaneado')
-      )
+      return claudineiKeywords.some((kw) => nome.includes(kw))
+    })
+    const hasAlexTrigger = (internalAnexos || []).some((a: any) => {
+      const nome = (a.nome_arquivo || '').toLowerCase()
+      return alexKeywords.some((kw) => nome.includes(kw))
     })
 
+    const isJuridicoUser = currentUserProfile?.tipo_usuario === 'juridico'
+    const isClaudineiFlow = isJuridicoUser && hasClaudineiTrigger
+    const hasApprovalTrigger = hasAlexTrigger
+
     const updatePayload: any = {
-      status: 'finalizado',
       atualizado_em: new Date().toISOString(),
     }
 
-    if (hasApprovalTrigger) {
+    if (isClaudineiFlow) {
+      updatePayload.status_aprovacao_claudinei = 'pendente'
+      updatePayload.status_interno = 'aguardando_claudinei'
+      updatePayload.status = 'em_atendimento'
+    } else if (hasApprovalTrigger) {
+      updatePayload.status = 'finalizado'
       updatePayload.status_interno = 'AGUARDANDO_ALEX'
       updatePayload.status_aprovacao_alex = 'pendente'
+    } else {
+      updatePayload.status = 'finalizado'
     }
 
     const { data, error: updateError } = await supabase
@@ -3359,13 +3386,23 @@ export default function ChamadoDetalhes() {
       return
     }
 
-    await supabase.from('historico_chamado').insert({
-      chamado_id: id,
-      acao: 'finalizado',
-      usuario_id: user?.id,
-    })
+    if (!isClaudineiFlow) {
+      await supabase.from('historico_chamado').insert({
+        chamado_id: id,
+        acao: 'finalizado',
+        usuario_id: user?.id,
+      })
+    }
 
-    if (hasApprovalTrigger) {
+    if (isClaudineiFlow) {
+      await supabase.from('historico_chamado').insert({
+        chamado_id: id as string,
+        acao: 'respondido',
+        usuario_id: user?.id as string,
+        detalhes:
+          'Chamado encaminhado para aprovação do Claudinei (documento de Vale/Quitação/Recibo/NF/Nota Fiscal/Boleto/Escaneado/Autorização/Desconto detectado).',
+      })
+    } else if (hasApprovalTrigger) {
       await supabase.from('historico_chamado').insert({
         chamado_id: id as string,
         acao: 'respondido',
@@ -3379,19 +3416,24 @@ export default function ChamadoDetalhes() {
       prev
         ? {
             ...prev,
-            status: 'finalizado',
+            status: updatePayload.status || prev.status,
             atualizado_em: new Date().toISOString(),
-            status_interno: hasApprovalTrigger ? 'AGUARDANDO_ALEX' : prev.status_interno,
-            status_aprovacao_alex: hasApprovalTrigger ? 'pendente' : prev.status_aprovacao_alex,
+            status_interno: updatePayload.status_interno || prev.status_interno,
+            status_aprovacao_alex:
+              updatePayload.status_aprovacao_alex || prev.status_aprovacao_alex,
+            status_aprovacao_claudinei:
+              updatePayload.status_aprovacao_claudinei || prev.status_aprovacao_claudinei,
           }
         : prev,
     )
 
     setCompleting(false)
     toast.success(
-      hasApprovalTrigger
-        ? 'Chamado finalizado e enviado para aprovação do Alex.'
-        : 'Chamado finalizado com sucesso',
+      isClaudineiFlow
+        ? 'Chamado encaminhado para aprovação do Claudinei.'
+        : hasApprovalTrigger
+          ? 'Chamado finalizado e enviado para aprovação do Alex.'
+          : 'Chamado finalizado com sucesso',
     )
   }
 

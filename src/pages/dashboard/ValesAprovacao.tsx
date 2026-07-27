@@ -191,20 +191,11 @@ export default function ValesAprovacao() {
         })
 
         if (!hasEdnaKeywords) {
-          await supabase
-            .from('chamados')
-            .update({
-              status_interno: 'aguardando_financeiro',
-              atualizado_em: new Date().toISOString(),
-            })
-            .eq('id', selectedChamado.id)
-
           await supabase.from('historico_chamado').insert({
             chamado_id: selectedChamado.id,
             usuario_id: user!.id,
             acao: 'Aprovação Diretor',
-            detalhes:
-              'Aprovação final da diretoria concluída. Chamado aguardando Financeiro/Contábil (sem documentos de Vale/Escaneado/Desconto/Autorização).',
+            detalhes: 'Aprovação final da diretoria concluída.',
           })
         } else {
           let totalValue = 0
@@ -280,6 +271,43 @@ export default function ValesAprovacao() {
               }
             }
           }
+        }
+      }
+
+      if (isFinished && isFullyApproved) {
+        const docsAprovados = selectedChamado.documentos || []
+        const hasReciboDoc = docsAprovados.some((d: any) => d.tipo_documento === 'Recibo')
+        const hasNfBoletoDoc = docsAprovados.some(
+          (d: any) =>
+            d.tipo_documento === 'NF' ||
+            d.tipo_documento === 'Nota Fiscal' ||
+            d.tipo_documento === 'Boleto',
+        )
+
+        let routingStatus: string | null = null
+        if (hasReciboDoc && hasNfBoletoDoc) {
+          routingStatus = 'aguardando_contabil_e_financeiro'
+        } else if (hasNfBoletoDoc) {
+          routingStatus = 'aguardando_contabil'
+        } else if (hasReciboDoc) {
+          routingStatus = 'aguardando_financeiro'
+        }
+
+        if (routingStatus) {
+          await supabase
+            .from('chamados')
+            .update({
+              status_interno: routingStatus,
+              atualizado_em: new Date().toISOString(),
+            })
+            .eq('id', selectedChamado.id)
+
+          await supabase.from('historico_chamado').insert({
+            chamado_id: selectedChamado.id,
+            usuario_id: user!.id,
+            acao: 'Roteamento Documentos',
+            detalhes: `Chamado roteado para ${routingStatus.replace(/_/g, ' ')} baseado nos tipos de documentos.`,
+          })
         }
       }
 

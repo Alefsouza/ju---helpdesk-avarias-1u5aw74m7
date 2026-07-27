@@ -17,6 +17,8 @@ import CobrancaTerceiros from './pages/dashboard/CobrancaTerceiros'
 import DemandaJudicial from './pages/dashboard/DemandaJudicial'
 import Documentos from './pages/dashboard/Documentos'
 import ValesAprovacao from './pages/dashboard/ValesAprovacao'
+import ValoresAprovadosFinanceiro from './pages/dashboard/ValoresAprovadosFinanceiro'
+import ValoresAprovadosContabil from './pages/dashboard/ValoresAprovadosContabil'
 import ValesAprovacaoAlexPage from './pages/dashboard/ValesAprovacaoAlexPage'
 import AutorizacaoValesClaudinei from './pages/dashboard/AutorizacaoValesClaudinei'
 import AutorizarParcelas from './pages/dashboard/AutorizarParcelas'
@@ -61,6 +63,12 @@ const DashboardRoute = () => {
     if (!loading && (profile?.tipo_usuario === 'dp' || profile?.departamento === 'DP')) {
       navigate('/vales-aprovados', { replace: true })
     }
+    if (!loading && profile?.tipo_usuario === 'financeiro') {
+      navigate('/dashboard/valores-aprovados-financeiro', { replace: true })
+    }
+    if (!loading && profile?.tipo_usuario === 'contabil') {
+      navigate('/dashboard/valores-aprovados-contabil', { replace: true })
+    }
   }, [user, profile, loading, navigate])
 
   if (
@@ -69,7 +77,9 @@ const DashboardRoute = () => {
     profile?.tipo_usuario === 'juridico' ||
     profile?.tipo_usuario === 'secretaria_tecnica' ||
     profile?.tipo_usuario === 'dp' ||
-    profile?.departamento === 'DP'
+    profile?.departamento === 'DP' ||
+    profile?.tipo_usuario === 'financeiro' ||
+    profile?.tipo_usuario === 'contabil'
   ) {
     return null
   }
@@ -109,6 +119,14 @@ const App = () => (
             />
             <Route path="/dashboard/autorizar-parcelas" element={<AutorizarParcelas />} />
             <Route path="/vales-aprovados" element={<ValesAprovadosDP />} />
+            <Route
+              path="/dashboard/valores-aprovados-financeiro"
+              element={<ValoresAprovadosFinanceiro />}
+            />
+            <Route
+              path="/dashboard/valores-aprovados-contabil"
+              element={<ValoresAprovadosContabil />}
+            />
             <Route path="/vistoria/novo" element={<VistoriaForm />} />
             <Route path="/vistoria/pendentes" element={<DocumentosPendentes />} />
             <Route path="/espelhos-danos" element={<EspelhosDanos />} />

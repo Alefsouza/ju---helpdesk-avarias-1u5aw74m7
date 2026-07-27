@@ -58,6 +58,7 @@ function AppSidebar() {
   const isDp = tipo === 'dp'
   const isAlexFontes = user?.email === 'alex.fontes@viasudeste.com'
   const isDanielBrotas = user?.email === 'daniel.brotas@viasudeste.com'
+  const isClaudinei = user?.email === 'claudinei.mariano@viasudeste.com'
 
   return (
     <Sidebar className="border-r-0">
@@ -181,6 +182,21 @@ function AppSidebar() {
                     <Link to="/dashboard/cobranca-terceiros">
                       <Briefcase />
                       <span>Cobrança de Terceiros</span>
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              )}
+
+              {isClaudinei && (
+                <SidebarMenuItem>
+                  <SidebarMenuButton
+                    asChild
+                    isActive={location.pathname === '/dashboard/autorizacao-vales-claudinei'}
+                    className="data-[active=true]:bg-transparent data-[active=true]:text-[#c8e6c9] hover:bg-[#c8e6c9]/10 hover:text-[#c8e6c9] text-white transition-colors"
+                  >
+                    <Link to="/dashboard/autorizacao-vales-claudinei">
+                      <FileCheck />
+                      <span>Autorização de Vales</span>
                     </Link>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
@@ -694,6 +710,9 @@ export default function Layout() {
     if (user?.email === 'daniel.brotas@viasudeste.com') {
       return <Navigate to="/dashboard/cobranca-terceiros" replace />
     }
+    if (user?.email === 'claudinei.mariano@viasudeste.com') {
+      return <Navigate to="/dashboard/autorizacao-vales-claudinei" replace />
+    }
     if (profile?.tipo_usuario === 'vistoriador') {
       return <Navigate to="/vistoria/novo" replace />
     }
@@ -813,6 +832,17 @@ export default function Layout() {
     !location.pathname.startsWith('/dashboard/chamados/')
   ) {
     return <Navigate to="/dashboard/cobranca-terceiros" replace />
+  }
+
+  // Redirect Claudinei to Autorização de Vales only (allow chamado details & profile)
+  if (
+    user &&
+    user?.email === 'claudinei.mariano@viasudeste.com' &&
+    location.pathname !== '/dashboard/autorizacao-vales-claudinei' &&
+    location.pathname !== '/dashboard/perfil' &&
+    !location.pathname.startsWith('/dashboard/chamados/')
+  ) {
+    return <Navigate to="/dashboard/autorizacao-vales-claudinei" replace />
   }
 
   // Auth Layout

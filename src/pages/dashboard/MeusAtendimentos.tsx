@@ -29,7 +29,7 @@ import { UnificarChamadoModal } from '@/components/UnificarChamadoModal'
 import { Badge } from '@/components/ui/badge'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 import { isDuplicateTicket } from '@/lib/utils'
-import { isMariaJuridico } from '@/lib/juridico-access'
+import { useJuridicoTeam } from '@/hooks/use-juridico-team'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -53,6 +53,7 @@ export default function MeusAtendimentos() {
   const { user, profile } = useAuth()
   const { toast } = useToast()
   const navigate = useNavigate()
+  const { juridicoUserIds } = useJuridicoTeam()
   const [searchParams, setSearchParams] = useSearchParams()
 
   const [chamados, setChamados] = useState<any[]>([])
@@ -72,7 +73,7 @@ export default function MeusAtendimentos() {
     null,
   )
 
-  const isMaria = isMariaJuridico(user?.email)
+  const isSinistro = profile?.tipo_usuario === 'sinistro'
 
   const isSupport =
     profile?.tipo_usuario === 'responsavel' ||
@@ -153,13 +154,11 @@ export default function MeusAtendimentos() {
     try {
       let query = supabase
         .from('chamados')
-        .select('*')
+        .select('*, formularios_espelho_danos(registro_motorista, nome_motorista)')
         .eq('status', 'em_atendimento')
         .order('criado_em', { ascending: false })
 
-      if (isMaria) {
-        query = query.not('status_juridico', 'is', null)
-      } else if (
+      if (
         profile.tipo_usuario === 'juridico' ||
         profile.tipo_usuario === 'dp' ||
         user?.email === 'alex.fontes@viasudeste.com'
@@ -174,16 +173,16 @@ export default function MeusAtendimentos() {
       if (err) throw err
 
       let fetchedData = data || []
-      if (
-        profile.tipo_usuario === 'juridico' &&
-        !isMaria &&
-        user?.email !== 'alex.fontes@viasudeste.com'
-      ) {
+      if (profile.tipo_usuario === 'juridico' && user?.email !== 'alex.fontes@viasudeste.com') {
         fetchedData = fetchedData.filter(
           (c) =>
             c.status_juridico !== 'Cobrança de Terceiros' &&
             c.status_juridico !== 'Demanda Judicial',
         )
+      }
+
+      if (isSinistro && juridicoUserIds.length > 0) {
+        fetchedData = fetchedData.filter((c) => !juridicoUserIds.includes(c.responsavel_id))
       }
 
       if (fetchedData.length > 0) {
@@ -245,7 +244,7 @@ export default function MeusAtendimentos() {
     return () => {
       supabase.removeChannel(channel)
     }
-  }, [user, profile?.tipo_usuario])
+  }, [user, profile?.tipo_usuario, juridicoUserIds])
 
   const handleReabrir = async (chamadoId: string) => {
     setCompletingId(chamadoId)
@@ -363,7 +362,13 @@ export default function MeusAtendimentos() {
       return (
         c.titulo?.toLowerCase().includes(term) ||
         c.pia?.toLowerCase().includes(term) ||
-        c.nome_usuario?.toLowerCase().includes(term)
+        c.nome_usuario?.toLowerCase().includes(term) ||
+        (Array.isArray(c.formularios_espelho_danos) &&
+          c.formularios_espelho_danos.some(
+            (f: any) =>
+              f.nome_motorista?.toLowerCase().includes(term) ||
+              f.registro_motorista?.toLowerCase().includes(term),
+          ))
       )
     })
     .sort((a, b) => {

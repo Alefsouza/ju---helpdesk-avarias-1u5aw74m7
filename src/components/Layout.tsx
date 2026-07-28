@@ -48,6 +48,7 @@ function AppSidebar() {
   const tipo = profile?.tipo_usuario
   const isBasico = tipo === 'basico'
   const isResponsavel = tipo === 'responsavel' || tipo === 'sinistro'
+  const isSinistro = tipo === 'sinistro'
   const isAdmin =
     tipo === 'admin' &&
     user?.email !== 'alex.fontes@viasudeste.com' &&
@@ -269,6 +270,20 @@ function AppSidebar() {
                         <Link to="/dashboard/finalizados">
                           <Archive />
                           <span>Finalizados</span>
+                        </Link>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  )}
+                  {isSinistro && (
+                    <SidebarMenuItem>
+                      <SidebarMenuButton
+                        asChild
+                        isActive={location.pathname === '/dashboard/juridico'}
+                        className="data-[active=true]:bg-transparent data-[active=true]:text-[#c8e6c9] hover:bg-[#c8e6c9]/10 hover:text-[#c8e6c9] text-white transition-colors"
+                      >
+                        <Link to="/dashboard/juridico">
+                          <Gavel />
+                          <span>Jurídico</span>
                         </Link>
                       </SidebarMenuButton>
                     </SidebarMenuItem>

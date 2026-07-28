@@ -28,7 +28,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 import { cn, isDuplicateTicket } from '@/lib/utils'
 
 export default function ChamadosAbertos() {
-  const { user } = useAuth()
+  const { user, profile } = useAuth()
   const { toast } = useToast()
   const navigate = useNavigate()
 
@@ -52,10 +52,16 @@ export default function ChamadosAbertos() {
     setLoading(true)
     setError(false)
     try {
-      const { data, error: err } = await supabase
+      let query = supabase
         .from('chamados')
-        .select('*')
+        .select('*, formularios_espelho_danos(registro_motorista, nome_motorista)')
         .eq('status', 'aberto')
+
+      if (profile?.tipo_usuario === 'sinistro') {
+        query = query.is('status_juridico', null)
+      }
+
+      const { data, error: err } = await query
 
       if (err) throw err
 
@@ -117,7 +123,7 @@ export default function ChamadosAbertos() {
     return () => {
       supabase.removeChannel(channel)
     }
-  }, [])
+  }, [profile?.tipo_usuario])
 
   const handlePegarChamado = async (chamadoId: string, e?: React.MouseEvent) => {
     if (e) e.stopPropagation()
@@ -187,7 +193,13 @@ export default function ChamadosAbertos() {
       const matchesSearch =
         c.titulo.toLowerCase().includes(term) ||
         c.id.toLowerCase().includes(term) ||
-        (c.pia && c.pia.toLowerCase().includes(term))
+        (c.pia && c.pia.toLowerCase().includes(term)) ||
+        (Array.isArray(c.formularios_espelho_danos) &&
+          c.formularios_espelho_danos.some(
+            (f: any) =>
+              f.nome_motorista?.toLowerCase().includes(term) ||
+              f.registro_motorista?.toLowerCase().includes(term),
+          ))
       const matchesPriority =
         filterPriority === 'todas' ||
         c.prioridade === filterPriority ||

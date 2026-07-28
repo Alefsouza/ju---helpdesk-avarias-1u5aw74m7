@@ -42,6 +42,10 @@ const getBadgeStyles = (tipo: string) => {
       return 'border-emerald-200 text-emerald-700 bg-emerald-50'
     case 'dp':
       return 'border-pink-200 text-pink-700 bg-pink-50'
+    case 'financeiro':
+      return 'border-sky-200 text-sky-700 bg-sky-50'
+    case 'contabil':
+      return 'border-green-200 text-green-700 bg-green-50'
     case 'basico':
       return 'border-gray-200 text-gray-700 bg-gray-50'
     default:
@@ -67,8 +71,14 @@ const getRoleLabel = (tipo: string) => {
       return 'Sec. Técnica'
     case 'dp':
       return 'DP'
+    case 'financeiro':
+      return 'Financeiro'
+    case 'contabil':
+      return 'Contábil'
     case 'basico':
       return 'Básico'
+    case 'responsavel':
+      return 'Responsável'
     default:
       return 'Responsável'
   }

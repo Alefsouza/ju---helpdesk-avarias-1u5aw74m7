@@ -38,6 +38,21 @@ export default function AutorizacaoValesClaudinei() {
 
   const isClaudinei = user?.email === 'claudinei.mariano@viasudeste.com'
 
+  const RELEVANT_KEYWORDS = [
+    'orcamento',
+    'orçamento',
+    'vale',
+    'recibo',
+    'nf',
+    'nota fiscal',
+    'escaneado',
+    'autorizacao',
+    'autorização',
+  ]
+
+  const buildAnexosOrFilter = () =>
+    RELEVANT_KEYWORDS.map((kw) => `nome_arquivo.ilike.%${kw}%`).join(',')
+
   const fetchChamados = async () => {
     setLoading(true)
     const { data, error } = await supabase
@@ -47,6 +62,7 @@ export default function AutorizacaoValesClaudinei() {
         anexos_chamado_interno ( id, nome_arquivo, arquivo_url, criado_em )`,
       )
       .eq('status_aprovacao_claudinei', 'pendente')
+      .or(buildAnexosOrFilter(), { referencedTable: 'anexos_chamado_interno' })
       .order('atualizado_em', { ascending: false })
 
     if (error) {

@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { Key, Users, Search, X, Loader2 } from 'lucide-react'
+import { Key, Users, Search, X, Loader2, Pencil } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import {
   Table,
@@ -15,6 +15,7 @@ import { Input } from '@/components/ui/input'
 import { supabase } from '@/lib/supabase/client'
 import { AlterarSenhaModal } from './alterar-senha-modal'
 import { NovoUsuarioModal } from './novo-usuario-modal'
+import { EditarUsuarioModal } from './editar-usuario-modal'
 import { format } from 'date-fns'
 
 export function GerenciarUsuarios() {
@@ -23,6 +24,7 @@ export function GerenciarUsuarios() {
   const [error, setError] = useState(false)
   const [modalOpen, setModalOpen] = useState(false)
   const [novoModalOpen, setNovoModalOpen] = useState(false)
+  const [editModalOpen, setEditModalOpen] = useState(false)
   const [selectedUser, setSelectedUser] = useState<any>(null)
 
   const [searchTerm, setSearchTerm] = useState('')
@@ -62,6 +64,11 @@ export function GerenciarUsuarios() {
   const openPasswordModal = (u: any) => {
     setSelectedUser(u)
     setModalOpen(true)
+  }
+
+  const openEditModal = (u: any) => {
+    setSelectedUser(u)
+    setEditModalOpen(true)
   }
 
   return (
@@ -149,7 +156,10 @@ export function GerenciarUsuarios() {
                     </TableCell>
                     <TableCell>{format(new Date(u.criado_em), 'dd/MM/yyyy')}</TableCell>
                     <TableCell className="text-right">
-                      <div className="flex justify-end gap-2">
+                      <div className="flex flex-col sm:flex-row justify-end gap-2">
+                        <Button variant="outline" size="sm" onClick={() => openEditModal(u)}>
+                          <Pencil className="h-4 w-4 mr-2" /> Editar
+                        </Button>
                         <Button variant="outline" size="sm" onClick={() => openPasswordModal(u)}>
                           <Key className="h-4 w-4 mr-2" /> Alterar Senha
                         </Button>
@@ -164,6 +174,12 @@ export function GerenciarUsuarios() {
       </CardContent>
 
       <AlterarSenhaModal open={modalOpen} setOpen={setModalOpen} user={selectedUser} />
+      <EditarUsuarioModal
+        open={editModalOpen}
+        setOpen={setEditModalOpen}
+        user={selectedUser}
+        onSuccess={() => loadUsers(debouncedSearch)}
+      />
       <NovoUsuarioModal
         open={novoModalOpen}
         setOpen={setNovoModalOpen}

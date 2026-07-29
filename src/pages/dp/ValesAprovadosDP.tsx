@@ -560,6 +560,7 @@ export default function ValesAprovadosDP() {
                     <TableCell className="pl-6">
                       <div className="flex flex-col">
                         <span className="font-medium inline-flex items-center gap-1">
+                          {p.chamado_titulo}
                           {p.vale_unificado && (
                             <Tooltip>
                               <TooltipTrigger asChild>
@@ -578,7 +579,6 @@ export default function ValesAprovadosDP() {
                               </TooltipContent>
                             </Tooltip>
                           )}
-                          {p.chamado_titulo}
                         </span>
                       </div>
                     </TableCell>

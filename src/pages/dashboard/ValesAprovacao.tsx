@@ -13,25 +13,43 @@ import {
 } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table'
-import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Checkbox } from '@/components/ui/checkbox'
-import { Check, X, FileText, Loader2, AlertCircle, FileSignature } from 'lucide-react'
+import { Loader2, AlertCircle } from 'lucide-react'
 import { toast } from 'sonner'
-import { format } from 'date-fns'
-import { Link } from 'react-router-dom'
+import { ValesAprovacaoTable } from '@/components/vales-aprovacao-table'
+
+const CLAUDINEI_KEYWORDS = [
+  'vale',
+  'quitação',
+  'quitacao',
+  'recibo',
+  'nf',
+  'nota fiscal',
+  'boleto',
+  'escaneado',
+  'autorização',
+  'autorizacao',
+  'desconto',
+]
+
+const hasApprovalTrigger = (anexos: any[]) =>
+  anexos.some((a) => {
+    const nome = (a.nome_arquivo || '').toLowerCase()
+    return CLAUDINEI_KEYWORDS.some((kw) => nome.includes(kw))
+  })
+
+const countAprovacoes = (aprovacoes: any) =>
+  Array.isArray(aprovacoes)
+    ? aprovacoes.filter((a: any) => a.acao === 'aprovado' || !a.acao).length
+    : 0
 
 export default function ValesAprovacao() {
   const { user, profile } = useAuth()
-  const [chamados, setChamados] = useState<any[]>([])
+  const [pendingChamados, setPendingChamados] = useState<any[]>([])
+  const [approvedChamados, setApprovedChamados] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
+  const [activeTab, setActiveTab] = useState<string>('pendentes')
   const [isApproveOpen, setIsApproveOpen] = useState(false)
   const [selectedChamado, setSelectedChamado] = useState<any>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
@@ -56,7 +74,7 @@ export default function ValesAprovacao() {
       .eq('status', 'finalizado')
       .or('status_aprovacao_alex.eq.aprovado,status_aprovacao_claudinei.eq.aprovado')
       .or(
-        'status_aprovacao.is.null,status_aprovacao.eq.aprovacao_parcial,status_aprovacao.eq.pendente',
+        'status_aprovacao.is.null,status_aprovacao.eq.aprovacao_parcial,status_aprovacao.eq.pendente,status_aprovacao.eq.aprovado',
       )
       .order('atualizado_em', { ascending: false })
 
@@ -69,28 +87,20 @@ export default function ValesAprovacao() {
     const filtered =
       data?.filter((c: any) => {
         const anexos = c.anexos_chamado_interno || []
-        const claudineiKeywords = [
-          'vale',
-          'quitação',
-          'quitacao',
-          'recibo',
-          'nf',
-          'nota fiscal',
-          'boleto',
-          'escaneado',
-          'autorização',
-          'autorizacao',
-          'desconto',
-        ]
-        const hasApprovalTrigger = anexos.some((a: any) => {
-          const nome = (a.nome_arquivo || '').toLowerCase()
-          return claudineiKeywords.some((kw) => nome.includes(kw))
-        })
-
-        return hasApprovalTrigger
+        return hasApprovalTrigger(anexos)
       }) || []
 
-    setChamados(filtered)
+    const pending = filtered.filter((c: any) => {
+      const count = countAprovacoes(c.aprovacoes_diretoria)
+      return count < 2 || c.status_aprovacao !== 'aprovado'
+    })
+
+    const approved = filtered.filter(
+      (c: any) => countAprovacoes(c.aprovacoes_diretoria) >= 2 && c.status_aprovacao === 'aprovado',
+    )
+
+    setPendingChamados(pending)
+    setApprovedChamados(approved)
     setLoading(false)
   }
 
@@ -452,66 +462,6 @@ export default function ValesAprovacao() {
     }
   }
 
-  const getDriverData = (chamado: any) => {
-    const espelhoData = Array.isArray(chamado.formularios_espelho_danos)
-      ? chamado.formularios_espelho_danos[0]
-      : chamado.formularios_espelho_danos
-
-    return {
-      registro: espelhoData?.registro_motorista || chamado.registro_motorista || '-',
-      nome: espelhoData?.nome_motorista || chamado.nome_motorista || '-',
-    }
-  }
-
-  const getOrcamentoUrl = (chamado: any) => {
-    if (!chamado.documentos || chamado.documentos.length === 0) return null
-    const orcamentos = chamado.documentos.filter(
-      (d: any) => d.tipo_documento === 'orcamento' || d.orcamento_url,
-    )
-    if (orcamentos.length > 0) {
-      return orcamentos[0].orcamento_url || orcamentos[0].arquivo_url
-    }
-    return null
-  }
-
-  const RELEVANT_ATTACHMENT_KEYWORDS = [
-    'vale',
-    'autorização',
-    'autorizacao',
-    'escaneado',
-    'nf',
-    'nota fiscal',
-    'boleto',
-    'recibo',
-    'quitação',
-    'quitacao',
-  ]
-
-  const isRelevantAttachment = (anexo: any) => {
-    const nome = (anexo.nome_arquivo || '').toLowerCase()
-    return RELEVANT_ATTACHMENT_KEYWORDS.some((kw) => nome.includes(kw))
-  }
-
-  const isAutorizacaoAnexo = isRelevantAttachment
-
-  const normalizeAttachmentLabel = (nomeArquivo: string): string => {
-    const nome = (nomeArquivo || '').toLowerCase()
-    if (nome.includes('nf') || nome.includes('nota fiscal')) return 'Nota Fiscal'
-    if (nome.includes('boleto')) return 'Boleto'
-    if (nome.includes('recibo') || nome.includes('quitação') || nome.includes('quitacao'))
-      return 'Recibo de Quitação'
-    return 'Autorização de Desconto'
-  }
-
-  const getAutorizacaoUrl = (chamado: any) => {
-    if (!chamado.anexos_chamado_interno || chamado.anexos_chamado_interno.length === 0) return null
-    const autorizacoes = chamado.anexos_chamado_interno.filter((a: any) => isAutorizacaoAnexo(a))
-    if (autorizacoes.length > 0) {
-      return autorizacoes[0].arquivo_url
-    }
-    return null
-  }
-
   if (profile?.departamento !== 'Diretoria') {
     return (
       <div className="flex flex-col items-center justify-center h-full p-8 text-center">
@@ -531,201 +481,62 @@ export default function ValesAprovacao() {
         </div>
       </div>
 
-      <Card>
-        <CardContent className="p-0">
-          {loading ? (
-            <div className="flex justify-center items-center p-8">
-              <Loader2 className="h-8 w-8 animate-spin text-primary" />
-            </div>
-          ) : chamados.length === 0 ? (
-            <div className="flex flex-col items-center justify-center p-12 text-center">
-              <Check className="h-12 w-12 text-muted-foreground/50 mb-4" />
-              <p className="text-lg font-medium text-muted-foreground">
-                Nenhum vale pendente de aprovação
-              </p>
-            </div>
-          ) : (
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Chamado</TableHead>
-                    <TableHead>Registro do Motorista</TableHead>
-                    <TableHead>Nome do Motorista</TableHead>
-                    <TableHead>Data da Ocorrência</TableHead>
-                    <TableHead>Aprovações</TableHead>
-                    <TableHead>Documentos</TableHead>
-                    <TableHead className="text-right">Ações</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {chamados.map((chamado) => {
-                    const driver = getDriverData(chamado)
-                    const orcamentoUrl = getOrcamentoUrl(chamado)
-                    const aprovacoes = Array.isArray(chamado.aprovacoes_diretoria)
-                      ? chamado.aprovacoes_diretoria
-                      : []
-                    return (
-                      <TableRow key={chamado.id}>
-                        <TableCell>
-                          <div className="flex flex-col">
-                            <Link
-                              to={`/dashboard/chamados/${chamado.id}`}
-                              className="font-medium text-primary hover:underline transition-colors"
-                            >
-                              {chamado.titulo || '-'}
-                            </Link>
-                          </div>
-                        </TableCell>
-                        <TableCell>{driver.registro}</TableCell>
-                        <TableCell>{driver.nome}</TableCell>
-                        <TableCell>
-                          {chamado.data_ocorrencia
-                            ? format(new Date(chamado.data_ocorrencia + 'T12:00:00'), 'dd/MM/yyyy')
-                            : '-'}
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex items-center gap-2">
-                            <div
-                              className={`h-2 w-2 rounded-full ${aprovacoes.filter((a: any) => a.acao === 'aprovado' || !a.acao).length > 0 ? 'bg-green-500' : 'bg-yellow-500'}`}
-                            />
-                            <span>
-                              {
-                                aprovacoes.filter((a: any) => a.acao === 'aprovado' || !a.acao)
-                                  .length
-                              }
-                              /2 Aprov.
-                            </span>
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex flex-col gap-1">
-                            {orcamentoUrl && (
-                              <a
-                                href={orcamentoUrl}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="flex items-center gap-1.5 text-xs text-primary hover:underline"
-                              >
-                                <FileText className="h-3 w-3 shrink-0" />
-                                <span className="truncate max-w-[150px]">Orçamento</span>
-                              </a>
-                            )}
-                            {(chamado.anexos_chamado_interno || [])
-                              .filter((anexo: any) => {
-                                const nome = (anexo.nome_arquivo || '').toLowerCase()
-                                return [
-                                  'vale',
-                                  'autorização',
-                                  'autorizacao',
-                                  'escaneado',
-                                  'nf',
-                                  'nota fiscal',
-                                  'boleto',
-                                  'recibo',
-                                  'quitação',
-                                  'quitacao',
-                                ].some((kw) => nome.includes(kw))
-                              })
-                              .map((anexo: any) => (
-                                <a
-                                  key={anexo.id}
-                                  href={anexo.arquivo_url}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  className="flex items-center gap-1.5 text-xs text-primary hover:underline"
-                                >
-                                  <FileSignature className="h-3 w-3 shrink-0" />
-                                  <span className="truncate max-w-[150px]">
-                                    {normalizeAttachmentLabel(anexo.nome_arquivo)}
-                                  </span>
-                                </a>
-                              ))}
-                            {(!chamado.anexos_chamado_interno ||
-                              (chamado.anexos_chamado_interno || []).filter((anexo: any) => {
-                                const nome = (anexo.nome_arquivo || '').toLowerCase()
-                                return [
-                                  'vale',
-                                  'autorização',
-                                  'autorizacao',
-                                  'escaneado',
-                                  'nf',
-                                  'nota fiscal',
-                                  'boleto',
-                                  'recibo',
-                                  'quitação',
-                                  'quitacao',
-                                ].some((kw) => nome.includes(kw))
-                              }).length === 0) &&
-                              !orcamentoUrl && (
-                                <span className="text-xs text-muted-foreground">Nenhum anexo</span>
-                              )}
-                          </div>
-                        </TableCell>
-                        <TableCell className="text-right">
-                          {(() => {
-                            const userAprovacao = aprovacoes.find(
-                              (a: any) => a.usuario_id === user!.id,
-                            )
-                            if (userAprovacao) {
-                              const isAprovado =
-                                userAprovacao.acao === 'aprovado' || !userAprovacao.acao
-                              return (
-                                <div className="flex justify-end items-center h-full min-h-[40px]">
-                                  <span
-                                    className={`text-sm font-medium px-2 py-1 rounded-md ${isAprovado ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'}`}
-                                  >
-                                    {isAprovado ? 'Aprovado por você' : 'Recusado por você'}
-                                  </span>
-                                </div>
-                              )
-                            }
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+        <TabsList>
+          <TabsTrigger value="pendentes">
+            Pendentes de Aprovação
+            <span className="ml-2 text-xs rounded-full bg-muted px-2 py-0.5">
+              {pendingChamados.length}
+            </span>
+          </TabsTrigger>
+          <TabsTrigger value="aprovados">
+            Aprovados (2/2)
+            <span className="ml-2 text-xs rounded-full bg-muted px-2 py-0.5">
+              {approvedChamados.length}
+            </span>
+          </TabsTrigger>
+        </TabsList>
 
-                            return (
-                              <div className="flex justify-end gap-2">
-                                <Tooltip>
-                                  <TooltipTrigger asChild>
-                                    <Button
-                                      variant="outline"
-                                      size="icon"
-                                      className="text-green-600 border-green-200 hover:bg-green-50 hover:text-green-700"
-                                      onClick={() => handleApproveClick(chamado)}
-                                    >
-                                      <Check className="h-4 w-4" />
-                                    </Button>
-                                  </TooltipTrigger>
-                                  <TooltipContent>
-                                    <p>Aprovar</p>
-                                  </TooltipContent>
-                                </Tooltip>
-                                <Tooltip>
-                                  <TooltipTrigger asChild>
-                                    <Button
-                                      variant="outline"
-                                      size="icon"
-                                      className="text-red-600 border-red-200 hover:bg-red-50 hover:text-red-700"
-                                      onClick={() => handleRejectClick(chamado)}
-                                    >
-                                      <X className="h-4 w-4" />
-                                    </Button>
-                                  </TooltipTrigger>
-                                  <TooltipContent>
-                                    <p>Recusar</p>
-                                  </TooltipContent>
-                                </Tooltip>
-                              </div>
-                            )
-                          })()}
-                        </TableCell>
-                      </TableRow>
-                    )
-                  })}
-                </TableBody>
-              </Table>
-            </div>
-          )}
-        </CardContent>
-      </Card>
+        <TabsContent value="pendentes">
+          <Card>
+            <CardContent className="p-0">
+              {loading ? (
+                <div className="flex justify-center items-center p-8">
+                  <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                </div>
+              ) : (
+                <ValesAprovacaoTable
+                  chamados={pendingChamados}
+                  userId={user!.id}
+                  showActions
+                  onApproveClick={handleApproveClick}
+                  onRejectClick={handleRejectClick}
+                />
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="aprovados">
+          <Card>
+            <CardContent className="p-0">
+              {loading ? (
+                <div className="flex justify-center items-center p-8">
+                  <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                </div>
+              ) : (
+                <ValesAprovacaoTable
+                  chamados={approvedChamados}
+                  userId={user!.id}
+                  showActions={false}
+                  onApproveClick={handleApproveClick}
+                  onRejectClick={handleRejectClick}
+                />
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
 
       <Dialog open={isApproveOpen} onOpenChange={setIsApproveOpen}>
         <DialogContent>

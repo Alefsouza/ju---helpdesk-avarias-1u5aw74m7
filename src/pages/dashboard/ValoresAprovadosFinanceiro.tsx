@@ -15,6 +15,13 @@ import { toast } from 'sonner'
 import { format } from 'date-fns'
 import { Link } from 'react-router-dom'
 
+const FINANCEIRO_KEYWORDS = ['recibo', 'quitação', 'quitacao']
+
+const hasReciboInNome = (nomeArquivo: string) => {
+  const nome = (nomeArquivo || '').toLowerCase()
+  return FINANCEIRO_KEYWORDS.some((kw) => nome.includes(kw))
+}
+
 export default function ValoresAprovadosFinanceiro() {
   const { profile } = useAuth()
   const [chamados, setChamados] = useState<any[]>([])
@@ -25,11 +32,13 @@ export default function ValoresAprovadosFinanceiro() {
     const { data, error } = await supabase
       .from('chamados')
       .select(
-        `id, titulo, status_interno, criado_em, registro_motorista, nome_motorista, data_ocorrencia, numero_os,
+        `id, titulo, status_interno, status_aprovacao_alex, status_aprovacao_claudinei, criado_em, registro_motorista, nome_motorista, data_ocorrencia, numero_os,
          documentos ( id, nome_arquivo, arquivo_url, tipo_documento, valor_orcamento ),
          anexos_chamado_interno ( id, nome_arquivo, arquivo_url, criado_em )`,
       )
-      .eq('status_aprovacao', 'aprovado')
+      .or(
+        'status_aprovacao.eq.aprovado,and(status_aprovacao_alex.eq.aprovado,status_aprovacao_claudinei.eq.aprovado)',
+      )
       .order('atualizado_em', { ascending: false })
 
     if (error) {
@@ -38,18 +47,19 @@ export default function ValoresAprovadosFinanceiro() {
       return
     }
 
-    const FINANCEIRO_KEYWORDS = ['recibo', 'quitação', 'quitacao']
     const filtered =
       data?.filter((c: any) => {
         const docs = c.documentos || []
-        const hasRecibo = docs.some((d: any) => d.tipo_documento === 'Recibo')
+        const hasReciboDoc = docs.some(
+          (d: any) => d.tipo_documento === 'Recibo' || hasReciboInNome(d.nome_arquivo),
+        )
         const isContabilApproved = c.status_interno === 'aprovado_contabil'
         const anexos = c.anexos_chamado_interno || []
-        const hasReciboAnexo = anexos.some((a: any) => {
-          const nome = (a.nome_arquivo || '').toLowerCase()
-          return FINANCEIRO_KEYWORDS.some((kw) => nome.includes(kw))
-        })
-        return hasRecibo || isContabilApproved || hasReciboAnexo
+        const hasReciboAnexo = anexos.some((a: any) => hasReciboInNome(a.nome_arquivo))
+        const hasDoubleApproval =
+          c.status_aprovacao_alex === 'aprovado' && c.status_aprovacao_claudinei === 'aprovado'
+        const hasRecibo = hasReciboDoc || hasReciboAnexo
+        return isContabilApproved || hasRecibo || (hasDoubleApproval && hasRecibo)
       }) || []
 
     setChamados(filtered)
@@ -109,13 +119,13 @@ export default function ValoresAprovadosFinanceiro() {
                 <TableBody>
                   {chamados.map((chamado) => {
                     const docs = chamado.documentos || []
-                    const recibo = docs.find((d: any) => d.tipo_documento === 'Recibo')
+                    const reciboDocs = docs.filter(
+                      (d: any) => d.tipo_documento === 'Recibo' || hasReciboInNome(d.nome_arquivo),
+                    )
                     const valorDoc = docs.find((d: any) => d.valor_orcamento)
-                    const FINANCEIRO_KW = ['recibo', 'quitação', 'quitacao']
-                    const reciboAnexos = (chamado.anexos_chamado_interno || []).filter((a: any) => {
-                      const nome = (a.nome_arquivo || '').toLowerCase()
-                      return FINANCEIRO_KW.some((kw) => nome.includes(kw))
-                    })
+                    const reciboAnexos = (chamado.anexos_chamado_interno || []).filter((a: any) =>
+                      hasReciboInNome(a.nome_arquivo),
+                    )
                     return (
                       <TableRow key={chamado.id}>
                         <TableCell>
@@ -141,19 +151,18 @@ export default function ValoresAprovadosFinanceiro() {
                         </TableCell>
                         <TableCell>
                           <div className="flex flex-col gap-1">
-                            {recibo && (
+                            {reciboDocs.map((doc: any) => (
                               <a
-                                href={recibo.arquivo_url}
+                                key={doc.id}
+                                href={doc.arquivo_url}
                                 target="_blank"
                                 rel="noopener noreferrer"
                                 className="flex items-center gap-1.5 text-xs text-primary hover:underline"
                               >
                                 <FileText className="h-4 w-4 shrink-0" />
-                                <span className="truncate max-w-[150px]">
-                                  {recibo.nome_arquivo}
-                                </span>
+                                <span className="truncate max-w-[150px]">{doc.nome_arquivo}</span>
                               </a>
-                            )}
+                            ))}
                             {reciboAnexos.map((anexo: any) => (
                               <a
                                 key={anexo.id}
@@ -166,7 +175,7 @@ export default function ValoresAprovadosFinanceiro() {
                                 <span className="truncate max-w-[150px]">{anexo.nome_arquivo}</span>
                               </a>
                             ))}
-                            {!recibo && reciboAnexos.length === 0 && (
+                            {reciboDocs.length === 0 && reciboAnexos.length === 0 && (
                               <span className="text-muted-foreground text-sm">
                                 Contábil aprovado
                               </span>

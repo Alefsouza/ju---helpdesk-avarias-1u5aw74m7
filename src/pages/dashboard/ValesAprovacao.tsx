@@ -227,9 +227,26 @@ export default function ValesAprovacao() {
               .eq('chamado_id', selectedChamado.id)
 
             if (!existingParcelas || existingParcelas.length === 0) {
-              // Apply the same discount logic used by the gerar-pdf edge function
-              // When desconto_aplicado is true, a 10% discount is applied to the original value
-              const finalValue = hasDiscount ? Math.trunc(totalValue * 0.9 * 100) / 100 : totalValue
+              // The valor_orcamento from solicitacoes_parcelamento already stores the
+              // discounted value when desconto_aplicado is true (set at solicitation time).
+              // Use valor_orcamento directly as the base — do NOT apply the discount again.
+              const finalValue = totalValue
+
+              // Persist desconto_aplicado BEFORE creating parcelas_vales rows
+              // so the database always reflects the discount state used in the signed PDF.
+              if (
+                selectedChamado.solicitacoes_parcelamento &&
+                selectedChamado.solicitacoes_parcelamento.length > 0
+              ) {
+                await supabase
+                  .from('solicitacoes_parcelamento')
+                  .update({
+                    status: 'aprovado',
+                    desconto_aplicado: hasDiscount,
+                    atualizado_em: new Date().toISOString(),
+                  })
+                  .eq('id', selectedChamado.solicitacoes_parcelamento[0].id)
+              }
 
               const today = new Date()
               const baseDateStr = new Date(today.getFullYear(), today.getMonth(), 1)
@@ -260,16 +277,6 @@ export default function ValesAprovacao() {
                   .from('parcelas_vales')
                   .insert(parcelas)
                 if (parcelasError) console.error('Error creating parcelas:', parcelasError)
-
-                if (
-                  selectedChamado.solicitacoes_parcelamento &&
-                  selectedChamado.solicitacoes_parcelamento.length > 0
-                ) {
-                  await supabase
-                    .from('solicitacoes_parcelamento')
-                    .update({ status: 'aprovado', atualizado_em: new Date().toISOString() })
-                    .eq('id', selectedChamado.solicitacoes_parcelamento[0].id)
-                }
               }
             }
           }

@@ -229,7 +229,9 @@ export default function ValesAprovadosDP() {
             nomeArq.includes('autorização') ||
             nomeArq.includes('autorizacao') ||
             nomeArq.includes('desconto') ||
-            nomeArq.includes('parcelamento')
+            nomeArq.includes('parcelamento') ||
+            nomeArq.includes('vale') ||
+            nomeArq.includes('escaneado')
           )
         })
         if (autorizacoes.length > 0) {

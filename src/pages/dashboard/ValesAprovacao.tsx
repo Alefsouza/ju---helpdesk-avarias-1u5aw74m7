@@ -54,7 +54,9 @@ export default function ValesAprovacao() {
       `)
       .eq('status', 'finalizado')
       .or('status_aprovacao_alex.eq.aprovado,status_aprovacao_claudinei.eq.aprovado')
-      .or('status_aprovacao.is.null,status_aprovacao.eq.aprovacao_parcial')
+      .or(
+        'status_aprovacao.is.null,status_aprovacao.eq.aprovacao_parcial,status_aprovacao.eq.pendente',
+      )
       .order('atualizado_em', { ascending: false })
 
     if (error) {
@@ -275,22 +277,39 @@ export default function ValesAprovacao() {
       }
 
       if (isFinished && isFullyApproved) {
-        const docsAprovados = selectedChamado.documentos || []
-        const hasReciboDoc = docsAprovados.some((d: any) => d.tipo_documento === 'Recibo')
-        const hasNfBoletoDoc = docsAprovados.some(
-          (d: any) =>
-            d.tipo_documento === 'NF' ||
-            d.tipo_documento === 'Nota Fiscal' ||
-            d.tipo_documento === 'Boleto',
-        )
+        const anexosInternos = selectedChamado.anexos_chamado_interno || []
+
+        const hasDPKeyword = anexosInternos.some((a: any) => {
+          const nome = (a.nome_arquivo || '').toLowerCase()
+          return ['vale', 'escaneado', 'autorização', 'autorizacao'].some((kw) => nome.includes(kw))
+        })
+        const hasFinanceiroKeyword = anexosInternos.some((a: any) => {
+          const nome = (a.nome_arquivo || '').toLowerCase()
+          return ['recibo', 'quitação', 'quitacao'].some((kw) => nome.includes(kw))
+        })
+        const hasContabilKeyword = anexosInternos.some((a: any) => {
+          const nome = (a.nome_arquivo || '').toLowerCase()
+          return ['boleto', 'nf', 'nota fiscal'].some((kw) => nome.includes(kw))
+        })
+
+        const alreadyRouted = [
+          'DP',
+          'aguardando_financeiro',
+          'aguardando_contabil',
+          'aguardando_contabil_e_financeiro',
+        ].includes(selectedChamado.status_interno)
 
         let routingStatus: string | null = null
-        if (hasReciboDoc && hasNfBoletoDoc) {
-          routingStatus = 'aguardando_contabil_e_financeiro'
-        } else if (hasNfBoletoDoc) {
-          routingStatus = 'aguardando_contabil'
-        } else if (hasReciboDoc) {
-          routingStatus = 'aguardando_financeiro'
+        if (!alreadyRouted) {
+          if (hasDPKeyword) {
+            routingStatus = 'DP'
+          } else if (hasFinanceiroKeyword && hasContabilKeyword) {
+            routingStatus = 'aguardando_contabil_e_financeiro'
+          } else if (hasContabilKeyword) {
+            routingStatus = 'aguardando_contabil'
+          } else if (hasFinanceiroKeyword) {
+            routingStatus = 'aguardando_financeiro'
+          }
         }
 
         if (routingStatus) {
@@ -306,7 +325,7 @@ export default function ValesAprovacao() {
             chamado_id: selectedChamado.id,
             usuario_id: user!.id,
             acao: 'Roteamento Documentos',
-            detalhes: `Chamado roteado para ${routingStatus.replace(/_/g, ' ')} baseado nos tipos de documentos.`,
+            detalhes: `Chamado roteado para ${routingStatus.replace(/_/g, ' ')} baseado nos anexos internos.`,
           })
         }
       }
@@ -454,17 +473,38 @@ export default function ValesAprovacao() {
     return null
   }
 
+  const RELEVANT_ATTACHMENT_KEYWORDS = [
+    'vale',
+    'autorização',
+    'autorizacao',
+    'escaneado',
+    'nf',
+    'nota fiscal',
+    'boleto',
+    'recibo',
+    'quitação',
+    'quitacao',
+  ]
+
+  const isRelevantAttachment = (anexo: any) => {
+    const nome = (anexo.nome_arquivo || '').toLowerCase()
+    return RELEVANT_ATTACHMENT_KEYWORDS.some((kw) => nome.includes(kw))
+  }
+
+  const isAutorizacaoAnexo = isRelevantAttachment
+
+  const normalizeAttachmentLabel = (nomeArquivo: string): string => {
+    const nome = (nomeArquivo || '').toLowerCase()
+    if (nome.includes('nf') || nome.includes('nota fiscal')) return 'Nota Fiscal'
+    if (nome.includes('boleto')) return 'Boleto'
+    if (nome.includes('recibo') || nome.includes('quitação') || nome.includes('quitacao'))
+      return 'Recibo de Quitação'
+    return 'Autorização de Desconto'
+  }
+
   const getAutorizacaoUrl = (chamado: any) => {
     if (!chamado.anexos_chamado_interno || chamado.anexos_chamado_interno.length === 0) return null
-    const autorizacoes = chamado.anexos_chamado_interno.filter((a: any) => {
-      const nome = (a.nome_arquivo || '').toLowerCase()
-      return (
-        nome.includes('autorização') ||
-        nome.includes('autorizacao') ||
-        nome.includes('desconto') ||
-        nome.includes('escaneado')
-      )
-    })
+    const autorizacoes = chamado.anexos_chamado_interno.filter((a: any) => isAutorizacaoAnexo(a))
     if (autorizacoes.length > 0) {
       return autorizacoes[0].arquivo_url
     }
@@ -521,7 +561,6 @@ export default function ValesAprovacao() {
                   {chamados.map((chamado) => {
                     const driver = getDriverData(chamado)
                     const orcamentoUrl = getOrcamentoUrl(chamado)
-                    const autorizacaoUrl = getAutorizacaoUrl(chamado)
                     const aprovacoes = Array.isArray(chamado.aprovacoes_diretoria)
                       ? chamado.aprovacoes_diretoria
                       : []
@@ -559,64 +598,67 @@ export default function ValesAprovacao() {
                           </div>
                         </TableCell>
                         <TableCell>
-                          <div className="flex gap-2">
-                            {orcamentoUrl ? (
-                              <Tooltip>
-                                <TooltipTrigger asChild>
-                                  <a
-                                    href={orcamentoUrl}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    className="text-primary hover:text-primary/80"
-                                  >
-                                    <FileText className="h-5 w-5" />
-                                  </a>
-                                </TooltipTrigger>
-                                <TooltipContent>
-                                  <p>Ver Orçamento</p>
-                                </TooltipContent>
-                              </Tooltip>
-                            ) : (
-                              <Tooltip>
-                                <TooltipTrigger asChild>
-                                  <div className="text-muted-foreground/30 cursor-not-allowed">
-                                    <FileText className="h-5 w-5" />
-                                  </div>
-                                </TooltipTrigger>
-                                <TooltipContent>
-                                  <p>Orçamento não anexado</p>
-                                </TooltipContent>
-                              </Tooltip>
+                          <div className="flex flex-col gap-1">
+                            {orcamentoUrl && (
+                              <a
+                                href={orcamentoUrl}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="flex items-center gap-1.5 text-xs text-primary hover:underline"
+                              >
+                                <FileText className="h-3 w-3 shrink-0" />
+                                <span className="truncate max-w-[150px]">Orçamento</span>
+                              </a>
                             )}
-
-                            {autorizacaoUrl ? (
-                              <Tooltip>
-                                <TooltipTrigger asChild>
-                                  <a
-                                    href={autorizacaoUrl}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    className="text-primary hover:text-primary/80"
-                                  >
-                                    <FileSignature className="h-5 w-5" />
-                                  </a>
-                                </TooltipTrigger>
-                                <TooltipContent>
-                                  <p>Ver Autorização de Desconto</p>
-                                </TooltipContent>
-                              </Tooltip>
-                            ) : (
-                              <Tooltip>
-                                <TooltipTrigger asChild>
-                                  <div className="text-muted-foreground/30 cursor-not-allowed">
-                                    <FileSignature className="h-5 w-5" />
-                                  </div>
-                                </TooltipTrigger>
-                                <TooltipContent>
-                                  <p>Autorização não anexada</p>
-                                </TooltipContent>
-                              </Tooltip>
-                            )}
+                            {(chamado.anexos_chamado_interno || [])
+                              .filter((anexo: any) => {
+                                const nome = (anexo.nome_arquivo || '').toLowerCase()
+                                return [
+                                  'vale',
+                                  'autorização',
+                                  'autorizacao',
+                                  'escaneado',
+                                  'nf',
+                                  'nota fiscal',
+                                  'boleto',
+                                  'recibo',
+                                  'quitação',
+                                  'quitacao',
+                                ].some((kw) => nome.includes(kw))
+                              })
+                              .map((anexo: any) => (
+                                <a
+                                  key={anexo.id}
+                                  href={anexo.arquivo_url}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="flex items-center gap-1.5 text-xs text-primary hover:underline"
+                                >
+                                  <FileSignature className="h-3 w-3 shrink-0" />
+                                  <span className="truncate max-w-[150px]">
+                                    {normalizeAttachmentLabel(anexo.nome_arquivo)}
+                                  </span>
+                                </a>
+                              ))}
+                            {(!chamado.anexos_chamado_interno ||
+                              (chamado.anexos_chamado_interno || []).filter((anexo: any) => {
+                                const nome = (anexo.nome_arquivo || '').toLowerCase()
+                                return [
+                                  'vale',
+                                  'autorização',
+                                  'autorizacao',
+                                  'escaneado',
+                                  'nf',
+                                  'nota fiscal',
+                                  'boleto',
+                                  'recibo',
+                                  'quitação',
+                                  'quitacao',
+                                ].some((kw) => nome.includes(kw))
+                              }).length === 0) &&
+                              !orcamentoUrl && (
+                                <span className="text-xs text-muted-foreground">Nenhum anexo</span>
+                              )}
                           </div>
                         </TableCell>
                         <TableCell className="text-right">

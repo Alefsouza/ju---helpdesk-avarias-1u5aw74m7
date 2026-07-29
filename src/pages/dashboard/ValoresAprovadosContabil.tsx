@@ -40,7 +40,8 @@ export default function ValoresAprovadosContabil() {
       .from('chamados')
       .select(
         `id, titulo, status_interno, criado_em, registro_motorista, nome_motorista, data_ocorrencia, numero_os,
-         documentos ( id, nome_arquivo, arquivo_url, tipo_documento, valor_orcamento )`,
+         documentos ( id, nome_arquivo, arquivo_url, tipo_documento, valor_orcamento ),
+         anexos_chamado_interno ( id, nome_arquivo, arquivo_url, criado_em )`,
       )
       .eq('status_aprovacao', 'aprovado')
       .order('atualizado_em', { ascending: false })
@@ -51,10 +52,17 @@ export default function ValoresAprovadosContabil() {
       return
     }
 
+    const CONTABIL_KEYWORDS = ['boleto', 'nf', 'nota fiscal']
     const filtered =
       data?.filter((c: any) => {
         const docs = c.documentos || []
-        return docs.some((d: any) => NF_TYPES.includes(d.tipo_documento))
+        const hasNfDoc = docs.some((d: any) => NF_TYPES.includes(d.tipo_documento))
+        const anexos = c.anexos_chamado_interno || []
+        const hasNfAnexo = anexos.some((a: any) => {
+          const nome = (a.nome_arquivo || '').toLowerCase()
+          return CONTABIL_KEYWORDS.some((kw) => nome.includes(kw))
+        })
+        return hasNfDoc || hasNfAnexo
       }) || []
 
     setChamados(filtered)
@@ -145,6 +153,11 @@ export default function ValoresAprovadosContabil() {
                     const nfDocs = docs.filter((d: any) => NF_TYPES.includes(d.tipo_documento))
                     const isApproved = chamado.status_interno === 'aprovado_contabil'
                     const valorDoc = docs.find((d: any) => d.valor_orcamento)
+                    const CONTABIL_KW = ['boleto', 'nf', 'nota fiscal']
+                    const nfAnexos = (chamado.anexos_chamado_interno || []).filter((a: any) => {
+                      const nome = (a.nome_arquivo || '').toLowerCase()
+                      return CONTABIL_KW.some((kw) => nome.includes(kw))
+                    })
                     return (
                       <TableRow key={chamado.id}>
                         <TableCell>
@@ -169,20 +182,36 @@ export default function ValoresAprovadosContabil() {
                             : '-'}
                         </TableCell>
                         <TableCell>
-                          <div className="flex gap-2">
+                          <div className="flex flex-col gap-1">
                             {nfDocs.map((doc: any) => (
                               <a
                                 key={doc.id}
                                 href={doc.arquivo_url}
                                 target="_blank"
                                 rel="noopener noreferrer"
-                                className="text-primary hover:text-primary/80"
+                                className="flex items-center gap-1.5 text-xs text-primary hover:underline"
                               >
-                                <FileText className="h-5 w-5" />
+                                <FileText className="h-4 w-4 shrink-0" />
+                                <span className="truncate max-w-[150px]">{doc.nome_arquivo}</span>
                               </a>
                             ))}
+                            {nfAnexos.map((anexo: any) => (
+                              <a
+                                key={anexo.id}
+                                href={anexo.arquivo_url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="flex items-center gap-1.5 text-xs text-primary hover:underline"
+                              >
+                                <FileText className="h-4 w-4 shrink-0" />
+                                <span className="truncate max-w-[150px]">{anexo.nome_arquivo}</span>
+                              </a>
+                            ))}
+                            {nfDocs.length === 0 && nfAnexos.length === 0 && (
+                              <span className="text-muted-foreground text-sm">-</span>
+                            )}
                           </div>
-                        </TableCell>
+                        </TableCell>{' '}
                         <TableCell>
                           {valorDoc?.valor_orcamento
                             ? `R$ ${Number(valorDoc.valor_orcamento).toFixed(2)}`

@@ -891,6 +891,10 @@ export type Database = {
         Args: { p_id: string }
         Returns: undefined
       }
+      recusar_chamado_claudinei: {
+        Args: { p_chamado_id: string; p_motivo: string; p_usuario_id: string }
+        Returns: undefined
+      }
       registrar_anexo_interno_publico: {
         Args: {
           p_arquivo_url: string

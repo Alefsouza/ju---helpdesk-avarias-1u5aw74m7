@@ -48,6 +48,7 @@ export default function AutorizacaoValesClaudinei() {
     'escaneado',
     'autorizacao',
     'autorização',
+    'boleto',
   ]
 
   const buildAnexosOrFilter = () =>
@@ -100,6 +101,7 @@ export default function AutorizacaoValesClaudinei() {
           status_aprovacao: 'pendente',
           aprovacoes_diretoria: [],
           status: 'finalizado',
+          status_interno: 'Aprovação Diretoria',
           atualizado_em: new Date().toISOString(),
         })
         .eq('id', selectedChamado.id)
@@ -138,23 +140,13 @@ export default function AutorizacaoValesClaudinei() {
     setIsSubmitting(true)
 
     try {
-      const { error } = await supabase
-        .from('chamados')
-        .update({
-          status_aprovacao_claudinei: 'recusado',
-          status_interno: 'recusado_claudinei',
-          atualizado_em: new Date().toISOString(),
-        })
-        .eq('id', selectedChamado.id)
+      const { error } = await supabase.rpc('recusar_chamado_claudinei', {
+        p_chamado_id: selectedChamado.id,
+        p_usuario_id: user!.id,
+        p_motivo: rejectReason.trim(),
+      })
 
       if (error) throw error
-
-      await supabase.from('historico_chamado').insert({
-        chamado_id: selectedChamado.id,
-        usuario_id: user!.id,
-        acao: 'reaberto',
-        detalhes: `Chamado recusado por Claudinei. Motivo: ${rejectReason.trim()}`,
-      })
 
       toast.success('Chamado recusado e retornado para o Jurídico!')
       setIsRejectOpen(false)

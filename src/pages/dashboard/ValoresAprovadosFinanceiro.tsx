@@ -26,7 +26,8 @@ export default function ValoresAprovadosFinanceiro() {
       .from('chamados')
       .select(
         `id, titulo, status_interno, criado_em, registro_motorista, nome_motorista, data_ocorrencia, numero_os,
-         documentos ( id, nome_arquivo, arquivo_url, tipo_documento, valor_orcamento )`,
+         documentos ( id, nome_arquivo, arquivo_url, tipo_documento, valor_orcamento ),
+         anexos_chamado_interno ( id, nome_arquivo, arquivo_url, criado_em )`,
       )
       .eq('status_aprovacao', 'aprovado')
       .order('atualizado_em', { ascending: false })
@@ -37,12 +38,18 @@ export default function ValoresAprovadosFinanceiro() {
       return
     }
 
+    const FINANCEIRO_KEYWORDS = ['recibo', 'quitação', 'quitacao']
     const filtered =
       data?.filter((c: any) => {
         const docs = c.documentos || []
         const hasRecibo = docs.some((d: any) => d.tipo_documento === 'Recibo')
         const isContabilApproved = c.status_interno === 'aprovado_contabil'
-        return hasRecibo || isContabilApproved
+        const anexos = c.anexos_chamado_interno || []
+        const hasReciboAnexo = anexos.some((a: any) => {
+          const nome = (a.nome_arquivo || '').toLowerCase()
+          return FINANCEIRO_KEYWORDS.some((kw) => nome.includes(kw))
+        })
+        return hasRecibo || isContabilApproved || hasReciboAnexo
       }) || []
 
     setChamados(filtered)
@@ -104,6 +111,11 @@ export default function ValoresAprovadosFinanceiro() {
                     const docs = chamado.documentos || []
                     const recibo = docs.find((d: any) => d.tipo_documento === 'Recibo')
                     const valorDoc = docs.find((d: any) => d.valor_orcamento)
+                    const FINANCEIRO_KW = ['recibo', 'quitação', 'quitacao']
+                    const reciboAnexos = (chamado.anexos_chamado_interno || []).filter((a: any) => {
+                      const nome = (a.nome_arquivo || '').toLowerCase()
+                      return FINANCEIRO_KW.some((kw) => nome.includes(kw))
+                    })
                     return (
                       <TableRow key={chamado.id}>
                         <TableCell>
@@ -128,19 +140,39 @@ export default function ValoresAprovadosFinanceiro() {
                             : '-'}
                         </TableCell>
                         <TableCell>
-                          {recibo ? (
-                            <a
-                              href={recibo.arquivo_url}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="text-primary hover:text-primary/80"
-                            >
-                              <FileText className="h-5 w-5" />
-                            </a>
-                          ) : (
-                            <span className="text-muted-foreground text-sm">Contábil aprovado</span>
-                          )}
-                        </TableCell>
+                          <div className="flex flex-col gap-1">
+                            {recibo && (
+                              <a
+                                href={recibo.arquivo_url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="flex items-center gap-1.5 text-xs text-primary hover:underline"
+                              >
+                                <FileText className="h-4 w-4 shrink-0" />
+                                <span className="truncate max-w-[150px]">
+                                  {recibo.nome_arquivo}
+                                </span>
+                              </a>
+                            )}
+                            {reciboAnexos.map((anexo: any) => (
+                              <a
+                                key={anexo.id}
+                                href={anexo.arquivo_url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="flex items-center gap-1.5 text-xs text-primary hover:underline"
+                              >
+                                <FileText className="h-4 w-4 shrink-0" />
+                                <span className="truncate max-w-[150px]">{anexo.nome_arquivo}</span>
+                              </a>
+                            ))}
+                            {!recibo && reciboAnexos.length === 0 && (
+                              <span className="text-muted-foreground text-sm">
+                                Contábil aprovado
+                              </span>
+                            )}
+                          </div>
+                        </TableCell>{' '}
                         <TableCell>
                           {valorDoc?.valor_orcamento
                             ? `R$ ${Number(valorDoc.valor_orcamento).toFixed(2)}`

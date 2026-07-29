@@ -559,11 +559,24 @@ export default function ValesAprovadosDP() {
                   <TableRow key={p.id}>
                     <TableCell className="pl-6">
                       <div className="flex flex-col">
-                        <span className="font-medium">
+                        <span className="font-medium inline-flex items-center gap-1">
                           {p.vale_unificado && (
-                            <span className="inline-flex items-center mr-1 px-1.5 py-0.5 rounded text-xs font-medium bg-amber-100 text-amber-800">
-                              Unificado
-                            </span>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <span
+                                  tabIndex={0}
+                                  className="inline-flex items-center shrink-0 cursor-help"
+                                >
+                                  <AlertCircle className="h-4 w-4 text-amber-600" />
+                                </span>
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                <p className="max-w-xs">
+                                  Esse é um vale unificado, por favor verificar vale anterior do
+                                  mesmo colaborador.
+                                </p>
+                              </TooltipContent>
+                            </Tooltip>
                           )}
                           {p.chamado_titulo}
                         </span>

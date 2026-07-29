@@ -32,13 +32,11 @@ export default function ValoresAprovadosFinanceiro() {
     const { data, error } = await supabase
       .from('chamados')
       .select(
-        `id, titulo, status_interno, status_aprovacao_alex, status_aprovacao_claudinei, criado_em, registro_motorista, nome_motorista, data_ocorrencia, numero_os,
+        `id, titulo, status_interno, status_aprovacao, status_aprovacao_alex, status_aprovacao_claudinei, criado_em, registro_motorista, nome_motorista, data_ocorrencia, numero_os,
          documentos ( id, nome_arquivo, arquivo_url, tipo_documento, valor_orcamento ),
          anexos_chamado_interno ( id, nome_arquivo, arquivo_url, criado_em )`,
       )
-      .or(
-        'status_aprovacao.eq.aprovado,and(status_aprovacao_alex.eq.aprovado,status_aprovacao_claudinei.eq.aprovado)',
-      )
+      .or('status_aprovacao.eq.aprovado,status_interno.eq.aprovado_contabil')
       .order('atualizado_em', { ascending: false })
 
     if (error) {
@@ -56,10 +54,9 @@ export default function ValoresAprovadosFinanceiro() {
         const isContabilApproved = c.status_interno === 'aprovado_contabil'
         const anexos = c.anexos_chamado_interno || []
         const hasReciboAnexo = anexos.some((a: any) => hasReciboInNome(a.nome_arquivo))
-        const hasDoubleApproval =
-          c.status_aprovacao_alex === 'aprovado' && c.status_aprovacao_claudinei === 'aprovado'
+        const hasDiretoriaApproval = c.status_aprovacao === 'aprovado'
         const hasRecibo = hasReciboDoc || hasReciboAnexo
-        return isContabilApproved || hasRecibo || (hasDoubleApproval && hasRecibo)
+        return isContabilApproved || (hasDiretoriaApproval && hasRecibo)
       }) || []
 
     setChamados(filtered)

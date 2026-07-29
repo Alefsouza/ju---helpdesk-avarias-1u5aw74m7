@@ -227,12 +227,8 @@ export default function ValesAprovacao() {
               .eq('chamado_id', selectedChamado.id)
 
             if (!existingParcelas || existingParcelas.length === 0) {
-              // Compute valor_final: apply 10% discount when desconto_aplicado is true.
-              // This matches the PDF generation logic where valor_final = valor_base * 0.9.
               const valorFinal = hasDiscount ? Math.round(totalValue * 0.9 * 100) / 100 : totalValue
 
-              // Persist desconto_aplicado BEFORE creating parcelas_vales rows
-              // so the database always reflects the discount state used in the signed PDF.
               if (
                 selectedChamado.solicitacoes_parcelamento &&
                 selectedChamado.solicitacoes_parcelamento.length > 0
@@ -247,34 +243,31 @@ export default function ValesAprovacao() {
                   .eq('id', selectedChamado.solicitacoes_parcelamento[0].id)
               }
 
-              // Compute installments using JS Math.round (same logic as PDF generation)
-              // to ensure stored values exactly match the signed Autorização de Desconto.
-              const valorPorParcela = Math.round((valorFinal / parcelsCount) * 100) / 100
-              const today = new Date()
-              const parcelasToInsert = []
-              for (let i = 0; i < parcelsCount; i++) {
-                const parcelaValor =
-                  i === parcelsCount - 1
-                    ? Math.round((valorFinal - valorPorParcela * (parcelsCount - 1)) * 100) / 100
-                    : valorPorParcela
+              const { data: parcelasCalculadas, error: calcError } = await supabase.rpc(
+                'calcular_parcelas_vale',
+                {
+                  p_valor_base: valorFinal,
+                  p_quantidade_parcelas: parcelsCount,
+                  p_data_base: new Date().toISOString().split('T')[0],
+                },
+              )
 
-                const dataReferencia = new Date(today.getFullYear(), today.getMonth() + i, 1)
-                  .toISOString()
-                  .split('T')[0]
-
-                parcelasToInsert.push({
+              if (calcError || !parcelasCalculadas) {
+                console.error('Error calculating parcelas via RPC:', calcError)
+              } else {
+                const parcelasToInsert = parcelasCalculadas.map((p: any) => ({
                   chamado_id: selectedChamado.id,
-                  valor_parcela: parcelaValor,
-                  data_referencia: dataReferencia,
+                  valor_parcela: p.valor_parcela,
+                  data_referencia: p.data_referencia,
                   aprovado_diretoria: true,
                   aprovado_em: new Date().toISOString(),
-                })
-              }
+                }))
 
-              const { error: parcelasError } = await supabase
-                .from('parcelas_vales')
-                .insert(parcelasToInsert)
-              if (parcelasError) console.error('Error creating parcelas:', parcelasError)
+                const { error: parcelasError } = await supabase
+                  .from('parcelas_vales')
+                  .insert(parcelasToInsert)
+                if (parcelasError) console.error('Error creating parcelas:', parcelasError)
+              }
             }
           }
         }

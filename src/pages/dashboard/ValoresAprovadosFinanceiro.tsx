@@ -55,8 +55,8 @@ export default function ValoresAprovadosFinanceiro() {
       return
     }
     setSending(true)
-    const tituloNotif = 'Encaminhamento Jurídico'
-    const mensagemNotif = `O chamado **${notifyChamado.titulo || notifyChamado.numero_os || notifyChamado.id}** foi encaminhado pelo Financeiro para o Jurídico.`
+    const tituloNotif = 'Encaminhamento Financeiro'
+    const mensagemNotif = `O chamado **${notifyChamado.titulo || notifyChamado.numero_os || notifyChamado.id}**, teve sua finalização por parte do Financeiro.`
     const linkNotif = `/chamados/${notifyChamado.id}`
 
     const payload = juridicoUserIds.map((usuario_id) => ({

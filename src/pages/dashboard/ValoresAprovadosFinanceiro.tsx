@@ -47,16 +47,11 @@ export default function ValoresAprovadosFinanceiro() {
 
     const filtered =
       data?.filter((c: any) => {
-        const docs = c.documentos || []
-        const hasReciboDoc = docs.some(
-          (d: any) => d.tipo_documento === 'Recibo' || hasReciboInNome(d.nome_arquivo),
-        )
         const isContabilApproved = c.status_interno === 'aprovado_contabil'
         const anexos = c.anexos_chamado_interno || []
         const hasReciboAnexo = anexos.some((a: any) => hasReciboInNome(a.nome_arquivo))
         const hasDiretoriaApproval = c.status_aprovacao === 'aprovado'
-        const hasRecibo = hasReciboDoc || hasReciboAnexo
-        return isContabilApproved || (hasDiretoriaApproval && hasRecibo)
+        return isContabilApproved || (hasDiretoriaApproval && hasReciboAnexo)
       }) || []
 
     setChamados(filtered)

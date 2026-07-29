@@ -932,6 +932,10 @@ export type Database = {
         }
         Returns: undefined
       }
+      sync_parcelas_from_solicitacao: {
+        Args: { p_chamado_id: string }
+        Returns: undefined
+      }
     }
     Enums: {
       [_ in never]: never

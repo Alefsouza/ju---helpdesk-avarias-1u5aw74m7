@@ -41,7 +41,8 @@ export default function ValoresAprovadosContabil() {
       .select(
         `id, titulo, status_interno, criado_em, registro_motorista, nome_motorista, data_ocorrencia, numero_os,
          documentos ( id, nome_arquivo, arquivo_url, tipo_documento, valor_orcamento ),
-         anexos_chamado_interno ( id, nome_arquivo, arquivo_url, criado_em )`,
+         anexos_chamado_interno ( id, nome_arquivo, arquivo_url, criado_em ),
+         formularios_espelho_danos ( nome_motorista )`,
       )
       .eq('status_aprovacao', 'aprovado')
       .order('atualizado_em', { ascending: false })
@@ -170,7 +171,14 @@ export default function ValoresAprovadosContabil() {
                         </TableCell>
                         <TableCell>
                           <div className="text-sm">
-                            <div>{chamado.nome_motorista || '-'}</div>
+                            <div>
+                              {chamado.nome_motorista ||
+                                (Array.isArray(chamado.formularios_espelho_danos) &&
+                                chamado.formularios_espelho_danos.length > 0
+                                  ? chamado.formularios_espelho_danos[0].nome_motorista
+                                  : chamado.formularios_espelho_danos?.nome_motorista) ||
+                                '-'}
+                            </div>
                             <div className="text-muted-foreground">
                               {chamado.registro_motorista || '-'}
                             </div>

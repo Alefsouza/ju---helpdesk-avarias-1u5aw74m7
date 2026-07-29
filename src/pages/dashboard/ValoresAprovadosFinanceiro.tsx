@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '@/lib/supabase/client'
 import { useAuth } from '@/hooks/use-auth'
+import { useJuridicoTeam } from '@/hooks/use-juridico-team'
 import { Card, CardContent } from '@/components/ui/card'
 import {
   Table,
@@ -10,7 +11,16 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
-import { Loader2, AlertCircle, FileText, Check } from 'lucide-react'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
+import { Button } from '@/components/ui/button'
+import { Loader2, AlertCircle, FileText, Check, Send } from 'lucide-react'
 import { toast } from 'sonner'
 import { format } from 'date-fns'
 import { Link } from 'react-router-dom'
@@ -31,8 +41,44 @@ const hasNfInNome = (nomeArquivo: string) => {
 
 export default function ValoresAprovadosFinanceiro() {
   const { profile } = useAuth()
+  const { juridicoUserIds } = useJuridicoTeam()
   const [chamados, setChamados] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
+  const [notifyChamado, setNotifyChamado] = useState<any | null>(null)
+  const [sending, setSending] = useState(false)
+
+  const handleNotifyJuridico = async () => {
+    if (!notifyChamado) return
+    if (juridicoUserIds.length === 0) {
+      toast.error('Time jurídico não encontrado.')
+      setNotifyChamado(null)
+      return
+    }
+    setSending(true)
+    const tituloNotif = 'Encaminhamento Jurídico'
+    const mensagemNotif = `O chamado **${notifyChamado.titulo || notifyChamado.numero_os || notifyChamado.id}** foi encaminhado pelo Financeiro para o Jurídico.`
+    const linkNotif = `/chamados/${notifyChamado.id}`
+
+    const payload = juridicoUserIds.map((usuario_id) => ({
+      usuario_id,
+      titulo: tituloNotif,
+      mensagem: mensagemNotif,
+      link: linkNotif,
+      lida: false,
+    }))
+
+    const { error } = await supabase.from('notificacoes').insert(payload)
+
+    if (error) {
+      toast.error('Erro ao notificar o Jurídico.')
+      setSending(false)
+      return
+    }
+
+    toast.success('Jurídico notificado com sucesso!')
+    setSending(false)
+    setNotifyChamado(null)
+  }
 
   const fetchChamados = async () => {
     setLoading(true)
@@ -114,6 +160,7 @@ export default function ValoresAprovadosFinanceiro() {
                     <TableHead>Data Ocorrência</TableHead>
                     <TableHead>Documentos</TableHead>
                     <TableHead>Valor</TableHead>
+                    <TableHead className="text-right">Ações</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -123,7 +170,10 @@ export default function ValoresAprovadosFinanceiro() {
                     const displayDocs = isContabilApproved
                       ? docs.filter(
                           (d: any) =>
-                            NF_TYPES.includes(d.tipo_documento) || hasNfInNome(d.nome_arquivo),
+                            d.tipo_documento === 'Recibo' ||
+                            hasReciboInNome(d.nome_arquivo) ||
+                            NF_TYPES.includes(d.tipo_documento) ||
+                            hasNfInNome(d.nome_arquivo),
                         )
                       : docs.filter(
                           (d: any) =>
@@ -131,12 +181,11 @@ export default function ValoresAprovadosFinanceiro() {
                         )
                     const valorDoc = docs.find((d: any) => d.valor_orcamento)
                     const displayAnexos = isContabilApproved
-                      ? (chamado.anexos_chamado_interno || []).filter((a: any) =>
-                          hasNfInNome(a.nome_arquivo),
+                      ? (chamado.anexos_chamado_interno || []).filter(
+                          (a: any) =>
+                            hasReciboInNome(a.nome_arquivo) || hasNfInNome(a.nome_arquivo),
                         )
-                      : (chamado.anexos_chamado_interno || []).filter((a: any) =>
-                          hasReciboInNome(a.nome_arquivo),
-                        )
+                      : []
                     return (
                       <TableRow key={chamado.id}>
                         <TableCell>
@@ -192,15 +241,27 @@ export default function ValoresAprovadosFinanceiro() {
                             ))}
                             {displayDocs.length === 0 && displayAnexos.length === 0 && (
                               <span className="text-muted-foreground text-sm">
-                                {isContabilApproved ? 'Sem NF/Boleto' : 'Sem recibo'}
+                                {isContabilApproved ? 'Sem documentos' : 'Sem recibo'}
                               </span>
                             )}
                           </div>
-                        </TableCell>{' '}
+                        </TableCell>
                         <TableCell>
                           {valorDoc?.valor_orcamento
                             ? `R$ ${Number(valorDoc.valor_orcamento).toFixed(2)}`
                             : '-'}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="gap-1.5 text-primary hover:bg-primary/10"
+                            onClick={() => setNotifyChamado(chamado)}
+                            title="Notificar Jurídico"
+                          >
+                            <Send className="h-4 w-4" />
+                            <span className="hidden sm:inline text-xs">Notificar Jurídico</span>
+                          </Button>
                         </TableCell>
                       </TableRow>
                     )
@@ -211,6 +272,37 @@ export default function ValoresAprovadosFinanceiro() {
           )}
         </CardContent>
       </Card>
+
+      <Dialog
+        open={!!notifyChamado}
+        onOpenChange={(open) => {
+          if (!sending) setNotifyChamado(null)
+        }}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Notificar Jurídico</DialogTitle>
+            <DialogDescription>
+              Tem certeza que deseja notificar o Jurídico sobre este chamado?
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setNotifyChamado(null)} disabled={sending}>
+              Cancelar
+            </Button>
+            <Button onClick={handleNotifyJuridico} disabled={sending}>
+              {sending ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Enviando...
+                </>
+              ) : (
+                'Confirmar'
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

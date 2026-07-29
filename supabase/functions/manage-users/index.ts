@@ -60,27 +60,61 @@ Deno.serve(async (req: Request) => {
         registro,
       } = body
 
+      const supabaseUrl = Deno.env.get('SUPABASE_URL') ?? ''
+      const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+
+      const searchRes = await fetch(
+        `${supabaseUrl}/auth/v1/admin/users?search=${encodeURIComponent(email)}&per_page=100`,
+        {
+          headers: {
+            Authorization: `Bearer ${serviceRoleKey}`,
+            apikey: serviceRoleKey,
+          },
+        },
+      )
+      const searchData = await searchRes.json()
+      const existingUser = searchData?.users?.find((u: any) => u.email === email)
+
+      const profileData: any = { tipo_usuario, nome_completo }
+      if (ativo !== undefined) profileData.ativo = ativo
+      if (whatsapp !== undefined) profileData.whatsapp = whatsapp
+      if (endereco !== undefined) profileData.endereco = endereco
+      if (departamento !== undefined) profileData.departamento = departamento
+      if (garagem !== undefined) profileData.garagem = garagem
+      if (registro !== undefined) profileData.registro = registro
+
+      if (existingUser) {
+        const { data: existingProfile } = await supabaseAdmin
+          .from('perfil_usuario')
+          .select('id')
+          .eq('id', existingUser.id)
+          .maybeSingle()
+
+        if (!existingProfile) {
+          const { error: insertError } = await supabaseAdmin
+            .from('perfil_usuario')
+            .upsert({ id: existingUser.id, email, ...profileData })
+          if (insertError) throw insertError
+        }
+
+        return new Response(
+          JSON.stringify({ ok: true, message: 'Usuário já existe no sistema.' }),
+          { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
+        )
+      }
+
       const { data: newUser, error: createError } = await supabaseAdmin.auth.admin.createUser({
         email,
-        password: 'HelpdeskUser@123', // Default initial password
+        password: 'HelpdeskUser@123',
         email_confirm: true,
         user_metadata: { full_name: nome_completo },
       })
 
       if (createError) throw createError
 
-      const updateData: any = { tipo_usuario, nome_completo }
-      if (ativo !== undefined) updateData.ativo = ativo
-      if (whatsapp !== undefined) updateData.whatsapp = whatsapp
-      if (endereco !== undefined) updateData.endereco = endereco
-      if (departamento !== undefined) updateData.departamento = departamento
-      if (garagem !== undefined) updateData.garagem = garagem
-      if (registro !== undefined) updateData.registro = registro
-
-      // Update profile created by the database trigger
       const { error: updateError } = await supabaseAdmin
         .from('perfil_usuario')
-        .update(updateData)
+        .update(profileData)
         .eq('id', newUser.user.id)
 
       if (updateError) throw updateError

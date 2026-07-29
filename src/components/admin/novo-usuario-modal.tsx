@@ -77,10 +77,15 @@ export function NovoUsuarioModal({
         ...values,
         garagem: values.garagem === 'nenhuma' ? null : values.garagem || null,
       }
-      const { error } = await createAdminUser(payload)
+      const { data, error } = await createAdminUser(payload)
       if (error) throw error
 
-      toast({ title: 'Sucesso', description: 'Usuário criado com sucesso.' })
+      const responseData = data as { ok?: boolean; message?: string } | null
+      if (responseData?.ok && responseData?.message) {
+        toast({ title: 'Sucesso', description: responseData.message })
+      } else {
+        toast({ title: 'Sucesso', description: 'Usuário criado com sucesso.' })
+      }
       form.reset()
       setOpen(false)
       onSuccess()

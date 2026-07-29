@@ -15,11 +15,18 @@ import { toast } from 'sonner'
 import { format } from 'date-fns'
 import { Link } from 'react-router-dom'
 
-const FINANCEIRO_KEYWORDS = ['recibo', 'quitação', 'quitacao']
+const FINANCEIRO_KEYWORDS = ['recibo', 'quição', 'quitacao']
+const NF_TYPES = ['NF', 'Nota Fiscal', 'Boleto']
+const NF_KEYWORDS = ['boleto', 'nf', 'nota fiscal']
 
 const hasReciboInNome = (nomeArquivo: string) => {
   const nome = (nomeArquivo || '').toLowerCase()
   return FINANCEIRO_KEYWORDS.some((kw) => nome.includes(kw))
+}
+
+const hasNfInNome = (nomeArquivo: string) => {
+  const nome = (nomeArquivo || '').toLowerCase()
+  return NF_KEYWORDS.some((kw) => nome.includes(kw))
 }
 
 export default function ValoresAprovadosFinanceiro() {
@@ -112,13 +119,24 @@ export default function ValoresAprovadosFinanceiro() {
                 <TableBody>
                   {chamados.map((chamado) => {
                     const docs = chamado.documentos || []
-                    const reciboDocs = docs.filter(
-                      (d: any) => d.tipo_documento === 'Recibo' || hasReciboInNome(d.nome_arquivo),
-                    )
+                    const isContabilApproved = chamado.status_interno === 'aprovado_contabil'
+                    const displayDocs = isContabilApproved
+                      ? docs.filter(
+                          (d: any) =>
+                            NF_TYPES.includes(d.tipo_documento) || hasNfInNome(d.nome_arquivo),
+                        )
+                      : docs.filter(
+                          (d: any) =>
+                            d.tipo_documento === 'Recibo' || hasReciboInNome(d.nome_arquivo),
+                        )
                     const valorDoc = docs.find((d: any) => d.valor_orcamento)
-                    const reciboAnexos = (chamado.anexos_chamado_interno || []).filter((a: any) =>
-                      hasReciboInNome(a.nome_arquivo),
-                    )
+                    const displayAnexos = isContabilApproved
+                      ? (chamado.anexos_chamado_interno || []).filter((a: any) =>
+                          hasNfInNome(a.nome_arquivo),
+                        )
+                      : (chamado.anexos_chamado_interno || []).filter((a: any) =>
+                          hasReciboInNome(a.nome_arquivo),
+                        )
                     return (
                       <TableRow key={chamado.id}>
                         <TableCell>
@@ -148,7 +166,7 @@ export default function ValoresAprovadosFinanceiro() {
                         </TableCell>
                         <TableCell>
                           <div className="flex flex-col gap-1">
-                            {reciboDocs.map((doc: any) => (
+                            {displayDocs.map((doc: any) => (
                               <a
                                 key={doc.id}
                                 href={doc.arquivo_url}
@@ -160,7 +178,7 @@ export default function ValoresAprovadosFinanceiro() {
                                 <span className="truncate max-w-[150px]">{doc.nome_arquivo}</span>
                               </a>
                             ))}
-                            {reciboAnexos.map((anexo: any) => (
+                            {displayAnexos.map((anexo: any) => (
                               <a
                                 key={anexo.id}
                                 href={anexo.arquivo_url}
@@ -172,9 +190,9 @@ export default function ValoresAprovadosFinanceiro() {
                                 <span className="truncate max-w-[150px]">{anexo.nome_arquivo}</span>
                               </a>
                             ))}
-                            {reciboDocs.length === 0 && reciboAnexos.length === 0 && (
+                            {displayDocs.length === 0 && displayAnexos.length === 0 && (
                               <span className="text-muted-foreground text-sm">
-                                Contábil aprovado
+                                {isContabilApproved ? 'Sem NF/Boleto' : 'Sem recibo'}
                               </span>
                             )}
                           </div>

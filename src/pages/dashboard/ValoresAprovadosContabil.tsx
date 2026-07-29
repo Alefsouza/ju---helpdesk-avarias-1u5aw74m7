@@ -179,9 +179,6 @@ export default function ValoresAprovadosContabil() {
                                   : chamado.formularios_espelho_danos?.nome_motorista) ||
                                 '-'}
                             </div>
-                            <div className="text-muted-foreground">
-                              {chamado.registro_motorista || '-'}
-                            </div>
                           </div>
                         </TableCell>
                         <TableCell>

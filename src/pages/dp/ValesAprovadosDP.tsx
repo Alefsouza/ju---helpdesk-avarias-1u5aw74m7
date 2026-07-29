@@ -20,9 +20,8 @@ import {
   Search,
   XCircle,
   FileSpreadsheet,
-  AlertTriangle,
 } from 'lucide-react'
-import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from '@/components/ui/tooltip'
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import {
   Select,
   SelectContent,
@@ -562,18 +561,9 @@ export default function ValesAprovadosDP() {
                       <div className="flex flex-col">
                         <span className="font-medium">
                           {p.vale_unificado && (
-                            <TooltipProvider>
-                              <Tooltip>
-                                <TooltipTrigger asChild>
-                                  <span className="inline-flex items-center mr-1 align-middle">
-                                    <AlertTriangle className="h-4 w-4 text-amber-500" />
-                                  </span>
-                                </TooltipTrigger>
-                                <TooltipContent>
-                                  <p>Vale unificado, favor verificar.</p>
-                                </TooltipContent>
-                              </Tooltip>
-                            </TooltipProvider>
+                            <span className="inline-flex items-center mr-1 px-1.5 py-0.5 rounded text-xs font-medium bg-amber-100 text-amber-800">
+                              Unificado
+                            </span>
                           )}
                           {p.chamado_titulo}
                         </span>

@@ -35,6 +35,7 @@ export default function ValesAprovacao() {
   const [isApproveOpen, setIsApproveOpen] = useState(false)
   const [selectedChamado, setSelectedChamado] = useState<any>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [valeUnificado, setValeUnificado] = useState(false)
 
   const [isRejectOpen, setIsRejectOpen] = useState(false)
   const [rejectReason, setRejectReason] = useState('')
@@ -50,7 +51,7 @@ export default function ValesAprovacao() {
         documentos ( id, nome_arquivo, arquivo_url, tipo_documento, orcamento_url, valor_orcamento, criado_em ),
         parcelas_vales ( id, valor_parcela, data_referencia ),
         formularios_espelho_danos ( registro_motorista, nome_motorista ),
-        solicitacoes_parcelamento ( id, valor_orcamento, quantidade_parcelas, status, desconto_aplicado )
+        solicitacoes_parcelamento ( id, valor_orcamento, quantidade_parcelas, status, desconto_aplicado, vale_unificado )
       `)
       .eq('status', 'finalizado')
       .or('status_aprovacao_alex.eq.aprovado,status_aprovacao_claudinei.eq.aprovado')
@@ -103,6 +104,8 @@ export default function ValesAprovacao() {
 
   const handleApproveClick = (chamado: any) => {
     setSelectedChamado(chamado)
+    const sol = chamado.solicitacoes_parcelamento?.[0]
+    setValeUnificado(sol?.vale_unificado === true)
     setIsApproveOpen(true)
   }
 
@@ -211,12 +214,11 @@ export default function ValesAprovacao() {
             totalValue = Number(sol.valor_orcamento) || 0
             parcelsCount = Number(sol.quantidade_parcelas) || 1
           } else {
-            const docOrcamento = selectedChamado.documentos?.find(
-              (d: any) =>
-                (d.tipo_documento === 'orcamento' || d.orcamento_url) && d.valor_orcamento,
+            const docVale = selectedChamado.documentos?.find(
+              (d: any) => d.tipo_documento === 'Vale' && d.valor_orcamento,
             )
-            if (docOrcamento) {
-              totalValue = Number(docOrcamento.valor_orcamento) || 0
+            if (docVale) {
+              totalValue = Number(docVale.valor_orcamento) || 0
             }
           }
 
@@ -227,7 +229,7 @@ export default function ValesAprovacao() {
               .eq('chamado_id', selectedChamado.id)
 
             if (!existingParcelas || existingParcelas.length === 0) {
-              const valorFinal = hasDiscount ? Math.round(totalValue * 0.9 * 100) / 100 : totalValue
+              const valorFinal = totalValue
 
               if (
                 selectedChamado.solicitacoes_parcelamento &&
@@ -238,6 +240,7 @@ export default function ValesAprovacao() {
                   .update({
                     status: 'aprovado',
                     desconto_aplicado: hasDiscount,
+                    vale_unificado: valeUnificado,
                     atualizado_em: new Date().toISOString(),
                   })
                   .eq('id', selectedChamado.solicitacoes_parcelamento[0].id)
@@ -261,6 +264,7 @@ export default function ValesAprovacao() {
                   data_referencia: p.data_referencia,
                   aprovado_diretoria: true,
                   aprovado_em: new Date().toISOString(),
+                  vale_unificado: valeUnificado,
                 }))
 
                 const { error: parcelasError } = await supabase
@@ -729,6 +733,17 @@ export default function ValesAprovacao() {
             <DialogTitle>Confirmar Aprovação</DialogTitle>
             <DialogDescription>Deseja confirmar a aprovação deste vale?</DialogDescription>
           </DialogHeader>
+
+          <div className="flex items-center space-x-2 py-2">
+            <Checkbox
+              id="valeUnificado"
+              checked={valeUnificado}
+              onCheckedChange={(checked) => setValeUnificado(checked === true)}
+            />
+            <Label htmlFor="valeUnificado" className="text-sm cursor-pointer">
+              Vale Unificado
+            </Label>
+          </div>
 
           <DialogFooter className="mt-4">
             <Button variant="outline" onClick={() => setIsApproveOpen(false)}>

@@ -53,6 +53,9 @@ function filterChamados(data: any[], cf: ChartFilters, excludeKey?: string): any
       if (!c.criado_em) return false
       if (!cf.data.includes(c.criado_em.substring(0, 10))) return false
     }
+    if (excludeKey !== 'situacao' && cf.situacao?.length) {
+      if (!c.situacao_processo || !cf.situacao.includes(c.situacao_processo)) return false
+    }
     if (excludeKey !== 'overdue' && cf.overdue) {
       if (c.status === 'finalizado') return false
       if (!isBefore(new Date(c.criado_em), subDays(new Date(), 30))) return false
@@ -70,7 +73,7 @@ export function DashboardCharts({
   chamados: any[]
   chartFilters: ChartFilters
   onChartClick: (
-    type: 'status' | 'prioridade' | 'garagem' | 'responsavel' | 'data' | 'overdue',
+    type: 'status' | 'prioridade' | 'garagem' | 'responsavel' | 'data' | 'overdue' | 'situacao',
     value: string,
     multiSelect?: boolean,
   ) => void
@@ -162,7 +165,7 @@ export function DashboardCharts({
   }, [chamados, chartFilters])
 
   const situacaoProcessoData = useMemo(() => {
-    const data = filterChamados(chamados, chartFilters)
+    const data = filterChamados(chamados, chartFilters, 'situacao')
     const options = [
       'Aguardando Julgamento',
       'Arquivado',
@@ -245,18 +248,21 @@ export function DashboardCharts({
     garagem: 'Garagem',
     responsavel: 'Resp',
     data: 'Data',
+    situacao: 'Situação',
   }
-  ;(['status', 'prioridade', 'garagem', 'responsavel', 'data'] as const).forEach((key) => {
-    const arr = chartFilters[key]
-    if (!arr) return
-    arr.forEach((v) => {
-      filterChips.push({
-        type: key,
-        value: v,
-        label: `${labelMap[key]}: ${formatFilterValue(key, v)}`,
+  ;(['status', 'prioridade', 'garagem', 'responsavel', 'data', 'situacao'] as const).forEach(
+    (key) => {
+      const arr = chartFilters[key]
+      if (!arr) return
+      arr.forEach((v) => {
+        filterChips.push({
+          type: key,
+          value: v,
+          label: `${labelMap[key]}: ${formatFilterValue(key, v)}`,
+        })
       })
-    })
-  })
+    },
+  )
 
   return (
     <div className="space-y-4 mb-6">
@@ -476,6 +482,14 @@ export function DashboardCharts({
                         className="cursor-pointer transition-opacity duration-200"
                         key={index}
                         fill={entry.fill}
+                        onClick={(e) => onChartClick('situacao', entry.id, e.ctrlKey || e.metaKey)}
+                        style={{
+                          opacity:
+                            chartFilters.situacao?.length &&
+                            !chartFilters.situacao.includes(entry.id)
+                              ? 0.3
+                              : 1,
+                        }}
                       />
                     ))}
                   </Pie>

@@ -23,7 +23,15 @@ export function DashboardCards({
   chamados: any[]
   chartFilters?: ChartFilters
   onCardClick?: (
-    type: 'status' | 'prioridade' | 'garagem' | 'responsavel' | 'data' | 'overdue' | 'clear',
+    type:
+      | 'status'
+      | 'prioridade'
+      | 'garagem'
+      | 'responsavel'
+      | 'data'
+      | 'overdue'
+      | 'situacao'
+      | 'clear',
     value: string,
     multiSelect: boolean,
   ) => void
@@ -45,6 +53,10 @@ export function DashboardCards({
       if (chartFilters.data?.length) {
         if (!c.criado_em) return false
         if (!chartFilters.data.includes(c.criado_em.substring(0, 10))) return false
+      }
+      if (chartFilters.situacao?.length) {
+        if (!c.situacao_processo || !chartFilters.situacao.includes(c.situacao_processo))
+          return false
       }
       if (chartFilters.overdue) {
         if (c.status === 'finalizado') return false

@@ -35,7 +35,15 @@ export function VisaoGeral() {
   })
 
   const handleChartClick = (
-    type: 'status' | 'prioridade' | 'garagem' | 'responsavel' | 'data' | 'overdue' | 'clear',
+    type:
+      | 'status'
+      | 'prioridade'
+      | 'garagem'
+      | 'responsavel'
+      | 'data'
+      | 'overdue'
+      | 'situacao'
+      | 'clear',
     value: string,
     multiSelect: boolean = false,
   ) => {

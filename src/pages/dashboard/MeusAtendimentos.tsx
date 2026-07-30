@@ -72,6 +72,10 @@ export default function MeusAtendimentos() {
   const [sortConfig, setSortConfig] = useState<{ key: string; direction: 'asc' | 'desc' } | null>(
     null,
   )
+  const [situacaoFilter, setSituacaoFilter] = useState<string>(
+    () => searchParams.get('situacao') || 'Todos',
+  )
+  const [situacaoOptions, setSituacaoOptions] = useState<string[]>([])
 
   const isSinistro = profile?.tipo_usuario === 'sinistro'
 
@@ -246,6 +250,39 @@ export default function MeusAtendimentos() {
     }
   }, [user, profile?.tipo_usuario, juridicoUserIds])
 
+  useEffect(() => {
+    const fetchSituacaoOptions = async () => {
+      if (!user || !profile) return
+      try {
+        let query = supabase
+          .from('chamados')
+          .select('situacao_processo')
+          .eq('status', 'em_atendimento')
+          .not('situacao_processo', 'is', null)
+
+        if (
+          profile.tipo_usuario === 'juridico' ||
+          profile.tipo_usuario === 'dp' ||
+          user?.email === 'alex.fontes@viasudeste.com'
+        ) {
+          query = query.eq('responsavel_id', user.id)
+        } else {
+          query = query.is('status_juridico', null)
+        }
+
+        const { data, error: err } = await query
+        if (err) throw err
+
+        const distinct = [...new Set((data || []).map((c) => c.situacao_processo).filter(Boolean))]
+        setSituacaoOptions(distinct)
+      } catch (e) {
+        console.error(e)
+      }
+    }
+
+    fetchSituacaoOptions()
+  }, [user, profile, juridicoUserIds])
+
   const handleReabrir = async (chamadoId: string) => {
     setCompletingId(chamadoId)
     setConfirmReabrirId(null)
@@ -357,6 +394,7 @@ export default function MeusAtendimentos() {
 
   const filteredChamados = chamados
     .filter((c) => {
+      if (situacaoFilter !== 'Todos' && c.situacao_processo !== situacaoFilter) return false
       if (!debouncedSearch) return true
       const term = debouncedSearch.toLowerCase()
       return (
@@ -410,6 +448,31 @@ export default function MeusAtendimentos() {
             onChange={(e) => setSearchTerm(e.target.value)}
           />
         </div>
+        <Select
+          value={situacaoFilter}
+          onValueChange={(value) => {
+            setSituacaoFilter(value)
+            const params = new URLSearchParams(searchParams)
+            if (value === 'Todos') {
+              params.delete('situacao')
+            } else {
+              params.set('situacao', value)
+            }
+            setSearchParams(params, { replace: true })
+          }}
+        >
+          <SelectTrigger className="w-full sm:w-64 bg-white shadow-sm">
+            <SelectValue placeholder="Situação do Processo" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="Todos">Todos</SelectItem>
+            {situacaoOptions.map((s) => (
+              <SelectItem key={s} value={s}>
+                {s}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </div>
 
       {loading ? (

@@ -23,7 +23,11 @@ export default function AdminDashboard() {
       .eq('id', user.id)
       .single()
       .then(({ data }) => {
-        setIsAdmin(data?.tipo_usuario === 'admin' || user?.email === 'alex.fontes@viasudeste.com')
+        setIsAdmin(
+          data?.tipo_usuario === 'admin' ||
+            user?.email === 'alex.fontes@viasudeste.com' ||
+            user?.email === 'raquel.santos@viasudeste.com',
+        )
       })
   }, [user])
 
@@ -58,6 +62,8 @@ export default function AdminDashboard() {
     return <Navigate to="/dashboard" replace />
   }
 
+  const isRaquel = user?.email === 'raquel.santos@viasudeste.com'
+
   return (
     <div className="space-y-6 max-w-7xl mx-auto p-4 animate-fade-in-up">
       <h1 className="text-3xl font-bold tracking-tight text-slate-800">Painel Administrativo</h1>
@@ -67,13 +73,17 @@ export default function AdminDashboard() {
           <TabsTrigger value="geral" className="flex gap-2">
             <Activity className="h-4 w-4" /> Visão Geral
           </TabsTrigger>
-          <TabsTrigger value="equipe" className="flex gap-2">
-            <UserCog className="h-4 w-4" /> Equipe
-          </TabsTrigger>
-          <TabsTrigger value="usuarios" className="flex gap-2">
-            <Users className="h-4 w-4" /> Todos Usuários
-          </TabsTrigger>
-          {user?.email === 'ti@viasudeste.com' && (
+          {!isRaquel && (
+            <TabsTrigger value="equipe" className="flex gap-2">
+              <UserCog className="h-4 w-4" /> Equipe
+            </TabsTrigger>
+          )}
+          {!isRaquel && (
+            <TabsTrigger value="usuarios" className="flex gap-2">
+              <Users className="h-4 w-4" /> Todos Usuários
+            </TabsTrigger>
+          )}
+          {!isRaquel && user?.email === 'ti@viasudeste.com' && (
             <TabsTrigger value="frota" className="flex gap-2">
               <Bus className="h-4 w-4" /> Gestão de Frota
             </TabsTrigger>
@@ -84,15 +94,19 @@ export default function AdminDashboard() {
           <VisaoGeral />
         </TabsContent>
 
-        <TabsContent value="equipe" className="space-y-6">
-          <GestaoEquipe />
-        </TabsContent>
+        {!isRaquel && (
+          <TabsContent value="equipe" className="space-y-6">
+            <GestaoEquipe />
+          </TabsContent>
+        )}
 
-        <TabsContent value="usuarios" className="space-y-6">
-          <GerenciarUsuarios />
-        </TabsContent>
+        {!isRaquel && (
+          <TabsContent value="usuarios" className="space-y-6">
+            <GerenciarUsuarios />
+          </TabsContent>
+        )}
 
-        {user?.email === 'ti@viasudeste.com' && (
+        {!isRaquel && user?.email === 'ti@viasudeste.com' && (
           <TabsContent value="frota" className="space-y-6">
             <ImportarFrota />
           </TabsContent>

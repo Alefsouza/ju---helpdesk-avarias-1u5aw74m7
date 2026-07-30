@@ -63,6 +63,7 @@ function AppSidebar() {
   const isAlexFontes = user?.email === 'alex.fontes@viasudeste.com'
   const isDanielBrotas = user?.email === 'daniel.brotas@viasudeste.com'
   const isClaudinei = user?.email === 'claudinei.mariano@viasudeste.com'
+  const isRaquel = user?.email === 'raquel.santos@viasudeste.com'
 
   return (
     <Sidebar className="border-r-0">
@@ -230,6 +231,21 @@ function AppSidebar() {
                     </SidebarMenuButton>
                   </SidebarMenuItem>
                 </>
+              )}
+
+              {isRaquel && (
+                <SidebarMenuItem>
+                  <SidebarMenuButton
+                    asChild
+                    isActive={location.pathname === '/dashboard/admin'}
+                    className="data-[active=true]:bg-transparent data-[active=true]:text-[#c8e6c9] hover:bg-[#c8e6c9]/10 hover:text-[#c8e6c9] text-white transition-colors"
+                  >
+                    <Link to="/dashboard/admin">
+                      <ShieldAlert />
+                      <span>Painel Admin</span>
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
               )}
 
               {(isResponsavel || isJuridico) && !isDanielBrotas && (

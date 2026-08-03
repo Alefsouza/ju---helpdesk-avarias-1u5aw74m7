@@ -681,7 +681,10 @@ export default function NovoChamado() {
           responsavel_id: null,
           status: 'aberto',
           garagem: identifiedGaragem !== 'NOT_FOUND' ? identifiedGaragem : null,
-          carro: placaOnibus,
+          carro:
+            identifiedPrefixo && identifiedGaragem !== 'NOT_FOUND'
+              ? identifiedPrefixo
+              : placaOnibus,
           data_ocorrencia: format(new Date(dataOcorrencia), 'yyyy-MM-dd'),
           situacao_processo: situacaoProcesso || null,
           criado_em: new Date().toISOString(),

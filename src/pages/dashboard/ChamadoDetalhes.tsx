@@ -1531,8 +1531,9 @@ export default function ChamadoDetalhes() {
         currUser.tipo_usuario === 'secretaria_tecnica' ||
         isDaniel ||
         isTiAdmin)
-      {
-        const { data: anexosInt } = await supabase        .from('anexos_chamado_interno')
+    ) {
+      const { data: anexosInt } = await supabase
+        .from('anexos_chamado_interno')
         .select('*')
         .eq('chamado_id', id)
       internalAttachments = anexosInt || []

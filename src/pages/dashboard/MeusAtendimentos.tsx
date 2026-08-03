@@ -79,6 +79,11 @@ export default function MeusAtendimentos() {
 
   const isSinistro = profile?.tipo_usuario === 'sinistro'
 
+  const RAQUEL_SINISTRO_EMAIL = 'raquel.santos@viasudeste.com'
+  const isRaquelSinistro = user?.email === RAQUEL_SINISTRO_EMAIL
+  const userGaragem = profile?.garagem?.trim() || null
+  const shouldFilterByGaragem = !isRaquelSinistro
+
   const isSupport =
     profile?.tipo_usuario === 'responsavel' ||
     profile?.tipo_usuario === 'sinistro' ||
@@ -161,6 +166,15 @@ export default function MeusAtendimentos() {
         .select('*, formularios_espelho_danos(registro_motorista, nome_motorista)')
         .eq('status', 'em_atendimento')
         .order('criado_em', { ascending: false })
+
+      if (shouldFilterByGaragem) {
+        if (!userGaragem) {
+          setChamados([])
+          setLoading(false)
+          return
+        }
+        query = query.eq('garagem', userGaragem)
+      }
 
       if (
         profile.tipo_usuario === 'juridico' ||
@@ -259,6 +273,14 @@ export default function MeusAtendimentos() {
           .select('situacao_processo')
           .eq('status', 'em_atendimento')
           .not('situacao_processo', 'is', null)
+
+        if (shouldFilterByGaragem) {
+          if (!userGaragem) {
+            setSituacaoOptions([])
+            return
+          }
+          query = query.eq('garagem', userGaragem)
+        }
 
         if (
           profile.tipo_usuario === 'juridico' ||

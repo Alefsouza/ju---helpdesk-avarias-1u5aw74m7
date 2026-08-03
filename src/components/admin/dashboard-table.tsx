@@ -287,7 +287,7 @@ export function DashboardTable({
             <Search className="absolute left-3 top-3 h-4 w-4 text-slate-400" />
             <Input
               className="pl-9 bg-[#f0f0f0] border-[#f0f0f0] text-[#212121] placeholder:text-slate-500"
-              placeholder="Buscar por Título ou ID..."
+              placeholder="Buscar por Título, ID ou Solicitante..."
               value={tableFilters.search}
               onChange={(e) => update({ search: e.target.value })}
             />

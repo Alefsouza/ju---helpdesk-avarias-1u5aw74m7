@@ -54,7 +54,13 @@ function applyTableFilters(data: any[], f: ChamadosFilters): any[] {
   return data.filter((c) => {
     if (f.search) {
       const s = f.search.toLowerCase()
-      if (!c.titulo?.toLowerCase().includes(s) && !c.id?.toLowerCase().includes(s)) return false
+      if (
+        !c.titulo?.toLowerCase().includes(s) &&
+        !c.id?.toLowerCase().includes(s) &&
+        !c.nome_usuario?.toLowerCase().includes(s)
+      ) {
+        return false
+      }
     }
     if (f.status !== 'all' && c.status !== f.status) return false
     if (f.situacaoProcesso !== 'all' && c.situacao_processo !== f.situacaoProcesso) return false
@@ -109,11 +115,15 @@ export const useChamadosDashboard = (filters: ChamadosFilters) => {
         if (chamRes.error) throw chamRes.error
         if (respRes.error) throw respRes.error
         const perfilMap = new Map((respRes.data || []).map((p) => [p.id, p]))
-        const enriched = (chamRes.data || []).map((c) => ({
-          ...c,
-          responsavel: perfilMap.get(c.responsavel_id) || null,
-          is_duplicate: isDuplicateTicket(c, chamRes.data || []),
-        }))
+        const enriched = (chamRes.data || []).map((c) => {
+          const creator = perfilMap.get(c.usuario_id)
+          return {
+            ...c,
+            responsavel: perfilMap.get(c.responsavel_id) || null,
+            nome_usuario: creator?.nome_completo || '',
+            is_duplicate: isDuplicateTicket(c, chamRes.data || []),
+          }
+        })
         const tableFiltered = applyTableFilters(enriched, filters)
         const chartFiltered = applyChartFilters(tableFiltered, filters.chartFilters || {})
         setChamados(chartFiltered)

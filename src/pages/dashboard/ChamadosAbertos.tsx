@@ -43,6 +43,11 @@ export default function ChamadosAbertos() {
 
   const [actionLoading, setActionLoading] = useState<string | null>(null)
 
+  const RAQUEL_SINISTRO_EMAIL = 'raquel.santos@viasudeste.com'
+  const isRaquelSinistro = user?.email === RAQUEL_SINISTRO_EMAIL
+  const userGaragem = profile?.garagem?.trim() || null
+  const shouldFilterByGaragem = !isRaquelSinistro
+
   useEffect(() => {
     const timer = setTimeout(() => setDebouncedSearch(searchTerm), 300)
     return () => clearTimeout(timer)
@@ -56,6 +61,15 @@ export default function ChamadosAbertos() {
         .from('chamados')
         .select('*, formularios_espelho_danos(registro_motorista, nome_motorista)')
         .eq('status', 'aberto')
+
+      if (shouldFilterByGaragem) {
+        if (!userGaragem) {
+          setChamados([])
+          setLoading(false)
+          return
+        }
+        query = query.eq('garagem', userGaragem)
+      }
 
       if (profile?.tipo_usuario === 'sinistro') {
         query = query.is('status_juridico', null)
@@ -123,7 +137,7 @@ export default function ChamadosAbertos() {
     return () => {
       supabase.removeChannel(channel)
     }
-  }, [profile?.tipo_usuario])
+  }, [profile?.tipo_usuario, shouldFilterByGaragem, userGaragem])
 
   const handlePegarChamado = async (chamadoId: string, e?: React.MouseEvent) => {
     if (e) e.stopPropagation()

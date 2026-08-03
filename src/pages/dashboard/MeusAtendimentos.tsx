@@ -84,7 +84,7 @@ export default function MeusAtendimentos() {
   const RAQUEL_SINISTRO_EMAIL = 'raquel.santos@viasudeste.com'
   const isRaquelSinistro = user?.email === RAQUEL_SINISTRO_EMAIL
   const userGaragem = profile?.garagem?.trim() || null
-  const shouldFilterByGaragem = !isRaquelSinistro
+  const shouldFilterByGaragem = isSinistro && !isRaquelSinistro
 
   const isSupport =
     profile?.tipo_usuario === 'responsavel' ||

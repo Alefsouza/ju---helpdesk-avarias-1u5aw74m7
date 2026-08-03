@@ -1401,6 +1401,7 @@ export default function ChamadoDetalhes() {
   const navigate = useNavigate()
   const { user } = useAuth()
   const isDaniel = isDanielBrotas(user?.email)
+  const isTiAdmin = user?.email === 'ti@viasudeste.com'
 
   const [chamado, setChamado] = useState<Chamado | null>(null)
   const [isParticipant, setIsParticipant] = useState(false)
@@ -1528,10 +1529,10 @@ export default function ChamadoDetalhes() {
         currUser.tipo_usuario === 'admin' ||
         currUser.tipo_usuario === 'juridico' ||
         currUser.tipo_usuario === 'secretaria_tecnica' ||
-        isDaniel)
-    ) {
-      const { data: anexosInt } = await supabase
-        .from('anexos_chamado_interno')
+        isDaniel ||
+        isTiAdmin)
+      {
+        const { data: anexosInt } = await supabase        .from('anexos_chamado_interno')
         .select('*')
         .eq('chamado_id', id)
       internalAttachments = anexosInt || []
@@ -2861,6 +2862,19 @@ export default function ChamadoDetalhes() {
     }
   }
 
+  const handleDeleteDocumento = async (docId: string) => {
+    if (!window.confirm('Tem certeza que deseja deletar este documento?')) return
+    try {
+      const { error } = await supabase.from('documentos').delete().eq('id', docId)
+      if (error) throw error
+      setDocumentosChamado((prev) => prev.filter((d) => d.id !== docId))
+      toast.success('Documento deletado com sucesso')
+    } catch (error) {
+      console.error(error)
+      toast.error('Erro ao deletar documento')
+    }
+  }
+
   const handleDownloadAnexo = (anexo: Anexo) => {
     handleDocumentAction(anexo.id, anexo.url_arquivo, anexo.nome_arquivo, 'download')
   }
@@ -4029,7 +4043,7 @@ export default function ChamadoDetalhes() {
           </div>
         )}
 
-        {isSupport && (
+        {(isSupport || isTiAdmin) && (
           <div className="pt-3 border-t flex flex-col gap-3" id="anexos-internos">
             <div>
               <div className="flex items-center justify-between mb-2">
@@ -4243,7 +4257,8 @@ export default function ChamadoDetalhes() {
                         </Button>
                         {(user?.id === anexo.usuario_id ||
                           user?.id === chamado.responsavel_id ||
-                          currentUserProfile?.tipo_usuario === 'admin') && (
+                          currentUserProfile?.tipo_usuario === 'admin' ||
+                          isTiAdmin) && (
                           <Button
                             size="icon"
                             variant="ghost"
@@ -4471,17 +4486,21 @@ export default function ChamadoDetalhes() {
                             <Eye className="h-4 w-4" />
                           )}
                         </Button>
-                        {isSupport && !anexo.isDocument && (
+                        {((isSupport && !anexo.isDocument) || isTiAdmin) && (
                           <Button
                             size="icon"
                             variant="ghost"
                             className="h-8 w-8 text-slate-500 hover:text-red-600"
-                            onClick={() => handleDeleteAnexo(anexo.id, anexo.url_arquivo)}
+                            onClick={() =>
+                              anexo.isDocument
+                                ? handleDeleteDocumento(anexo.id)
+                                : handleDeleteAnexo(anexo.id, anexo.url_arquivo)
+                            }
                             disabled={
                               loadingAction === `${anexo.id}-download` ||
                               loadingAction === `${anexo.id}-view`
                             }
-                            title="Excluir anexo"
+                            title="Excluir"
                           >
                             <Trash2 className="h-4 w-4" />
                           </Button>

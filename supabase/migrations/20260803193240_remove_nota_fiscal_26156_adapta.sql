@@ -12,7 +12,7 @@
 
 DO $$
 DECLARE
-  v_chamado_id uuid := 'aaa01cd4-8f26-4932-bf82-5fde17160e8'::uuid;
+  v_chamado_id uuid := 'aaa01cd4-8f26-4932-bf82-5fde171601e8'::uuid;
   v_admin_id uuid;
   v_detalhe text := 'Remoção manual dos arquivos da Nota fiscal 26156 ADAPTA';
 BEGIN

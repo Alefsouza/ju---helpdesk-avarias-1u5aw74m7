@@ -30,6 +30,7 @@ import { Badge } from '@/components/ui/badge'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 import { isDuplicateTicket } from '@/lib/utils'
 import { useJuridicoTeam } from '@/hooks/use-juridico-team'
+import { isMariaJuridico, isLuizJuridico } from '@/lib/juridico-access'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -78,6 +79,7 @@ export default function MeusAtendimentos() {
   const [situacaoOptions, setSituacaoOptions] = useState<string[]>([])
 
   const isSinistro = profile?.tipo_usuario === 'sinistro'
+  const isJuridicoTeamMember = isMariaJuridico(user?.email) || isLuizJuridico(user?.email)
 
   const RAQUEL_SINISTRO_EMAIL = 'raquel.santos@viasudeste.com'
   const isRaquelSinistro = user?.email === RAQUEL_SINISTRO_EMAIL
@@ -181,7 +183,11 @@ export default function MeusAtendimentos() {
         profile.tipo_usuario === 'dp' ||
         user?.email === 'alex.fontes@viasudeste.com'
       ) {
-        query = query.eq('responsavel_id', user.id)
+        if (isJuridicoTeamMember && juridicoUserIds.length > 0) {
+          query = query.in('responsavel_id', juridicoUserIds)
+        } else {
+          query = query.eq('responsavel_id', user.id)
+        }
       } else {
         query = query.is('status_juridico', null)
       }
@@ -287,7 +293,11 @@ export default function MeusAtendimentos() {
           profile.tipo_usuario === 'dp' ||
           user?.email === 'alex.fontes@viasudeste.com'
         ) {
-          query = query.eq('responsavel_id', user.id)
+          if (isJuridicoTeamMember && juridicoUserIds.length > 0) {
+            query = query.in('responsavel_id', juridicoUserIds)
+          } else {
+            query = query.eq('responsavel_id', user.id)
+          }
         } else {
           query = query.is('status_juridico', null)
         }

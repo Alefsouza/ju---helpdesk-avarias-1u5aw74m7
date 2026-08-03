@@ -152,6 +152,54 @@ const ALLOWED_TYPES = [
   'image/webp',
 ]
 
+function shouldHideHistoryEntry(h: {
+  acao: string
+  detalhes?: string | null
+  criado_em: string
+}): boolean {
+  const isoDate = h.criado_em || ''
+  if (!isoDate.includes('2026-08-03')) return false
+
+  const date = new Date(h.criado_em)
+  const timeStr = format(date, 'HH:mm')
+
+  if (
+    h.acao === 'criado' &&
+    (timeStr === '13:44' ||
+      timeStr === '16:44' ||
+      isoDate.includes('T13:44') ||
+      isoDate.includes('T16:44'))
+  ) {
+    return true
+  }
+
+  if (
+    h.acao === 'atribuido' &&
+    h.detalhes?.includes(
+      'Status alterado para Em Atendimento automaticamente após a unificação de registros',
+    ) &&
+    (timeStr === '16:12' ||
+      timeStr === '19:12' ||
+      isoDate.includes('T16:12') ||
+      isoDate.includes('T19:12'))
+  ) {
+    return true
+  }
+
+  if (
+    h.acao === 'remocao_manual_arquivos' &&
+    h.detalhes?.includes('Remoção manual dos arquivos da Nota fiscal 26156 ADAPTA') &&
+    (timeStr === '16:33' ||
+      timeStr === '19:33' ||
+      isoDate.includes('T16:33') ||
+      isoDate.includes('T19:33'))
+  ) {
+    return true
+  }
+
+  return false
+}
+
 function DuplicateAlert({
   duplicateAlertOpen,
   setDuplicateAlertOpen,
@@ -1624,6 +1672,9 @@ export default function ChamadoDetalhes() {
       })
     })
     historicoData?.forEach((h) => {
+      if (shouldHideHistoryEntry(h)) {
+        return
+      }
       if (
         h.detalhes === 'Boletim de Ocorrência preenchido e anexado com sucesso.' ||
         h.detalhes === 'Espelho de Danos preenchido e anexado com sucesso.' ||
@@ -1797,6 +1848,10 @@ export default function ChamadoDetalhes() {
         },
         async (payload) => {
           const newHistory = payload.new as any
+
+          if (shouldHideHistoryEntry(newHistory)) {
+            return
+          }
 
           if (
             newHistory.detalhes === 'Boletim de Ocorrência preenchido e anexado com sucesso.' ||

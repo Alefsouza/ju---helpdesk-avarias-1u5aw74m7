@@ -152,6 +152,54 @@ const ALLOWED_TYPES = [
   'image/webp',
 ]
 
+function shouldHideHistoryEntry(h: {
+  acao: string
+  detalhes?: string | null
+  criado_em: string
+}): boolean {
+  const isoDate = h.criado_em || ''
+  if (!isoDate.includes('2026-08-03')) return false
+
+  const date = new Date(h.criado_em)
+  const timeStr = format(date, 'HH:mm')
+
+  if (
+    h.acao === 'criado' &&
+    (timeStr === '13:44' ||
+      timeStr === '16:44' ||
+      isoDate.includes('T13:44') ||
+      isoDate.includes('T16:44'))
+  ) {
+    return true
+  }
+
+  if (
+    h.acao === 'atribuido' &&
+    h.detalhes?.includes(
+      'Status alterado para Em Atendimento automaticamente após a unificação de registros',
+    ) &&
+    (timeStr === '16:12' ||
+      timeStr === '19:12' ||
+      isoDate.includes('T16:12') ||
+      isoDate.includes('T19:12'))
+  ) {
+    return true
+  }
+
+  if (
+    h.acao === 'remocao_manual_arquivos' &&
+    h.detalhes?.includes('Remoção manual dos arquivos da Nota fiscal 26156 ADAPTA') &&
+    (timeStr === '16:33' ||
+      timeStr === '19:33' ||
+      isoDate.includes('T16:33') ||
+      isoDate.includes('T19:33'))
+  ) {
+    return true
+  }
+
+  return false
+}
+
 function DuplicateAlert({
   duplicateAlertOpen,
   setDuplicateAlertOpen,
@@ -1401,6 +1449,7 @@ export default function ChamadoDetalhes() {
   const navigate = useNavigate()
   const { user } = useAuth()
   const isDaniel = isDanielBrotas(user?.email)
+  const isTiAdmin = user?.email === 'ti@viasudeste.com'
 
   const [chamado, setChamado] = useState<Chamado | null>(null)
   const [isParticipant, setIsParticipant] = useState(false)
@@ -1528,7 +1577,8 @@ export default function ChamadoDetalhes() {
         currUser.tipo_usuario === 'admin' ||
         currUser.tipo_usuario === 'juridico' ||
         currUser.tipo_usuario === 'secretaria_tecnica' ||
-        isDaniel)
+        isDaniel ||
+        isTiAdmin)
     ) {
       const { data: anexosInt } = await supabase
         .from('anexos_chamado_interno')
@@ -1622,6 +1672,9 @@ export default function ChamadoDetalhes() {
       })
     })
     historicoData?.forEach((h) => {
+      if (shouldHideHistoryEntry(h)) {
+        return
+      }
       if (
         h.detalhes === 'Boletim de Ocorrência preenchido e anexado com sucesso.' ||
         h.detalhes === 'Espelho de Danos preenchido e anexado com sucesso.' ||
@@ -1795,6 +1848,10 @@ export default function ChamadoDetalhes() {
         },
         async (payload) => {
           const newHistory = payload.new as any
+
+          if (shouldHideHistoryEntry(newHistory)) {
+            return
+          }
 
           if (
             newHistory.detalhes === 'Boletim de Ocorrência preenchido e anexado com sucesso.' ||
@@ -2858,6 +2915,19 @@ export default function ChamadoDetalhes() {
       toast.success('Anexo deletado com sucesso')
     } catch (error) {
       toast.error('Erro ao deletar anexo')
+    }
+  }
+
+  const handleDeleteDocumento = async (docId: string) => {
+    if (!window.confirm('Tem certeza que deseja deletar este documento?')) return
+    try {
+      const { error } = await supabase.from('documentos').delete().eq('id', docId)
+      if (error) throw error
+      setDocumentosChamado((prev) => prev.filter((d) => d.id !== docId))
+      toast.success('Documento deletado com sucesso')
+    } catch (error) {
+      console.error(error)
+      toast.error('Erro ao deletar documento')
     }
   }
 
@@ -4029,7 +4099,7 @@ export default function ChamadoDetalhes() {
           </div>
         )}
 
-        {isSupport && (
+        {(isSupport || isTiAdmin) && (
           <div className="pt-3 border-t flex flex-col gap-3" id="anexos-internos">
             <div>
               <div className="flex items-center justify-between mb-2">
@@ -4243,7 +4313,8 @@ export default function ChamadoDetalhes() {
                         </Button>
                         {(user?.id === anexo.usuario_id ||
                           user?.id === chamado.responsavel_id ||
-                          currentUserProfile?.tipo_usuario === 'admin') && (
+                          currentUserProfile?.tipo_usuario === 'admin' ||
+                          isTiAdmin) && (
                           <Button
                             size="icon"
                             variant="ghost"
@@ -4471,17 +4542,21 @@ export default function ChamadoDetalhes() {
                             <Eye className="h-4 w-4" />
                           )}
                         </Button>
-                        {isSupport && !anexo.isDocument && (
+                        {((isSupport && !anexo.isDocument) || isTiAdmin) && (
                           <Button
                             size="icon"
                             variant="ghost"
                             className="h-8 w-8 text-slate-500 hover:text-red-600"
-                            onClick={() => handleDeleteAnexo(anexo.id, anexo.url_arquivo)}
+                            onClick={() =>
+                              anexo.isDocument
+                                ? handleDeleteDocumento(anexo.id)
+                                : handleDeleteAnexo(anexo.id, anexo.url_arquivo)
+                            }
                             disabled={
                               loadingAction === `${anexo.id}-download` ||
                               loadingAction === `${anexo.id}-view`
                             }
-                            title="Excluir anexo"
+                            title="Excluir"
                           >
                             <Trash2 className="h-4 w-4" />
                           </Button>

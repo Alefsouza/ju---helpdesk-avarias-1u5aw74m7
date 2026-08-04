@@ -77,6 +77,8 @@ export default function MeusAtendimentos() {
     () => searchParams.get('situacao') || 'Todos',
   )
   const [situacaoOptions, setSituacaoOptions] = useState<string[]>([])
+  const [orcamentoFilter, setOrcamentoFilter] = useState<string>('Todos')
+  const [chamadosComOrcamento, setChamadosComOrcamento] = useState<Set<string>>(new Set())
 
   const isSinistro = profile?.tipo_usuario === 'sinistro'
   const isJuridicoTeamMember = isMariaJuridico(user?.email) || isLuizJuridico(user?.email)
@@ -243,8 +245,28 @@ export default function MeusAtendimentos() {
         }))
 
         setChamados(chamadosComNome)
+
+        const chamadoIds = chamadosComNome.map((c) => c.id)
+        if (chamadoIds.length > 0) {
+          const { data: anexosInternos } = await supabase
+            .from('anexos_chamado_interno')
+            .select('chamado_id, nome_arquivo')
+            .in('chamado_id', chamadoIds)
+
+          const orcamentoIds = new Set<string>()
+          ;(anexosInternos || []).forEach((a) => {
+            const nome = (a.nome_arquivo || '').toLowerCase()
+            if (nome.includes('orçamento') || nome.includes('orcamento')) {
+              orcamentoIds.add(a.chamado_id)
+            }
+          })
+          setChamadosComOrcamento(orcamentoIds)
+        } else {
+          setChamadosComOrcamento(new Set())
+        }
       } else {
         setChamados([])
+        setChamadosComOrcamento(new Set())
       }
     } catch (e) {
       console.error(e)
@@ -427,6 +449,8 @@ export default function MeusAtendimentos() {
   const filteredChamados = chamados
     .filter((c) => {
       if (situacaoFilter !== 'Todos' && c.situacao_processo !== situacaoFilter) return false
+      if (orcamentoFilter === 'Com orçamento' && !chamadosComOrcamento.has(c.id)) return false
+      if (orcamentoFilter === 'Sem orçamento' && chamadosComOrcamento.has(c.id)) return false
       if (!debouncedSearch) return true
       const term = debouncedSearch.toLowerCase()
       return (
@@ -505,8 +529,17 @@ export default function MeusAtendimentos() {
             ))}
           </SelectContent>
         </Select>
+        <Select value={orcamentoFilter} onValueChange={setOrcamentoFilter}>
+          <SelectTrigger className="w-full sm:w-48 bg-white shadow-sm">
+            <SelectValue placeholder="Orçamento" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="Todos">Todos</SelectItem>
+            <SelectItem value="Com orçamento">Com orçamento</SelectItem>
+            <SelectItem value="Sem orçamento">Sem orçamento</SelectItem>
+          </SelectContent>
+        </Select>
       </div>
-
       {loading ? (
         <div className="bg-white rounded-lg border shadow-sm p-4 space-y-4">
           {[1, 2, 3].map((i) => (

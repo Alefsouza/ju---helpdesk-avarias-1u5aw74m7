@@ -549,41 +549,47 @@ export default function MeusAtendimentos() {
             onChange={(e) => setSearchTerm(e.target.value)}
           />
         </div>
-        <Select
-          value={situacaoFilter}
-          onValueChange={(value) => {
-            setSituacaoFilter(value)
-            const params = new URLSearchParams(searchParams)
-            if (value === 'Todos') {
-              params.delete('situacao')
-            } else {
-              params.set('situacao', value)
-            }
-            setSearchParams(params, { replace: true })
-          }}
-        >
-          <SelectTrigger className="w-full sm:w-64 bg-white shadow-sm">
-            <SelectValue placeholder="Situação do Processo" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="Todos">Todos</SelectItem>
-            {situacaoOptions.map((s) => (
-              <SelectItem key={s} value={s}>
-                {s}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-        <Select value={orcamentoFilter} onValueChange={setOrcamentoFilter}>
-          <SelectTrigger className="w-full sm:w-48 bg-white shadow-sm">
-            <SelectValue placeholder="Orçamento" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="Todos">Todos</SelectItem>
-            <SelectItem value="Com orçamento">Com orçamento</SelectItem>
-            <SelectItem value="Sem orçamento">Sem orçamento</SelectItem>
-          </SelectContent>
-        </Select>
+        <div className="flex flex-col gap-1">
+          <span className="text-xs font-medium text-slate-500">Situação do Processo</span>
+          <Select
+            value={situacaoFilter}
+            onValueChange={(value) => {
+              setSituacaoFilter(value)
+              const params = new URLSearchParams(searchParams)
+              if (value === 'Todos') {
+                params.delete('situacao')
+              } else {
+                params.set('situacao', value)
+              }
+              setSearchParams(params, { replace: true })
+            }}
+          >
+            <SelectTrigger className="w-full sm:w-64 bg-white shadow-sm">
+              <SelectValue placeholder="Situação do Processo" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="Todos">Todos</SelectItem>
+              {situacaoOptions.map((s) => (
+                <SelectItem key={s} value={s}>
+                  {s}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="flex flex-col gap-1">
+          <span className="text-xs font-medium text-slate-500">Orçamento</span>
+          <Select value={orcamentoFilter} onValueChange={setOrcamentoFilter}>
+            <SelectTrigger className="w-full sm:w-48 bg-white shadow-sm">
+              <SelectValue placeholder="Orçamento" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="Todos">Todos</SelectItem>
+              <SelectItem value="Com orçamento">Com orçamento</SelectItem>
+              <SelectItem value="Sem orçamento">Sem orçamento</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
       </div>
       {loading ? (
         <div className="bg-white rounded-lg border shadow-sm p-4 space-y-4">

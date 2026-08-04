@@ -248,18 +248,25 @@ export default function MeusAtendimentos() {
 
         const chamadoIds = chamadosComNome.map((c) => c.id)
         if (chamadoIds.length > 0) {
-          const { data: anexosInternos } = await supabase
-            .from('anexos_chamado_interno')
-            .select('chamado_id, nome_arquivo')
-            .in('chamado_id', chamadoIds)
-
           const orcamentoIds = new Set<string>()
-          ;(anexosInternos || []).forEach((a) => {
-            const nome = (a.nome_arquivo || '').toLowerCase()
-            if (nome.includes('orçamento') || nome.includes('orcamento')) {
-              orcamentoIds.add(a.chamado_id)
-            }
-          })
+          const batchSize = 200
+          for (let i = 0; i < chamadoIds.length; i += batchSize) {
+            const batch = chamadoIds.slice(i, i + batchSize)
+            const { data: anexosBatch } = await supabase
+              .from('anexos_chamado_interno')
+              .select('chamado_id, nome_arquivo')
+              .in('chamado_id', batch)
+
+            ;(anexosBatch || []).forEach((a) => {
+              const nome = (a.nome_arquivo || '')
+                .toLowerCase()
+                .normalize('NFD')
+                .replace(/[\u0300-\u036f]/g, '')
+              if (nome.includes('orcamento')) {
+                orcamentoIds.add(a.chamado_id)
+              }
+            })
+          }
           setChamadosComOrcamento(orcamentoIds)
         } else {
           setChamadosComOrcamento(new Set())

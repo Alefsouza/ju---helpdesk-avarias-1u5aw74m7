@@ -250,20 +250,58 @@ export default function MeusAtendimentos() {
         if (chamadoIds.length > 0) {
           const orcamentoIds = new Set<string>()
           const batchSize = 200
+
+          const normalizeName = (name: string | null | undefined): string =>
+            (name || '')
+              .toLowerCase()
+              .normalize('NFD')
+              .replace(/[\u0300-\u036f]/g, '')
+
           for (let i = 0; i < chamadoIds.length; i += batchSize) {
             const batch = chamadoIds.slice(i, i + batchSize)
-            const { data: anexosBatch } = await supabase
+
+            const { data: anexosBatch, error: anexosError } = await supabase
               .from('anexos_chamado_interno')
               .select('chamado_id, nome_arquivo')
               .in('chamado_id', batch)
 
+            if (anexosError) {
+              console.error(
+                '[MeusAtendimentos] Erro ao buscar anexos_chamado_interno para orçamento:',
+                anexosError,
+              )
+            }
+
             ;(anexosBatch || []).forEach((a) => {
-              const nome = (a.nome_arquivo || '')
-                .toLowerCase()
-                .normalize('NFD')
-                .replace(/[\u0300-\u036f]/g, '')
-              if (nome.includes('orcamento')) {
+              if (normalizeName(a.nome_arquivo).includes('orcamento')) {
                 orcamentoIds.add(a.chamado_id)
+              }
+            })
+
+            const { data: docsBatch, error: docsError } = await supabase
+              .from('documentos')
+              .select('chamado_id, nome_arquivo, tipo_documento, orcamento_url')
+              .in('chamado_id', batch)
+
+            if (docsError) {
+              console.error(
+                '[MeusAtendimentos] Erro ao buscar documentos para orçamento:',
+                docsError,
+              )
+            }
+
+            ;(docsBatch || []).forEach((d) => {
+              const nome = normalizeName(d.nome_arquivo)
+              const tipo = normalizeName(d.tipo_documento)
+              const orcamentoUrl = normalizeName(d.orcamento_url)
+              if (
+                nome.includes('orcamento') ||
+                tipo.includes('orcamento') ||
+                orcamentoUrl.includes('orcamento')
+              ) {
+                if (d.chamado_id) {
+                  orcamentoIds.add(d.chamado_id)
+                }
               }
             })
           }

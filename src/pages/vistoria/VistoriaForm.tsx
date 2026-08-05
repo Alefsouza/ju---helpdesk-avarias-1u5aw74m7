@@ -28,11 +28,16 @@ import {
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
+import { Label } from '@/components/ui/label'
 import logoBranco from '@/assets/logo_branco_transparente_nitido-80a6a.png'
 
 const formSchema = z.object({
   linha: z.string().min(1, 'Campo obrigatório'),
   numero_carro: z.string().min(1, 'Campo obrigatório'),
+  data_ocorrencia: z.enum(['hoje', 'ontem'], {
+    required_error: 'Selecione a data da ocorrência',
+  }),
   descricao_danos: z.string().min(1, 'Campo obrigatório'),
   registro_motorista: z.string().min(1, 'Campo obrigatório'),
   nome_motorista: z.string().min(1, 'Campo obrigatório'),
@@ -55,6 +60,7 @@ export default function VistoriaForm() {
     defaultValues: {
       linha: '',
       numero_carro: '',
+      data_ocorrencia: undefined,
       descricao_danos: '',
       registro_motorista: '',
       nome_motorista: '',
@@ -192,12 +198,16 @@ export default function VistoriaForm() {
       }
 
       const now = new Date()
+      const occurrenceDate =
+        values.data_ocorrencia === 'ontem'
+          ? new Date(now.getFullYear(), now.getMonth(), now.getDate() - 1)
+          : now
       const currentDate =
-        now.getFullYear() +
+        occurrenceDate.getFullYear() +
         '-' +
-        String(now.getMonth() + 1).padStart(2, '0') +
+        String(occurrenceDate.getMonth() + 1).padStart(2, '0') +
         '-' +
-        String(now.getDate()).padStart(2, '0')
+        String(occurrenceDate.getDate()).padStart(2, '0')
       const currentTime =
         String(now.getHours()).padStart(2, '0') +
         ':' +
@@ -337,6 +347,37 @@ export default function VistoriaForm() {
                   )}
                 />
               </div>
+
+              <FormField
+                control={form.control}
+                name="data_ocorrencia"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Data da Ocorrência</FormLabel>
+                    <FormControl>
+                      <RadioGroup
+                        onValueChange={field.onChange}
+                        value={field.value}
+                        className="flex flex-wrap gap-4"
+                      >
+                        <div className="flex items-center gap-2">
+                          <RadioGroupItem value="hoje" id="data-hoje" />
+                          <Label htmlFor="data-hoje" className="cursor-pointer font-normal">
+                            Hoje
+                          </Label>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <RadioGroupItem value="ontem" id="data-ontem" />
+                          <Label htmlFor="data-ontem" className="cursor-pointer font-normal">
+                            Ontem
+                          </Label>
+                        </div>
+                      </RadioGroup>
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
 
               <FormField
                 control={form.control}

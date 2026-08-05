@@ -395,7 +395,8 @@ export default function DocumentosPendentes() {
     const data = formatDate(dateStr)
     if (data === '-') return '-'
     if (!horario) return data
-    return `${data} às ${horario}`
+    const horarioFormatado = horario.length >= 5 ? horario.substring(0, 5) : horario
+    return `${data} às ${horarioFormatado}`
   }
 
   return (

@@ -353,50 +353,51 @@ export default function VistoriaForm() {
                 />
               </div>
 
-              <FormField
-                control={form.control}
-                name="data_ocorrencia"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Data da Ocorrência</FormLabel>
-                    <FormControl>
-                      <RadioGroup
-                        onValueChange={field.onChange}
-                        value={field.value}
-                        className="flex flex-wrap gap-4"
-                      >
-                        <div className="flex items-center gap-2">
-                          <RadioGroupItem value="hoje" id="data-hoje" />
-                          <Label htmlFor="data-hoje" className="cursor-pointer font-normal">
-                            Hoje
-                          </Label>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <RadioGroupItem value="ontem" id="data-ontem" />
-                          <Label htmlFor="data-ontem" className="cursor-pointer font-normal">
-                            Ontem
-                          </Label>
-                        </div>
-                      </RadioGroup>
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="horario_ocorrencia"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Horário da Ocorrência</FormLabel>
-                    <FormControl>
-                      <Input type="time" placeholder="Ex: 14:30" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <FormField
+                  control={form.control}
+                  name="data_ocorrencia"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Data da Ocorrência</FormLabel>
+                      <FormControl>
+                        <RadioGroup
+                          onValueChange={field.onChange}
+                          value={field.value}
+                          className="flex flex-wrap gap-4"
+                        >
+                          <div className="flex items-center gap-2">
+                            <RadioGroupItem value="hoje" id="data-hoje" />
+                            <Label htmlFor="data-hoje" className="cursor-pointer font-normal">
+                              Hoje
+                            </Label>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <RadioGroupItem value="ontem" id="data-ontem" />
+                            <Label htmlFor="data-ontem" className="cursor-pointer font-normal">
+                              Ontem
+                            </Label>
+                          </div>
+                        </RadioGroup>
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="horario_ocorrencia"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Horário da Ocorrência</FormLabel>
+                      <FormControl>
+                        <Input type="time" placeholder="Ex: 14:30" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
 
               <FormField
                 control={form.control}

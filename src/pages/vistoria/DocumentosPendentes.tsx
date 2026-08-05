@@ -391,6 +391,13 @@ export default function DocumentosPendentes() {
     }
   }
 
+  const formatDataHorario = (dateStr: string | null, horario: string | null) => {
+    const data = formatDate(dateStr)
+    if (data === '-') return '-'
+    if (!horario) return data
+    return `${data} às ${horario}`
+  }
+
   return (
     <div className="max-w-6xl mx-auto space-y-6">
       <div className="flex items-center justify-between">
@@ -576,7 +583,9 @@ export default function DocumentosPendentes() {
                 </div>
                 <div>
                   <p className="text-slate-500 font-medium mb-1">Data da Ocorrência</p>
-                  <p className="text-slate-900">{formatDate(selectedViewDoc.data)}</p>
+                  <p className="text-slate-900">
+                    {formatDataHorario(selectedViewDoc.data, selectedViewDoc.horario)}
+                  </p>
                 </div>
                 <div>
                   <p className="text-slate-500 font-medium mb-1">Vistoriador</p>

@@ -404,7 +404,7 @@ export default function DocumentosPendentes() {
               <TableHead>Garagem</TableHead>
               <TableHead>Linha</TableHead>
               <TableHead>Carro</TableHead>
-              <TableHead>Data</TableHead>
+              <TableHead>Data da Ocorrência</TableHead>
               <TableHead>Descrição dos Danos</TableHead>
               <TableHead className="text-right w-[340px]">Ações</TableHead>
             </TableRow>

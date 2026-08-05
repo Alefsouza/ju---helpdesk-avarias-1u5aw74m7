@@ -575,11 +575,8 @@ export default function DocumentosPendentes() {
                   <p className="text-slate-900">{selectedViewDoc.numero_carro || '-'}</p>
                 </div>
                 <div>
-                  <p className="text-slate-500 font-medium mb-1">Data / Horário</p>
-                  <p className="text-slate-900">
-                    {formatDate(selectedViewDoc.data)}{' '}
-                    {selectedViewDoc.horario ? `às ${selectedViewDoc.horario}` : ''}
-                  </p>
+                  <p className="text-slate-500 font-medium mb-1">Data</p>
+                  <p className="text-slate-900">{formatDate(selectedViewDoc.data)}</p>
                 </div>
                 <div>
                   <p className="text-slate-500 font-medium mb-1">Vistoriador</p>

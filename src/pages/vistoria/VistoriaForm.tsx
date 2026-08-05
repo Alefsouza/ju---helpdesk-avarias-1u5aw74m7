@@ -38,6 +38,10 @@ const formSchema = z.object({
   data_ocorrencia: z.enum(['hoje', 'ontem'], {
     required_error: 'Selecione a data da ocorrência',
   }),
+  horario_ocorrencia: z
+    .string()
+    .min(1, 'Campo obrigatório')
+    .regex(/^\d{2}:\d{2}$/, 'Formato inválido. Use hh:mm'),
   descricao_danos: z.string().min(1, 'Campo obrigatório'),
   registro_motorista: z.string().min(1, 'Campo obrigatório'),
   nome_motorista: z.string().min(1, 'Campo obrigatório'),
@@ -61,6 +65,7 @@ export default function VistoriaForm() {
       linha: '',
       numero_carro: '',
       data_ocorrencia: undefined,
+      horario_ocorrencia: '',
       descricao_danos: '',
       registro_motorista: '',
       nome_motorista: '',
@@ -230,7 +235,7 @@ export default function VistoriaForm() {
 
       docData.garagem = profile?.garagem || ''
       docData.data = currentDate
-      docData.horario = currentTime
+      docData.horario = values.horario_ocorrencia
       docData.linha = values.linha
       docData.numero_carro = values.numero_carro
       docData.descricao_danos = values.descricao_danos
@@ -373,6 +378,20 @@ export default function VistoriaForm() {
                           </Label>
                         </div>
                       </RadioGroup>
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="horario_ocorrencia"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Horário da Ocorrência</FormLabel>
+                    <FormControl>
+                      <Input type="time" placeholder="Ex: 14:30" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>

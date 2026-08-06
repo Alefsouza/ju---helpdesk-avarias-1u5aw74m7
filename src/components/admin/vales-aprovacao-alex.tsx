@@ -47,7 +47,7 @@ export function ValesAprovacaoAlex() {
       .eq('status', 'finalizado')
       .eq('status_aprovacao_alex', 'pendente')
       .or(
-        'nome_arquivo.ilike.%autorização%,nome_arquivo.ilike.%autorizacao%,nome_arquivo.ilike.%escaneado%',
+        'nome_arquivo.ilike.%autorização%,nome_arquivo.ilike.%autorizacao%,nome_arquivo.ilike.%escaneado%,nome_arquivo.ilike.%vale%',
         { referencedTable: 'anexos_chamado_interno' },
       )
       .order('atualizado_em', { ascending: false })

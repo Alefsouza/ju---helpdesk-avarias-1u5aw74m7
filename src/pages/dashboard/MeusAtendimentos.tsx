@@ -24,6 +24,7 @@ import {
   RotateCcw,
   Link as LinkIcon,
   AlertTriangle,
+  DollarSign,
 } from 'lucide-react'
 import { UnificarChamadoModal } from '@/components/UnificarChamadoModal'
 import { Badge } from '@/components/ui/badge'
@@ -746,11 +747,25 @@ export default function MeusAtendimentos() {
                 {filteredChamados.map((c) => (
                   <TableRow key={c.id} className="hover:bg-slate-50/80 transition-colors py-2">
                     <TableCell className="align-middle">
-                      <div
-                        className="font-semibold text-slate-700 break-words whitespace-normal"
-                        title={c.pia || ''}
-                      >
-                        {c.pia || '—'}
+                      <div className="flex items-center gap-1">
+                        <div
+                          className="font-semibold text-slate-700 break-words whitespace-normal"
+                          title={c.pia || ''}
+                        >
+                          {c.pia || '—'}
+                        </div>
+                        {chamadosComOrcamento.has(c.id) && (
+                          <TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <DollarSign className="h-4 w-4 text-green-600 shrink-0 cursor-help" />
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                <p>Chamado com orçamento!</p>
+                              </TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
+                        )}
                       </div>
                     </TableCell>
                     <TableCell className="align-middle">
@@ -890,7 +905,19 @@ export default function MeusAtendimentos() {
                   <div className="flex justify-between items-start gap-2">
                     <div className="flex-1 min-w-0">
                       <div className="text-xs font-semibold text-slate-500 mb-1 flex items-center gap-1 break-words whitespace-normal">
-                        R.A.: {c.pia || '—'}
+                        <span>R.A.: {c.pia || '—'}</span>
+                        {chamadosComOrcamento.has(c.id) && (
+                          <TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <DollarSign className="h-4 w-4 text-green-600 shrink-0 cursor-help" />
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                <p>Chamado com orçamento!</p>
+                              </TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
+                        )}
                       </div>
                       <div className="flex items-center gap-2">
                         <h3 className="font-semibold text-slate-900 break-words whitespace-normal">

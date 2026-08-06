@@ -1,8 +1,10 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { supabase } from '@/lib/supabase/client'
 import { useAuth } from '@/hooks/use-auth'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Search, X } from 'lucide-react'
 import {
   Dialog,
   DialogContent,
@@ -36,6 +38,7 @@ export function ValesAprovacaoAlex() {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [isRejectOpen, setIsRejectOpen] = useState(false)
   const [rejectReason, setRejectReason] = useState('')
+  const [searchTerm, setSearchTerm] = useState('')
 
   const fetchChamados = async () => {
     setLoading(true)
@@ -190,6 +193,18 @@ export function ValesAprovacaoAlex() {
     }
   }
 
+  const filteredChamados = useMemo(() => {
+    if (!searchTerm.trim()) return chamados
+    const term = searchTerm.trim().toLowerCase()
+    return chamados.filter((chamado) => {
+      const driver = getDriverData(chamado)
+      const titulo = (chamado.titulo || '').toLowerCase()
+      const registro = (driver.registro || '').toLowerCase()
+      const nome = (driver.nome || '').toLowerCase()
+      return titulo.includes(term) || registro.includes(term) || nome.includes(term)
+    })
+  }, [chamados, searchTerm])
+
   const getOccurrenceDate = (chamado: any) => {
     if (chamado.data_ocorrencia) {
       return format(new Date(chamado.data_ocorrencia + 'T12:00:00'), 'dd/MM/yyyy')
@@ -221,6 +236,41 @@ export function ValesAprovacaoAlex() {
             </p>
           </div>
         ) : (
+          <div className="p-4 border-b">
+            <div className="relative max-w-sm">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                type="text"
+                placeholder="Buscar por chamado, registro ou motorista..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-9 pr-9"
+              />
+              {searchTerm && (
+                <button
+                  type="button"
+                  onClick={() => setSearchTerm('')}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                  aria-label="Limpar busca"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              )}
+            </div>
+          </div>
+        )}
+        {!loading && chamados.length > 0 && filteredChamados.length === 0 && (
+          <div className="flex flex-col items-center justify-center p-12 text-center">
+            <Search className="h-12 w-12 text-muted-foreground/50 mb-4" />
+            <p className="text-lg font-medium text-muted-foreground">
+              Nenhum chamado encontrado para "{searchTerm}"
+            </p>
+            <Button variant="outline" size="sm" className="mt-4" onClick={() => setSearchTerm('')}>
+              Limpar busca
+            </Button>
+          </div>
+        )}
+        {!loading && chamados.length > 0 && filteredChamados.length > 0 && (
           <div className="overflow-x-auto">
             <Table>
               <TableHeader>
@@ -233,7 +283,7 @@ export function ValesAprovacaoAlex() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {chamados.map((chamado) => {
+                {filteredChamados.map((chamado) => {
                   const driver = getDriverData(chamado)
                   return (
                     <TableRow key={chamado.id}>

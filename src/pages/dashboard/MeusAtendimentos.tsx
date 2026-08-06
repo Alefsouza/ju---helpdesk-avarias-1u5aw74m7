@@ -462,6 +462,24 @@ export default function MeusAtendimentos() {
     })
   }
 
+  const getAttendanceDays = (criadoEm: string): number => {
+    const created = new Date(criadoEm)
+    const now = new Date()
+    const diffMs = now.getTime() - created.getTime()
+    return Math.floor(diffMs / (1000 * 60 * 60 * 24))
+  }
+
+  const getAttendanceIndicator = (criadoEm: string): { color: string; message: string } | null => {
+    const days = getAttendanceDays(criadoEm)
+    if (days > 30) {
+      return { color: 'bg-red-500', message: 'Chamado em atendimento há mais de 30 dias' }
+    }
+    if (days >= 15) {
+      return { color: 'bg-orange-500', message: 'Chamado em atendimento há mais de 15 dias' }
+    }
+    return null
+  }
+
   const PriorityBadge = ({ priority }: { priority: string | null }) => {
     if (!priority)
       return (
@@ -776,6 +794,24 @@ export default function MeusAtendimentos() {
                         >
                           {c.titulo}
                         </div>
+                        {(() => {
+                          const indicator = getAttendanceIndicator(c.criado_em)
+                          if (!indicator) return null
+                          return (
+                            <TooltipProvider>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <span
+                                    className={`inline-block h-3 w-3 rounded-full shrink-0 cursor-help ${indicator.color}`}
+                                  />
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  <p>{indicator.message}</p>
+                                </TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
+                          )
+                        })()}
                         {c.is_duplicate && (
                           <TooltipProvider>
                             <Tooltip>
@@ -923,6 +959,24 @@ export default function MeusAtendimentos() {
                         <h3 className="font-semibold text-slate-900 break-words whitespace-normal">
                           {c.titulo}
                         </h3>
+                        {(() => {
+                          const indicator = getAttendanceIndicator(c.criado_em)
+                          if (!indicator) return null
+                          return (
+                            <TooltipProvider>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <span
+                                    className={`inline-block h-3 w-3 rounded-full shrink-0 cursor-help ${indicator.color}`}
+                                  />
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  <p>{indicator.message}</p>
+                                </TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
+                          )
+                        })()}
                         {c.is_duplicate && (
                           <TooltipProvider>
                             <Tooltip>

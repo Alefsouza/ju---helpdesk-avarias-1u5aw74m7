@@ -3408,7 +3408,7 @@ export default function ChamadoDetalhes() {
       'autorizacao',
       'desconto',
     ]
-    const alexKeywords = ['autorização', 'autorizacao', 'escaneado']
+    const alexKeywords = ['autorização', 'autorizacao', 'escaneado', 'vale']
 
     const hasClaudineiTrigger = (internalAnexos || []).some((a: any) => {
       const nome = (a.nome_arquivo || '').toLowerCase()

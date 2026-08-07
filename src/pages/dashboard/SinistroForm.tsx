@@ -37,8 +37,8 @@ const formSchema = z.object({
     .regex(/^[A-Z]{3} [A-Z0-9]{4}$/, 'Formato inválido'),
   registroMotorista: z.string().min(1, 'Obrigatório'),
   nomeMotorista: z.string().min(1, 'Obrigatório'),
-  registroCobrador: z.string().min(1, 'Obrigatório'),
-  nomeCobrador: z.string().min(1, 'Obrigatório'),
+  registroCobrador: z.string().optional(),
+  nomeCobrador: z.string().optional(),
   descricaoAcidente: z.string().min(20, 'Mínimo 20 caracteres'),
   t1Nome: z.string().optional(),
   t1Contato: z.string().optional(),
@@ -64,9 +64,13 @@ function FileUploadField({
   onChange: (f: File | null) => void
 }) {
   const inputId = `upload-${label.replace(/\s/g, '-').toLowerCase()}`
+  const isOptional = label.toLowerCase().includes('opcional')
   return (
     <div className="space-y-2">
-      <Label className="text-sm font-medium">{label} *</Label>
+      <Label className="text-sm font-medium">
+        {label}
+        {!isOptional && ' *'}
+      </Label>
       {!file ? (
         <label
           htmlFor={inputId}
@@ -212,8 +216,8 @@ export function SinistroForm() {
 
   const onSubmit = async (values: FormValues) => {
     if (!user) return
-    if (!relatoCoc || !relatoOperador) {
-      toast.error('Os anexos Relato COC e Relato Operador são obrigatórios')
+    if (!relatoOperador) {
+      toast.error('O anexo Relato Operador é obrigatório')
       return
     }
     if (isSearchingPlaca || !identifiedGaragem) {
@@ -256,10 +260,10 @@ export function SinistroForm() {
         .single()
       if (chamadoError) throw chamadoError
 
-      for (const [fileObj, label] of [
-        [relatoCoc, 'Relato COC'],
-        [relatoOperador, 'Relato Operador'],
-      ] as [File, string][]) {
+      const attachmentsToUpload: [File, string][] = []
+      if (relatoCoc) attachmentsToUpload.push([relatoCoc, 'Relato COC'])
+      if (relatoOperador) attachmentsToUpload.push([relatoOperador, 'Relato Operador'])
+      for (const [fileObj, label] of attachmentsToUpload) {
         const ext = fileObj.name.split('.').pop() || 'dat'
         const fileName = `${chamado.id}/${Date.now()}-${Math.random().toString(36).substring(7)}.${ext}`
         const { error: uploadError } = await supabase.storage
@@ -440,7 +444,7 @@ export function SinistroForm() {
                   )}
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="registroCobrador">Registro Cobrador *</Label>
+                  <Label htmlFor="registroCobrador">Registro Cobrador</Label>
                   <Input
                     id="registroCobrador"
                     placeholder="Ex: 54321"
@@ -451,7 +455,7 @@ export function SinistroForm() {
                   )}
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="nomeCobrador">Nome Cobrador *</Label>
+                  <Label htmlFor="nomeCobrador">Nome Cobrador</Label>
                   <Input
                     id="nomeCobrador"
                     placeholder="Nome completo"
@@ -475,7 +479,11 @@ export function SinistroForm() {
                 )}
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <FileUploadField label="Relato COC" file={relatoCoc} onChange={setRelatoCoc} />
+                <FileUploadField
+                  label="Relato COC (Opcional)"
+                  file={relatoCoc}
+                  onChange={setRelatoCoc}
+                />
                 <FileUploadField
                   label="Relato Operador"
                   file={relatoOperador}

@@ -319,10 +319,12 @@ export function SinistroForm() {
       ]
       const descricao = `${values.descricaoAcidente}\n\nTestemunhas:\n${testemunhas.map((t) => `${t.nome || '-'} - ${t.contato || '-'}`).join('\n')}\n\nDados do Terceiro:\n${values.terNome || '-'} - ${values.terContato || '-'}\n${values.terPlaca || '-'} - ${values.terModelo || '-'}`
 
+      const carroIdentificador = identifiedPrefixo || values.placaOnibus.replace(/\s/g, '')
+      const tituloFinal = `${values.titulo} - Carro: ${carroIdentificador}`
       const { data: chamado, error: chamadoError } = await supabase
         .from('chamados')
         .insert({
-          titulo: values.titulo,
+          titulo: tituloFinal,
           descricao,
           tipo_chamado: 'Colisão',
           prioridade: null,

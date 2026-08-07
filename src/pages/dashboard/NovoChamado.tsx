@@ -43,6 +43,7 @@ import {
   type StoredFile,
 } from '@/lib/indexeddb'
 import { compressImage } from '@/lib/image-compression'
+import { SinistroForm } from '@/pages/dashboard/SinistroForm'
 
 type FileCategory =
   | 'boletim'
@@ -778,6 +779,10 @@ export default function NovoChamado() {
     files.some((f) => f.status !== 'success') ||
     isSearchingPlaca ||
     identifiedGaragem === 'NOT_FOUND'
+
+  if (profile?.tipo_usuario === 'sinistro') {
+    return <SinistroForm />
+  }
 
   return (
     <div className="max-w-3xl mx-auto space-y-6 animate-fade-in-up p-4 mb-20">

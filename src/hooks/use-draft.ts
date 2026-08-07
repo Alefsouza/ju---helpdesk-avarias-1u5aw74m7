@@ -25,12 +25,17 @@ export function useDraft<T extends Record<string, any>>(
   form: UseFormReturn<T>,
   storageKey: string,
   userId?: string,
+  enabled: boolean = true,
 ) {
   const [draftRestored, setDraftRestored] = useState(false)
   const isRestoring = useRef(true)
   const debounceTimer = useRef<NodeJS.Timeout | null>(null)
 
   useEffect(() => {
+    if (!enabled) {
+      isRestoring.current = false
+      return
+    }
     const loadDraft = async () => {
       let parsed = null
 
@@ -82,9 +87,10 @@ export function useDraft<T extends Record<string, any>>(
     }
 
     loadDraft()
-  }, [form, storageKey, userId])
+  }, [form, storageKey, userId, enabled])
 
   useEffect(() => {
+    if (!enabled) return
     const subscription = form.watch((value) => {
       if (isRestoring.current) return
 
@@ -133,9 +139,10 @@ export function useDraft<T extends Record<string, any>>(
       subscription.unsubscribe()
       if (debounceTimer.current) clearTimeout(debounceTimer.current)
     }
-  }, [form, storageKey, userId])
+  }, [form, storageKey, userId, enabled])
 
   const clearDraft = async () => {
+    if (!enabled) return
     localStorage.removeItem(storageKey)
     setDraftRestored(false)
     if (userId) {

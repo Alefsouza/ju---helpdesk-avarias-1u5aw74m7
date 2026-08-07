@@ -257,6 +257,7 @@ export default function NovoChamado() {
     form,
     'draft-novo-chamado',
     user?.id,
+    profile?.tipo_usuario !== 'sinistro',
   )
 
   const [attachmentErrors, setAttachmentErrors] = useState<Record<string, string>>({})
@@ -280,7 +281,14 @@ export default function NovoChamado() {
       localStorage.removeItem('draft-novo-chamado-files')
 
       try {
-        const storedFiles = await getStoredFiles()
+        const validCategoryIds = [
+          ...ATTACHMENT_CATEGORIES,
+          ...SEGURADORA_CATEGORIES,
+          LESAO_ATTACHMENT,
+        ].map((c) => c.id)
+        const storedFiles = (await getStoredFiles()).filter((f) =>
+          validCategoryIds.includes(f.category as FileCategory),
+        )
         if (storedFiles && storedFiles.length > 0) {
           setFiles(storedFiles as FileItem[])
 

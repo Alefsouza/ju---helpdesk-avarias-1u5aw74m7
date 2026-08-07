@@ -1,7 +1,9 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '@/lib/supabase/client'
 import { useAuth } from '@/hooks/use-auth'
+import { useDraft, getSyncDraft } from '@/hooks/use-draft'
+import { saveStoredFile, getStoredFiles, deleteStoredFile, clearStoredFiles } from '@/lib/indexeddb'
 import { Card, CardContent, CardFooter } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -25,6 +27,8 @@ import {
   Loader2,
   CalendarIcon,
 } from 'lucide-react'
+
+const SINISTRO_DRAFT_KEY = 'draft-sinistro-form'
 
 const formSchema = z.object({
   titulo: z.string().min(1, 'Título é obrigatório'),
@@ -115,31 +119,109 @@ export function SinistroForm() {
   const [identifiedGaragem, setIdentifiedGaragem] = useState<string | null>(null)
   const [identifiedPrefixo, setIdentifiedPrefixo] = useState<string | null>(null)
   const [isSearchingPlaca, setIsSearchingPlaca] = useState(false)
+  const filesLoadedRef = useRef(false)
+  const toastMostrado = useRef(false)
+
+  const initialDraft = getSyncDraft(SINISTRO_DRAFT_KEY)
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      titulo: '',
-      dataOcorrencia: undefined,
-      horaOcorrencia: '',
-      placaOnibus: '',
-      registroMotorista: '',
-      nomeMotorista: '',
-      registroCobrador: '',
-      nomeCobrador: '',
-      descricaoAcidente: '',
-      t1Nome: '',
-      t1Contato: '',
-      t2Nome: '',
-      t2Contato: '',
-      t3Nome: '',
-      t3Contato: '',
-      terNome: '',
-      terContato: '',
-      terPlaca: '',
-      terModelo: '',
+      titulo: initialDraft?.titulo || '',
+      dataOcorrencia: initialDraft?.dataOcorrencia
+        ? new Date(initialDraft.dataOcorrencia)
+        : undefined,
+      horaOcorrencia: initialDraft?.horaOcorrencia || '',
+      placaOnibus: initialDraft?.placaOnibus || '',
+      registroMotorista: initialDraft?.registroMotorista || '',
+      nomeMotorista: initialDraft?.nomeMotorista || '',
+      registroCobrador: initialDraft?.registroCobrador || '',
+      nomeCobrador: initialDraft?.nomeCobrador || '',
+      descricaoAcidente: initialDraft?.descricaoAcidente || '',
+      t1Nome: initialDraft?.t1Nome || '',
+      t1Contato: initialDraft?.t1Contato || '',
+      t2Nome: initialDraft?.t2Nome || '',
+      t2Contato: initialDraft?.t2Contato || '',
+      t3Nome: initialDraft?.t3Nome || '',
+      t3Contato: initialDraft?.t3Contato || '',
+      terNome: initialDraft?.terNome || '',
+      terContato: initialDraft?.terContato || '',
+      terPlaca: initialDraft?.terPlaca || '',
+      terModelo: initialDraft?.terModelo || '',
     },
   })
+
+  const { draftRestored, clearDraft, setDraftRestored } = useDraft(
+    form,
+    SINISTRO_DRAFT_KEY,
+    user?.id,
+  )
+
+  useEffect(() => {
+    if (!user || filesLoadedRef.current) return
+    filesLoadedRef.current = true
+    const loadFiles = async () => {
+      try {
+        const stored = await getStoredFiles()
+        const cocFile = stored.find((f) => f.category === 'sinistro_coc')
+        const operadorFile = stored.find((f) => f.category === 'sinistro_operador')
+        if (cocFile?.file) setRelatoCoc(cocFile.file)
+        if (operadorFile?.file) setRelatoOperador(operadorFile.file)
+      } catch (e) {
+        console.error('Failed to load sinistro files from IDB', e)
+      }
+    }
+    loadFiles()
+  }, [user])
+
+  useEffect(() => {
+    if (draftRestored && !toastMostrado.current) {
+      toast.success('Rascunho recuperado com sucesso!')
+      toastMostrado.current = true
+      const dataObj = form.getValues('dataOcorrencia')
+      if (dataObj && typeof dataObj === 'string') {
+        form.setValue('dataOcorrencia', new Date(dataObj), { shouldValidate: true })
+      }
+    }
+  }, [draftRestored, form])
+
+  const handleRelatoCocChange = (f: File | null) => {
+    setRelatoCoc(f)
+    if (f) {
+      saveStoredFile({
+        id: 'sinistro-relato-coc',
+        category: 'sinistro_coc',
+        file: f,
+        name: f.name,
+        size: f.size,
+        type: f.type,
+        status: 'pending',
+        progress: 0,
+        errorCount: 0,
+      }).catch(console.error)
+    } else {
+      deleteStoredFile('sinistro-relato-coc').catch(console.error)
+    }
+  }
+
+  const handleRelatoOperadorChange = (f: File | null) => {
+    setRelatoOperador(f)
+    if (f) {
+      saveStoredFile({
+        id: 'sinistro-relato-operador',
+        category: 'sinistro_operador',
+        file: f,
+        name: f.name,
+        size: f.size,
+        type: f.type,
+        status: 'pending',
+        progress: 0,
+        errorCount: 0,
+      }).catch(console.error)
+    } else {
+      deleteStoredFile('sinistro-relato-operador').catch(console.error)
+    }
+  }
 
   const placaOnibus = form.watch('placaOnibus')
   const registroMotorista = form.watch('registroMotorista')
@@ -287,6 +369,9 @@ export function SinistroForm() {
       await supabase
         .from('historico_chamado')
         .insert({ chamado_id: chamado.id, acao: 'criado', usuario_id: user.id })
+
+      await clearDraft()
+      await clearStoredFiles()
       toast.success('Chamado aberto com sucesso')
       navigate(`/dashboard/chamados/${chamado.id}`)
     } catch (error) {
@@ -305,6 +390,30 @@ export function SinistroForm() {
         <h1 className="text-3xl font-bold tracking-tight">Abrir Novo Chamado</h1>
         <p className="text-muted-foreground mt-2">Preencha os dados da ocorrência.</p>
       </div>
+
+      {draftRestored && (
+        <div className="mb-2 rounded-lg border border-blue-200 bg-blue-50 p-4 text-blue-800 flex items-start justify-between">
+          <div className="flex items-start gap-3">
+            <AlertCircle className="h-5 w-5 text-blue-600 mt-0.5" />
+            <div>
+              <h3 className="font-semibold text-blue-800">Rascunho Restaurado</h3>
+              <p className="mt-1 text-sm">
+                Encontramos dados preenchidos anteriormente. Seus <strong>anexos</strong> foram
+                preservados.
+              </p>
+            </div>
+          </div>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setDraftRestored(false)}
+            className="-mt-2 -mr-2 text-blue-600 hover:text-blue-800 hover:bg-blue-100"
+          >
+            <X className="h-4 w-4" />
+          </Button>
+        </div>
+      )}
+
       <Card>
         <form onSubmit={form.handleSubmit(onSubmit)}>
           <CardContent className="space-y-8 pt-6">
@@ -482,12 +591,12 @@ export function SinistroForm() {
                 <FileUploadField
                   label="Relato COC (Opcional)"
                   file={relatoCoc}
-                  onChange={setRelatoCoc}
+                  onChange={handleRelatoCocChange}
                 />
                 <FileUploadField
                   label="Relato Operador"
                   file={relatoOperador}
-                  onChange={setRelatoOperador}
+                  onChange={handleRelatoOperadorChange}
                 />
               </div>
             </div>

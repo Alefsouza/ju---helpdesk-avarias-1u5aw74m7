@@ -393,7 +393,7 @@ export default function ValesAprovadosDP() {
         const rawRegistro = String(p.registro).replace(/\D/g, '') || '0'
         const registroPadded = rawRegistro.padStart(6, '0')
 
-        const codigo = '261'
+        const codigo = '602'
 
         const valueNum = Number(p.valor_parcela)
         const valueStr = valueNum.toFixed(2).replace('.', ',')

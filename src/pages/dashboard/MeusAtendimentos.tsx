@@ -29,7 +29,7 @@ import {
 import { UnificarChamadoModal } from '@/components/UnificarChamadoModal'
 import { Badge } from '@/components/ui/badge'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
-import { isDuplicateTicket } from '@/lib/utils'
+import { isDuplicateTicket, cn } from '@/lib/utils'
 import { useJuridicoTeam } from '@/hooks/use-juridico-team'
 import { isMariaJuridico, isLuizJuridico } from '@/lib/juridico-access'
 import {
@@ -80,6 +80,9 @@ export default function MeusAtendimentos() {
   const [situacaoOptions, setSituacaoOptions] = useState<string[]>([])
   const [orcamentoFilter, setOrcamentoFilter] = useState<string>('Todos')
   const [chamadosComOrcamento, setChamadosComOrcamento] = useState<Set<string>>(new Set())
+  const [quickFilterOrcamento, setQuickFilterOrcamento] = useState(false)
+  const [quickFilter15Dias, setQuickFilter15Dias] = useState(false)
+  const [quickFilter30Dias, setQuickFilter30Dias] = useState(false)
 
   const isSinistro = profile?.tipo_usuario === 'sinistro'
   const isJuridicoTeamMember = isMariaJuridico(user?.email) || isLuizJuridico(user?.email)
@@ -515,6 +518,9 @@ export default function MeusAtendimentos() {
       if (situacaoFilter !== 'Todos' && c.situacao_processo !== situacaoFilter) return false
       if (orcamentoFilter === 'Com orçamento' && !chamadosComOrcamento.has(c.id)) return false
       if (orcamentoFilter === 'Sem orçamento' && chamadosComOrcamento.has(c.id)) return false
+      if (quickFilterOrcamento && !chamadosComOrcamento.has(c.id)) return false
+      if (quickFilter15Dias && getAttendanceDays(c.criado_em) <= 15) return false
+      if (quickFilter30Dias && getAttendanceDays(c.criado_em) <= 30) return false
       if (!debouncedSearch) return true
       const term = debouncedSearch.toLowerCase()
       return (
@@ -609,6 +615,85 @@ export default function MeusAtendimentos() {
             </SelectContent>
           </Select>
         </div>
+      </div>
+
+      <div className="flex items-center gap-1.5 -mt-2">
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <button
+                type="button"
+                onClick={() => setQuickFilterOrcamento((v) => !v)}
+                className={cn(
+                  'flex items-center justify-center h-7 w-7 rounded-md border transition-all duration-200',
+                  quickFilterOrcamento
+                    ? 'bg-green-100 border-green-400 text-green-600 shadow-sm scale-105'
+                    : 'bg-slate-50 border-slate-200 text-slate-300 hover:text-slate-400 opacity-60 hover:opacity-100',
+                )}
+                title="Filtrar chamados com orçamento"
+              >
+                <DollarSign className="h-3.5 w-3.5" />
+              </button>
+            </TooltipTrigger>
+            <TooltipContent>
+              <p>Chamados com orçamento</p>
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <button
+                type="button"
+                onClick={() => setQuickFilter15Dias((v) => !v)}
+                className={cn(
+                  'flex items-center justify-center h-7 w-7 rounded-md border transition-all duration-200',
+                  quickFilter15Dias
+                    ? 'bg-orange-100 border-orange-400 shadow-sm scale-105'
+                    : 'bg-slate-50 border-slate-200 opacity-60 hover:opacity-100',
+                )}
+                title="Filtrar chamados em atendimento há mais de 15 dias"
+              >
+                <span
+                  className={cn(
+                    'inline-block h-3 w-3 rounded-full transition-colors',
+                    quickFilter15Dias ? 'bg-orange-500' : 'bg-orange-300/50',
+                  )}
+                />
+              </button>
+            </TooltipTrigger>
+            <TooltipContent>
+              <p>Em atendimento há mais de 15 dias</p>
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <button
+                type="button"
+                onClick={() => setQuickFilter30Dias((v) => !v)}
+                className={cn(
+                  'flex items-center justify-center h-7 w-7 rounded-md border transition-all duration-200',
+                  quickFilter30Dias
+                    ? 'bg-red-100 border-red-400 shadow-sm scale-105'
+                    : 'bg-slate-50 border-slate-200 opacity-60 hover:opacity-100',
+                )}
+                title="Filtrar chamados em atendimento há mais de 30 dias"
+              >
+                <span
+                  className={cn(
+                    'inline-block h-3 w-3 rounded-full transition-colors',
+                    quickFilter30Dias ? 'bg-red-500' : 'bg-red-300/50',
+                  )}
+                />
+              </button>
+            </TooltipTrigger>
+            <TooltipContent>
+              <p>Em atendimento há mais de 30 dias</p>
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
       </div>
       {loading ? (
         <div className="bg-white rounded-lg border shadow-sm p-4 space-y-4">

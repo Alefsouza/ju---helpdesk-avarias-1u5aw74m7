@@ -57,7 +57,8 @@ function applyTableFilters(data: any[], f: ChamadosFilters): any[] {
       if (
         !c.titulo?.toLowerCase().includes(s) &&
         !c.id?.toLowerCase().includes(s) &&
-        !c.nome_usuario?.toLowerCase().includes(s)
+        !c.nome_usuario?.toLowerCase().includes(s) &&
+        !c.pia?.toLowerCase().includes(s)
       ) {
         return false
       }

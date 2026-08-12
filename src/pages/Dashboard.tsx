@@ -9,7 +9,9 @@ export default function Dashboard() {
 
   useEffect(() => {
     if (!loading && profile) {
-      if (profile.tipo_usuario === 'admin') {
+      if (profile.tipo_usuario === 'planejamento') {
+        navigate('/dashboard/vales-aprovacao-alex', { replace: true })
+      } else if (profile.tipo_usuario === 'admin') {
         navigate('/dashboard/admin', { replace: true })
       } else if (profile.tipo_usuario === 'responsavel') {
         navigate('/dashboard/chamados-abertos', { replace: true })
@@ -22,6 +24,10 @@ export default function Dashboard() {
       }
     }
   }, [profile, loading, navigate])
+
+  if (!loading && profile?.tipo_usuario === 'planejamento') {
+    return null
+  }
 
   return (
     <div className="flex h-[50vh] items-center justify-center">

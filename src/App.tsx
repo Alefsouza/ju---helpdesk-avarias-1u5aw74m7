@@ -52,6 +52,9 @@ const DashboardRoute = () => {
   const navigate = useNavigate()
 
   useEffect(() => {
+    if (!loading && profile?.tipo_usuario === 'planejamento') {
+      navigate('/dashboard/vales-aprovacao-alex', { replace: true })
+    }
     if (!loading && user?.email === 'alex.fontes@viasudeste.com') {
       navigate('/dashboard/admin', { replace: true })
     }
@@ -74,6 +77,7 @@ const DashboardRoute = () => {
 
   if (
     loading ||
+    profile?.tipo_usuario === 'planejamento' ||
     user?.email === 'alex.fontes@viasudeste.com' ||
     profile?.tipo_usuario === 'juridico' ||
     profile?.tipo_usuario === 'secretaria_tecnica' ||

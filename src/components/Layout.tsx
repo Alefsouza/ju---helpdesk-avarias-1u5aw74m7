@@ -46,6 +46,7 @@ function AppSidebar() {
   const location = useLocation()
 
   const tipo = profile?.tipo_usuario
+  const isPlanejamento = tipo === 'planejamento'
   const isBasico = tipo === 'basico'
   const isResponsavel = tipo === 'responsavel' || tipo === 'sinistro'
   const isSinistro = tipo === 'sinistro'
@@ -83,6 +84,21 @@ function AppSidebar() {
         <SidebarGroup>
           <SidebarGroupContent>
             <SidebarMenu>
+              {isPlanejamento && (
+                <SidebarMenuItem>
+                  <SidebarMenuButton
+                    asChild
+                    isActive={location.pathname === '/dashboard/vales-aprovacao-alex'}
+                    className="data-[active=true]:bg-transparent data-[active=true]:text-[#c8e6c9] hover:bg-[#c8e6c9]/10 hover:text-[#c8e6c9] text-white transition-colors"
+                  >
+                    <Link to="/dashboard/vales-aprovacao-alex">
+                      <FileCheck />
+                      <span>Vales para Aprovação</span>
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              )}
+
               {isBasico && (
                 <>
                   <SidebarMenuItem>
@@ -764,6 +780,9 @@ export default function Layout() {
 
   // Redirect authenticated users from auth routes
   if (user && isAuthRoute) {
+    if (profile?.tipo_usuario === 'planejamento') {
+      return <Navigate to="/dashboard/vales-aprovacao-alex" replace />
+    }
     if (user?.email === 'alex.fontes@viasudeste.com') {
       return <Navigate to="/dashboard/admin" replace />
     }
@@ -783,6 +802,17 @@ export default function Layout() {
       return <Navigate to="/sos/pendentes" replace />
     }
     return <Navigate to="/dashboard" replace />
+  }
+
+  // Redirect Planejamento users to allowed routes only
+  if (user && profile?.tipo_usuario === 'planejamento') {
+    const isPlanejamentoRoute =
+      location.pathname === '/dashboard/vales-aprovacao-alex' ||
+      location.pathname.startsWith('/dashboard/chamados/') ||
+      location.pathname === '/dashboard/perfil'
+    if (!isPlanejamentoRoute) {
+      return <Navigate to="/dashboard/vales-aprovacao-alex" replace />
+    }
   }
 
   // Redirect Secretária Técnica from other areas

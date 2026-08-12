@@ -174,7 +174,7 @@ export function ChatInternoChamado({ chamadoId }: { chamadoId: string }) {
         <div className="bg-amber-50 border-b border-amber-200 px-3 py-1.5 flex items-center gap-1.5">
           <Lock className="h-3 w-3 text-amber-700" />
           <span className="text-[11px] font-medium text-amber-800">
-            Apenas Admin, Sinistro e Jurídico podem visualizar esta conversa.
+            Apenas Admin, Sinistro, Jurídico e Planejamento podem visualizar esta conversa.
           </span>
         </div>
 

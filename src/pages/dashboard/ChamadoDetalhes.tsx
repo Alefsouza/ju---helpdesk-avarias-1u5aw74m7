@@ -1577,6 +1577,7 @@ export default function ChamadoDetalhes() {
         currUser.tipo_usuario === 'admin' ||
         currUser.tipo_usuario === 'juridico' ||
         currUser.tipo_usuario === 'secretaria_tecnica' ||
+        currUser.tipo_usuario === 'planejamento' ||
         isDaniel ||
         isTiAdmin)
     ) {
@@ -3529,6 +3530,7 @@ export default function ChamadoDetalhes() {
     )
   }
 
+  const isPlanejamento = currentUserProfile?.tipo_usuario === 'planejamento'
   const canAnexarOrcamento =
     (currentUserProfile?.tipo_usuario === 'secretaria_tecnica' ||
       currentUserProfile?.tipo_usuario === 'responsavel') &&
@@ -4370,8 +4372,8 @@ export default function ChamadoDetalhes() {
           </div>
         )}
 
-        {isDaniel && anexosInternos.length > 0 && (
-          <div className="pt-3 border-t" id="anexos-internos-daniel">
+        {(isDaniel || isPlanejamento) && anexosInternos.length > 0 && (
+          <div className="pt-3 border-t" id="anexos-internos-readonly">
             <div>
               <h3 className="text-xs font-bold text-slate-900 mb-2 uppercase tracking-wider flex items-center gap-1.5">
                 Anexos Internos{' '}
@@ -4437,7 +4439,7 @@ export default function ChamadoDetalhes() {
           </div>
         )}
 
-        {isPrivilegedTransfer && (
+        {(isPrivilegedTransfer || isPlanejamento) && (
           <div className="animate-fade-in-up">
             <ChatInternoChamado chamadoId={id as string} />
           </div>

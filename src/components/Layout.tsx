@@ -883,11 +883,13 @@ export default function Layout() {
     return <Navigate to="/dashboard" replace />
   }
 
-  // Prevent non-Alex users from accessing Vales Aprovacao Alex
+  // Prevent unauthorized users from accessing Vales Aprovacao Alex
+  // Allowed: Alex Fontes and users with the planejamento profile
   if (
     user &&
     location.pathname === '/dashboard/vales-aprovacao-alex' &&
-    user?.email !== 'alex.fontes@viasudeste.com'
+    user?.email !== 'alex.fontes@viasudeste.com' &&
+    profile?.tipo_usuario !== 'planejamento'
   ) {
     return <Navigate to="/dashboard" replace />
   }

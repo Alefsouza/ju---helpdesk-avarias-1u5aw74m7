@@ -944,14 +944,6 @@ export default function Relatorios() {
                 <TableHeader>
                   <TableRow className="bg-[#c8e6c9] hover:bg-[#c8e6c9] border-b-0">
                     <TableHead
-                      className="text-[#225f3d] font-semibold cursor-pointer whitespace-nowrap"
-                      onClick={() => handleSort('valor_orcamento')}
-                    >
-                      <div className="flex items-center gap-1">
-                        Valor Orçamento <ArrowUpDown className="w-3 h-3" />
-                      </div>
-                    </TableHead>
-                    <TableHead
                       className="text-[#225f3d] font-semibold cursor-pointer min-w-[200px]"
                       onClick={() => handleSort('titulo')}
                     >
@@ -993,6 +985,14 @@ export default function Relatorios() {
                     </TableHead>
                     <TableHead
                       className="text-[#225f3d] font-semibold cursor-pointer whitespace-nowrap"
+                      onClick={() => handleSort('valor_orcamento')}
+                    >
+                      <div className="flex items-center gap-1">
+                        Valor Orçamento <ArrowUpDown className="w-3 h-3" />
+                      </div>
+                    </TableHead>
+                    <TableHead
+                      className="text-[#225f3d] font-semibold cursor-pointer whitespace-nowrap"
                       onClick={() => handleSort('tempo')}
                     >
                       <div className="flex items-center gap-1">
@@ -1016,14 +1016,6 @@ export default function Relatorios() {
                             : 'bg-[#fcfcfc] hover:bg-[#f5f5f5] transition-colors'
                         }
                       >
-                        <TableCell className="text-sm font-medium text-[#225f3d] whitespace-nowrap">
-                          {chamadoValorMap.has(c.id)
-                            ? (chamadoValorMap.get(c.id) as number).toLocaleString('pt-BR', {
-                                style: 'currency',
-                                currency: 'BRL',
-                              })
-                            : '-'}
-                        </TableCell>
                         <TableCell className="font-medium truncate max-w-[200px]" title={c.titulo}>
                           <Link
                             to={`/dashboard/chamados/${c.id}`}
@@ -1061,6 +1053,14 @@ export default function Relatorios() {
                         </TableCell>
                         <TableCell className="text-sm text-slate-500 whitespace-nowrap">
                           {format(parseISO(c.criado_em), 'dd/MM/yyyy')}
+                        </TableCell>
+                        <TableCell className="text-sm font-medium text-[#225f3d] whitespace-nowrap">
+                          {chamadoValorMap.has(c.id)
+                            ? (chamadoValorMap.get(c.id) as number).toLocaleString('pt-BR', {
+                                style: 'currency',
+                                currency: 'BRL',
+                              })
+                            : '-'}
                         </TableCell>
                         <TableCell className="text-sm font-medium text-[#225f3d]">
                           {hrs !== null ? `${hrs}h` : '-'}

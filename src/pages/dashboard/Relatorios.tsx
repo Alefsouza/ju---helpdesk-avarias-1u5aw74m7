@@ -277,8 +277,12 @@ export default function Relatorios() {
         if (next.has(key)) next.delete(key)
         else next.add(key)
       } else {
-        next.clear()
-        next.add(key)
+        if (next.size === 1 && next.has(key)) {
+          next.clear()
+        } else {
+          next.clear()
+          next.add(key)
+        }
       }
       return next
     })
@@ -295,8 +299,12 @@ export default function Relatorios() {
         if (next.has(id)) next.delete(id)
         else next.add(id)
       } else {
-        next.clear()
-        next.add(id)
+        if (next.size === 1 && next.has(id)) {
+          next.clear()
+        } else {
+          next.clear()
+          next.add(id)
+        }
       }
       return next
     })

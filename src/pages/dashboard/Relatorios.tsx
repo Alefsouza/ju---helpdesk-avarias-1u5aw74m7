@@ -97,12 +97,13 @@ export default function Relatorios() {
 
   const [valeChamadoIds, setValeChamadoIds] = useState<Set<string>>(new Set())
   const [activeParcelaChamadoIds, setActiveParcelaChamadoIds] = useState<Set<string>>(new Set())
+  const [chamadoValorMap, setChamadoValorMap] = useState<Map<string, number>>(new Map())
 
   const [activeCardFilters, setActiveCardFilters] = useState<Set<CardFilterKey>>(new Set())
   const [activeResponsavelFilters, setActiveResponsavelFilters] = useState<Set<string>>(new Set())
 
   const [sortConfig, setSortConfig] = useState<{
-    key: keyof Chamado | 'tempo'
+    key: keyof Chamado | 'tempo' | 'valor_orcamento'
     direction: 'asc' | 'desc'
   }>({ key: 'criado_em', direction: 'desc' })
   const [page, setPage] = useState(1)
@@ -192,8 +193,14 @@ export default function Relatorios() {
       .gte('criado_em', '2026-08-01T00:00:00+00:00')
 
     const valeIds = new Set<string>()
+    const docByChamado = new Map<string, number>()
     const totalOrcamentos = (docData || []).reduce((sum, d) => {
-      if (d.chamado_id) valeIds.add(d.chamado_id)
+      if (d.chamado_id) {
+        valeIds.add(d.chamado_id)
+        if (d.valor_orcamento != null) {
+          docByChamado.set(d.chamado_id, (docByChamado.get(d.chamado_id) || 0) + d.valor_orcamento)
+        }
+      }
       return sum + (d.valor_orcamento || 0)
     }, 0)
     setValeChamadoIds(valeIds)
@@ -204,11 +211,23 @@ export default function Relatorios() {
       .eq('status', 'ativo')
 
     const activeIds = new Set<string>()
+    const parcelasByChamado = new Map<string, number>()
     const orcamentoCobrado = (parcelaData || []).reduce((sum, p) => {
-      if (p.chamado_id) activeIds.add(p.chamado_id)
+      if (p.chamado_id) {
+        activeIds.add(p.chamado_id)
+        parcelasByChamado.set(
+          p.chamado_id,
+          (parcelasByChamado.get(p.chamado_id) || 0) + (p.valor_parcela || 0),
+        )
+      }
       return sum + (p.valor_parcela || 0)
     }, 0)
     setActiveParcelaChamadoIds(activeIds)
+
+    const valorMap = new Map<string, number>()
+    docByChamado.forEach((val, chamadoId) => valorMap.set(chamadoId, val))
+    parcelasByChamado.forEach((val, chamadoId) => valorMap.set(chamadoId, val))
+    setChamadoValorMap(valorMap)
 
     setOrcamentoTotals({
       totalOrcamentos,
@@ -369,6 +388,9 @@ export default function Relatorios() {
           b.status === 'finalizado'
             ? differenceInHours(parseISO(b.atualizado_em), parseISO(b.criado_em))
             : -1
+      } else if (sortConfig.key === 'valor_orcamento') {
+        valA = chamadoValorMap.get(a.id) ?? -1
+        valB = chamadoValorMap.get(b.id) ?? -1
       }
 
       if (valA < valB) return sortConfig.direction === 'asc' ? -1 : 1
@@ -385,6 +407,7 @@ export default function Relatorios() {
     activeResponsavelFilters,
     valeChamadoIds,
     activeParcelaChamadoIds,
+    chamadoValorMap,
   ])
 
   const paginatedData = useMemo(() => {
@@ -415,7 +438,7 @@ export default function Relatorios() {
     return { total, resolutionRate, avgTime, byAssignee }
   }, [filteredData])
 
-  const handleSort = (key: keyof Chamado | 'tempo') => {
+  const handleSort = (key: keyof Chamado | 'tempo' | 'valor_orcamento') => {
     setSortConfig((current) => ({
       key,
       direction: current.key === key && current.direction === 'asc' ? 'desc' : 'asc',
@@ -477,7 +500,7 @@ export default function Relatorios() {
         doc.setFontSize(9)
         doc.setTextColor(34, 95, 61)
         doc.setFont('helvetica', 'bold')
-        doc.text('ID', tableColumnX[0], pageY)
+        doc.text('Valor', tableColumnX[0], pageY)
         doc.text('Título', tableColumnX[1], pageY)
         doc.text('Status', tableColumnX[2], pageY)
         doc.text('Prior.', tableColumnX[3], pageY)
@@ -504,7 +527,11 @@ export default function Relatorios() {
           ? differenceInHours(parseISO(d.atualizado_em), parseISO(d.criado_em))
           : '-'
 
-        const id = d.id.split('-')[0].toUpperCase()
+        const valorOrc = chamadoValorMap.get(d.id)
+        const valorStr =
+          valorOrc != null
+            ? valorOrc.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
+            : '-'
         const titulo = d.titulo.substring(0, 25) + (d.titulo.length > 25 ? '...' : '')
         const status = d.status.replace('_', ' ')
         const prioridade = d.prioridade
@@ -516,7 +543,7 @@ export default function Relatorios() {
         const hrs = String(time)
 
         doc.setFontSize(8)
-        doc.text(id, tableColumnX[0], pageY)
+        doc.text(valorStr, tableColumnX[0], pageY)
         doc.text(titulo, tableColumnX[1], pageY)
         doc.text(status, tableColumnX[2], pageY)
         doc.text(prioridade, tableColumnX[3], pageY)
@@ -918,10 +945,10 @@ export default function Relatorios() {
                   <TableRow className="bg-[#c8e6c9] hover:bg-[#c8e6c9] border-b-0">
                     <TableHead
                       className="text-[#225f3d] font-semibold cursor-pointer whitespace-nowrap"
-                      onClick={() => handleSort('id')}
+                      onClick={() => handleSort('valor_orcamento')}
                     >
                       <div className="flex items-center gap-1">
-                        ID <ArrowUpDown className="w-3 h-3" />
+                        Valor Orçamento <ArrowUpDown className="w-3 h-3" />
                       </div>
                     </TableHead>
                     <TableHead
@@ -989,8 +1016,13 @@ export default function Relatorios() {
                             : 'bg-[#fcfcfc] hover:bg-[#f5f5f5] transition-colors'
                         }
                       >
-                        <TableCell className="font-mono text-xs text-slate-500">
-                          {c.id.split('-')[0].toUpperCase()}
+                        <TableCell className="text-sm font-medium text-[#225f3d] whitespace-nowrap">
+                          {chamadoValorMap.has(c.id)
+                            ? (chamadoValorMap.get(c.id) as number).toLocaleString('pt-BR', {
+                                style: 'currency',
+                                currency: 'BRL',
+                              })
+                            : '-'}
                         </TableCell>
                         <TableCell className="font-medium truncate max-w-[200px]" title={c.titulo}>
                           <Link

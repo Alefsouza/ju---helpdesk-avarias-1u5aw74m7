@@ -27,7 +27,7 @@ import { toast } from 'sonner'
 import { Link } from 'react-router-dom'
 
 export default function AutorizacaoValesClaudinei() {
-  const { user } = useAuth()
+  const { user, profile } = useAuth()
   const [chamados, setChamados] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [isApproveOpen, setIsApproveOpen] = useState(false)
@@ -94,6 +94,8 @@ export default function AutorizacaoValesClaudinei() {
     setIsSubmitting(true)
 
     try {
+      const firstName = profile?.nome_completo?.split(' ')[0] || 'Usuário'
+
       const { error } = await supabase
         .from('chamados')
         .update({
@@ -112,7 +114,7 @@ export default function AutorizacaoValesClaudinei() {
         chamado_id: selectedChamado.id,
         usuario_id: user!.id,
         acao: 'respondido',
-        detalhes: 'Chamado aprovado por Claudinei e encaminhado para aprovação da diretoria.',
+        detalhes: `Chamado aprovado por ${firstName} e encaminhado para aprovação da diretoria.`,
       })
 
       toast.success('Chamado aprovado e enviado para a diretoria!')

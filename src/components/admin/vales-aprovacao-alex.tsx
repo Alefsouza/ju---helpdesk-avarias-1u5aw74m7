@@ -29,7 +29,7 @@ import { format } from 'date-fns'
 import { Link } from 'react-router-dom'
 
 export function ValesAprovacaoAlex() {
-  const { user } = useAuth()
+  const { user, profile } = useAuth()
   const [chamados, setChamados] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [isApproveOpen, setIsApproveOpen] = useState(false)
@@ -90,11 +90,13 @@ export function ValesAprovacaoAlex() {
 
       if (error) throw error
 
+      const firstName = profile?.nome_completo?.split(' ')[0] || 'Usuário'
+
       await supabase.from('historico_chamado').insert({
         chamado_id: selectedChamado.id,
         usuario_id: user!.id,
         acao: 'respondido',
-        detalhes: 'Chamado aprovado por Alex e encaminhado para aprovação da diretoria.',
+        detalhes: `Chamado aprovado por ${firstName} e encaminhado para aprovação da diretoria.`,
       })
 
       toast.success('Chamado aprovado e enviado para a diretoria!')
@@ -122,6 +124,8 @@ export function ValesAprovacaoAlex() {
     setIsSubmitting(true)
 
     try {
+      const rejectFirstName = profile?.nome_completo?.split(' ')[0] || 'Usuário'
+
       const { data: historico } = await supabase
         .from('historico_chamado')
         .select('usuario_id, acao, criado_em')
@@ -150,20 +154,20 @@ export function ValesAprovacaoAlex() {
       await supabase.from('mensagens_internas_chamado').insert({
         chamado_id: selectedChamado.id,
         usuario_id: user!.id,
-        mensagem: `[Chamado Desaprovado por Alex] ${rejectReason.trim()}`,
+        mensagem: `[Chamado Desaprovado por ${rejectFirstName}] ${rejectReason.trim()}`,
       })
 
       await supabase.from('historico_chamado').insert({
         chamado_id: selectedChamado.id,
         usuario_id: user!.id,
         acao: 'reaberto',
-        detalhes: `Chamado desaprovado por Alex. Motivo: ${rejectReason.trim()}`,
+        detalhes: `Chamado desaprovado por ${rejectFirstName}. Motivo: ${rejectReason.trim()}`,
       })
 
       await supabase.from('notificacoes').insert({
         usuario_id: restoreResponsavelId,
         titulo: 'Chamado Reaberto',
-        mensagem: `O chamado "${selectedChamado.titulo}" foi reaberto por Alex. Motivo: ${rejectReason.trim()}`,
+        mensagem: `O chamado "${selectedChamado.titulo}" foi reaberto por ${rejectFirstName}. Motivo: ${rejectReason.trim()}`,
         link: `/dashboard/chamados/${selectedChamado.id}`,
       })
 

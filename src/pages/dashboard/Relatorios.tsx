@@ -64,6 +64,8 @@ const defaultFilters: FilterState = {
   search: '',
 }
 
+type CardFilterKey = 'resolucao' | 'orcamentos' | 'cobrado' | 'falta'
+
 type Chamado = {
   id: string
   titulo: string
@@ -92,6 +94,12 @@ export default function Relatorios() {
     orcamentoCobrado: 0,
     quantoFalta: 0,
   })
+
+  const [valeChamadoIds, setValeChamadoIds] = useState<Set<string>>(new Set())
+  const [activeParcelaChamadoIds, setActiveParcelaChamadoIds] = useState<Set<string>>(new Set())
+
+  const [activeCardFilters, setActiveCardFilters] = useState<Set<CardFilterKey>>(new Set())
+  const [activeResponsavelFilters, setActiveResponsavelFilters] = useState<Set<string>>(new Set())
 
   const [sortConfig, setSortConfig] = useState<{
     key: keyof Chamado | 'tempo'
@@ -179,18 +187,28 @@ export default function Relatorios() {
   const fetchOrcamentoTotals = useCallback(async () => {
     const { data: docData } = await supabase
       .from('documentos')
-      .select('valor_orcamento')
+      .select('chamado_id, valor_orcamento')
       .eq('tipo_documento', 'Vale')
       .gte('criado_em', '2026-08-01T00:00:00+00:00')
 
-    const totalOrcamentos = (docData || []).reduce((sum, d) => sum + (d.valor_orcamento || 0), 0)
+    const valeIds = new Set<string>()
+    const totalOrcamentos = (docData || []).reduce((sum, d) => {
+      if (d.chamado_id) valeIds.add(d.chamado_id)
+      return sum + (d.valor_orcamento || 0)
+    }, 0)
+    setValeChamadoIds(valeIds)
 
     const { data: parcelaData } = await supabase
       .from('parcelas_vales')
-      .select('valor_parcela')
+      .select('chamado_id, valor_parcela')
       .eq('status', 'ativo')
 
-    const orcamentoCobrado = (parcelaData || []).reduce((sum, p) => sum + (p.valor_parcela || 0), 0)
+    const activeIds = new Set<string>()
+    const orcamentoCobrado = (parcelaData || []).reduce((sum, p) => {
+      if (p.chamado_id) activeIds.add(p.chamado_id)
+      return sum + (p.valor_parcela || 0)
+    }, 0)
+    setActiveParcelaChamadoIds(activeIds)
 
     setOrcamentoTotals({
       totalOrcamentos,
@@ -224,6 +242,48 @@ export default function Relatorios() {
   const handleClearFilters = () => {
     setFilters(defaultFilters)
     setAppliedFilters(defaultFilters)
+    setPage(1)
+  }
+
+  const toggleCardFilter = (key: CardFilterKey | 'total', ctrl: boolean) => {
+    if (key === 'total') {
+      setActiveCardFilters(new Set())
+      setActiveResponsavelFilters(new Set())
+      setPage(1)
+      return
+    }
+    setActiveCardFilters((prev) => {
+      const next = new Set(prev)
+      if (ctrl) {
+        if (next.has(key)) next.delete(key)
+        else next.add(key)
+      } else {
+        next.clear()
+        next.add(key)
+      }
+      return next
+    })
+    if (!ctrl) {
+      setActiveResponsavelFilters(new Set())
+    }
+    setPage(1)
+  }
+
+  const toggleResponsavelFilter = (id: string, ctrl: boolean) => {
+    setActiveResponsavelFilters((prev) => {
+      const next = new Set(prev)
+      if (ctrl) {
+        if (next.has(id)) next.delete(id)
+        else next.add(id)
+      } else {
+        next.clear()
+        next.add(id)
+      }
+      return next
+    })
+    if (!ctrl) {
+      setActiveCardFilters(new Set())
+    }
     setPage(1)
   }
 
@@ -269,6 +329,32 @@ export default function Relatorios() {
       )
     }
 
+    // Cross-filters: card filters (OR within cards)
+    if (activeCardFilters.size > 0) {
+      result = result.filter((item) => {
+        let matches = false
+        for (const key of activeCardFilters) {
+          if (key === 'resolucao') {
+            if (item.status === 'finalizado') matches = true
+          } else if (key === 'orcamentos') {
+            if (valeChamadoIds.has(item.id)) matches = true
+          } else if (key === 'cobrado') {
+            if (activeParcelaChamadoIds.has(item.id)) matches = true
+          } else if (key === 'falta') {
+            if (valeChamadoIds.has(item.id) && !activeParcelaChamadoIds.has(item.id)) matches = true
+          }
+        }
+        return matches
+      })
+    }
+
+    // Cross-filters: responsável filters (OR within responsáveis, AND with cards)
+    if (activeResponsavelFilters.size > 0) {
+      result = result.filter((item) =>
+        item.responsavel_id ? activeResponsavelFilters.has(item.responsavel_id) : false,
+      )
+    }
+
     // Sort
     result.sort((a, b) => {
       let valA: any = a[sortConfig.key as keyof Chamado]
@@ -291,7 +377,15 @@ export default function Relatorios() {
     })
 
     return result
-  }, [data, appliedFilters, sortConfig])
+  }, [
+    data,
+    appliedFilters,
+    sortConfig,
+    activeCardFilters,
+    activeResponsavelFilters,
+    valeChamadoIds,
+    activeParcelaChamadoIds,
+  ])
 
   const paginatedData = useMemo(() => {
     const start = (page - 1) * itemsPerPage
@@ -457,6 +551,16 @@ export default function Relatorios() {
 
   if (isAdmin === false) return <Navigate to="/dashboard" replace />
 
+  const cardActiveClass =
+    'ring-2 ring-[#225f3d] ring-offset-2 ring-offset-white bg-[#f0f7f2] cursor-pointer'
+  const cardIdleClass =
+    'cursor-pointer hover:ring-1 hover:ring-[#225f3d]/40 hover:ring-offset-1 hover:ring-offset-white transition-all'
+
+  const handleCardClick = (e: React.MouseEvent, key: CardFilterKey | 'total') => {
+    e.preventDefault()
+    toggleCardFilter(key, e.ctrlKey || e.metaKey)
+  }
+
   return (
     <div className="flex flex-col gap-6 w-full max-w-[1400px] mx-auto pb-10">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
@@ -591,7 +695,10 @@ export default function Relatorios() {
       {/* Metrics Area */}
       {!loading && !error && (
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4 animate-fade-in-up">
-          <Card className="bg-white border border-[#f0f0f0] shadow-sm">
+          <Card
+            className={`bg-white border border-[#f0f0f0] shadow-sm ${activeCardFilters.size === 0 && activeResponsavelFilters.size === 0 ? cardIdleClass : cardIdleClass}`}
+            onClick={(e) => handleCardClick(e, 'total')}
+          >
             <CardContent className="p-6">
               <p className="text-[12px] font-medium text-slate-500 mb-1 uppercase tracking-wider">
                 Total de Chamados
@@ -599,9 +706,13 @@ export default function Relatorios() {
               <p className="text-[32px] font-semibold text-[#225f3d] leading-none">
                 {metrics.total}
               </p>
+              <p className="text-[10px] text-slate-400 mt-2">Clique para limpar filtros visuais</p>
             </CardContent>
           </Card>
-          <Card className="bg-white border border-[#f0f0f0] shadow-sm">
+          <Card
+            className={`bg-white border border-[#f0f0f0] shadow-sm ${activeCardFilters.has('resolucao') ? cardActiveClass : cardIdleClass}`}
+            onClick={(e) => handleCardClick(e, 'resolucao')}
+          >
             <CardContent className="p-6">
               <p className="text-[12px] font-medium text-slate-500 mb-1 uppercase tracking-wider">
                 Tempo Médio (Hrs)
@@ -609,9 +720,13 @@ export default function Relatorios() {
               <p className="text-[32px] font-semibold text-[#225f3d] leading-none">
                 {metrics.avgTime.toFixed(1)}
               </p>
+              <p className="text-[10px] text-slate-400 mt-2">Não filtrável</p>
             </CardContent>
           </Card>
-          <Card className="bg-white border border-[#f0f0f0] shadow-sm">
+          <Card
+            className={`bg-white border border-[#f0f0f0] shadow-sm ${activeCardFilters.has('resolucao') ? cardActiveClass : cardIdleClass}`}
+            onClick={(e) => handleCardClick(e, 'resolucao')}
+          >
             <CardContent className="p-6">
               <p className="text-[12px] font-medium text-slate-500 mb-1 uppercase tracking-wider">
                 Taxa de Resolução
@@ -619,9 +734,12 @@ export default function Relatorios() {
               <p className="text-[32px] font-semibold text-[#225f3d] leading-none">
                 {metrics.resolutionRate.toFixed(1)}%
               </p>
+              <p className="text-[10px] text-slate-400 mt-2">Filtrar finalizados</p>
             </CardContent>
           </Card>
-          <Card className="bg-white border border-[#f0f0f0] shadow-sm md:row-span-2 overflow-auto max-h-[250px] md:max-h-full">
+          <Card
+            className={`bg-white border border-[#f0f0f0] shadow-sm md:row-span-2 overflow-auto max-h-[250px] md:max-h-full ${activeResponsavelFilters.size > 0 ? 'ring-2 ring-[#225f3d] ring-offset-2 ring-offset-white' : ''}`}
+          >
             <CardContent className="p-6">
               <p className="text-[12px] font-medium text-slate-500 mb-4 uppercase tracking-wider">
                 Por Responsável
@@ -629,21 +747,39 @@ export default function Relatorios() {
               <div className="space-y-3">
                 {Object.entries(metrics.byAssignee)
                   .sort(([, a], [, b]) => b - a)
-                  .map(([name, count]) => (
-                    <div key={name} className="flex justify-between items-center text-sm">
-                      <span className="text-[#212121] truncate pr-2">{name}</span>
-                      <span className="font-semibold text-[#225f3d] bg-[#c8e6c9] px-2 py-0.5 rounded-full text-xs">
-                        {count}
-                      </span>
-                    </div>
-                  ))}
+                  .map(([name, count]) => {
+                    const assignee = assignees.find((a) => a.nome_completo === name)
+                    const respId = assignee?.id || null
+                    const isActive = respId ? activeResponsavelFilters.has(respId) : false
+                    return (
+                      <div
+                        key={name}
+                        onClick={(e) => {
+                          if (!respId) return
+                          e.preventDefault()
+                          toggleResponsavelFilter(respId, e.ctrlKey || e.metaKey)
+                        }}
+                        className={`flex justify-between items-center text-sm rounded-md px-2 py-1 transition-colors ${
+                          respId ? 'cursor-pointer hover:bg-slate-50' : ''
+                        } ${isActive ? 'bg-[#c8e6c9] ring-1 ring-[#225f3d]' : ''}`}
+                      >
+                        <span className="text-[#212121] truncate pr-2">{name}</span>
+                        <span className="font-semibold text-[#225f3d] bg-[#c8e6c9] px-2 py-0.5 rounded-full text-xs">
+                          {count}
+                        </span>
+                      </div>
+                    )
+                  })}
                 {Object.keys(metrics.byAssignee).length === 0 && (
                   <p className="text-sm text-slate-400">Nenhum dado</p>
                 )}
               </div>
             </CardContent>
           </Card>
-          <Card className="bg-white border border-[#f0f0f0] shadow-sm">
+          <Card
+            className={`bg-white border border-[#f0f0f0] shadow-sm ${activeCardFilters.has('orcamentos') ? cardActiveClass : cardIdleClass}`}
+            onClick={(e) => handleCardClick(e, 'orcamentos')}
+          >
             <CardContent className="p-6">
               <p className="text-[12px] font-medium text-slate-500 mb-1 uppercase tracking-wider">
                 Total de Orçamentos
@@ -654,9 +790,13 @@ export default function Relatorios() {
                   currency: 'BRL',
                 })}
               </p>
+              <p className="text-[10px] text-slate-400 mt-2">Filtrar chamados com Vale</p>
             </CardContent>
           </Card>
-          <Card className="bg-white border border-[#f0f0f0] shadow-sm">
+          <Card
+            className={`bg-white border border-[#f0f0f0] shadow-sm ${activeCardFilters.has('cobrado') ? cardActiveClass : cardIdleClass}`}
+            onClick={(e) => handleCardClick(e, 'cobrado')}
+          >
             <CardContent className="p-6">
               <p className="text-[12px] font-medium text-slate-500 mb-1 uppercase tracking-wider">
                 Orçamento Cobrado
@@ -667,9 +807,13 @@ export default function Relatorios() {
                   currency: 'BRL',
                 })}
               </p>
+              <p className="text-[10px] text-slate-400 mt-2">Filtrar com parcelas ativas</p>
             </CardContent>
           </Card>
-          <Card className="bg-white border border-[#f0f0f0] shadow-sm">
+          <Card
+            className={`bg-white border border-[#f0f0f0] shadow-sm ${activeCardFilters.has('falta') ? cardActiveClass : cardIdleClass}`}
+            onClick={(e) => handleCardClick(e, 'falta')}
+          >
             <CardContent className="p-6">
               <p className="text-[12px] font-medium text-slate-500 mb-1 uppercase tracking-wider">
                 Quanto Falta Cobrar
@@ -680,8 +824,56 @@ export default function Relatorios() {
                   currency: 'BRL',
                 })}
               </p>
+              <p className="text-[10px] text-slate-400 mt-2">Filtrar pendentes</p>
             </CardContent>
           </Card>
+        </div>
+      )}
+
+      {/* Active cross-filters indicator */}
+      {(activeCardFilters.size > 0 || activeResponsavelFilters.size > 0) && (
+        <div className="flex flex-wrap items-center gap-2 animate-fade-in">
+          <span className="text-xs font-medium text-slate-500">Filtros visuais ativos:</span>
+          {Array.from(activeCardFilters).map((key) => (
+            <Badge
+              key={key}
+              variant="outline"
+              className="bg-[#c8e6c9] text-[#225f3d] border-[#225f3d] cursor-pointer"
+              onClick={() => toggleCardFilter(key, true)}
+            >
+              {key === 'resolucao' && 'Finalizados'}
+              {key === 'orcamentos' && 'Com Vale'}
+              {key === 'cobrado' && 'Parcelas ativas'}
+              {key === 'falta' && 'Pendentes'}
+              <X className="w-3 h-3 ml-1" />
+            </Badge>
+          ))}
+          {Array.from(activeResponsavelFilters).map((id) => {
+            const a = assignees.find((x) => x.id === id)
+            if (!a) return null
+            return (
+              <Badge
+                key={id}
+                variant="outline"
+                className="bg-[#c8e6c9] text-[#225f3d] border-[#225f3d] cursor-pointer"
+                onClick={() => toggleResponsavelFilter(id, true)}
+              >
+                {a.nome_completo}
+                <X className="w-3 h-3 ml-1" />
+              </Badge>
+            )
+          })}
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-6 text-xs text-slate-500"
+            onClick={() => {
+              setActiveCardFilters(new Set())
+              setActiveResponsavelFilters(new Set())
+            }}
+          >
+            Limpar filtros visuais
+          </Button>
         </div>
       )}
 

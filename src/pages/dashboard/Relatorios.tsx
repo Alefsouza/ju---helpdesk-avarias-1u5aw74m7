@@ -42,7 +42,7 @@ import {
 } from 'date-fns'
 import { toast } from 'sonner'
 import { useAuth } from '@/hooks/use-auth'
-import { Navigate } from 'react-router-dom'
+import { Link, Navigate } from 'react-router-dom'
 
 type FilterState = {
   period: string
@@ -992,11 +992,13 @@ export default function Relatorios() {
                         <TableCell className="font-mono text-xs text-slate-500">
                           {c.id.split('-')[0].toUpperCase()}
                         </TableCell>
-                        <TableCell
-                          className="font-medium text-[#212121] truncate max-w-[200px]"
-                          title={c.titulo}
-                        >
-                          {c.titulo}
+                        <TableCell className="font-medium truncate max-w-[200px]" title={c.titulo}>
+                          <Link
+                            to={`/dashboard/chamados/${c.id}`}
+                            className="text-[#225f3d] hover:text-[#1a4a2f] hover:underline transition-colors"
+                          >
+                            {c.titulo}
+                          </Link>
                         </TableCell>
                         <TableCell>
                           <Badge

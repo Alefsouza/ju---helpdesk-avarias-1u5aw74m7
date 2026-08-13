@@ -87,6 +87,12 @@ export default function Relatorios() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(false)
 
+  const [orcamentoTotals, setOrcamentoTotals] = useState({
+    totalOrcamentos: 0,
+    orcamentoCobrado: 0,
+    quantoFalta: 0,
+  })
+
   const [sortConfig, setSortConfig] = useState<{
     key: keyof Chamado | 'tempo'
     direction: 'asc' | 'desc'
@@ -169,6 +175,33 @@ export default function Relatorios() {
   useEffect(() => {
     if (isAdmin) fetchData()
   }, [isAdmin, fetchData])
+
+  const fetchOrcamentoTotals = useCallback(async () => {
+    const { data: docData } = await supabase
+      .from('documentos')
+      .select('valor_orcamento')
+      .eq('tipo_documento', 'Vale')
+      .gte('criado_em', '2026-08-01T00:00:00+00:00')
+
+    const totalOrcamentos = (docData || []).reduce((sum, d) => sum + (d.valor_orcamento || 0), 0)
+
+    const { data: parcelaData } = await supabase
+      .from('parcelas_vales')
+      .select('valor_parcela')
+      .eq('status', 'ativo')
+
+    const orcamentoCobrado = (parcelaData || []).reduce((sum, p) => sum + (p.valor_parcela || 0), 0)
+
+    setOrcamentoTotals({
+      totalOrcamentos,
+      orcamentoCobrado,
+      quantoFalta: totalOrcamentos - orcamentoCobrado,
+    })
+  }, [])
+
+  useEffect(() => {
+    if (isAdmin) fetchOrcamentoTotals()
+  }, [isAdmin, fetchOrcamentoTotals])
 
   useEffect(() => {
     if (!isAdmin) return
@@ -608,6 +641,45 @@ export default function Relatorios() {
                   <p className="text-sm text-slate-400">Nenhum dado</p>
                 )}
               </div>
+            </CardContent>
+          </Card>
+          <Card className="bg-white border border-[#f0f0f0] shadow-sm">
+            <CardContent className="p-6">
+              <p className="text-[12px] font-medium text-slate-500 mb-1 uppercase tracking-wider">
+                Total de Orçamentos
+              </p>
+              <p className="text-[32px] font-semibold text-[#225f3d] leading-none">
+                {orcamentoTotals.totalOrcamentos.toLocaleString('pt-BR', {
+                  style: 'currency',
+                  currency: 'BRL',
+                })}
+              </p>
+            </CardContent>
+          </Card>
+          <Card className="bg-white border border-[#f0f0f0] shadow-sm">
+            <CardContent className="p-6">
+              <p className="text-[12px] font-medium text-slate-500 mb-1 uppercase tracking-wider">
+                Orçamento Cobrado
+              </p>
+              <p className="text-[32px] font-semibold text-[#e6a817] leading-none">
+                {orcamentoTotals.orcamentoCobrado.toLocaleString('pt-BR', {
+                  style: 'currency',
+                  currency: 'BRL',
+                })}
+              </p>
+            </CardContent>
+          </Card>
+          <Card className="bg-white border border-[#f0f0f0] shadow-sm">
+            <CardContent className="p-6">
+              <p className="text-[12px] font-medium text-slate-500 mb-1 uppercase tracking-wider">
+                Quanto Falta Cobrar
+              </p>
+              <p className="text-[32px] font-semibold text-red-600 leading-none">
+                {orcamentoTotals.quantoFalta.toLocaleString('pt-BR', {
+                  style: 'currency',
+                  currency: 'BRL',
+                })}
+              </p>
             </CardContent>
           </Card>
         </div>

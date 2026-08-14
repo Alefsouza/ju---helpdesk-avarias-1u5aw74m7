@@ -207,7 +207,8 @@ export default function MeusAtendimentos() {
         fetchedData = fetchedData.filter(
           (c) =>
             c.status_juridico !== 'Cobrança de Terceiros' &&
-            c.status_juridico !== 'Demanda Judicial',
+            c.status_juridico !== 'Demanda Judicial' &&
+            c.status_juridico !== 'Defiridos',
         )
       }
 

@@ -325,6 +325,18 @@ function AppSidebar() {
                       <SidebarMenuItem>
                         <SidebarMenuButton
                           asChild
+                          isActive={location.pathname === '/dashboard/defiridos'}
+                          className="data-[active=true]:bg-transparent data-[active=true]:text-[#c8e6c9] hover:bg-[#c8e6c9]/10 hover:text-[#c8e6c9] text-white transition-colors"
+                        >
+                          <Link to="/dashboard/defiridos">
+                            <Gavel />
+                            <span>Defiridos</span>
+                          </Link>
+                        </SidebarMenuButton>
+                      </SidebarMenuItem>
+                      <SidebarMenuItem>
+                        <SidebarMenuButton
+                          asChild
                           isActive={location.pathname === '/dashboard/cobranca-terceiros'}
                           className="data-[active=true]:bg-transparent data-[active=true]:text-[#c8e6c9] hover:bg-[#c8e6c9]/10 hover:text-[#c8e6c9] text-white transition-colors"
                         >

@@ -69,7 +69,8 @@ export default function ValesAprovacao() {
         documentos ( id, nome_arquivo, arquivo_url, tipo_documento, orcamento_url, valor_orcamento, criado_em ),
         parcelas_vales ( id, valor_parcela, data_referencia ),
         formularios_espelho_danos ( registro_motorista, nome_motorista ),
-        solicitacoes_parcelamento ( id, valor_orcamento, quantidade_parcelas, status, desconto_aplicado, vale_unificado )
+        solicitacoes_parcelamento ( id, valor_orcamento, quantidade_parcelas, status, desconto_aplicado, vale_unificado ),
+        historico_chamado ( usuario_id, acao )
       `)
       .eq('status', 'finalizado')
       .or('status_aprovacao_alex.eq.aprovado,status_aprovacao_claudinei.eq.aprovado')

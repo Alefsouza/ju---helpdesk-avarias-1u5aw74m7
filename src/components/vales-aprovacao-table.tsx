@@ -11,6 +11,7 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
+import { Badge } from '@/components/ui/badge'
 
 const RELEVANT_ATTACHMENT_KEYWORDS = [
   'vale',
@@ -113,12 +114,23 @@ export function ValesAprovacaoTable({
             return (
               <TableRow key={chamado.id}>
                 <TableCell>
-                  <Link
-                    to={`/dashboard/chamados/${chamado.id}`}
-                    className="font-medium text-primary hover:underline transition-colors"
-                  >
-                    {chamado.titulo || '-'}
-                  </Link>
+                  <div className="flex flex-col gap-1">
+                    <Link
+                      to={`/dashboard/chamados/${chamado.id}`}
+                      className="font-medium text-primary hover:underline transition-colors"
+                    >
+                      {chamado.titulo || '-'}
+                    </Link>
+                    {(chamado.departamentoFinalizador === 'Jurídico' ||
+                      chamado.departamentoFinalizador === 'Sinistro') && (
+                      <Badge
+                        variant="outline"
+                        className="w-fit bg-green-100 text-green-800 border-green-300"
+                      >
+                        {chamado.departamentoFinalizador}
+                      </Badge>
+                    )}
+                  </div>
                 </TableCell>
                 <TableCell>{driver.registro}</TableCell>
                 <TableCell>{driver.nome}</TableCell>

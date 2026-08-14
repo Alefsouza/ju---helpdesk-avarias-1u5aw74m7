@@ -330,7 +330,7 @@ function AppSidebar() {
                         >
                           <Link to="/dashboard/defiridos">
                             <Gavel />
-                            <span>Defiridos</span>
+                            <span>Deferidos</span>
                           </Link>
                         </SidebarMenuButton>
                       </SidebarMenuItem>

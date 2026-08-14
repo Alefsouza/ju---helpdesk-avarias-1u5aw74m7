@@ -47,6 +47,7 @@ const countAprovacoes = (aprovacoes: any) =>
 export default function ValesAprovacao() {
   const { user, profile } = useAuth()
   const [pendingChamados, setPendingChamados] = useState<any[]>([])
+  const [approvedByYouChamados, setApprovedByYouChamados] = useState<any[]>([])
   const [approvedChamados, setApprovedChamados] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [activeTab, setActiveTab] = useState<string>('pendentes')
@@ -87,6 +88,11 @@ export default function ValesAprovacao() {
     [approvedChamados, searchTerm],
   )
 
+  const filteredApprovedByYouChamados = useMemo(
+    () => approvedByYouChamados.filter((c) => matchesSearch(c, searchTerm)),
+    [approvedByYouChamados, searchTerm],
+  )
+
   const fetchChamados = async () => {
     setLoading(true)
     const { data, error } = await supabase
@@ -120,16 +126,29 @@ export default function ValesAprovacao() {
         return hasApprovalTrigger(anexos)
       }) || []
 
-    const pending = filtered.filter((c: any) => {
-      const count = countAprovacoes(c.aprovacoes_diretoria)
-      return count < 2 || c.status_aprovacao !== 'aprovado'
-    })
+    const isApprovedByUser = (c: any) => {
+      const aprovacoes = Array.isArray(c.aprovacoes_diretoria) ? c.aprovacoes_diretoria : []
+      return aprovacoes.some((a: any) => a.usuario_id === user!.id && a.acao === 'aprovado')
+    }
 
     const approved = filtered.filter(
       (c: any) => countAprovacoes(c.aprovacoes_diretoria) >= 2 && c.status_aprovacao === 'aprovado',
     )
 
+    const approvedByYou = filtered.filter((c: any) => {
+      const count = countAprovacoes(c.aprovacoes_diretoria)
+      return count < 2 && isApprovedByUser(c)
+    })
+
+    const pending = filtered.filter((c: any) => {
+      const count = countAprovacoes(c.aprovacoes_diretoria)
+      const isApproved = count >= 2 && c.status_aprovacao === 'aprovado'
+      const isApprovedByUser = count < 2 && isApprovedByUser(c)
+      return !isApproved && !isApprovedByUser && (count < 2 || c.status_aprovacao !== 'aprovado')
+    })
+
     setPendingChamados(pending)
+    setApprovedByYouChamados(approvedByYou)
     setApprovedChamados(approved)
     setLoading(false)
   }
@@ -526,6 +545,12 @@ export default function ValesAprovacao() {
               {filteredPendingChamados.length}
             </span>
           </TabsTrigger>
+          <TabsTrigger value="aprovados-por-voce">
+            Aprovados por você
+            <span className="ml-2 text-xs rounded-full bg-muted px-2 py-0.5">
+              {filteredApprovedByYouChamados.length}
+            </span>
+          </TabsTrigger>
           <TabsTrigger value="aprovados">
             Aprovados (2/2)
             <span className="ml-2 text-xs rounded-full bg-muted px-2 py-0.5">
@@ -546,6 +571,26 @@ export default function ValesAprovacao() {
                   chamados={filteredPendingChamados}
                   userId={user!.id}
                   showActions
+                  onApproveClick={handleApproveClick}
+                  onRejectClick={handleRejectClick}
+                />
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="aprovados-por-voce">
+          <Card>
+            <CardContent className="p-0">
+              {loading ? (
+                <div className="flex justify-center items-center p-8">
+                  <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                </div>
+              ) : (
+                <ValesAprovacaoTable
+                  chamados={filteredApprovedByYouChamados}
+                  userId={user!.id}
+                  showActions={false}
                   onApproveClick={handleApproveClick}
                   onRejectClick={handleRejectClick}
                 />

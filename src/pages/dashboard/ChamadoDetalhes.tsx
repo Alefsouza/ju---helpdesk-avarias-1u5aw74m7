@@ -438,7 +438,6 @@ function SolicitarParcelasModal({
       }
       fetchOrcamento()
       setParcelas('1')
-      setValeUnificado(false)
     }
   }, [open, chamadoId, orcamentoDoc, anexosInternos, documentosChamado, chamado])
 

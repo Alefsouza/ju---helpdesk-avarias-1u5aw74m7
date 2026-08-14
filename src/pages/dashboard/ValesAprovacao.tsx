@@ -545,17 +545,6 @@ export default function ValesAprovacao() {
             <DialogDescription>Deseja confirmar a aprovação deste vale?</DialogDescription>
           </DialogHeader>
 
-          <div className="flex items-center space-x-2 py-2">
-            <Checkbox
-              id="valeUnificado"
-              checked={valeUnificado}
-              onCheckedChange={(checked) => setValeUnificado(checked === true)}
-            />
-            <Label htmlFor="valeUnificado" className="text-sm cursor-pointer">
-              Vale Unificado
-            </Label>
-          </div>
-
           <DialogFooter className="mt-4">
             <Button variant="outline" onClick={() => setIsApproveOpen(false)}>
               Cancelar

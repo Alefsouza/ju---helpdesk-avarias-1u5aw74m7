@@ -143,8 +143,8 @@ export default function ValesAprovacao() {
     const pending = filtered.filter((c: any) => {
       const count = countAprovacoes(c.aprovacoes_diretoria)
       const isApproved = count >= 2 && c.status_aprovacao === 'aprovado'
-      const isApprovedByUser = count < 2 && isApprovedByUser(c)
-      return !isApproved && !isApprovedByUser && (count < 2 || c.status_aprovacao !== 'aprovado')
+      const approvedByUser = count < 2 && isApprovedByUser(c)
+      return !isApproved && !approvedByUser && (count < 2 || c.status_aprovacao !== 'aprovado')
     })
 
     setPendingChamados(pending)

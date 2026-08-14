@@ -3627,8 +3627,8 @@ export default function ChamadoDetalhes() {
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
-                <DropdownMenuItem onClick={() => handleMoverJuridico('Defiridos')}>
-                  Defiridos
+                <DropdownMenuItem onClick={() => handleMoverJuridico('Deferidos')}>
+                  Deferidos
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => handleMoverJuridico('Cobrança de Terceiros')}>
                   Cobrança de Terceiros

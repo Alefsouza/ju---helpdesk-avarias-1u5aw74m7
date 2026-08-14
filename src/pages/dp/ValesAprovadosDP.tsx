@@ -113,12 +113,15 @@ export default function ValesAprovadosDP() {
       return
     }
 
+    const DIRETORES_DP_IDS = [
+      '880b08e4-778e-4446-b482-e1e35472a520', // leandro.ferraz@viasudeste.com
+      '08425c6d-ba5f-4f5b-89f9-c2ecc8c68c93', // sonia.mattoso@viasudeste.com
+    ]
+
     const validParcelas =
       parcelasData?.filter((p: any) => {
         const chamado = p.chamados
         if (!chamado) return false
-
-        if (p.aprovado_diretoria === true) return true
 
         let aprovacoes: any[] = []
         try {
@@ -131,11 +134,16 @@ export default function ValesAprovadosDP() {
           /* intentionally ignored */
         }
 
-        const hasAprovacao =
-          Array.isArray(aprovacoes) &&
-          aprovacoes.some((a: any) => String(a?.acao).toLowerCase() === 'aprovado')
+        if (!Array.isArray(aprovacoes)) return false
 
-        return chamado.status_aprovacao === 'aprovado' || hasAprovacao
+        const aprovadores = aprovacoes
+          .filter((a: any) => String(a?.acao).toLowerCase() === 'aprovado')
+          .map((a: any) =>
+            String(a?.usuario_id || a?.email || a?.usuario_email || '').toLowerCase(),
+          )
+          .filter(Boolean)
+
+        return DIRETORES_DP_IDS.every((id) => aprovadores.includes(id))
       }) || []
 
     const userIds = [

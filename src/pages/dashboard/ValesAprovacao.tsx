@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { supabase } from '@/lib/supabase/client'
 import { useAuth } from '@/hooks/use-auth'
 import { Card, CardContent } from '@/components/ui/card'
@@ -57,6 +57,35 @@ export default function ValesAprovacao() {
 
   const [isRejectOpen, setIsRejectOpen] = useState(false)
   const [rejectReason, setRejectReason] = useState('')
+  const [searchTerm, setSearchTerm] = useState('')
+
+  const matchesSearch = (c: any, term: string): boolean => {
+    if (!term) return true
+    const t = term.toLowerCase()
+    const fields = [c.titulo, c.registro_motorista, c.nome_motorista]
+    if (fields.some((f) => (f ?? '').toString().toLowerCase().includes(t))) {
+      return true
+    }
+    const espelhos = c.formularios_espelho_danos
+    if (Array.isArray(espelhos)) {
+      return espelhos.some(
+        (e: any) =>
+          (e?.registro_motorista ?? '').toString().toLowerCase().includes(t) ||
+          (e?.nome_motorista ?? '').toString().toLowerCase().includes(t),
+      )
+    }
+    return false
+  }
+
+  const filteredPendingChamados = useMemo(
+    () => pendingChamados.filter((c) => matchesSearch(c, searchTerm)),
+    [pendingChamados, searchTerm],
+  )
+
+  const filteredApprovedChamados = useMemo(
+    () => approvedChamados.filter((c) => matchesSearch(c, searchTerm)),
+    [approvedChamados, searchTerm],
+  )
 
   const fetchChamados = async () => {
     setLoading(true)
@@ -482,18 +511,25 @@ export default function ValesAprovacao() {
         </div>
       </div>
 
+      <Input
+        placeholder="Buscar por carro, OS, registro ou nome..."
+        value={searchTerm}
+        onChange={(e) => setSearchTerm(e.target.value)}
+        className="max-w-xl"
+      />
+
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
         <TabsList>
           <TabsTrigger value="pendentes">
             Pendentes de Aprovação
             <span className="ml-2 text-xs rounded-full bg-muted px-2 py-0.5">
-              {pendingChamados.length}
+              {filteredPendingChamados.length}
             </span>
           </TabsTrigger>
           <TabsTrigger value="aprovados">
             Aprovados (2/2)
             <span className="ml-2 text-xs rounded-full bg-muted px-2 py-0.5">
-              {approvedChamados.length}
+              {filteredApprovedChamados.length}
             </span>
           </TabsTrigger>
         </TabsList>
@@ -507,7 +543,7 @@ export default function ValesAprovacao() {
                 </div>
               ) : (
                 <ValesAprovacaoTable
-                  chamados={pendingChamados}
+                  chamados={filteredPendingChamados}
                   userId={user!.id}
                   showActions
                   onApproveClick={handleApproveClick}
@@ -527,7 +563,7 @@ export default function ValesAprovacao() {
                 </div>
               ) : (
                 <ValesAprovacaoTable
-                  chamados={approvedChamados}
+                  chamados={filteredApprovedChamados}
                   userId={user!.id}
                   showActions={false}
                   onApproveClick={handleApproveClick}

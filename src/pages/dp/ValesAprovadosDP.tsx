@@ -277,6 +277,30 @@ export default function ValesAprovadosDP() {
       const parcelaInfo =
         currentParcela && totalParcelas ? `${currentParcela}/${totalParcelas}` : ''
 
+      let aprovacoesDiretoria: any[] = []
+      try {
+        if (Array.isArray(chamado?.aprovacoes_diretoria)) {
+          aprovacoesDiretoria = chamado.aprovacoes_diretoria
+        } else if (typeof chamado?.aprovacoes_diretoria === 'string') {
+          aprovacoesDiretoria = JSON.parse(chamado.aprovacoes_diretoria)
+        }
+      } catch {
+        /* intentionally ignored */
+      }
+
+      const ultimaAprovacaoDiretoria = Array.isArray(aprovacoesDiretoria)
+        ? aprovacoesDiretoria
+            .filter((a: any) => String(a?.acao).toLowerCase() === 'aprovado')
+            .slice()
+            .sort((a: any, b: any) => {
+              const da = a?.data_hora ? new Date(a.data_hora).getTime() : 0
+              const db = b?.data_hora ? new Date(b.data_hora).getTime() : 0
+              return db - da
+            })[0]
+        : undefined
+
+      const aprovadoEmDiretoria = ultimaAprovacaoDiretoria?.data_hora || null
+
       return {
         id: p.id,
         chamado_id: p.chamado_id,
@@ -284,7 +308,7 @@ export default function ValesAprovadosDP() {
         valor_parcela: valorCalculado,
         data_referencia: p.data_referencia,
         vale_unificado: (p as any).vale_unificado || false,
-        aprovado_em: p.aprovado_em,
+        aprovado_em: aprovadoEmDiretoria,
         aprovado_diretoria: p.aprovado_diretoria,
         nome,
         registro,

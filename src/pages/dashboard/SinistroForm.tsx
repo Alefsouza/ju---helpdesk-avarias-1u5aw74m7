@@ -35,10 +35,8 @@ const formSchema = z.object({
   dataOcorrencia: z.any().refine((v) => v != null, 'Data obrigatória'),
   horaOcorrencia: z.string().min(1, 'Hora obrigatória'),
   placaOnibus: z
-    .string()
-    .min(1, 'Placa obrigatória')
-    .length(8, 'Formato: ABC 1234')
-    .regex(/^[A-Z]{3} [A-Z0-9]{4}$/, 'Formato inválido'),
+    .string({ required_error: 'O prefixo do veículo é obrigatório' })
+    .min(1, 'O prefixo do veículo é obrigatório'),
   registroMotorista: z.string().min(1, 'Obrigatório'),
   nomeMotorista: z.string().min(1, 'Obrigatório'),
   registroCobrador: z.string().optional(),
@@ -118,6 +116,7 @@ export function SinistroForm() {
   const [relatoOperador, setRelatoOperador] = useState<File | null>(null)
   const [identifiedGaragem, setIdentifiedGaragem] = useState<string | null>(null)
   const [identifiedPrefixo, setIdentifiedPrefixo] = useState<string | null>(null)
+  const [identifiedPlaca, setIdentifiedPlaca] = useState<string | null>(null)
   const [isSearchingPlaca, setIsSearchingPlaca] = useState(false)
   const filesLoadedRef = useRef(false)
   const toastMostrado = useRef(false)
@@ -228,31 +227,36 @@ export function SinistroForm() {
   const registroCobrador = form.watch('registroCobrador')
 
   useEffect(() => {
-    if (!placaOnibus || placaOnibus.length !== 8) {
+    const trimmed = placaOnibus.trim()
+    if (!trimmed) {
       setIdentifiedGaragem(null)
       setIdentifiedPrefixo(null)
+      setIdentifiedPlaca(null)
       return
     }
     const timer = setTimeout(async () => {
       setIsSearchingPlaca(true)
       try {
-        const clean = placaOnibus.replace(/[^a-zA-Z0-9]/g, '')
-        const { data, error } = await supabase.rpc(
-          'buscar_veiculo_por_placa' as any,
-          { p_placa: clean } as any,
-        )
+        const { data, error } = await supabase
+          .from('frota_veiculos')
+          .select('garagem, prefixo, placa')
+          .eq('prefixo', trimmed)
+          .maybeSingle()
         if (error) throw error
-        const result = data as { garagem: string; prefixo: string } | null
-        if (result?.garagem) {
+        const result = data as { garagem: string; prefixo: string; placa: string | null } | null
+        if (result && result.garagem) {
           setIdentifiedGaragem(result.garagem)
           setIdentifiedPrefixo(result.prefixo)
+          setIdentifiedPlaca(result.placa)
         } else {
           setIdentifiedGaragem('NOT_FOUND')
           setIdentifiedPrefixo(null)
+          setIdentifiedPlaca(null)
         }
       } catch {
         setIdentifiedGaragem('NOT_FOUND')
         setIdentifiedPrefixo(null)
+        setIdentifiedPlaca(null)
       } finally {
         setIsSearchingPlaca(false)
       }
@@ -491,21 +495,16 @@ export function SinistroForm() {
                 </div>
               </div>
               <div className="space-y-2">
-                <Label htmlFor="placaOnibus">Placa do nosso ônibus *</Label>
+                <Label htmlFor="placaOnibus">Prefixo do veículo *</Label>
                 <Controller
                   control={form.control}
                   name="placaOnibus"
                   render={({ field }) => (
                     <Input
                       id="placaOnibus"
-                      placeholder="Ex: ABC 1234"
+                      placeholder="Ex: 52043"
                       value={field.value}
-                      onChange={(e) => {
-                        let v = e.target.value.replace(/[^a-zA-Z0-9]/g, '').toUpperCase()
-                        if (v.length > 3) v = v.substring(0, 3) + ' ' + v.substring(3, 7)
-                        field.onChange(v)
-                      }}
-                      maxLength={8}
+                      onChange={(e) => field.onChange(e.target.value)}
                     />
                   )}
                 />
@@ -525,9 +524,9 @@ export function SinistroForm() {
                 )}
                 {!isSearchingPlaca && identifiedGaragem && identifiedGaragem !== 'NOT_FOUND' && (
                   <p className="text-sm text-green-600 font-medium flex items-center gap-1 mt-1">
-                    <CheckCircle2 className="h-3 w-3" /> Veículo identificado: Garagem{' '}
+                    <CheckCircle2 className="h-3 w-3" /> Veículo identificado: Garagem:{' '}
                     {identifiedGaragem}
-                    {identifiedPrefixo && ` - Carro: ${identifiedPrefixo}`}
+                    {identifiedPlaca ? ` - Placa ${identifiedPlaca}` : ''}
                   </p>
                 )}
               </div>

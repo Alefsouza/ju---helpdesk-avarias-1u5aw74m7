@@ -221,8 +221,10 @@ const formSchema = z.object({
     .refine((val) => val !== undefined && val !== null, 'Data da ocorrência é obrigatória'),
   descricao: z.string().min(20, 'A descrição deve ter no mínimo 20 caracteres'),
   placaOnibus: z
-    .string({ required_error: 'O prefixo do veículo é obrigatório' })
-    .min(1, 'O prefixo do veículo é obrigatório'),
+    .string({ required_error: 'A placa do nosso ônibus é obrigatória' })
+    .min(1, 'A placa do nosso ônibus é obrigatória')
+    .length(8, 'Formato: ABC 1234')
+    .regex(/^[A-Z]{3} [A-Z0-9]{4}$/, 'Formato inválido'),
 })
 
 type FormValues = z.infer<typeof formSchema>
@@ -261,7 +263,6 @@ export default function NovoChamado() {
   const [attachmentErrors, setAttachmentErrors] = useState<Record<string, string>>({})
   const [identifiedGaragem, setIdentifiedGaragem] = useState<string | null>(null)
   const [identifiedPrefixo, setIdentifiedPrefixo] = useState<string | null>(null)
-  const [identifiedPlaca, setIdentifiedPlaca] = useState<string | null>(null)
   const [isSearchingPlaca, setIsSearchingPlaca] = useState(false)
 
   const [files, setFiles] = useState<FileItem[]>([])
@@ -529,41 +530,35 @@ export default function NovoChamado() {
   }
 
   useEffect(() => {
-    const trimmed = placaOnibus.trim()
-    if (!trimmed) {
+    if (!placaOnibus || placaOnibus.length !== 8) {
       setIdentifiedGaragem(null)
       setIdentifiedPrefixo(null)
-      setIdentifiedPlaca(null)
       return
     }
 
     const searchTimer = setTimeout(async () => {
       setIsSearchingPlaca(true)
       try {
-        const { data, error } = await supabase
-          .from('frota_veiculos')
-          .select('garagem, prefixo, placa')
-          .eq('prefixo', trimmed)
-          .maybeSingle()
-
+        const clean = placaOnibus.replace(/[^a-zA-Z0-9]/g, '')
+        const { data, error } = await supabase.rpc(
+          'buscar_veiculo_por_placa' as any,
+          { p_placa: clean } as any,
+        )
         if (error) throw error
 
-        const result = data as { garagem: string; prefixo: string; placa: string | null } | null
+        const result = data as { garagem: string; prefixo: string } | null
 
-        if (result && result.garagem) {
+        if (result?.garagem) {
           setIdentifiedGaragem(result.garagem)
           setIdentifiedPrefixo(result.prefixo)
-          setIdentifiedPlaca(result.placa)
         } else {
           setIdentifiedGaragem('NOT_FOUND')
           setIdentifiedPrefixo(null)
-          setIdentifiedPlaca(null)
         }
       } catch (err) {
-        console.error('Error searching frota:', err)
+        console.error('Error searching veiculo:', err)
         setIdentifiedGaragem('NOT_FOUND')
         setIdentifiedPrefixo(null)
-        setIdentifiedPlaca(null)
       } finally {
         setIsSearchingPlaca(false)
       }
@@ -913,16 +908,21 @@ export default function NovoChamado() {
                     </div>
                   )}
                   <div className="space-y-2 scroll-mt-24" id="field-placaOnibus">
-                    <Label htmlFor="placaOnibus">Prefixo do veículo *</Label>
+                    <Label htmlFor="placaOnibus">Placa do nosso ônibus *</Label>
                     <Controller
                       control={form.control}
                       name="placaOnibus"
                       render={({ field }) => (
                         <Input
                           id="placaOnibus"
-                          placeholder="Ex: 52043"
+                          placeholder="Ex: ABC 1234"
                           value={field.value}
-                          onChange={(e) => field.onChange(e.target.value)}
+                          onChange={(e) => {
+                            let v = e.target.value.replace(/[^a-zA-Z0-9]/g, '').toUpperCase()
+                            if (v.length > 3) v = v.substring(0, 3) + ' ' + v.substring(3, 7)
+                            field.onChange(v)
+                          }}
+                          maxLength={8}
                         />
                       )}
                     />
@@ -946,9 +946,9 @@ export default function NovoChamado() {
                       identifiedGaragem &&
                       identifiedGaragem !== 'NOT_FOUND' && (
                         <p className="text-sm text-green-600 font-medium flex items-center gap-1 mt-1">
-                          <CheckCircle2 className="h-3 w-3" /> Veículo identificado: Garagem:{' '}
+                          <CheckCircle2 className="h-3 w-3" /> Veículo identificado: Garagem{' '}
                           {identifiedGaragem}
-                          {identifiedPlaca ? ` - Placa ${identifiedPlaca}` : ''}
+                          {identifiedPrefixo && ` - Carro: ${identifiedPrefixo}`}
                         </p>
                       )}
                   </div>

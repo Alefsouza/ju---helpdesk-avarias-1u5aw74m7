@@ -58,7 +58,9 @@ function applyTableFilters(data: any[], f: ChamadosFilters): any[] {
         !c.titulo?.toLowerCase().includes(s) &&
         !c.id?.toLowerCase().includes(s) &&
         !c.nome_usuario?.toLowerCase().includes(s) &&
-        !c.pia?.toLowerCase().includes(s)
+        !c.pia?.toLowerCase().includes(s) &&
+        !c.registro_motorista?.toLowerCase().includes(s) &&
+        !c.nome_motorista?.toLowerCase().includes(s)
       ) {
         return false
       }

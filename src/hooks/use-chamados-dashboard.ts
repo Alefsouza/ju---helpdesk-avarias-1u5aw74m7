@@ -107,23 +107,44 @@ export const useChamadosDashboard = (filters: ChamadosFilters) => {
       try {
         setLoading(true)
         setError(null)
-        const [chamRes, respRes] = await Promise.all([
+        const [chamRes, respRes, espRes] = await Promise.all([
           supabase.from('chamados').select('*').order('criado_em', { ascending: false }),
           supabase
             .from('perfil_usuario')
             .select('id, nome_completo')
             .order('nome_completo', { ascending: true }),
+          supabase
+            .from('formularios_espelho_danos')
+            .select('chamado_id, registro_motorista, nome_motorista'),
         ])
         if (cancelled) return
         if (chamRes.error) throw chamRes.error
         if (respRes.error) throw respRes.error
+        if (espRes.error) throw espRes.error
         const perfilMap = new Map((respRes.data || []).map((p) => [p.id, p]))
+        // Mapa de espelho de danos por chamado_id (primeiro registro encontrado),
+        // usado para complementar registro_motorista/nome_motorista ausentes no chamado.
+        const espelhoMap = new Map<
+          string,
+          { registro_motorista?: string | null; nome_motorista?: string | null }
+        >()
+        for (const e of espRes.data || []) {
+          if (e.chamado_id && !espelhoMap.has(e.chamado_id)) {
+            espelhoMap.set(e.chamado_id, {
+              registro_motorista: e.registro_motorista,
+              nome_motorista: e.nome_motorista,
+            })
+          }
+        }
         const enriched = (chamRes.data || []).map((c) => {
           const creator = perfilMap.get(c.usuario_id)
+          const espelho = espelhoMap.get(c.id)
           return {
             ...c,
             responsavel: perfilMap.get(c.responsavel_id) || null,
             nome_usuario: creator?.nome_completo || '',
+            registro_motorista: c.registro_motorista || espelho?.registro_motorista || null,
+            nome_motorista: c.nome_motorista || espelho?.nome_motorista || null,
             is_duplicate: isDuplicateTicket(c, chamRes.data || []),
           }
         })

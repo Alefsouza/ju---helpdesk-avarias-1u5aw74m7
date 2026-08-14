@@ -306,8 +306,8 @@ export default function Defiridos() {
     <div className="space-y-6 max-w-6xl mx-auto p-2 sm:p-4 animate-fade-in-up">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight text-slate-900">Defiridos</h1>
-          <p className="text-slate-500">Chamados classificados como Defiridos.</p>
+          <h1 className="text-3xl font-bold tracking-tight text-slate-900">Deferidos</h1>
+          <p className="text-slate-500">Chamados classificados como Deferidos.</p>
         </div>
       </div>
 

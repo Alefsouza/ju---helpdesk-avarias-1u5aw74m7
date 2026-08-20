@@ -134,15 +134,16 @@ export default function CarrosLiberadosPlantao({
           updateData.status = 'operacao'
         }
 
-        const { data: updatedData, error } = await supabase
+        const { data: updatedRows, error } = await supabase
           .from('chamados')
           .update(updateData)
           .eq('id', chamadoId)
-          .select()
+          .select('id')
 
-        if (error || !updatedData || updatedData.length === 0) {
-          toast.error('Erro ao liberar carro')
-          return
+        if (error) throw error
+
+        if (!updatedRows || updatedRows.length === 0) {
+          throw new Error('Não foi possível atualizar o chamado — verifique as permissões.')
         }
 
         const currentUser = user?.id || (await supabase.auth.getUser()).data.user?.id

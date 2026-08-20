@@ -310,7 +310,11 @@ export default function CarrosLiberadosPlantao({
                                     : 'bg-rose-100 text-rose-800 border-rose-200'
                                 }`}
                             >
-                              {isLiberado ? d.status_liberacao || 'Liberado' : 'Manutenção'}
+                              {isLiberado
+                                ? d.status_liberacao === 'Liberado com Pendência'
+                                  ? 'Liberado com Pendência'
+                                  : 'Liberado'
+                                : 'Manutenção'}
                             </Badge>
                           </TableCell>
                           <TableCell className="text-right">

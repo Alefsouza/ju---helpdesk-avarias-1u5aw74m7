@@ -134,9 +134,16 @@ export default function CarrosLiberadosPlantao({
           updateData.status = 'operacao'
         }
 
-        const { error } = await supabase.from('chamados').update(updateData).eq('id', chamadoId)
+        const { data: updatedData, error } = await supabase
+          .from('chamados')
+          .update(updateData)
+          .eq('id', chamadoId)
+          .select()
 
-        if (error) throw error
+        if (error || !updatedData || updatedData.length === 0) {
+          toast.error('Erro ao liberar carro')
+          return
+        }
 
         const currentUser = user?.id || (await supabase.auth.getUser()).data.user?.id
         if (currentUser) {

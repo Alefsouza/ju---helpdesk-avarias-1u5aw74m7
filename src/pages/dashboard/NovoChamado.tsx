@@ -142,7 +142,7 @@ const getCategoryConfigs = (os: string) => {
       title: '01 Orçamento da Nossa funilaria credenciada',
       description:
         'CARMG Funilaria e Pintura - R. Bom Pastor, 2454 - Ipiranga - Contato: (11) 94004-1866 / Marcos',
-      required: false,
+      required: true,
       min: 0,
       max: 1,
       accept: acceptVal,

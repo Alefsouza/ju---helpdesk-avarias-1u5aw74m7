@@ -1,13 +1,13 @@
 {
   "_versions": {
-    "manage-users": 14,
-    "transferir-chamado": 14,
-    "gerar-pdf": 54,
-    "criar-chamado-vistoria": 12,
-    "processar-documento-uazapi": 123,
-    "unificar-chamados": 21,
-    "verificar-inatividade-chamados": 8,
-    "importar-frota-xlsx": 123,
-    "sync-external-registros": 5
+    "manage-users": 15,
+    "transferir-chamado": 15,
+    "gerar-pdf": 55,
+    "criar-chamado-vistoria": 13,
+    "processar-documento-uazapi": 125,
+    "unificar-chamados": 22,
+    "verificar-inatividade-chamados": 9,
+    "importar-frota-xlsx": 125,
+    "sync-external-registros": 6
   }
 }

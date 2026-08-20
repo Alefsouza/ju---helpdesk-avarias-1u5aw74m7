@@ -40,7 +40,7 @@ const formSchema = z.object({
   departamento: z.string().optional(),
   garagem: z.string().optional().nullable(),
   registro: z.string().optional(),
-  ativo: z.boolean().default(true),
+  ativo: z.boolean(),
 })
 
 type FormValues = z.infer<typeof formSchema>

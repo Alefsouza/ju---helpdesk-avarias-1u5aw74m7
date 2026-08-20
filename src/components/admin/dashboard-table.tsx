@@ -41,7 +41,7 @@ export interface TableFilters {
   search: string
   debouncedSearch: string
   period: string
-  dateRange: { from?: Date; to?: Date } | undefined
+  dateRange: { from: Date; to?: Date } | undefined
   status: string
   situacaoProcesso: string
   statusInterno: string

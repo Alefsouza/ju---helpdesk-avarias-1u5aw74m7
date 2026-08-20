@@ -29,7 +29,7 @@ export function useDraft<T extends Record<string, any>>(
 ) {
   const [draftRestored, setDraftRestored] = useState(false)
   const isRestoring = useRef(true)
-  const debounceTimer = useRef<NodeJS.Timeout | null>(null)
+  const debounceTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   useEffect(() => {
     if (!enabled) {

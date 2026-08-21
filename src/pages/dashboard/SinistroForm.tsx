@@ -34,9 +34,7 @@ const formSchema = z.object({
   titulo: z.string().min(1, 'Título é obrigatório'),
   dataOcorrencia: z.any().refine((v) => v != null, 'Data obrigatória'),
   horaOcorrencia: z.string().min(1, 'Hora obrigatória'),
-  placaOnibus: z
-    .string({ required_error: 'O prefixo do veículo é obrigatório' })
-    .min(1, 'O prefixo do veículo é obrigatório'),
+  placaOnibus: z.string().min(1, 'O prefixo do veículo é obrigatório'),
   registroMotorista: z.string().min(1, 'Obrigatório'),
   nomeMotorista: z.string().min(1, 'Obrigatório'),
   registroCobrador: z.string().optional(),
@@ -333,8 +331,8 @@ export function SinistroForm() {
           tipo_chamado: 'Colisão',
           prioridade: null,
           usuario_id: user.id,
-          responsavel_id: null,
-          status: 'aberto',
+          responsavel_id: user.id,
+          status: 'em_atendimento',
           garagem: identifiedGaragem,
           carro: identifiedPrefixo,
           data_ocorrencia: format(new Date(values.dataOcorrencia), 'yyyy-MM-dd'),
@@ -375,6 +373,10 @@ export function SinistroForm() {
       await supabase
         .from('historico_chamado')
         .insert({ chamado_id: chamado.id, acao: 'criado', usuario_id: user.id })
+
+      await supabase
+        .from('historico_chamado')
+        .insert({ chamado_id: chamado.id, acao: 'atribuido', usuario_id: user.id })
 
       await clearDraft()
       await clearStoredFiles()

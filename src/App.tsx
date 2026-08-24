@@ -16,6 +16,7 @@ import AdminDashboard from './pages/dashboard/Admin'
 import Relatorios from './pages/dashboard/Relatorios'
 import CobrancaTerceiros from './pages/dashboard/CobrancaTerceiros'
 import DemandaJudicial from './pages/dashboard/DemandaJudicial'
+import Terceiros from './pages/dashboard/Terceiros'
 import Defiridos from './pages/dashboard/Defiridos'
 import Documentos from './pages/dashboard/Documentos'
 import ValesAprovacao from './pages/dashboard/ValesAprovacao'
@@ -113,6 +114,7 @@ const App = () => (
             <Route path="/dashboard/defiridos" element={<Defiridos />} />
             <Route path="/dashboard/cobranca-terceiros" element={<CobrancaTerceiros />} />
             <Route path="/dashboard/demanda-judicial" element={<DemandaJudicial />} />
+            <Route path="/dashboard/terceiros" element={<Terceiros />} />
             <Route path="/dashboard/chamados/:id" element={<ChamadoDetalhes />} />
             <Route path="/dashboard/admin" element={<AdminDashboard />} />
             <Route path="/dashboard/relatorios" element={<Relatorios />} />

@@ -3386,6 +3386,34 @@ export default function ChamadoDetalhes() {
     }
   }
 
+  const handleMoverSinistro = async (novoStatus: string | null) => {
+    setCompleting(true)
+    try {
+      const { error } = await supabase
+        .from('chamados')
+        .update({ status_sinistro: novoStatus, atualizado_em: new Date().toISOString() } as any)
+        .eq('id', id)
+
+      if (error) throw error
+
+      setChamado((prev: any) => (prev ? { ...prev, status_sinistro: novoStatus } : prev))
+
+      await supabase.from('historico_chamado').insert({
+        chamado_id: id as string,
+        acao: 'Classificação Sinistro Alterada',
+        usuario_id: user?.id as string,
+        detalhes: novoStatus ? `Movido para ${novoStatus}` : `Classificação Sinistro removida`,
+      })
+
+      toast.success('Classificação de sinistro atualizada com sucesso')
+    } catch (e) {
+      console.error(e)
+      toast.error('Erro ao atualizar classificação de sinistro')
+    } finally {
+      setCompleting(false)
+    }
+  }
+
   const handleFinalizar = async () => {
     if (!window.confirm('Tem certeza que deseja finalizar este chamado?')) return
     setCompleting(true)
@@ -3565,6 +3593,7 @@ export default function ChamadoDetalhes() {
     !isDaniel
   const canUnify = isSupport && chamado.status !== 'finalizado' && chamado.status !== 'unificado'
   const isJuridico = currentUserProfile?.tipo_usuario === 'juridico' && !isDaniel
+  const isSinistro = currentUserProfile?.tipo_usuario === 'sinistro' && !isDaniel
 
   const orcamentoDoc = documentosChamado.find((d) => d.tipo_documento === 'Orçamento')
   const hasOrcamentoInterno = anexosInternos.some((a) => {
@@ -3638,6 +3667,33 @@ export default function ChamadoDetalhes() {
                 <DropdownMenuSeparator />
                 <DropdownMenuItem
                   onClick={() => handleMoverJuridico(null)}
+                  className="text-red-600 focus:bg-red-50 focus:text-red-700"
+                >
+                  Remover Classificação
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          )}
+          {isSinistro && (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="w-full sm:w-auto h-8 text-xs bg-indigo-50 border-indigo-200 text-indigo-700 hover:bg-indigo-100 hover:text-indigo-800"
+                  disabled={completing || transferLoading}
+                >
+                  <ArrowRightLeft className="mr-2 h-3.5 w-3.5" />
+                  Mover
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={() => handleMoverSinistro('Terceiros')}>
+                  Terceiros
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem
+                  onClick={() => handleMoverSinistro(null)}
                   className="text-red-600 focus:bg-red-50 focus:text-red-700"
                 >
                   Remover Classificação
@@ -3754,6 +3810,19 @@ export default function ChamadoDetalhes() {
                   className="px-2.5 py-0.5 uppercase text-[10px] font-bold tracking-wider bg-indigo-100 text-indigo-800 border-indigo-200"
                 >
                   {chamado.status_juridico}
+                </Badge>
+              </div>
+            )}
+            {chamado.status_sinistro && (
+              <div className="flex items-center gap-2 mb-2">
+                <span className="text-[10px] font-bold text-slate-500 tracking-wider">
+                  SINISTRO:
+                </span>
+                <Badge
+                  variant="outline"
+                  className="px-2.5 py-0.5 uppercase text-[10px] font-bold tracking-wider bg-indigo-100 text-indigo-800 border-indigo-200"
+                >
+                  {chamado.status_sinistro}
                 </Badge>
               </div>
             )}

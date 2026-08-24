@@ -310,6 +310,20 @@ function AppSidebar() {
                     <SidebarMenuItem>
                       <SidebarMenuButton
                         asChild
+                        isActive={location.pathname === '/dashboard/terceiros'}
+                        className="data-[active=true]:bg-transparent data-[active=true]:text-[#c8e6c9] hover:bg-[#c8e6c9]/10 hover:text-[#c8e6c9] text-white transition-colors"
+                      >
+                        <Link to="/dashboard/terceiros">
+                          <Briefcase />
+                          <span>Terceiros</span>
+                        </Link>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  )}
+                  {isSinistro && (
+                    <SidebarMenuItem>
+                      <SidebarMenuButton
+                        asChild
                         isActive={location.pathname === '/dashboard/juridico'}
                         className="data-[active=true]:bg-transparent data-[active=true]:text-[#c8e6c9] hover:bg-[#c8e6c9]/10 hover:text-[#c8e6c9] text-white transition-colors"
                       >

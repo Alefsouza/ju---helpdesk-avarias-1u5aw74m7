@@ -195,7 +195,7 @@ export default function MeusAtendimentos() {
           query = query.eq('responsavel_id', user.id)
         }
       } else {
-        query = query.is('status_juridico', null)
+        query = query.is('status_juridico', null).is('status_sinistro', null)
       }
 
       const { data, error: err } = await query
@@ -210,6 +210,10 @@ export default function MeusAtendimentos() {
             c.status_juridico !== 'Demanda Judicial' &&
             c.status_juridico !== 'Defiridos',
         )
+      }
+
+      if (isSinistro) {
+        fetchedData = fetchedData.filter((c: any) => c.status_sinistro !== 'Terceiros')
       }
 
       if (isSinistro && juridicoUserIds.length > 0) {
@@ -371,7 +375,7 @@ export default function MeusAtendimentos() {
             query = query.eq('responsavel_id', user.id)
           }
         } else {
-          query = query.is('status_juridico', null)
+          query = query.is('status_juridico', null).is('status_sinistro', null)
         }
 
         const { data, error: err } = await query

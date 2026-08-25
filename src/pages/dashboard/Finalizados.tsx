@@ -164,7 +164,7 @@ export default function Finalizados() {
         const statusList = statusValues.join(',')
         query = query.or(`status_juridico.not.is.null,status.in.(${statusList})`)
       } else {
-        query = query.is('status_juridico', null)
+        query = query.or('status_juridico.is.null,status_juridico.eq.Deferidos')
         if (statusFilter === 'all') {
           query = query.in('status', ['finalizado', 'unificado'])
         } else {

@@ -208,7 +208,7 @@ export default function MeusAtendimentos() {
           (c) =>
             c.status_juridico !== 'Cobrança de Terceiros' &&
             c.status_juridico !== 'Demanda Judicial' &&
-            c.status_juridico !== 'Defiridos',
+            c.status_juridico !== 'Deferidos',
         )
       }
 
@@ -1182,11 +1182,14 @@ export default function MeusAtendimentos() {
       <UnificarChamadoModal
         isOpen={!!unificarChamado}
         onClose={() => setUnificarChamado(null)}
-        sourceChamado={unificarChamado}
-        onSuccess={(destinoId) => {
+        targetChamado={unificarChamado}
+        onSuccess={() => {
+          const id = unificarChamado?.id
           setUnificarChamado(null)
           fetchChamados()
-          navigate(`/dashboard/chamados/${destinoId}`)
+          if (id) {
+            navigate(`/dashboard/chamados/${id}`)
+          }
         }}
       />
 

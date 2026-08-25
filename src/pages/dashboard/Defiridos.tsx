@@ -149,7 +149,7 @@ export default function Defiridos() {
       let query = supabase
         .from('chamados')
         .select('*')
-        .eq('status_juridico', 'Defiridos')
+        .eq('status_juridico', 'Deferidos')
         .order('atualizado_em', { ascending: false })
         .limit(200)
 

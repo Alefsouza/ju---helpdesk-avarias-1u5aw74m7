@@ -3457,6 +3457,7 @@ export default function ChamadoDetalhes() {
 
     if (isClaudineiFlow) {
       updatePayload.status_aprovacao_claudinei = 'pendente'
+      updatePayload.status_aprovacao_alex = null
       updatePayload.status_interno = 'aguardando_claudinei'
       updatePayload.status = 'finalizado'
     } else if (hasApprovalTrigger) {

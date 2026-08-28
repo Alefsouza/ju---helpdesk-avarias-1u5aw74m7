@@ -19,19 +19,7 @@ import { Loader2, AlertCircle } from 'lucide-react'
 import { toast } from 'sonner'
 import { ValesAprovacaoTable } from '@/components/vales-aprovacao-table'
 
-const CLAUDINEI_KEYWORDS = [
-  'vale',
-  'quitação',
-  'quitacao',
-  'recibo',
-  'nf',
-  'nota fiscal',
-  'boleto',
-  'escaneado',
-  'autorização',
-  'autorizacao',
-  'desconto',
-]
+const CLAUDINEI_KEYWORDS = ['vale', 'autorização', 'autorizacao', 'desconto', 'escaneado']
 
 const hasApprovalTrigger = (anexos: any[]) =>
   anexos.some((a) => {

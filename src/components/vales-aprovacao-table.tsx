@@ -13,6 +13,12 @@ import {
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { Badge } from '@/components/ui/badge'
 
+const stripAccents = (str: string): string =>
+  str
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+
 const RELEVANT_ATTACHMENT_KEYWORDS = [
   'vale',
   'autorização',
@@ -24,19 +30,27 @@ const RELEVANT_ATTACHMENT_KEYWORDS = [
   'recibo',
   'quitação',
   'quitacao',
+  'orçamento',
+  'orcamento',
 ]
 
+const isOrcamento = (nameOrType?: string): boolean => {
+  if (!nameOrType) return false
+  const normalized = stripAccents(nameOrType)
+  return normalized.includes('orcamento')
+}
+
 const isRelevantAttachment = (anexo: any) => {
-  const nome = (anexo.nome_arquivo || '').toLowerCase()
-  return RELEVANT_ATTACHMENT_KEYWORDS.some((kw) => nome.includes(kw))
+  const nome = stripAccents(anexo.nome_arquivo || '')
+  return RELEVANT_ATTACHMENT_KEYWORDS.some((kw) => nome.includes(stripAccents(kw)))
 }
 
 const normalizeAttachmentLabel = (nomeArquivo: string): string => {
-  const nome = (nomeArquivo || '').toLowerCase()
+  const nome = stripAccents(nomeArquivo || '')
+  if (nome.includes('orcamento')) return 'Orçamento'
   if (nome.includes('nf') || nome.includes('nota fiscal')) return 'Nota Fiscal'
   if (nome.includes('boleto')) return 'Boleto'
-  if (nome.includes('recibo') || nome.includes('quitação') || nome.includes('quitacao'))
-    return 'Recibo de Quitação'
+  if (nome.includes('recibo') || nome.includes('quitacao')) return 'Recibo de Quitação'
   return 'Autorização de Desconto'
 }
 
@@ -52,13 +66,32 @@ const getDriverData = (chamado: any) => {
 }
 
 const getOrcamentoUrl = (chamado: any) => {
-  if (!chamado.documentos || chamado.documentos.length === 0) return null
-  const orcamentos = chamado.documentos.filter(
-    (d: any) => d.tipo_documento === 'orcamento' || d.orcamento_url,
-  )
-  if (orcamentos.length > 0) {
-    return orcamentos[0].orcamento_url || orcamentos[0].arquivo_url
+  // 1. Procurar na lista de documentos
+  if (chamado.documentos && Array.isArray(chamado.documentos) && chamado.documentos.length > 0) {
+    const orcamentos = chamado.documentos.filter(
+      (d: any) =>
+        isOrcamento(d.tipo_documento) || isOrcamento(d.nome_arquivo) || Boolean(d.orcamento_url),
+    )
+    if (orcamentos.length > 0) {
+      const url = orcamentos[0].orcamento_url || orcamentos[0].arquivo_url
+      if (url) return url
+    }
   }
+
+  // 2. Fallback: procurar em anexos_chamado_interno
+  if (
+    chamado.anexos_chamado_interno &&
+    Array.isArray(chamado.anexos_chamado_interno) &&
+    chamado.anexos_chamado_interno.length > 0
+  ) {
+    const anexoOrcamento = chamado.anexos_chamado_interno.find((a: any) =>
+      isOrcamento(a.nome_arquivo),
+    )
+    if (anexoOrcamento?.arquivo_url) {
+      return anexoOrcamento.arquivo_url
+    }
+  }
+
   return null
 }
 
@@ -107,9 +140,13 @@ export function ValesAprovacaoTable({
             const aprovacoes = Array.isArray(chamado.aprovacoes_diretoria)
               ? chamado.aprovacoes_diretoria
               : []
-            const relevantAnexos = (chamado.anexos_chamado_interno || []).filter((anexo: any) =>
-              isRelevantAttachment(anexo),
-            )
+            const relevantAnexos = (chamado.anexos_chamado_interno || []).filter((anexo: any) => {
+              // Se o anexo interno for o próprio orçamento exibido no link principal de Orçamento, evita duplicar
+              if (orcamentoUrl && anexo.arquivo_url === orcamentoUrl) {
+                return false
+              }
+              return isRelevantAttachment(anexo)
+            })
 
             return (
               <TableRow key={chamado.id}>

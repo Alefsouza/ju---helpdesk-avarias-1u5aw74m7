@@ -23,7 +23,7 @@ export function VisaoGeral() {
   const [chartFilters, setChartFilters] = useState<ChartFilters>({})
   const [tableFilters, setTableFilters] = useState<TableFilters>(INITIAL_TABLE_FILTERS)
 
-  const { chamados, responsaveis, loading, error, refetch } = useChamadosDashboard({
+  const { chamados, totalExact, responsaveis, loading, error, refetch } = useChamadosDashboard({
     search: tableFilters.debouncedSearch,
     status: tableFilters.status,
     situacaoProcesso: tableFilters.situacaoProcesso,
@@ -143,6 +143,7 @@ export function VisaoGeral() {
       )}
       <DashboardCards
         chamados={chamados}
+        totalExact={hasTableFilters ? chamados.length : totalExact}
         chartFilters={chartFilters}
         onCardClick={handleChartClick}
       />

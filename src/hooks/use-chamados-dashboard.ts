@@ -94,6 +94,7 @@ function applyTableFilters(data: any[], f: ChamadosFilters): any[] {
 
 export const useChamadosDashboard = (filters: ChamadosFilters) => {
   const [chamados, setChamados] = useState<any[]>([])
+  const [totalExact, setTotalExact] = useState<number | null>(null)
   const [responsaveis, setResponsaveis] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -107,25 +108,69 @@ export const useChamadosDashboard = (filters: ChamadosFilters) => {
       try {
         setLoading(true)
         setError(null)
-        const [chamRes, respRes, espRes] = await Promise.all([
-          supabase
-            .from('chamados')
-            .select('*')
-            .order('criado_em', { ascending: false })
-            .limit(5000),
-          supabase
-            .from('perfil_usuario')
-            .select('id, nome_completo')
-            .order('nome_completo', { ascending: true }),
-          supabase
-            .from('formularios_espelho_danos')
-            .select('chamado_id, registro_motorista, nome_motorista')
-            .limit(5000),
+
+        // 1. Obter contagem exata no banco de dados sem restrição de Max Rows
+        const countPromise = supabase.from('chamados').select('id', { count: 'exact', head: true })
+
+        // 2. Obter perfis
+        const respPromise = supabase
+          .from('perfil_usuario')
+          .select('id, nome_completo')
+          .order('nome_completo', { ascending: true })
+
+        // Buscar espelhos paginados se necessário
+        const fetchAllEspelhos = async () => {
+          const espelhos: any[] = []
+          const PAGE_SIZE = 1000
+          let from = 0
+          while (true) {
+            const { data, error } = await supabase
+              .from('formularios_espelho_danos')
+              .select('chamado_id, registro_motorista, nome_motorista')
+              .range(from, from + PAGE_SIZE - 1)
+            if (error) throw error
+            if (!data || data.length === 0) break
+            espelhos.push(...data)
+            if (data.length < PAGE_SIZE) break
+            from += PAGE_SIZE
+          }
+          return espelhos
+        }
+
+        // 3. Buscar todos os chamados paginando em lotes de 1000 com .range()
+        const fetchAllChamados = async () => {
+          const allChamados: any[] = []
+          const PAGE_SIZE = 1000
+          let from = 0
+          while (true) {
+            const { data, error } = await supabase
+              .from('chamados')
+              .select('*')
+              .order('criado_em', { ascending: false })
+              .range(from, from + PAGE_SIZE - 1)
+            if (error) throw error
+            if (!data || data.length === 0) break
+            allChamados.push(...data)
+            if (data.length < PAGE_SIZE) break
+            from += PAGE_SIZE
+          }
+          return allChamados
+        }
+
+        const [countRes, respRes, allEspelhos, allChamados] = await Promise.all([
+          countPromise,
+          respPromise,
+          fetchAllEspelhos(),
+          fetchAllChamados(),
         ])
+
         if (cancelled) return
-        if (chamRes.error) throw chamRes.error
+        if (countRes.error) throw countRes.error
         if (respRes.error) throw respRes.error
-        if (espRes.error) throw espRes.error
+
+        const exactCount = countRes.count ?? allChamados.length
+        setTotalExact(exactCount)
+
         const perfilMap = new Map((respRes.data || []).map((p) => [p.id, p]))
         // Mapa de espelho de danos por chamado_id (primeiro registro encontrado),
         // usado para complementar registro_motorista/nome_motorista ausentes no chamado.
@@ -133,7 +178,7 @@ export const useChamadosDashboard = (filters: ChamadosFilters) => {
           string,
           { registro_motorista?: string | null; nome_motorista?: string | null }
         >()
-        for (const e of espRes.data || []) {
+        for (const e of allEspelhos) {
           if (e.chamado_id && !espelhoMap.has(e.chamado_id)) {
             espelhoMap.set(e.chamado_id, {
               registro_motorista: e.registro_motorista,
@@ -141,7 +186,7 @@ export const useChamadosDashboard = (filters: ChamadosFilters) => {
             })
           }
         }
-        const enriched = (chamRes.data || []).map((c) => {
+        const enriched = allChamados.map((c) => {
           const creator = perfilMap.get(c.usuario_id)
           const espelho = espelhoMap.get(c.id)
           return {
@@ -150,7 +195,7 @@ export const useChamadosDashboard = (filters: ChamadosFilters) => {
             nome_usuario: creator?.nome_completo || '',
             registro_motorista: c.registro_motorista || espelho?.registro_motorista || null,
             nome_motorista: c.nome_motorista || espelho?.nome_motorista || null,
-            is_duplicate: isDuplicateTicket(c, chamRes.data || []),
+            is_duplicate: isDuplicateTicket(c, allChamados),
           }
         })
         const tableFiltered = applyTableFilters(enriched, filters)
@@ -185,5 +230,5 @@ export const useChamadosDashboard = (filters: ChamadosFilters) => {
     return () => window.removeEventListener('dashboard_realtime_update', handler)
   }, [])
 
-  return { chamados, responsaveis, loading, error, refetch }
+  return { chamados, totalExact, responsaveis, loading, error, refetch }
 }

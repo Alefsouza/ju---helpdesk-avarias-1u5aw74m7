@@ -17,10 +17,12 @@ import type { ChartFilters } from '@/hooks/use-chamados-dashboard'
 
 export function DashboardCards({
   chamados,
+  totalExact,
   chartFilters,
   onCardClick,
 }: {
   chamados: any[]
+  totalExact?: number | null
   chartFilters?: ChartFilters
   onCardClick?: (
     type:
@@ -66,7 +68,16 @@ export function DashboardCards({
     })
   }, [chamados, chartFilters])
 
-  const total = filtered.length
+  const hasChartFilterApplied = chartFilters
+    ? Object.entries(chartFilters).some(([k, v]) =>
+        k === 'overdue' ? v === true : Array.isArray(v) && v.length > 0,
+      )
+    : false
+
+  const total =
+    !hasChartFilterApplied && totalExact !== null && totalExact !== undefined
+      ? totalExact
+      : filtered.length
   const abertos = filtered.filter((c) => c.status === 'aberto').length
   const emAtendimento = filtered.filter((c) => c.status === 'em_atendimento').length
   const finalizados = filtered.filter((c) => c.status === 'finalizado').length

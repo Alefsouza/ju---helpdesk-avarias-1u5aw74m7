@@ -876,7 +876,13 @@ function GerarValeModal({
           data_referencia: p.data_referencia,
           vale_unificado: valeUnificado,
         }))
-        await supabase.from('parcelas_vales').delete().eq('chamado_id', chamadoId)
+        const { error: cancelError } = await supabase
+          .from('parcelas_vales')
+          .update({ status: 'cancelado' })
+          .eq('chamado_id', chamadoId)
+          .eq('status', 'ativo')
+        if (cancelError) console.error('Error cancelling old parcelas:', cancelError)
+
         const { error: parcelasError } = await supabase
           .from('parcelas_vales')
           .insert(parcelasToInsert)

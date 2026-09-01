@@ -871,22 +871,20 @@ function GerarValeModal({
         console.error('Erro ao calcular parcelas:', calcError)
       } else if (calculadas && calculadas.length > 0) {
         const parcelasToInsert = calculadas.map((p: any) => ({
-          chamado_id: chamadoId,
           valor_parcela: p.valor_parcela,
           data_referencia: p.data_referencia,
           vale_unificado: valeUnificado,
         }))
-        const { error: cancelError } = await supabase
-          .from('parcelas_vales')
-          .update({ status: 'cancelado' })
-          .eq('chamado_id', chamadoId)
-          .eq('status', 'ativo')
-        if (cancelError) console.error('Error cancelling old parcelas:', cancelError)
 
-        const { error: parcelasError } = await supabase
-          .from('parcelas_vales')
-          .insert(parcelasToInsert)
-        if (parcelasError) console.error('Error creating parcelas:', parcelasError)
+        const { error: rpcSubstituirError } = await (supabase.rpc as any)(
+          'substituir_parcelas_vale',
+          {
+            p_chamado_id: chamadoId,
+            p_parcelas: parcelasToInsert,
+          },
+        )
+        if (rpcSubstituirError)
+          console.error('Error substituting parcelas via RPC:', rpcSubstituirError)
       }
 
       try {

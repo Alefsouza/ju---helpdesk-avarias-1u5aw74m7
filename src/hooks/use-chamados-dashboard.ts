@@ -108,14 +108,19 @@ export const useChamadosDashboard = (filters: ChamadosFilters) => {
         setLoading(true)
         setError(null)
         const [chamRes, respRes, espRes] = await Promise.all([
-          supabase.from('chamados').select('*').order('criado_em', { ascending: false }),
+          supabase
+            .from('chamados')
+            .select('*')
+            .order('criado_em', { ascending: false })
+            .limit(5000),
           supabase
             .from('perfil_usuario')
             .select('id, nome_completo')
             .order('nome_completo', { ascending: true }),
           supabase
             .from('formularios_espelho_danos')
-            .select('chamado_id, registro_motorista, nome_motorista'),
+            .select('chamado_id, registro_motorista, nome_motorista')
+            .limit(5000),
         ])
         if (cancelled) return
         if (chamRes.error) throw chamRes.error

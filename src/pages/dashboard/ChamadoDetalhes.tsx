@@ -150,6 +150,7 @@ const ALLOWED_TYPES = [
   'image/png',
   'image/gif',
   'image/webp',
+  'application/msword',
   'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
 ]
 
@@ -2256,14 +2257,17 @@ export default function ChamadoDetalhes() {
     const itemsToUpload: FileItem[] = []
 
     for (const file of newFiles) {
+      const isDoc = file.name.toLowerCase().endsWith('.doc')
       const isDocx = file.name.toLowerCase().endsWith('.docx')
       const isValidType =
         ALLOWED_TYPES.includes(file.type) ||
         file.type.startsWith('image/') ||
+        isDoc ||
         isDocx ||
+        file.type === 'application/msword' ||
         file.type === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
       if (!isValidType || file.size > MAX_SIZE_BYTES) {
-        toast.error('Arquivo inválido. Máximo 20 MB. Tipos: MP3, MP4, imagens, PDF, DOCX')
+        toast.error('Arquivo inválido. Máximo 20 MB. Tipos: MP3, MP4, imagens, PDF, DOC, DOCX')
         continue
       }
 
@@ -4876,7 +4880,7 @@ export default function ChamadoDetalhes() {
                   onChange={handleFileChange}
                   className="hidden"
                   multiple
-                  accept=".mp3,.mp4,.pdf,.docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document,image/jpeg,image/png,image/gif,image/webp"
+                  accept=".mp3,.mp4,.pdf,.doc,.docx,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,image/jpeg,image/png,image/gif,image/webp"
                 />
                 <span className="text-[10px] text-slate-500 hidden sm:inline-block">
                   Máx 10 arquivos (20MB)

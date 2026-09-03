@@ -212,7 +212,7 @@ const MAX_SIZE_BYTES = MAX_SIZE_MB * 1024 * 1024
 
 const formSchema = z.object({
   tipoChamado: z.enum(['Colisão', 'Lesão Corporal', 'Seguradora', ''], {
-    required_error: 'Tipo de chamado é obrigatório',
+    message: 'Tipo de chamado é obrigatório',
   }),
   situacaoProcesso: z.string().optional(),
   titulo: z.string().min(1, 'Título é obrigatório'),
@@ -221,7 +221,7 @@ const formSchema = z.object({
     .refine((val) => val !== undefined && val !== null, 'Data da ocorrência é obrigatória'),
   descricao: z.string().min(20, 'A descrição deve ter no mínimo 20 caracteres'),
   placaOnibus: z
-    .string({ required_error: 'A placa do nosso ônibus é obrigatória' })
+    .string({ message: 'A placa do nosso ônibus é obrigatória' })
     .min(1, 'A placa do nosso ônibus é obrigatória')
     .length(8, 'Formato: ABC 1234')
     .regex(/^[A-Z]{3} [A-Z0-9]{4}$/, 'Formato inválido'),
@@ -846,7 +846,7 @@ export default function NovoChamado() {
                     <Select
                       value={field.value}
                       onValueChange={async (val: 'Colisão' | 'Lesão Corporal' | 'Seguradora') => {
-                        const currentVal = field.value
+                        const currentVal = field.value as string
                         if (currentVal && currentVal !== '' && currentVal !== val) {
                           form.setValue('titulo', '')
                           form.setValue('descricao', '')

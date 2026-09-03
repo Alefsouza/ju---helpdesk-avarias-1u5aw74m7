@@ -117,7 +117,9 @@ export default function SecretariaTecnica() {
 
   // Modal States
   const [photosModalOpen, setPhotosModalOpen] = useState(false)
-  const [selectedPhotos, setSelectedPhotos] = useState<{ url: string; type: 'photo' | 'pdf' }[]>([])
+  const [selectedPhotos, setSelectedPhotos] = useState<
+    { url: string; type: 'photo' | 'pdf' | 'manutencao' | 'requisicao' | 'orcamento' }[]
+  >([])
   const [uploadModalOpen, setUploadModalOpen] = useState(false)
   const [selectedDoc, setSelectedDoc] = useState<any | null>(null)
   const [uploading, setUploading] = useState(false)

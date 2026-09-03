@@ -195,7 +195,9 @@ export default function MeusAtendimentos() {
           query = query.eq('responsavel_id', user.id)
         }
       } else {
-        query = query.is('status_juridico', null).is('status_sinistro', null)
+        query = query
+          .is('status_juridico', null)
+          .or('status_sinistro.is.null,status_sinistro.eq.Terceiros')
       }
 
       const { data, error: err } = await query
@@ -212,9 +214,16 @@ export default function MeusAtendimentos() {
         )
       }
 
-      if (isSinistro) {
-        fetchedData = fetchedData.filter((c: any) => c.status_sinistro !== 'Terceiros')
-      }
+      // Permite chamados com status_sinistro = 'Terceiros' se pertencem à garagem do usuário logado OU se o responsavel_id é o próprio usuário
+      fetchedData = fetchedData.filter((c: any) => {
+        if (c.status_sinistro === 'Terceiros') {
+          const isMine = c.responsavel_id === user.id
+          const isMyGaragem =
+            !!userGaragem && (c.garagem || '').trim().toLowerCase() === userGaragem.toLowerCase()
+          return isMine || isMyGaragem
+        }
+        return true
+      })
 
       if (isSinistro && juridicoUserIds.length > 0) {
         fetchedData = fetchedData.filter((c) => !juridicoUserIds.includes(c.responsavel_id))
@@ -375,7 +384,9 @@ export default function MeusAtendimentos() {
             query = query.eq('responsavel_id', user.id)
           }
         } else {
-          query = query.is('status_juridico', null).is('status_sinistro', null)
+          query = query
+            .is('status_juridico', null)
+            .or('status_sinistro.is.null,status_sinistro.eq.Terceiros')
         }
 
         const { data, error: err } = await query

@@ -249,13 +249,12 @@ export default function OsManutencao({
   const fetchDocumentos = async () => {
     try {
       setLoading(true)
-      const { data, error } = await supabase
-        .from('documentos')
+      const { data, error } = await (supabase.from('documentos') as any)
         .select('*, chamados(carro)')
         .in('tipo_documento', ['Vistoria', 'Espelho de Danos', 'OS de Manutenção'])
         .not('numero_os', 'is', null)
         .neq('numero_os', '')
-        .neq('excluido_manutencao' as any, true)
+        .neq('excluido_manutencao', true)
         .ilike('garagem', garagemFilter)
         .order('criado_em', { ascending: false })
 

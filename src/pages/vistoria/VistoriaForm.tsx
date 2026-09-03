@@ -36,7 +36,7 @@ const formSchema = z.object({
   linha: z.string().min(1, 'Campo obrigatório'),
   numero_carro: z.string().min(1, 'Campo obrigatório'),
   data_ocorrencia: z.enum(['hoje', 'ontem'], {
-    required_error: 'Selecione a data da ocorrência',
+    message: 'Selecione a data da ocorrência',
   }),
   horario_ocorrencia: z
     .string()
@@ -173,7 +173,8 @@ export default function VistoriaForm() {
       return
     }
 
-    if (!profile?.registro || !profile?.nome_completo) {
+    const userReg = (profile as any)?.registro
+    if (!userReg || !profile?.nome_completo) {
       toast.error('Seu perfil está incompleto (falta Nome ou Registro).')
       return
     }
@@ -227,7 +228,7 @@ export default function VistoriaForm() {
         arquivo_url: '', // Initially empty, will be filled with PDF url when OS is linked
         fotos_urls: uploadedUrls,
         chamado_id: chamadoId || null,
-        registro_responsavel: profile.registro,
+        registro_responsavel: userReg,
         nome_responsavel: profile.nome_completo,
         registro_motorista: values.registro_motorista,
         nome_motorista: values.nome_motorista,
@@ -298,7 +299,7 @@ export default function VistoriaForm() {
         </div>
       ) : null}
 
-      {!profile?.registro || !profile?.nome_completo ? (
+      {!(profile as any)?.registro || !profile?.nome_completo ? (
         <div className="mb-6 rounded-lg border border-red-200 bg-red-50 p-4 text-red-800">
           <div className="flex items-center gap-3">
             <AlertCircle className="h-5 w-5 text-red-600" />
@@ -534,7 +535,10 @@ export default function VistoriaForm() {
                 type="submit"
                 className="bg-[#225f3d] hover:bg-[#1a472d] text-white px-8"
                 disabled={
-                  isSubmitting || !profile?.garagem || !profile?.registro || !profile?.nome_completo
+                  isSubmitting ||
+                  !profile?.garagem ||
+                  !(profile as any)?.registro ||
+                  !profile?.nome_completo
                 }
               >
                 {isSubmitting ? (

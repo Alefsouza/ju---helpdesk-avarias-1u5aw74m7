@@ -45,12 +45,12 @@ type Documento = {
   ocorrencia: string | null
   descricao_danos: string | null
   foto_url: string | null
-  fotos_urls: string[] | null
+  fotos_urls: any
   nome_responsavel: string | null
   registro_responsavel: string | null
   nome_motorista: string | null
   registro_motorista: string | null
-  criado_em: string
+  criado_em?: string | null
   hasDuplicate?: boolean
 }
 
@@ -230,12 +230,12 @@ export default function DocumentosPendentes() {
         const { data: existingForm } = await supabase
           .from('formularios_espelho_danos')
           .select('id')
-          .eq('chamado_id', selectedDoc.chamado_id)
+          .eq('chamado_id', selectedDoc.chamado_id as any)
           .limit(1)
           .maybeSingle()
 
         if (existingForm) {
-          finalEspelhoId = existingForm.id
+          finalEspelhoId = existingForm.id as string
           shouldInsertForm = false
 
           await supabase
@@ -259,7 +259,9 @@ export default function DocumentosPendentes() {
       }
 
       if (shouldInsertForm) {
-        const { error: formError } = await supabase.from('formularios_espelho_danos').insert({
+        const { error: formError } = await (
+          supabase.from('formularios_espelho_danos') as any
+        ).insert({
           id: finalEspelhoId,
           chamado_id: selectedDoc.chamado_id || null,
           numero_os: numeroOS.trim(),

@@ -73,7 +73,7 @@ Deno.serve(async (req: Request) => {
 
     const { data: novoResponsavel, error: novoRespError } = await supabaseAdmin
       .from('perfil_usuario')
-      .select('nome_completo, departamento')
+      .select('nome_completo, departamento, garagem')
       .eq('id', novo_responsavel_id)
       .single()
 
@@ -81,13 +81,19 @@ Deno.serve(async (req: Request) => {
       throw new Error('Novo responsável não encontrado')
     }
 
+    const updatePayload: Record<string, any> = {
+      responsavel_id: novo_responsavel_id,
+      status_interno: novoResponsavel.departamento || null,
+      atualizado_em: new Date().toISOString(),
+    }
+
+    if (novoResponsavel.garagem) {
+      updatePayload.garagem = novoResponsavel.garagem
+    }
+
     const { error: updateError } = await supabaseAdmin
       .from('chamados')
-      .update({
-        responsavel_id: novo_responsavel_id,
-        status_interno: novoResponsavel.departamento || null,
-        atualizado_em: new Date().toISOString(),
-      })
+      .update(updatePayload)
       .eq('id', chamado_id)
 
     if (updateError) throw updateError

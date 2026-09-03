@@ -72,8 +72,8 @@ export default function SinistrosCoc() {
         const checkboxMarked =
           s.tipo_chamado === 'Contém vítimas, mas não tem avarias' ||
           s.tipo_chamado === 'Avaria sem vítima' ||
-          s.tipo_chamado === 'true' ||
-          s.tipo_chamado === true
+          (s.tipo_chamado as any) === 'true' ||
+          (s.tipo_chamado as any) === true
 
         return !checkboxMarked
       })

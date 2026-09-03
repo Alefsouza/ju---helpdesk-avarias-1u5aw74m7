@@ -516,25 +516,28 @@ export default function FormularioIdoFixo() {
                         <Label>Nome</Label>
                         <Input
                           placeholder="Nome da testemunha"
-                          {...form.register(`${prefix}.nome`)}
+                          {...form.register(`${prefix}.nome` as any)}
                         />
                       </div>
                       <div className="space-y-2">
                         <Label>Endereço</Label>
                         <Input
                           placeholder="Endereço da testemunha"
-                          {...form.register(`${prefix}.endereco`)}
+                          {...form.register(`${prefix}.endereco` as any)}
                         />
                       </div>
                       <div className="space-y-2">
                         <Label>RG</Label>
-                        <Input placeholder="RG da testemunha" {...form.register(`${prefix}.rg`)} />
+                        <Input
+                          placeholder="RG da testemunha"
+                          {...form.register(`${prefix}.rg` as any)}
+                        />
                       </div>
                       <div className="space-y-2">
                         <Label>Telefone</Label>
                         <Input
                           placeholder="Telefone da testemunha"
-                          {...form.register(`${prefix}.telefone`)}
+                          {...form.register(`${prefix}.telefone` as any)}
                         />
                       </div>
                     </div>

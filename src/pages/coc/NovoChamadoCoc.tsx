@@ -38,9 +38,11 @@ const formSchema = z.object({
   carro: z.string().min(1, 'Obrigatório'),
   linha: z.string().min(1, 'Obrigatório'),
   local_ocorrencia: z.string().min(1, 'Obrigatório'),
-  operacao: z.enum(['RA', 'RN', 'OPN'], { required_error: 'Selecione uma operação' }),
+  operacao: z.enum(['RA', 'RN', 'OPN'], {
+    message: 'Selecione uma operação',
+  }),
   colisao: z.enum(['Sim', 'Não'], {
-    required_error: 'Selecione uma opção',
+    message: 'Selecione uma opção',
   }),
 })
 
@@ -153,8 +155,7 @@ export default function NovoChamadoCoc() {
       }
       setIsVerificandoCarro(true)
       try {
-        const { data } = await supabase
-          .from('frota_veiculos' as any)
+        const { data } = await (supabase.from('frota_veiculos') as any)
           .select('garagem')
           .eq('prefixo', carro.trim())
           .maybeSingle()
@@ -181,8 +182,7 @@ export default function NovoChamadoCoc() {
     setIsSubmitting(true)
     try {
       // Lookup garage in frota_veiculos
-      const { data: veiculo } = await supabase
-        .from('frota_veiculos' as any)
+      const { data: veiculo } = await (supabase.from('frota_veiculos') as any)
         .select('garagem')
         .eq('prefixo', values.carro.trim())
         .maybeSingle()

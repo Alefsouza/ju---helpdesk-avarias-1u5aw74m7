@@ -235,7 +235,7 @@ export default function DocumentosPendentes() {
           .maybeSingle()
 
         if (existingForm) {
-          finalEspelhoId = existingForm.id as string
+          finalEspelhoId = existingForm.id as any
           shouldInsertForm = false
 
           await supabase

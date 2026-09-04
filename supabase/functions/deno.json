@@ -4,10 +4,10 @@
     "transferir-chamado": 16,
     "gerar-pdf": 55,
     "criar-chamado-vistoria": 13,
-    "processar-documento-uazapi": 155,
+    "processar-documento-uazapi": 157,
     "unificar-chamados": 22,
     "verificar-inatividade-chamados": 9,
-    "importar-frota-xlsx": 154,
+    "importar-frota-xlsx": 156,
     "sync-external-registros": 6
   }
 }

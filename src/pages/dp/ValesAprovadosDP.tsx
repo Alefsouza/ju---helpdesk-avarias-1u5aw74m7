@@ -167,6 +167,7 @@ export default function ValesAprovadosDP() {
       const { data: allParcelas } = await supabase
         .from('parcelas_vales')
         .select('chamado_id, data_referencia')
+        .eq('status', 'ativo')
         .in('chamado_id', chamadoIds)
         .order('data_referencia', { ascending: true })
 

@@ -64,6 +64,7 @@ interface GroupedOs {
   fotos_urls: string[]
   fotos_manutencao: string[]
   fotos_requisicao: string[]
+  orcamento_url: string | null
   chamado_id: string | null
   mostRecentRecord: any
 }
@@ -147,6 +148,13 @@ const groupByOs = (docs: any[]): GroupedOs[] => {
     const arquivo_url =
       records.map((r) => r.arquivo_url).find((v) => v && typeof v === 'string' && v !== '') || null
 
+    const orcamento_url =
+      records
+        .map((r) => r.orcamento_url)
+        .find((v) => v && typeof v === 'string' && v.trim() !== '') ||
+      mostRecent?.orcamento_url ||
+      null
+
     groups.push({
       numero_os: os.startsWith('__no_os_') ? '' : os,
       ids: records.map((r) => r.id),
@@ -186,6 +194,7 @@ const groupByOs = (docs: any[]): GroupedOs[] => {
       fotos_urls: merged_fotos_urls,
       fotos_manutencao,
       fotos_requisicao,
+      orcamento_url,
       chamado_id: mostRecent?.chamado_id || null,
       mostRecentRecord: mostRecent,
     })
@@ -570,6 +579,18 @@ export default function OsManutencao({
         }),
       )
 
+      if (docToRelease && photoManagerDoc.ids.some((id) => docToRelease.ids.includes(id))) {
+        setDocToRelease((prev) =>
+          prev
+            ? {
+                ...prev,
+                fotos_manutencao: finalFotosManutencao,
+                fotos_requisicao: finalFotosReq,
+              }
+            : null,
+        )
+      }
+
       handleClosePhotoManager()
     } catch (error: any) {
       console.error('Erro ao salvar arquivos:', error)
@@ -585,6 +606,22 @@ export default function OsManutencao({
 
   const handleRelease = async (status: string) => {
     if (!docToRelease) return
+
+    if (status === 'Liberado (Sem Pendências)') {
+      const hasPhotos =
+        Array.isArray(docToRelease.fotos_manutencao) && docToRelease.fotos_manutencao.length > 0
+      const hasOrcamento = !!docToRelease.orcamento_url
+      if (!hasPhotos || !hasOrcamento) {
+        toast({
+          title: 'Não é possível liberar',
+          description:
+            'Para liberar sem pendências, é obrigatório anexar pelo menos 1 foto do carro consertado e o orçamento.',
+          variant: 'destructive',
+        })
+        return
+      }
+    }
+
     try {
       setIsReleasing(true)
 
@@ -936,15 +973,22 @@ export default function OsManutencao({
                                   </TooltipContent>
                                 </Tooltip>
                               )}
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className="h-8 w-8 text-slate-500 hover:text-green-600 hover:bg-green-50"
-                                onClick={() => setDocToRelease(doc)}
-                                title="Liberar Veículo"
-                              >
-                                <CheckCircle className="h-4 w-4" />
-                              </Button>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-8 w-8 text-slate-500 hover:text-green-600 hover:bg-green-50"
+                                    onClick={() => setDocToRelease(doc)}
+                                    title="Liberar Veículo"
+                                  >
+                                    <CheckCircle className="h-4 w-4" />
+                                  </Button>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  <p>Liberar Veículo</p>
+                                </TooltipContent>
+                              </Tooltip>
                             </div>
                           </TableCell>
                         </TableRow>
@@ -1133,6 +1177,21 @@ export default function OsManutencao({
                 <div>
                   <p className="text-[#333333] font-bold mb-1">Registros Agrupados</p>
                   <p className="text-[#333333]">{viewDoc.records.length}</p>
+                </div>
+                <div>
+                  <p className="text-[#333333] font-bold mb-1">Orçamento</p>
+                  {viewDoc.orcamento_url ? (
+                    <a
+                      href={viewDoc.orcamento_url}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="text-xs text-blue-600 hover:underline flex items-center gap-1"
+                    >
+                      Ver Orçamento Anexado
+                    </a>
+                  ) : (
+                    <span className="text-[#333333] text-xs italic">Não anexado</span>
+                  )}
                 </div>
               </div>
 
@@ -1369,22 +1428,58 @@ export default function OsManutencao({
               de liberação:
             </DialogDescription>
           </DialogHeader>
-          <div className="flex flex-col gap-3 py-4">
-            <Button
-              onClick={() => handleRelease('Liberado (Sem Pendências)')}
-              disabled={isReleasing}
-              className="w-full bg-emerald-600 hover:bg-emerald-700 text-white py-6 text-base"
-            >
-              {isReleasing ? 'Processando...' : 'Liberado (Sem Pendências)'}
-            </Button>
-            <Button
-              onClick={() => handleRelease('Liberado com Pendência')}
-              disabled={isReleasing}
-              className="w-full bg-amber-500 hover:bg-amber-600 text-white py-6 text-base"
-            >
-              {isReleasing ? 'Processando...' : 'Liberado com Pendência'}
-            </Button>
-          </div>
+          {(() => {
+            const hasPhotos =
+              !!docToRelease &&
+              Array.isArray(docToRelease.fotos_manutencao) &&
+              docToRelease.fotos_manutencao.length > 0
+            const hasOrcamento = !!docToRelease && !!docToRelease.orcamento_url
+            const canReleaseWithoutPendencies = hasPhotos && hasOrcamento
+
+            const getMissingReasonText = () => {
+              if (!hasPhotos && !hasOrcamento) {
+                return 'Falta: foto do carro consertado e orçamento anexado'
+              }
+              if (!hasPhotos) {
+                return 'Falta: foto do carro consertado'
+              }
+              if (!hasOrcamento) {
+                return 'Falta: orçamento anexado'
+              }
+              return ''
+            }
+
+            return (
+              <div className="flex flex-col gap-3 py-4">
+                <div className="flex flex-col gap-1.5">
+                  <Button
+                    onClick={() => {
+                      if (!canReleaseWithoutPendencies) return
+                      handleRelease('Liberado (Sem Pendências)')
+                    }}
+                    disabled={isReleasing || !canReleaseWithoutPendencies}
+                    aria-disabled={isReleasing || !canReleaseWithoutPendencies}
+                    className="w-full bg-emerald-600 hover:bg-emerald-700 disabled:bg-slate-200 disabled:text-slate-400 disabled:cursor-not-allowed text-white py-6 text-base"
+                  >
+                    {isReleasing ? 'Processando...' : 'Liberado (Sem Pendências)'}
+                  </Button>
+                  {!canReleaseWithoutPendencies && (
+                    <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-md bg-amber-50 border border-amber-200 text-amber-800 text-xs font-medium">
+                      <AlertCircle className="h-3.5 w-3.5 shrink-0 text-amber-600" />
+                      <span>{getMissingReasonText()}</span>
+                    </div>
+                  )}
+                </div>
+                <Button
+                  onClick={() => handleRelease('Liberado com Pendência')}
+                  disabled={isReleasing}
+                  className="w-full bg-amber-500 hover:bg-amber-600 text-white py-6 text-base"
+                >
+                  {isReleasing ? 'Processando...' : 'Liberado com Pendência'}
+                </Button>
+              </div>
+            )
+          })()}
           <DialogFooter>
             <Button
               variant="outline"

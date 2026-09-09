@@ -214,10 +214,14 @@ export default function MeusAtendimentos() {
         )
       }
 
-      // Permite chamados com status_sinistro = 'Terceiros' se pertencem à garagem do usuário logado OU se o responsavel_id é o próprio usuário
+      // Permite chamados com status_sinistro = 'Terceiros' se pertencem à garagem do usuário logado OU se o responsavel_id é o próprio usuário (ou do time jurídico, para membros do jurídico)
       fetchedData = fetchedData.filter((c: any) => {
         if (c.status_sinistro === 'Terceiros') {
-          const isMine = c.responsavel_id === user.id
+          const isMine = isJuridicoTeamMember
+            ? juridicoUserIds.length > 0
+              ? juridicoUserIds.includes(c.responsavel_id)
+              : c.responsavel_id === user.id
+            : c.responsavel_id === user.id
           const isMyGaragem =
             !!userGaragem && (c.garagem || '').trim().toLowerCase() === userGaragem.toLowerCase()
           return isMine || isMyGaragem

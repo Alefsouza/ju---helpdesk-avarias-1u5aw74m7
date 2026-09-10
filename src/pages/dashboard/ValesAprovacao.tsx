@@ -57,11 +57,28 @@ export default function ValesAprovacao() {
     }
     const espelhos = c.formularios_espelho_danos
     if (Array.isArray(espelhos)) {
-      return espelhos.some(
-        (e: any) =>
-          (e?.registro_motorista ?? '').toString().toLowerCase().includes(t) ||
-          (e?.nome_motorista ?? '').toString().toLowerCase().includes(t),
-      )
+      if (
+        espelhos.some(
+          (e: any) =>
+            (e?.registro_motorista ?? '').toString().toLowerCase().includes(t) ||
+            (e?.nome_motorista ?? '').toString().toLowerCase().includes(t),
+        )
+      ) {
+        return true
+      }
+    }
+    const docs = c.documentos
+    if (Array.isArray(docs)) {
+      const vales = docs.filter((d: any) => d?.tipo_documento === 'Vale')
+      if (
+        vales.some(
+          (v: any) =>
+            (v?.registro_motorista ?? '').toString().toLowerCase().includes(t) ||
+            (v?.nome_motorista ?? '').toString().toLowerCase().includes(t),
+        )
+      ) {
+        return true
+      }
     }
     return false
   }
@@ -89,7 +106,7 @@ export default function ValesAprovacao() {
         id, titulo, descricao, status_aprovacao, status_aprovacao_claudinei, aprovacoes_diretoria, criado_em,
         registro_motorista, nome_motorista, data_ocorrencia,
         anexos_chamado_interno ( id, nome_arquivo, arquivo_url, criado_em ),
-        documentos ( id, nome_arquivo, arquivo_url, tipo_documento, orcamento_url, valor_orcamento, criado_em ),
+        documentos ( id, nome_arquivo, arquivo_url, tipo_documento, orcamento_url, valor_orcamento, registro_motorista, nome_motorista, criado_em ),
         parcelas_vales ( id, valor_parcela, data_referencia ),
         formularios_espelho_danos ( registro_motorista, nome_motorista ),
         solicitacoes_parcelamento ( id, valor_orcamento, quantidade_parcelas, status, desconto_aplicado, vale_unificado ),

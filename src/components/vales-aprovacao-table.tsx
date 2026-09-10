@@ -59,9 +59,19 @@ const getDriverData = (chamado: any) => {
     ? chamado.formularios_espelho_danos[0]
     : chamado.formularios_espelho_danos
 
+  const docVale = Array.isArray(chamado.documentos)
+    ? chamado.documentos.find(
+        (d: any) => d.tipo_documento === 'Vale' && (d.registro_motorista || d.nome_motorista),
+      )
+    : null
+
   return {
-    registro: espelhoData?.registro_motorista || chamado.registro_motorista || '-',
-    nome: espelhoData?.nome_motorista || chamado.nome_motorista || '-',
+    registro:
+      espelhoData?.registro_motorista ||
+      docVale?.registro_motorista ||
+      chamado.registro_motorista ||
+      '-',
+    nome: espelhoData?.nome_motorista || docVale?.nome_motorista || chamado.nome_motorista || '-',
   }
 }
 

@@ -935,6 +935,45 @@ function GerarValeModal({
         newNomeArquivo = `Autorizacao_Desconto_${format(new Date(), 'dd-MM-yyyy HHmm')}.docx`
       }
 
+      // Buscar dados do motorista na mesma cadeia: espelho de danos -> campos do chamado -> perfil do solicitante
+      let resolvedRegistroMotorista: string | null = null
+      let resolvedNomeMotorista: string | null = null
+
+      try {
+        const { data: espelhoData } = await supabase
+          .from('formularios_espelho_danos')
+          .select('registro_motorista, nome_motorista')
+          .eq('chamado_id', chamadoId)
+          .order('criado_em', { ascending: false })
+          .limit(1)
+          .maybeSingle()
+
+        if (espelhoData?.registro_motorista || espelhoData?.nome_motorista) {
+          resolvedRegistroMotorista = espelhoData.registro_motorista || null
+          resolvedNomeMotorista = espelhoData.nome_motorista || null
+        }
+      } catch (err) {
+        console.warn('Erro ao buscar espelho para dados do motorista no vale:', err)
+      }
+
+      if (!resolvedRegistroMotorista && chamado?.registro_motorista) {
+        resolvedRegistroMotorista = chamado.registro_motorista
+      }
+      if (!resolvedNomeMotorista && chamado?.nome_motorista) {
+        resolvedNomeMotorista = chamado.nome_motorista
+      }
+
+      if (!resolvedRegistroMotorista || !resolvedNomeMotorista) {
+        const solRegistro = solicitante?.registro
+        const solNome = solicitante?.nome_completo
+        if (!resolvedRegistroMotorista && solRegistro) {
+          resolvedRegistroMotorista = solRegistro
+        }
+        if (!resolvedNomeMotorista && solNome) {
+          resolvedNomeMotorista = solNome
+        }
+      }
+
       const { error: docError } = await supabase.from('documentos').insert({
         chamado_id: chamadoId,
         tipo_documento: 'Vale',
@@ -942,6 +981,8 @@ function GerarValeModal({
         nome_arquivo: newNomeArquivo,
         arquivo_url: newUrl,
         status_liberacao: 'Pendente',
+        registro_motorista: resolvedRegistroMotorista,
+        nome_motorista: resolvedNomeMotorista,
       })
 
       if (docError) throw docError
@@ -1552,7 +1593,7 @@ export default function ChamadoDetalhes() {
 
     const { data: solicitanteData } = await supabase
       .from('perfil_usuario')
-      .select('id, nome_completo, email')
+      .select('id, nome_completo, email, registro')
       .eq('id', chamadoData.usuario_id)
       .maybeSingle()
 

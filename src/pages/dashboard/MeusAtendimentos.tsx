@@ -89,6 +89,8 @@ export default function MeusAtendimentos() {
   const isJuridicoTeamMember = isMariaJuridico(user?.email) || isLuizJuridico(user?.email)
 
   const RAQUEL_SINISTRO_EMAIL = 'raquel.santos@viasudeste.com'
+  const ALEX_FONTES_EMAIL = 'alex.fontes@viasudeste.com'
+  const [alexUserId, setAlexUserId] = useState<string | null>(null)
   const isRaquelSinistro = user?.email === RAQUEL_SINISTRO_EMAIL
   const userGaragem = profile?.garagem?.trim() || null
   const shouldFilterByGaragem = isSinistro && !isRaquelSinistro
@@ -161,6 +163,24 @@ export default function MeusAtendimentos() {
   }, [resizingCol, startX, startWidth])
 
   useEffect(() => {
+    const fetchAlexUserId = async () => {
+      try {
+        const { data } = await supabase
+          .from('perfil_usuario')
+          .select('id')
+          .eq('email', ALEX_FONTES_EMAIL)
+          .maybeSingle()
+        if (data?.id) {
+          setAlexUserId(data.id)
+        }
+      } catch (err) {
+        console.error('Erro ao buscar ID do Alex Fontes:', err)
+      }
+    }
+    fetchAlexUserId()
+  }, [])
+
+  useEffect(() => {
     const timer = setTimeout(() => setDebouncedSearch(searchTerm), 300)
     return () => clearTimeout(timer)
   }, [searchTerm])
@@ -231,7 +251,12 @@ export default function MeusAtendimentos() {
       })
 
       if (isSinistro && juridicoUserIds.length > 0) {
-        fetchedData = fetchedData.filter((c) => !juridicoUserIds.includes(c.responsavel_id))
+        // Para sinistro: não exibir chamados do time jurídico, mas NUNCA filtrar chamados do Alex Fontes
+        fetchedData = fetchedData.filter(
+          (c) =>
+            !juridicoUserIds.includes(c.responsavel_id) ||
+            (alexUserId && c.responsavel_id === alexUserId),
+        )
       }
 
       if (fetchedData.length > 0) {
@@ -368,7 +393,7 @@ export default function MeusAtendimentos() {
     return () => {
       supabase.removeChannel(channel)
     }
-  }, [user, profile?.tipo_usuario, juridicoUserIds])
+  }, [user, profile?.tipo_usuario, juridicoUserIds, alexUserId])
 
   useEffect(() => {
     const fetchSituacaoOptions = async () => {
@@ -376,7 +401,7 @@ export default function MeusAtendimentos() {
       try {
         let query = supabase
           .from('chamados')
-          .select('situacao_processo')
+          .select('situacao_processo, responsavel_id')
           .eq('status', 'em_atendimento')
           .not('situacao_processo', 'is', null)
 
@@ -407,7 +432,18 @@ export default function MeusAtendimentos() {
         const { data, error: err } = await query
         if (err) throw err
 
-        const distinct = [...new Set((data || []).map((c) => c.situacao_processo).filter(Boolean))]
+        let optionsData = data || []
+        if (isSinistro && juridicoUserIds.length > 0) {
+          optionsData = optionsData.filter(
+            (c: any) =>
+              !juridicoUserIds.includes(c.responsavel_id) ||
+              (alexUserId && c.responsavel_id === alexUserId),
+          )
+        }
+
+        const distinct = [
+          ...new Set(optionsData.map((c: any) => c.situacao_processo).filter(Boolean)),
+        ]
         setSituacaoOptions(distinct)
       } catch (e) {
         console.error(e)
@@ -415,7 +451,7 @@ export default function MeusAtendimentos() {
     }
 
     fetchSituacaoOptions()
-  }, [user, profile, juridicoUserIds])
+  }, [user, profile, juridicoUserIds, alexUserId])
 
   const handleReabrir = async (chamadoId: string) => {
     setCompletingId(chamadoId)

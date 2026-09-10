@@ -610,12 +610,13 @@ export default function OsManutencao({
     if (status === 'Liberado (Sem Pendências)') {
       const hasPhotos =
         Array.isArray(docToRelease.fotos_manutencao) && docToRelease.fotos_manutencao.length > 0
-      const hasOrcamento = !!docToRelease.orcamento_url
-      if (!hasPhotos || !hasOrcamento) {
+      const hasRequisicao =
+        Array.isArray(docToRelease.fotos_requisicao) && docToRelease.fotos_requisicao.length > 0
+      if (!hasPhotos || !hasRequisicao) {
         toast({
           title: 'Não é possível liberar',
           description:
-            'Para liberar sem pendências, é obrigatório anexar pelo menos 1 foto do carro consertado e o orçamento.',
+            'Para liberar sem pendências, é obrigatório anexar pelo menos 1 foto do carro consertado e a requisição.',
           variant: 'destructive',
         })
         return
@@ -1433,18 +1434,21 @@ export default function OsManutencao({
               !!docToRelease &&
               Array.isArray(docToRelease.fotos_manutencao) &&
               docToRelease.fotos_manutencao.length > 0
-            const hasOrcamento = !!docToRelease && !!docToRelease.orcamento_url
-            const canReleaseWithoutPendencies = hasPhotos && hasOrcamento
+            const hasRequisicao =
+              !!docToRelease &&
+              Array.isArray(docToRelease.fotos_requisicao) &&
+              docToRelease.fotos_requisicao.length > 0
+            const canReleaseWithoutPendencies = hasPhotos && hasRequisicao
 
             const getMissingReasonText = () => {
-              if (!hasPhotos && !hasOrcamento) {
-                return 'Falta: foto do carro consertado e orçamento anexado'
+              if (!hasPhotos && !hasRequisicao) {
+                return 'Falta: foto do carro consertado e requisição anexada'
               }
               if (!hasPhotos) {
                 return 'Falta: foto do carro consertado'
               }
-              if (!hasOrcamento) {
-                return 'Falta: orçamento anexado'
+              if (!hasRequisicao) {
+                return 'Falta: requisição anexada'
               }
               return ''
             }

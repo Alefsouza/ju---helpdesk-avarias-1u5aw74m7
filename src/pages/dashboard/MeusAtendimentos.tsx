@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState, useCallback } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { supabase } from '@/lib/supabase/client'
 import { useAuth } from '@/hooks/use-auth'
@@ -65,6 +65,7 @@ export default function MeusAtendimentos() {
     pia?: string
   } | null>(null)
   const [loading, setLoading] = useState(true)
+  const [isRefreshing, setIsRefreshing] = useState(false)
   const [error, setError] = useState(false)
   const [searchTerm, setSearchTerm] = useState('')
   const [debouncedSearch, setDebouncedSearch] = useState('')
@@ -94,6 +95,12 @@ export default function MeusAtendimentos() {
   const isRaquelSinistro = user?.email === RAQUEL_SINISTRO_EMAIL
   const userGaragem = profile?.garagem?.trim() || null
   const shouldFilterByGaragem = isSinistro && !isRaquelSinistro
+
+  // Refs para manter dados atualizados sem causar re-subscrição no realtime
+  const loadedChamadoIdsRef = useRef<Set<string>>(new Set())
+  const loadedChamadosRef = useRef<any[]>([])
+  const isInitialLoadRef = useRef<boolean>(true)
+  const fetchTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const isSupport =
     profile?.tipo_usuario === 'responsavel' ||
@@ -185,161 +192,202 @@ export default function MeusAtendimentos() {
     return () => clearTimeout(timer)
   }, [searchTerm])
 
-  const fetchChamados = async () => {
-    if (!user || !profile) return
-    setLoading(true)
-    setError(false)
-    try {
-      let query = supabase
-        .from('chamados')
-        .select('*, formularios_espelho_danos(registro_motorista, nome_motorista)')
-        .eq('status', 'em_atendimento')
-        .order('criado_em', { ascending: false })
+  const fetchChamados = useCallback(
+    async (isBackground = false) => {
+      if (!user || !profile) return
 
-      if (shouldFilterByGaragem) {
-        if (!userGaragem) {
-          setChamados([])
-          setLoading(false)
-          return
-        }
-        query = query.eq('garagem', userGaragem)
-      }
-
-      if (
-        profile.tipo_usuario === 'juridico' ||
-        profile.tipo_usuario === 'dp' ||
-        user?.email === 'alex.fontes@viasudeste.com'
-      ) {
-        if (isJuridicoTeamMember && juridicoUserIds.length > 0) {
-          query = query.in('responsavel_id', juridicoUserIds)
-        } else {
-          query = query.eq('responsavel_id', user.id)
-        }
+      // Não pisca o skeleton em atualizações subsequentes (background / realtime)
+      if (!isBackground && isInitialLoadRef.current) {
+        setLoading(true)
       } else {
-        query = query
-          .is('status_juridico', null)
-          .or('status_sinistro.is.null,status_sinistro.eq.Terceiros')
+        setIsRefreshing(true)
       }
+      setError(false)
 
-      const { data, error: err } = await query
-
-      if (err) throw err
-
-      let fetchedData = data || []
-      if (profile.tipo_usuario === 'juridico' && user?.email !== 'alex.fontes@viasudeste.com') {
-        fetchedData = fetchedData.filter(
-          (c) =>
-            c.status_juridico !== 'Cobrança de Terceiros' &&
-            c.status_juridico !== 'Demanda Judicial' &&
-            c.status_juridico !== 'Deferidos',
-        )
-      }
-
-      // Permite chamados com status_sinistro = 'Terceiros' se pertencem à garagem do usuário logado OU se o responsavel_id é o próprio usuário (ou do time jurídico, para membros do jurídico)
-      fetchedData = fetchedData.filter((c: any) => {
-        if (c.status_sinistro === 'Terceiros') {
-          const isMine = isJuridicoTeamMember
-            ? juridicoUserIds.length > 0
-              ? juridicoUserIds.includes(c.responsavel_id)
-              : c.responsavel_id === user.id
-            : c.responsavel_id === user.id
-          const isMyGaragem =
-            !!userGaragem && (c.garagem || '').trim().toLowerCase() === userGaragem.toLowerCase()
-          return isMine || isMyGaragem
-        }
-        return true
-      })
-
-      if (isSinistro && juridicoUserIds.length > 0) {
-        // Para sinistro: não exibir chamados do time jurídico, mas NUNCA filtrar chamados do Alex Fontes
-        fetchedData = fetchedData.filter(
-          (c) =>
-            !juridicoUserIds.includes(c.responsavel_id) ||
-            (alexUserId && c.responsavel_id === alexUserId),
-        )
-      }
-
-      if (fetchedData.length > 0) {
-        const userIds = [
-          ...new Set(fetchedData.flatMap((c) => [c.usuario_id, c.responsavel_id]).filter(Boolean)),
-        ]
-        const { data: perfis } = await supabase
-          .from('perfil_usuario')
-          .select('id, nome_completo')
-          .in('id', userIds)
-
-        const perfilMap = perfis?.reduce(
-          (acc, p) => {
-            acc[p.id] = p.nome_completo
-            return acc
-          },
-          {} as Record<string, string>,
-        )
-
-        const { data: allActiveChamados } = await supabase
+      try {
+        let query = supabase
           .from('chamados')
-          .select('id, carro, titulo, data_ocorrencia, criado_em, status')
-          .in('status', ['aberto', 'em_atendimento'])
+          .select('*, formularios_espelho_danos(registro_motorista, nome_motorista)')
+          .eq('status', 'em_atendimento')
+          .order('criado_em', { ascending: false })
 
-        const activeChamados = allActiveChamados || []
+        if (shouldFilterByGaragem) {
+          if (!userGaragem) {
+            setChamados([])
+            loadedChamadosRef.current = []
+            loadedChamadoIdsRef.current = new Set()
+            setLoading(false)
+            setIsRefreshing(false)
+            isInitialLoadRef.current = false
+            return
+          }
+          query = query.eq('garagem', userGaragem)
+        }
 
-        const chamadosComNome = fetchedData.map((c) => ({
-          ...c,
-          nome_usuario: perfilMap?.[c.usuario_id] || 'Usuário Desconhecido',
-          nome_responsavel: c.responsavel_id
-            ? perfilMap?.[c.responsavel_id] || 'Sem responsável'
-            : 'Sem responsável',
-          is_duplicate: isDuplicateTicket(c, activeChamados),
-        }))
+        if (
+          profile.tipo_usuario === 'juridico' ||
+          profile.tipo_usuario === 'dp' ||
+          user?.email === 'alex.fontes@viasudeste.com'
+        ) {
+          if (isJuridicoTeamMember && juridicoUserIds.length > 0) {
+            query = query.in('responsavel_id', juridicoUserIds)
+          } else {
+            query = query.eq('responsavel_id', user.id)
+          }
+        } else {
+          query = query
+            .is('status_juridico', null)
+            .or('status_sinistro.is.null,status_sinistro.eq.Terceiros')
+        }
 
-        setChamados(chamadosComNome)
+        const { data, error: err } = await query
 
-        const chamadoIds = chamadosComNome.map((c) => c.id)
-        if (chamadoIds.length > 0) {
-          const orcamentoIds = new Set<string>()
-          const devolvidoIds = new Set<string>()
+        if (err) throw err
+
+        let fetchedData = data || []
+        if (profile.tipo_usuario === 'juridico' && user?.email !== 'alex.fontes@viasudeste.com') {
+          fetchedData = fetchedData.filter(
+            (c) =>
+              c.status_juridico !== 'Cobrança de Terceiros' &&
+              c.status_juridico !== 'Demanda Judicial' &&
+              c.status_juridico !== 'Deferidos',
+          )
+        }
+
+        // Permite chamados com status_sinistro = 'Terceiros' se pertencem à garagem do usuário logado OU se o responsavel_id é o próprio usuário (ou do time jurídico, para membros do jurídico)
+        fetchedData = fetchedData.filter((c: any) => {
+          if (c.status_sinistro === 'Terceiros') {
+            const isMine = isJuridicoTeamMember
+              ? juridicoUserIds.length > 0
+                ? juridicoUserIds.includes(c.responsavel_id)
+                : c.responsavel_id === user.id
+              : c.responsavel_id === user.id
+            const isMyGaragem =
+              !!userGaragem && (c.garagem || '').trim().toLowerCase() === userGaragem.toLowerCase()
+            return isMine || isMyGaragem
+          }
+          return true
+        })
+
+        if (isSinistro && juridicoUserIds.length > 0) {
+          // Para sinistro: não exibir chamados do time jurídico, mas NUNCA filtrar chamados do Alex Fontes
+          fetchedData = fetchedData.filter(
+            (c) =>
+              !juridicoUserIds.includes(c.responsavel_id) ||
+              (alexUserId && c.responsavel_id === alexUserId),
+          )
+        }
+
+        if (fetchedData.length > 0) {
+          const userIds = [
+            ...new Set(
+              fetchedData.flatMap((c) => [c.usuario_id, c.responsavel_id]).filter(Boolean),
+            ),
+          ]
+          const chamadoIds = fetchedData.map((c) => c.id)
+
+          // Extração otimizada para detecção de duplicados:
+          // Apenas carros e datas presentes nos chamados da tela
+          const carrosSet = new Set<string>()
+          const datasSet = new Set<string>()
+          fetchedData.forEach((c) => {
+            if (c.carro) carrosSet.add(c.carro)
+            if (c.data_ocorrencia) datasSet.add(c.data_ocorrencia)
+          })
+
+          const carrosList = Array.from(carrosSet)
+          const datasList = Array.from(datasSet)
+
           const batchSize = 200
-
           const normalizeName = (name: string | null | undefined): string =>
             (name || '')
               .toLowerCase()
               .normalize('NFD')
               .replace(/[\u0300-\u036f]/g, '')
 
+          // Fatiar IDs para consultas em lotes
+          const batches: string[][] = []
           for (let i = 0; i < chamadoIds.length; i += batchSize) {
-            const batch = chamadoIds.slice(i, i + batchSize)
+            batches.push(chamadoIds.slice(i, i + batchSize))
+          }
 
-            const { data: anexosBatch, error: anexosError } = await supabase
-              .from('anexos_chamado_interno')
-              .select('chamado_id, nome_arquivo')
-              .in('chamado_id', batch)
+          // Execução PARALELA de todas as consultas auxiliares
+          const [perfisResult, activeChamadosResult, anexosResults, docsResults] =
+            await Promise.all([
+              // 1. Perfis de usuários
+              userIds.length > 0
+                ? supabase.from('perfil_usuario').select('id, nome_completo').in('id', userIds)
+                : Promise.resolve({ data: [] }),
 
-            if (anexosError) {
+              // 2. Chamados ativos para duplicados (somente colunas necessárias e filtrados por data_ocorrencia quando disponível)
+              datasList.length > 0
+                ? supabase
+                    .from('chamados')
+                    .select('id, carro, titulo, data_ocorrencia, status')
+                    .in('status', ['aberto', 'em_atendimento'])
+                    .in('data_ocorrencia', datasList)
+                : supabase
+                    .from('chamados')
+                    .select('id, carro, titulo, data_ocorrencia, status')
+                    .in('status', ['aberto', 'em_atendimento']),
+
+              // 3. Anexos internos (em paralelo por lote)
+              Promise.all(
+                batches.map((batch) =>
+                  supabase
+                    .from('anexos_chamado_interno')
+                    .select('chamado_id, nome_arquivo')
+                    .in('chamado_id', batch),
+                ),
+              ),
+
+              // 4. Documentos (em paralelo por lote)
+              Promise.all(
+                batches.map((batch) =>
+                  supabase
+                    .from('documentos')
+                    .select('chamado_id, nome_arquivo, tipo_documento, orcamento_url, is_recusado')
+                    .in('chamado_id', batch),
+                ),
+              ),
+            ])
+
+          const perfilMap = (perfisResult.data || []).reduce(
+            (acc: Record<string, string>, p: any) => {
+              acc[p.id] = p.nome_completo
+              return acc
+            },
+            {},
+          )
+
+          const activeChamados = (activeChamadosResult.data || []) as any[]
+
+          // Processar anexos de todos os lotes
+          const orcamentoIds = new Set<string>()
+          anexosResults.forEach((res) => {
+            if (res.error) {
               console.error(
                 '[MeusAtendimentos] Erro ao buscar anexos_chamado_interno para orçamento:',
-                anexosError,
+                res.error,
               )
             }
-
-            ;(anexosBatch || []).forEach((a) => {
-              if (normalizeName(a.nome_arquivo).includes('orcamento')) {
+            ;(res.data || []).forEach((a: any) => {
+              if (normalizeName(a.nome_arquivo).includes('orcamento') && a.chamado_id) {
                 orcamentoIds.add(a.chamado_id)
               }
             })
+          })
 
-            const { data: docsBatch, error: docsError } = await supabase
-              .from('documentos')
-              .select('chamado_id, nome_arquivo, tipo_documento, orcamento_url, is_recusado')
-              .in('chamado_id', batch)
-
-            if (docsError) {
+          // Processar documentos de todos os lotes
+          const devolvidoIds = new Set<string>()
+          docsResults.forEach((res) => {
+            if (res.error) {
               console.error(
                 '[MeusAtendimentos] Erro ao buscar documentos para orçamento:',
-                docsError,
+                res.error,
               )
             }
-
-            ;(docsBatch || []).forEach((d) => {
+            ;(res.data || []).forEach((d: any) => {
               if (d.is_recusado && d.chamado_id) {
                 devolvidoIds.add(d.chamado_id)
               }
@@ -356,44 +404,144 @@ export default function MeusAtendimentos() {
                 }
               }
             })
-          }
+          })
+
+          const chamadosComNome = fetchedData.map((c) => ({
+            ...c,
+            nome_usuario: perfilMap?.[c.usuario_id] || 'Usuário Desconhecido',
+            nome_responsavel: c.responsavel_id
+              ? perfilMap?.[c.responsavel_id] || 'Sem responsável'
+              : 'Sem responsável',
+            is_duplicate: isDuplicateTicket(c, activeChamados),
+          }))
+
+          setChamados(chamadosComNome)
+          loadedChamadosRef.current = chamadosComNome
+          loadedChamadoIdsRef.current = new Set(chamadoIds)
           setChamadosComOrcamento(orcamentoIds)
           setChamadosDevolvidos(devolvidoIds)
         } else {
+          setChamados([])
+          loadedChamadosRef.current = []
+          loadedChamadoIdsRef.current = new Set()
           setChamadosComOrcamento(new Set())
           setChamadosDevolvidos(new Set())
         }
-      } else {
-        setChamados([])
-        setChamadosComOrcamento(new Set())
-        setChamadosDevolvidos(new Set())
+      } catch (e) {
+        console.error(e)
+        setError(true)
+      } finally {
+        setLoading(false)
+        setIsRefreshing(false)
+        isInitialLoadRef.current = false
       }
-    } catch (e) {
-      console.error(e)
-      setError(true)
-    } finally {
-      setLoading(false)
+    },
+    [
+      user,
+      profile,
+      shouldFilterByGaragem,
+      userGaragem,
+      isJuridicoTeamMember,
+      juridicoUserIds,
+      isSinistro,
+      alexUserId,
+    ],
+  )
+
+  const fetchChamadosRef = useRef(fetchChamados)
+  useEffect(() => {
+    fetchChamadosRef.current = fetchChamados
+  }, [fetchChamados])
+
+  // Debounced trigger para realtime: agrupa rajadas e recarrega em background (sem piscar skeleton)
+  const triggerDebouncedRefetch = useCallback(() => {
+    if (fetchTimeoutRef.current) {
+      clearTimeout(fetchTimeoutRef.current)
     }
-  }
+    fetchTimeoutRef.current = setTimeout(() => {
+      fetchChamadosRef.current(true)
+    }, 1200)
+  }, [])
 
   useEffect(() => {
     if (!profile) return
-    fetchChamados()
+
+    // Carga inicial
+    fetchChamadosRef.current(false)
+
+    // Avalia se o evento de alteração em 'chamados' é relevante para a tela
+    const isChamadoEventRelevant = (payload: any): boolean => {
+      const { eventType, new: newRecord, old: oldRecord } = payload
+
+      // Se o chamado já está exibido na tela, qualquer alteração ou delete é relevante
+      if (oldRecord?.id && loadedChamadoIdsRef.current.has(oldRecord.id)) return true
+      if (newRecord?.id && loadedChamadoIdsRef.current.has(newRecord.id)) return true
+
+      // Se é INSERT ou UPDATE com status 'em_atendimento', pode ser um novo atendimento
+      const targetRecord = newRecord || oldRecord
+      if (!targetRecord) return false
+
+      if (targetRecord.status !== 'em_atendimento') return false
+
+      // Se usuário tem filtro de garagem, checar se bate com a garagem
+      if (shouldFilterByGaragem && userGaragem) {
+        const recGaragem = (targetRecord.garagem || '').trim().toLowerCase()
+        if (recGaragem !== userGaragem.toLowerCase()) return false
+      }
+
+      // Se usuário for jurídico/dp/alex
+      if (
+        profile.tipo_usuario === 'juridico' ||
+        profile.tipo_usuario === 'dp' ||
+        user?.email === 'alex.fontes@viasudeste.com'
+      ) {
+        if (isJuridicoTeamMember && juridicoUserIds.length > 0) {
+          if (!juridicoUserIds.includes(targetRecord.responsavel_id)) return false
+        } else {
+          if (targetRecord.responsavel_id !== user?.id) return false
+        }
+      }
+
+      return true
+    }
+
+    // Avalia se alteração em 'documentos' afeta algum chamado da lista
+    const isDocumentoEventRelevant = (payload: any): boolean => {
+      const { new: newRecord, old: oldRecord } = payload
+      const chamadoId = newRecord?.chamado_id || oldRecord?.chamado_id
+      if (!chamadoId) return false
+      return loadedChamadoIdsRef.current.has(chamadoId)
+    }
 
     const channel = supabase
       .channel('meus_atendimentos_realtime')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'chamados' }, () => {
-        fetchChamados()
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'chamados' }, (payload) => {
+        if (isChamadoEventRelevant(payload)) {
+          triggerDebouncedRefetch()
+        }
       })
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'documentos' }, () => {
-        fetchChamados()
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'documentos' }, (payload) => {
+        if (isDocumentoEventRelevant(payload)) {
+          triggerDebouncedRefetch()
+        }
       })
       .subscribe()
 
     return () => {
+      if (fetchTimeoutRef.current) {
+        clearTimeout(fetchTimeoutRef.current)
+      }
       supabase.removeChannel(channel)
     }
-  }, [user, profile?.tipo_usuario, juridicoUserIds, alexUserId])
+  }, [
+    user,
+    profile,
+    shouldFilterByGaragem,
+    userGaragem,
+    isJuridicoTeamMember,
+    juridicoUserIds,
+    triggerDebouncedRefetch,
+  ])
 
   useEffect(() => {
     const fetchSituacaoOptions = async () => {
@@ -629,10 +777,31 @@ export default function MeusAtendimentos() {
     <div className="space-y-6 max-w-6xl mx-auto p-2 sm:p-4 animate-fade-in-up">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight text-slate-900">Atendimentos</h1>
+          <div className="flex items-center gap-3">
+            <h1 className="text-3xl font-bold tracking-tight text-slate-900">Atendimentos</h1>
+            {isRefreshing && (
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-50 text-blue-700 border border-blue-200 animate-pulse">
+                <span className="h-1.5 w-1.5 rounded-full bg-blue-600 animate-ping" />
+                Atualizando...
+              </span>
+            )}
+          </div>
           <p className="text-slate-500">
             Acompanhe todos os chamados que estão atualmente em atendimento.
           </p>
+        </div>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => fetchChamados(true)}
+            disabled={loading || isRefreshing}
+            className="text-slate-600"
+            title="Recarregar lista"
+          >
+            <RotateCcw className={cn('h-4 w-4 mr-1.5', isRefreshing && 'animate-spin')} />
+            Atualizar
+          </Button>
         </div>
       </div>
 
@@ -778,7 +947,7 @@ export default function MeusAtendimentos() {
           <AlertCircle className="h-12 w-12 mx-auto text-red-500 mb-4" />
           <h3 className="text-lg font-medium text-slate-900">Erro ao carregar chamados</h3>
           <p className="text-slate-500 mb-6">Ocorreu um problema ao buscar seus atendimentos.</p>
-          <Button onClick={fetchChamados}>Tentar novamente</Button>
+          <Button onClick={() => fetchChamados(false)}>Tentar novamente</Button>
         </div>
       ) : filteredChamados.length === 0 ? (
         <div className="text-center py-16 bg-white rounded-lg border shadow-sm">

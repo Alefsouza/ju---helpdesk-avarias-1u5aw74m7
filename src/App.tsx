@@ -10,6 +10,7 @@ import MeusChamados from './pages/dashboard/MeusChamados'
 import NovoChamado from './pages/dashboard/NovoChamado'
 import ChamadosAbertos from './pages/dashboard/ChamadosAbertos'
 import MeusAtendimentos from './pages/dashboard/MeusAtendimentos'
+import OrcamentosDevolvidos from './pages/dashboard/OrcamentosDevolvidos'
 import Finalizados from './pages/dashboard/Finalizados'
 import Juridico from './pages/dashboard/Juridico'
 import AdminDashboard from './pages/dashboard/Admin'
@@ -109,6 +110,7 @@ const App = () => (
             <Route path="/dashboard/novo-chamado" element={<NovoChamado />} />
             <Route path="/dashboard/chamados-abertos" element={<ChamadosAbertos />} />
             <Route path="/dashboard/meus-atendimentos" element={<MeusAtendimentos />} />
+            <Route path="/dashboard/orcamentos-devolvidos" element={<OrcamentosDevolvidos />} />
             <Route path="/dashboard/finalizados" element={<Finalizados />} />
             <Route path="/dashboard/juridico" element={<Juridico />} />
             <Route path="/dashboard/defiridos" element={<Defiridos />} />

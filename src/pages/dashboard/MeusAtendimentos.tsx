@@ -80,6 +80,7 @@ export default function MeusAtendimentos() {
   const [situacaoOptions, setSituacaoOptions] = useState<string[]>([])
   const [orcamentoFilter, setOrcamentoFilter] = useState<string>('Todos')
   const [chamadosComOrcamento, setChamadosComOrcamento] = useState<Set<string>>(new Set())
+  const [chamadosDevolvidos, setChamadosDevolvidos] = useState<Set<string>>(new Set())
   const [quickFilterOrcamento, setQuickFilterOrcamento] = useState(false)
   const [quickFilter15Dias, setQuickFilter15Dias] = useState(false)
   const [quickFilter30Dias, setQuickFilter30Dias] = useState(false)
@@ -271,6 +272,7 @@ export default function MeusAtendimentos() {
         const chamadoIds = chamadosComNome.map((c) => c.id)
         if (chamadoIds.length > 0) {
           const orcamentoIds = new Set<string>()
+          const devolvidoIds = new Set<string>()
           const batchSize = 200
 
           const normalizeName = (name: string | null | undefined): string =>
@@ -302,7 +304,7 @@ export default function MeusAtendimentos() {
 
             const { data: docsBatch, error: docsError } = await supabase
               .from('documentos')
-              .select('chamado_id, nome_arquivo, tipo_documento, orcamento_url')
+              .select('chamado_id, nome_arquivo, tipo_documento, orcamento_url, is_recusado')
               .in('chamado_id', batch)
 
             if (docsError) {
@@ -313,6 +315,9 @@ export default function MeusAtendimentos() {
             }
 
             ;(docsBatch || []).forEach((d) => {
+              if (d.is_recusado && d.chamado_id) {
+                devolvidoIds.add(d.chamado_id)
+              }
               const nome = normalizeName(d.nome_arquivo)
               const tipo = normalizeName(d.tipo_documento)
               const orcamentoUrl = normalizeName(d.orcamento_url)
@@ -328,12 +333,15 @@ export default function MeusAtendimentos() {
             })
           }
           setChamadosComOrcamento(orcamentoIds)
+          setChamadosDevolvidos(devolvidoIds)
         } else {
           setChamadosComOrcamento(new Set())
+          setChamadosDevolvidos(new Set())
         }
       } else {
         setChamados([])
         setChamadosComOrcamento(new Set())
+        setChamadosDevolvidos(new Set())
       }
     } catch (e) {
       console.error(e)
@@ -350,6 +358,9 @@ export default function MeusAtendimentos() {
     const channel = supabase
       .channel('meus_atendimentos_realtime')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'chamados' }, () => {
+        fetchChamados()
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'documentos' }, () => {
         fetchChamados()
       })
       .subscribe()
@@ -535,6 +546,11 @@ export default function MeusAtendimentos() {
 
   const filteredChamados = chamados
     .filter((c) => {
+      // Para o perfil sinistro, orçamentos devolvidos para a Secretaria Técnica reenviar
+      // saem da lista de Atendimentos e vão para a aba "Orçamentos Devolvidos".
+      // Quando o orçamento é reenviado pela Secretaria Técnica, ele volta automaticamente.
+      if (isSinistro && chamadosDevolvidos.has(c.id)) return false
+
       if (situacaoFilter !== 'Todos' && c.situacao_processo !== situacaoFilter) return false
       if (orcamentoFilter === 'Com orçamento' && !chamadosComOrcamento.has(c.id)) return false
       if (orcamentoFilter === 'Sem orçamento' && chamadosComOrcamento.has(c.id)) return false

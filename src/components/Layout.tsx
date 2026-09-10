@@ -33,6 +33,7 @@ import {
   Briefcase,
   Gavel,
   FileCheck,
+  RotateCcw,
 } from 'lucide-react'
 import { Skeleton } from '@/components/ui/skeleton'
 import { useEffect, useState } from 'react'
@@ -292,6 +293,20 @@ function AppSidebar() {
                       </Link>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
+                  {isSinistro && (
+                    <SidebarMenuItem>
+                      <SidebarMenuButton
+                        asChild
+                        isActive={location.pathname === '/dashboard/orcamentos-devolvidos'}
+                        className="data-[active=true]:bg-transparent data-[active=true]:text-[#c8e6c9] hover:bg-[#c8e6c9]/10 hover:text-[#c8e6c9] text-white transition-colors"
+                      >
+                        <Link to="/dashboard/orcamentos-devolvidos">
+                          <RotateCcw />
+                          <span>Orçamentos Devolvidos</span>
+                        </Link>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  )}
                   {(isResponsavel || isJuridico) && (
                     <SidebarMenuItem>
                       <SidebarMenuButton

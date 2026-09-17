@@ -160,6 +160,55 @@ export default function ValesAprovadosDP() {
       usersMap = new Map((usersData || []).map((u) => [u.id, u]))
     }
 
+    // Coleta todos os possíveis registros de colaboradores dos vales aprovados
+    const rawRegistrosToFetch = new Set<string>()
+    validParcelas.forEach((p: any) => {
+      const c = p.chamados
+      if (!c) return
+      const espelhoData = Array.isArray(c.formularios_espelho_danos)
+        ? c.formularios_espelho_danos[0]
+        : c.formularios_espelho_danos
+      const solicitacaoData = Array.isArray(c.solicitacoes_parcelamento)
+        ? c.solicitacoes_parcelamento[0]
+        : c.solicitacoes_parcelamento
+      const u = c.usuario_id ? usersMap.get(c.usuario_id) : null
+
+      const cand =
+        solicitacaoData?.registro ||
+        espelhoData?.registro_motorista ||
+        c.registro_motorista ||
+        u?.registro
+
+      if (cand && String(cand).trim() && String(cand).trim() !== 'N/A') {
+        const val = String(cand).trim()
+        rawRegistrosToFetch.add(val)
+        // Adiciona também a forma sem zeros à esquerda e padronizada
+        const normalized = val.replace(/^0+(?!$)/, '')
+        if (normalized) rawRegistrosToFetch.add(normalized)
+      }
+    })
+
+    const registrosArray = Array.from(rawRegistrosToFetch)
+    let registrosColaboradorMap = new Map<string, string>() // key: registro normalizado e original -> garagem_colaborador
+
+    if (registrosArray.length > 0) {
+      const { data: registrosData } = await (supabase.from('registros') as any)
+        .select('registro, garagem_colaborador')
+        .in('registro', registrosArray)
+
+      if (registrosData) {
+        for (const reg of registrosData) {
+          if (reg.garagem_colaborador && String(reg.garagem_colaborador).trim()) {
+            const val = String(reg.garagem_colaborador).trim()
+            const keyOriginal = String(reg.registro).trim()
+            const keyNorm = keyOriginal.replace(/^0+(?!$)/, '')
+            registrosColaboradorMap.set(keyOriginal, val)
+            registrosColaboradorMap.set(keyNorm, val)
+          }
+        }
+      }
+    }
+
     const chamadoIds = [...new Set(validParcelas.map((p: any) => p.chamado_id).filter(Boolean))]
 
     let parcelaSequenceMap = new Map<string, Map<string, number>>()
@@ -210,7 +259,17 @@ export default function ValesAprovadosDP() {
         chamado.nome_motorista ||
         user?.nome_completo ||
         'N/A'
-      const garagem = chamado.garagem || user?.garagem || 'N/A'
+
+      // Fonte primária: garagem_colaborador da tabela registros pelo registro do colaborador
+      // Fallback: chamado.garagem || perfil do usuário
+      const regKey = registro !== 'N/A' ? String(registro).trim() : ''
+      const regNorm = regKey.replace(/^0+(?!$)/, '')
+      const garagemColaborador =
+        (regKey && registrosColaboradorMap.get(regKey)) ||
+        (regNorm && registrosColaboradorMap.get(regNorm)) ||
+        null
+
+      const garagem = garagemColaborador || chamado.garagem || user?.garagem || 'N/A'
 
       let orcamentoUrl = null
       let orcamentoId = null

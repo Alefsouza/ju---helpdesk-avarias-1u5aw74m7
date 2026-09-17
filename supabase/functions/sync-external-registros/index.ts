@@ -59,17 +59,25 @@ Deno.serve(async (req: Request) => {
           const keys = Object.keys(item)
           const registroKey = keys.find((k) => k.toLowerCase().trim() === 'registro')
           const nomeKey = keys.find((k) => k.toLowerCase().trim() === 'nome')
+          const garagemKey = keys.find((k) => k.toLowerCase().trim() === 'garagem')
 
           if (!registroKey || !nomeKey) continue
 
           const regStr = String(item[registroKey]).trim()
           if (!regStr) continue
 
+          const rawGaragem =
+            garagemKey !== undefined && item[garagemKey] !== null && item[garagemKey] !== undefined
+              ? String(item[garagemKey]).trim()
+              : null
+          const garagemColaborador = rawGaragem ? rawGaragem : null
+
           const registroNormalized = regStr.replace(/^0+(?!$)/, '')
           if (!processedMap.has(registroNormalized)) {
             processedMap.set(registroNormalized, {
               registro: registroNormalized,
               nome: String(item[nomeKey]).trim(),
+              garagem_colaborador: garagemColaborador,
               atualizado_em: new Date().toISOString(),
             })
             newItemsAdded++

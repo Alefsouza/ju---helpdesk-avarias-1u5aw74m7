@@ -43,25 +43,43 @@ export default function AutorizacaoValesClaudinei() {
   const fetchChamados = async () => {
     setLoading(true)
 
-    // Busca apenas os chamados com status_aprovacao_claudinei pendente que possuam
-    // ao menos um documento de tipo 'Vale' (Autorização de Desconto).
-    const { data: valesDocs, error: docError } = await supabase
-      .from('documentos')
-      .select('chamado_id')
-      .eq('tipo_documento', 'Vale')
-      .not('chamado_id', 'is', null)
+    // Critério aditivo ("OU"): um chamado pendente deve aparecer se:
+    // 1. Possui documento do tipo 'Vale' em public.documentos, OU
+    // 2. Possui anexo interno cujo nome de arquivo comece com "Vale" (case-insensitive) em public.anexos_chamado_interno.
+    const [docsResult, anexosResult] = await Promise.all([
+      supabase
+        .from('documentos')
+        .select('chamado_id')
+        .eq('tipo_documento', 'Vale')
+        .not('chamado_id', 'is', null),
+      supabase
+        .from('anexos_chamado_interno')
+        .select('chamado_id')
+        .ilike('nome_arquivo', 'Vale%')
+        .not('chamado_id', 'is', null),
+    ])
 
-    if (docError) {
+    if (docsResult.error) {
       toast.error('Erro ao buscar documentos de autorização de vale')
       setLoading(false)
       return
     }
 
-    const chamadosComValeIds = Array.from(
-      new Set(
-        (valesDocs || []).map((d: any) => d.chamado_id).filter((id): id is string => Boolean(id)),
-      ),
-    )
+    if (anexosResult.error) {
+      toast.error('Erro ao buscar anexos de autorização de vale')
+      setLoading(false)
+      return
+    }
+
+    const idsValesDocs = (docsResult.data || [])
+      .map((d: any) => d.chamado_id)
+      .filter((id): id is string => Boolean(id))
+
+    const idsAnexosVale = (anexosResult.data || [])
+      .map((a: any) => a.chamado_id)
+      .filter((id): id is string => Boolean(id))
+
+    const chamadosComValeIds = Array.from(new Set([...idsValesDocs, ...idsAnexosVale]))
 
     if (chamadosComValeIds.length === 0) {
       setChamados([])

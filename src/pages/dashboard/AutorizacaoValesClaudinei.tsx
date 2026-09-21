@@ -36,7 +36,9 @@ export default function AutorizacaoValesClaudinei() {
   const [isRejectOpen, setIsRejectOpen] = useState(false)
   const [rejectReason, setRejectReason] = useState('')
 
-  const isClaudinei = user?.email === 'claudinei.mariano@viasudeste.com'
+  const isAuthorized =
+    user?.email === 'claudinei.mariano@viasudeste.com' ||
+    user?.email === 'bianca.zanatta@viasudeste.com'
 
   const RELEVANT_KEYWORDS = [
     'orcamento',
@@ -77,12 +79,12 @@ export default function AutorizacaoValesClaudinei() {
   }
 
   useEffect(() => {
-    if (isClaudinei) {
+    if (isAuthorized) {
       fetchChamados()
     } else {
       setLoading(false)
     }
-  }, [isClaudinei])
+  }, [isAuthorized])
 
   const handleApproveClick = (chamado: any) => {
     setSelectedChamado(chamado)
@@ -160,13 +162,13 @@ export default function AutorizacaoValesClaudinei() {
     }
   }
 
-  if (!isClaudinei) {
+  if (!isAuthorized) {
     return (
       <div className="flex flex-col items-center justify-center h-[50vh] text-center p-4">
         <AlertCircle className="w-12 h-12 text-muted-foreground mb-4" />
         <h2 className="text-xl font-medium">Acesso Restrito</h2>
         <p className="text-muted-foreground mt-1">
-          Esta página é exclusiva para Claudinei Mariano.
+          Esta página é exclusiva para autorização de vales.
         </p>
       </div>
     )

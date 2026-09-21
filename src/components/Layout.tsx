@@ -64,6 +64,7 @@ function AppSidebar() {
   const isDp = tipo === 'dp'
   const isAlexFontes = user?.email === 'alex.fontes@viasudeste.com'
   const isDanielBrotas = user?.email === 'daniel.brotas@viasudeste.com'
+  const isBiancaZanatta = user?.email === 'bianca.zanatta@viasudeste.com'
   const isClaudinei = user?.email === 'claudinei.mariano@viasudeste.com'
   const isRaquel = user?.email === 'raquel.santos@viasudeste.com'
 
@@ -209,6 +210,21 @@ function AppSidebar() {
                 </SidebarMenuItem>
               )}
 
+              {isBiancaZanatta && (
+                <SidebarMenuItem>
+                  <SidebarMenuButton
+                    asChild
+                    isActive={location.pathname === '/dashboard/autorizacao-vales-claudinei'}
+                    className="data-[active=true]:bg-transparent data-[active=true]:text-[#c8e6c9] hover:bg-[#c8e6c9]/10 hover:text-[#c8e6c9] text-white transition-colors"
+                  >
+                    <Link to="/dashboard/autorizacao-vales-claudinei">
+                      <FileCheck />
+                      <span>Autorização de Vales</span>
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              )}
+
               {isClaudinei && (
                 <>
                   <SidebarMenuItem>
@@ -265,7 +281,7 @@ function AppSidebar() {
                 </SidebarMenuItem>
               )}
 
-              {(isResponsavel || isJuridico) && !isDanielBrotas && (
+              {(isResponsavel || isJuridico) && !isDanielBrotas && !isBiancaZanatta && (
                 <>
                   {isResponsavel && (
                     <SidebarMenuItem>
@@ -637,7 +653,7 @@ function AppSidebar() {
           </SidebarGroupContent>
         </SidebarGroup>
 
-        {(isResponsavel || isJuridico || isAlexFontes) && !isDanielBrotas && (
+        {(isResponsavel || isJuridico || isAlexFontes) && !isDanielBrotas && !isBiancaZanatta && (
           <SidebarGroup className="mt-auto">
             <SidebarGroupContent>
               <SidebarMenu>
@@ -830,6 +846,9 @@ export default function Layout() {
     if (user?.email === 'daniel.brotas@viasudeste.com') {
       return <Navigate to="/dashboard/cobranca-terceiros" replace />
     }
+    if (user?.email === 'bianca.zanatta@viasudeste.com') {
+      return <Navigate to="/dashboard/autorizacao-vales-claudinei" replace />
+    }
     if (user?.email === 'claudinei.mariano@viasudeste.com') {
       return <Navigate to="/dashboard" replace />
     }
@@ -965,6 +984,17 @@ export default function Layout() {
     !location.pathname.startsWith('/dashboard/chamados/')
   ) {
     return <Navigate to="/dashboard/cobranca-terceiros" replace />
+  }
+
+  // Redirect Bianca Zanatta to Autorização de Vales only (allow chamado details & profile)
+  if (
+    user &&
+    user?.email === 'bianca.zanatta@viasudeste.com' &&
+    location.pathname !== '/dashboard/autorizacao-vales-claudinei' &&
+    location.pathname !== '/dashboard/perfil' &&
+    !location.pathname.startsWith('/dashboard/chamados/')
+  ) {
+    return <Navigate to="/dashboard/autorizacao-vales-claudinei" replace />
   }
 
   // Auth Layout

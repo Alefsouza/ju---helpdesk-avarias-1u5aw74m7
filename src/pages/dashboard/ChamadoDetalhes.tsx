@@ -72,7 +72,7 @@ import { format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
-import { isDanielBrotas } from '@/lib/juridico-access'
+import { isDanielBrotas, isBiancaZanatta } from '@/lib/juridico-access'
 import { UnificarChamadoModal } from '@/components/UnificarChamadoModal'
 import { useDocumentAction } from '@/hooks/use-document-action'
 import { useRegistroNome } from '@/hooks/use-registro-nome'
@@ -1514,6 +1514,7 @@ export default function ChamadoDetalhes() {
   const navigate = useNavigate()
   const { user } = useAuth()
   const isDaniel = isDanielBrotas(user?.email)
+  const isBianca = isBiancaZanatta(user?.email)
   const isTiAdmin = user?.email === 'ti@viasudeste.com'
 
   const [chamado, setChamado] = useState<Chamado | null>(null)
@@ -1644,6 +1645,7 @@ export default function ChamadoDetalhes() {
         currUser.tipo_usuario === 'secretaria_tecnica' ||
         currUser.tipo_usuario === 'planejamento' ||
         isDaniel ||
+        isBianca ||
         isTiAdmin)
     ) {
       const { data: anexosInt } = await supabase
@@ -3636,39 +3638,44 @@ export default function ChamadoDetalhes() {
   const canAnexarOrcamento =
     (currentUserProfile?.tipo_usuario === 'secretaria_tecnica' ||
       currentUserProfile?.tipo_usuario === 'responsavel') &&
-    !isDaniel
+    !isDaniel &&
+    !isBianca
   const isSupport =
     (currentUserProfile?.tipo_usuario === 'responsavel' ||
       currentUserProfile?.tipo_usuario === 'sinistro' ||
       currentUserProfile?.tipo_usuario === 'admin' ||
       currentUserProfile?.tipo_usuario === 'juridico' ||
       currentUserProfile?.tipo_usuario === 'secretaria_tecnica') &&
-    !isDaniel
+    !isDaniel &&
+    !isBianca
   const isResponsible = chamado.responsavel_id === user?.id
   const isSolicitante = chamado.usuario_id === user?.id
 
-  const canReply = (isSolicitante || isResponsible || isSupport || isParticipant) && !isDaniel
+  const canReply =
+    (isSolicitante || isResponsible || isSupport || isParticipant) && !isDaniel && !isBianca
   const canFinalize = isSupport && chamado.status !== 'finalizado' && chamado.status !== 'unificado'
 
   const isPrivilegedTransfer =
     (currentUserProfile?.tipo_usuario === 'admin' ||
       currentUserProfile?.tipo_usuario === 'sinistro' ||
       currentUserProfile?.tipo_usuario === 'juridico') &&
-    !isDaniel
+    !isDaniel &&
+    !isBianca
   const canTransfer =
     (isResponsible || isPrivilegedTransfer) &&
     chamado.status !== 'finalizado' &&
     chamado.status !== 'unificado'
 
-  const canEditRA = isSupport && !isDaniel
+  const canEditRA = isSupport && !isDaniel && !isBianca
   const canEditSituacaoProcesso =
     (currentUserProfile?.tipo_usuario === 'admin' ||
       currentUserProfile?.tipo_usuario === 'juridico' ||
       currentUserProfile?.tipo_usuario === 'sinistro') &&
-    !isDaniel
+    !isDaniel &&
+    !isBianca
   const canUnify = isSupport && chamado.status !== 'finalizado' && chamado.status !== 'unificado'
-  const isJuridico = currentUserProfile?.tipo_usuario === 'juridico' && !isDaniel
-  const isSinistro = currentUserProfile?.tipo_usuario === 'sinistro' && !isDaniel
+  const isJuridico = currentUserProfile?.tipo_usuario === 'juridico' && !isDaniel && !isBianca
+  const isSinistro = currentUserProfile?.tipo_usuario === 'sinistro' && !isDaniel && !isBianca
 
   const orcamentoDoc = documentosChamado.find((d) => d.tipo_documento === 'Orçamento')
   const hasOrcamentoInterno = anexosInternos.some((a) => {
@@ -4495,7 +4502,8 @@ export default function ChamadoDetalhes() {
               currentUserProfile?.tipo_usuario === 'admin' ||
               currentUserProfile?.tipo_usuario === 'sinistro' ||
               currentUserProfile?.tipo_usuario === 'responsavel') &&
-              !isDaniel && (
+              !isDaniel &&
+              !isBianca && (
                 <div className="flex flex-col sm:flex-row justify-end gap-2 pt-2">
                   <Button
                     onClick={() => setSolicitarParcelasModalOpen(true)}
@@ -4518,7 +4526,7 @@ export default function ChamadoDetalhes() {
           </div>
         )}
 
-        {(isDaniel || isPlanejamento) && anexosInternos.length > 0 && (
+        {(isDaniel || isBianca || isPlanejamento) && anexosInternos.length > 0 && (
           <div className="pt-3 border-t" id="anexos-internos-readonly">
             <div>
               <h3 className="text-xs font-bold text-slate-900 mb-2 uppercase tracking-wider flex items-center gap-1.5">

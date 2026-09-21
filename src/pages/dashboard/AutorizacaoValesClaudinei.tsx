@@ -40,24 +40,35 @@ export default function AutorizacaoValesClaudinei() {
     user?.email === 'claudinei.mariano@viasudeste.com' ||
     user?.email === 'bianca.zanatta@viasudeste.com'
 
-  const RELEVANT_KEYWORDS = [
-    'orcamento',
-    'orçamento',
-    'vale',
-    'recibo',
-    'nf',
-    'nota fiscal',
-    'escaneado',
-    'autorizacao',
-    'autorização',
-    'boleto',
-  ]
-
-  const buildAnexosOrFilter = () =>
-    RELEVANT_KEYWORDS.map((kw) => `nome_arquivo.ilike.%${kw}%`).join(',')
-
   const fetchChamados = async () => {
     setLoading(true)
+
+    // Busca apenas os chamados com status_aprovacao_claudinei pendente que possuam
+    // ao menos um documento de tipo 'Vale' (Autorização de Desconto).
+    const { data: valesDocs, error: docError } = await supabase
+      .from('documentos')
+      .select('chamado_id')
+      .eq('tipo_documento', 'Vale')
+      .not('chamado_id', 'is', null)
+
+    if (docError) {
+      toast.error('Erro ao buscar documentos de autorização de vale')
+      setLoading(false)
+      return
+    }
+
+    const chamadosComValeIds = Array.from(
+      new Set(
+        (valesDocs || []).map((d: any) => d.chamado_id).filter((id): id is string => Boolean(id)),
+      ),
+    )
+
+    if (chamadosComValeIds.length === 0) {
+      setChamados([])
+      setLoading(false)
+      return
+    }
+
     const { data, error } = await supabase
       .from('chamados')
       .select(
@@ -65,7 +76,7 @@ export default function AutorizacaoValesClaudinei() {
         anexos_chamado_interno ( id, nome_arquivo, arquivo_url, criado_em )`,
       )
       .eq('status_aprovacao_claudinei', 'pendente')
-      .or(buildAnexosOrFilter(), { referencedTable: 'anexos_chamado_interno' })
+      .in('id', chamadosComValeIds)
       .order('atualizado_em', { ascending: false })
 
     if (error) {

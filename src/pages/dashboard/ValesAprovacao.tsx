@@ -104,7 +104,7 @@ export default function ValesAprovacao() {
       .from('chamados')
       .select(`
         id, titulo, descricao, status_aprovacao, status_aprovacao_claudinei, aprovacoes_diretoria, criado_em,
-        registro_motorista, nome_motorista, data_ocorrencia,
+        registro_motorista, nome_motorista, data_ocorrencia, status_juridico, status_sinistro,
         anexos_chamado_interno ( id, nome_arquivo, arquivo_url, criado_em ),
         documentos ( id, nome_arquivo, arquivo_url, tipo_documento, orcamento_url, valor_orcamento, registro_motorista, nome_motorista, criado_em ),
         parcelas_vales ( id, valor_parcela, data_referencia ),

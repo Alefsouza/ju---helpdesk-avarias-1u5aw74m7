@@ -156,15 +156,36 @@ export function ValesAprovacaoTable({
                     >
                       {chamado.titulo || '-'}
                     </Link>
-                    {(chamado.departamentoFinalizador === 'Jurídico' ||
-                      chamado.departamentoFinalizador === 'Sinistro') && (
-                      <Badge
-                        variant="outline"
-                        className="w-fit bg-green-100 text-green-800 border-green-300"
-                      >
-                        {chamado.departamentoFinalizador}
-                      </Badge>
-                    )}
+                    {(() => {
+                      const hasJuridico = Boolean(
+                        chamado.status_juridico && chamado.status_juridico.trim?.() !== '',
+                      )
+                      const hasSinistro = chamado.status_sinistro === 'Terceiros'
+
+                      if (hasJuridico) {
+                        return (
+                          <Badge
+                            variant="outline"
+                            className="w-fit rounded-full text-xs font-medium px-2.5 py-0.5 bg-blue-50 text-blue-700 border-blue-200"
+                          >
+                            Jurídico
+                          </Badge>
+                        )
+                      }
+
+                      if (hasSinistro) {
+                        return (
+                          <Badge
+                            variant="outline"
+                            className="w-fit rounded-full text-xs font-medium px-2.5 py-0.5 bg-green-50 text-green-700 border-green-200"
+                          >
+                            Sinistro
+                          </Badge>
+                        )
+                      }
+
+                      return null
+                    })()}
                   </div>
                 </TableCell>
                 <TableCell>{driver.registro}</TableCell>

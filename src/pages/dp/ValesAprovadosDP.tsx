@@ -123,9 +123,8 @@ export default function ValesAprovadosDP() {
         const chamado = p.chamados
         if (!chamado) return false
 
-        // Regra de Negócio: O colaborador só pode ser cobrado após a Diretoria aprovar o vale/chamado.
-        // O chamado precisa estar com status_aprovacao = 'aprovado' ou a parcela marcada como aprovado_diretoria.
-        // Além disso, checa as assinaturas dos diretores no histórico de aprovações.
+        // Regra de Negócio: O colaborador só pode ser cobrado após a 2ª aprovação da Diretoria (2/2).
+        // Não aceitar parcelas com aprovação isolada (1/2 ou pendente).
         let aprovacoes: any[] = []
         try {
           if (Array.isArray(chamado.aprovacoes_diretoria)) {
@@ -139,23 +138,24 @@ export default function ValesAprovadosDP() {
 
         if (!Array.isArray(aprovacoes)) return false
 
-        const aprovadores = aprovacoes
-          .filter((a: any) => String(a?.acao || 'aprovado').toLowerCase() === 'aprovado')
+        const aprovados = aprovacoes.filter(
+          (a: any) => String(a?.acao || 'aprovado').toLowerCase() === 'aprovado',
+        )
+
+        const aprovadoresIds = aprovados
           .map((a: any) =>
             String(a?.usuario_id || a?.email || a?.usuario_email || '').toLowerCase(),
           )
           .filter(Boolean)
 
-        const temAssinaturaDiretoria =
-          DIRETORES_DP_IDS.every((id) => aprovadores.includes(id)) ||
-          chamado.status_aprovacao === 'aprovado' ||
-          p.aprovado_diretoria === true
+        // Tem 2 aprovações de diretores se:
+        // - Contém os 2 diretores cadastrados (DIRETORES_DP_IDS), OU
+        // - Possui pelo menos 2 aprovações registradas com acao === 'aprovado' e status_aprovacao === 'aprovado'
+        const temDuasAprovacoes =
+          DIRETORES_DP_IDS.every((id) => aprovadoresIds.includes(id)) ||
+          (aprovados.length >= 2 && chamado.status_aprovacao === 'aprovado')
 
-        const isAprovadoDiretoria =
-          (chamado.status_aprovacao === 'aprovado' || p.aprovado_diretoria === true) &&
-          temAssinaturaDiretoria
-
-        return isAprovadoDiretoria
+        return temDuasAprovacoes
       }) || []
 
     const userIds = [

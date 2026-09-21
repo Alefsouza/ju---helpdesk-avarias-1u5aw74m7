@@ -76,19 +76,7 @@ const getDriverData = (chamado: any) => {
 }
 
 const getOrcamentoUrl = (chamado: any) => {
-  // 1. Procurar na lista de documentos
-  if (chamado.documentos && Array.isArray(chamado.documentos) && chamado.documentos.length > 0) {
-    const orcamentos = chamado.documentos.filter(
-      (d: any) =>
-        isOrcamento(d.tipo_documento) || isOrcamento(d.nome_arquivo) || Boolean(d.orcamento_url),
-    )
-    if (orcamentos.length > 0) {
-      const url = orcamentos[0].orcamento_url || orcamentos[0].arquivo_url
-      if (url) return url
-    }
-  }
-
-  // 2. Fallback: procurar em anexos_chamado_interno
+  // Link de Orçamento deve vir SOMENTE dos anexos internos do chamado (anexos_chamado_interno)
   if (
     chamado.anexos_chamado_interno &&
     Array.isArray(chamado.anexos_chamado_interno) &&

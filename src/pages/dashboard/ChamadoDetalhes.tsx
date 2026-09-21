@@ -858,8 +858,27 @@ function GerarValeModal({
       // Use the RPC function to calculate precise installments
       // This ensures the sum of all installments equals the total budget exactly
       // by adding the remainder to the last installment
-      const today = new Date()
-      const baseDateStr = new Date(today.getFullYear(), today.getMonth(), 1)
+      // Se o chamado já tiver aprovação da diretoria (ou aprovação final),
+      // a data de referência da 1ª parcela deve ser o mês da aprovação.
+      // Caso contrário, usa o mês corrente de geração.
+      let baseDateObj = new Date()
+      const aprovacoesDiretoria = Array.isArray(chamado?.aprovacoes_diretoria)
+        ? chamado.aprovacoes_diretoria
+        : typeof chamado?.aprovacoes_diretoria === 'string'
+          ? JSON.parse(chamado.aprovacoes_diretoria || '[]')
+          : []
+      const aprovacoesValidas = aprovacoesDiretoria.filter(
+        (a: any) => String(a?.acao || 'aprovado').toLowerCase() === 'aprovado' && a?.data_hora,
+      )
+      if (aprovacoesValidas.length > 0) {
+        // Pega a data da aprovação mais recente da diretoria
+        const sorted = aprovacoesValidas.slice().sort((a: any, b: any) => {
+          return new Date(b.data_hora).getTime() - new Date(a.data_hora).getTime()
+        })
+        baseDateObj = new Date(sorted[0].data_hora)
+      }
+
+      const baseDateStr = new Date(baseDateObj.getFullYear(), baseDateObj.getMonth(), 1)
         .toISOString()
         .split('T')[0]
 

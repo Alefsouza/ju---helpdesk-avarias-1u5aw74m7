@@ -123,6 +123,9 @@ export default function ValesAprovadosDP() {
         const chamado = p.chamados
         if (!chamado) return false
 
+        // Regra de Negócio: O colaborador só pode ser cobrado após a Diretoria aprovar o vale/chamado.
+        // O chamado precisa estar com status_aprovacao = 'aprovado' ou a parcela marcada como aprovado_diretoria.
+        // Além disso, checa as assinaturas dos diretores no histórico de aprovações.
         let aprovacoes: any[] = []
         try {
           if (Array.isArray(chamado.aprovacoes_diretoria)) {
@@ -137,13 +140,22 @@ export default function ValesAprovadosDP() {
         if (!Array.isArray(aprovacoes)) return false
 
         const aprovadores = aprovacoes
-          .filter((a: any) => String(a?.acao).toLowerCase() === 'aprovado')
+          .filter((a: any) => String(a?.acao || 'aprovado').toLowerCase() === 'aprovado')
           .map((a: any) =>
             String(a?.usuario_id || a?.email || a?.usuario_email || '').toLowerCase(),
           )
           .filter(Boolean)
 
-        return DIRETORES_DP_IDS.every((id) => aprovadores.includes(id))
+        const temAssinaturaDiretoria =
+          DIRETORES_DP_IDS.every((id) => aprovadores.includes(id)) ||
+          chamado.status_aprovacao === 'aprovado' ||
+          p.aprovado_diretoria === true
+
+        const isAprovadoDiretoria =
+          (chamado.status_aprovacao === 'aprovado' || p.aprovado_diretoria === true) &&
+          temAssinaturaDiretoria
+
+        return isAprovadoDiretoria
       }) || []
 
     const userIds = [

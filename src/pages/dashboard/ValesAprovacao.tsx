@@ -287,10 +287,21 @@ export default function ValesAprovacao() {
           }
 
           if (totalValue > 0) {
+            const approvalDate = new Date()
+            const approvalBaseDateStr = new Date(
+              approvalDate.getFullYear(),
+              approvalDate.getMonth(),
+              1,
+            )
+              .toISOString()
+              .split('T')[0]
+
             const { data: existingParcelas } = await supabase
               .from('parcelas_vales')
-              .select('id')
+              .select('id, data_referencia, valor_parcela, is_data_referencia_fixed')
               .eq('chamado_id', selectedChamado.id)
+              .eq('status', 'ativo')
+              .order('data_referencia', { ascending: true })
 
             if (!existingParcelas || existingParcelas.length === 0) {
               const valorFinal = totalValue
@@ -305,7 +316,7 @@ export default function ValesAprovacao() {
                     status: 'aprovado',
                     desconto_aplicado: hasDiscount,
                     vale_unificado: valeUnificado,
-                    atualizado_em: new Date().toISOString(),
+                    atualizado_em: approvalDate.toISOString(),
                   })
                   .eq('id', selectedChamado.solicitacoes_parcelamento[0].id)
               }
@@ -315,7 +326,7 @@ export default function ValesAprovacao() {
                 {
                   p_valor_base: valorFinal,
                   p_quantidade_parcelas: parcelsCount,
-                  p_data_base: new Date().toISOString().split('T')[0],
+                  p_data_base: approvalBaseDateStr,
                 },
               )
 
@@ -327,7 +338,7 @@ export default function ValesAprovacao() {
                   valor_parcela: p.valor_parcela,
                   data_referencia: p.data_referencia,
                   aprovado_diretoria: true,
-                  aprovado_em: new Date().toISOString(),
+                  aprovado_em: approvalDate.toISOString(),
                   vale_unificado: valeUnificado,
                 }))
 
@@ -335,6 +346,29 @@ export default function ValesAprovacao() {
                   .from('parcelas_vales')
                   .insert(parcelasToInsert)
                 if (parcelasError) console.error('Error creating parcelas:', parcelasError)
+              }
+            } else {
+              // Parcelas já existem (geradas antes da aprovação da diretoria).
+              // Recalcula as referências: 1ª parcela = mês da aprovação da diretoria,
+              // e as seguintes em sequência mensal.
+              // Marca aprovado_diretoria = true e aprovado_em = data de aprovação.
+              const nowYear = approvalDate.getFullYear()
+              const nowMonth = approvalDate.getMonth() // 0-indexed
+
+              for (let i = 0; i < existingParcelas.length; i++) {
+                const parcela = existingParcelas[i]
+                const newRefDate = new Date(Date.UTC(nowYear, nowMonth + i, 1))
+                  .toISOString()
+                  .split('T')[0]
+
+                await supabase
+                  .from('parcelas_vales')
+                  .update({
+                    data_referencia: newRefDate,
+                    aprovado_diretoria: true,
+                    aprovado_em: approvalDate.toISOString(),
+                  })
+                  .eq('id', parcela.id)
               }
             }
           }

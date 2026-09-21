@@ -103,7 +103,7 @@ export default function ValesAprovacao() {
     const { data, error } = await supabase
       .from('chamados')
       .select(`
-        id, titulo, descricao, status_aprovacao, status_aprovacao_claudinei, aprovacoes_diretoria, criado_em,
+        id, titulo, descricao, responsavel_id, status_aprovacao, status_aprovacao_claudinei, aprovacoes_diretoria, criado_em,
         registro_motorista, nome_motorista, data_ocorrencia, status_juridico, status_sinistro,
         anexos_chamado_interno ( id, nome_arquivo, arquivo_url, criado_em ),
         documentos ( id, nome_arquivo, arquivo_url, tipo_documento, orcamento_url, valor_orcamento, registro_motorista, nome_motorista, criado_em ),
@@ -130,6 +130,66 @@ export default function ValesAprovacao() {
         const anexos = c.anexos_chamado_interno || []
         return hasApprovalTrigger(anexos)
       }) || []
+
+    // Buscar em lote o histórico de finalização para os chamados filtrados
+    if (filtered.length > 0) {
+      const chamadoIds = filtered.map((c: any) => c.id)
+
+      // 1. Busca todos os registros de historico_chamado com acao = 'finalizado' ordenados por criado_em asc
+      const { data: histData, error: histError } = await supabase
+        .from('historico_chamado')
+        .select('chamado_id, usuario_id, acao, criado_em')
+        .in('chamado_id', chamadoIds)
+        .eq('acao', 'finalizado')
+        .order('criado_em', { ascending: true })
+
+      if (!histError && histData) {
+        // Mapear o último usuário que finalizou cada chamado
+        const lastFinalizerPerChamado = new Map<string, string>()
+        histData.forEach((h: any) => {
+          if (h.usuario_id) {
+            lastFinalizerPerChamado.set(h.chamado_id, h.usuario_id)
+          }
+        })
+
+        // Coletar userIds a consultar em perfil_usuario
+        const userIdsToFetch = new Set<string>()
+        lastFinalizerPerChamado.forEach((uid) => userIdsToFetch.add(uid))
+
+        // Para chamados que não tenham historico com acao='finalizado', olhar o responsavel_id como fallback
+        filtered.forEach((c: any) => {
+          if (!lastFinalizerPerChamado.has(c.id) && c.responsavel_id) {
+            userIdsToFetch.add(c.responsavel_id)
+          }
+        })
+
+        let profileMap = new Map<string, string>()
+        if (userIdsToFetch.size > 0) {
+          const { data: profiles } = await supabase
+            .from('perfil_usuario')
+            .select('id, departamento')
+            .in('id', Array.from(userIdsToFetch))
+
+          if (profiles) {
+            profiles.forEach((p: any) => {
+              if (p.id && p.departamento) {
+                profileMap.set(p.id, p.departamento)
+              }
+            })
+          }
+        }
+
+        // Anexar departamento_finalizador a cada chamado
+        filtered.forEach((c: any) => {
+          const finalizerUserId = lastFinalizerPerChamado.get(c.id) || c.responsavel_id
+          if (finalizerUserId && profileMap.has(finalizerUserId)) {
+            c.departamento_finalizador = profileMap.get(finalizerUserId)
+          } else {
+            c.departamento_finalizador = null
+          }
+        })
+      }
+    }
 
     const isApprovedByUser = (c: any) => {
       const aprovacoes = Array.isArray(c.aprovacoes_diretoria) ? c.aprovacoes_diretoria : []

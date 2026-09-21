@@ -157,12 +157,11 @@ export function ValesAprovacaoTable({
                       {chamado.titulo || '-'}
                     </Link>
                     {(() => {
-                      const hasJuridico = Boolean(
-                        chamado.status_juridico && chamado.status_juridico.trim?.() !== '',
-                      )
-                      const hasSinistro = chamado.status_sinistro === 'Terceiros'
+                      const dep = stripAccents(chamado.departamento_finalizador || '')
+                      const isJuridico = dep.includes('juridico')
+                      const isSinistro = dep.includes('sinistro')
 
-                      if (hasJuridico) {
+                      if (isJuridico) {
                         return (
                           <Badge
                             variant="outline"
@@ -173,7 +172,7 @@ export function ValesAprovacaoTable({
                         )
                       }
 
-                      if (hasSinistro) {
+                      if (isSinistro) {
                         return (
                           <Badge
                             variant="outline"

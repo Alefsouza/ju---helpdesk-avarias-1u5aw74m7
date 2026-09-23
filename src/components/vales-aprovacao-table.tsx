@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { format } from 'date-fns'
-import { FileText, FileSignature, Check, X, ExternalLink, Download } from 'lucide-react'
+import { FileText, FileSignature, Check, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
   Table,
@@ -338,59 +338,22 @@ export function ValesAprovacaoTable({
           if (!open) setSelectedDoc(null)
         }}
       >
-        <DialogContent className="max-w-4xl w-[95vw] sm:max-w-4xl h-[85vh] flex flex-col p-4 sm:p-6 gap-3">
-          <DialogHeader className="flex flex-row items-center justify-between pr-8 border-b pb-3 space-y-0">
+        <DialogContent className="max-w-[96vw] w-[96vw] h-[94vh] max-h-[94vh] flex flex-col p-3 sm:p-5 gap-2 sm:gap-3">
+          <DialogHeader className="flex flex-row items-center justify-between pr-8 border-b pb-2.5 sm:pb-3 space-y-0 shrink-0">
             <DialogTitle className="text-base sm:text-lg font-semibold truncate flex items-center gap-2">
               <FileText className="h-5 w-5 text-primary shrink-0" />
               <span className="truncate">{selectedDoc?.title || 'Visualização do Documento'}</span>
             </DialogTitle>
-            <div className="flex items-center gap-1 shrink-0">
-              {selectedDoc?.url && (
-                <>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="h-8 px-2 text-xs text-muted-foreground hover:text-foreground"
-                    asChild
-                  >
-                    <a
-                      href={selectedDoc.url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      title="Abrir em nova aba"
-                    >
-                      <ExternalLink className="h-3.5 w-3.5 mr-1" />
-                      <span className="hidden sm:inline">Nova aba</span>
-                    </a>
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="h-8 px-2 text-xs text-muted-foreground hover:text-foreground"
-                    asChild
-                  >
-                    <a
-                      href={selectedDoc.url}
-                      download={selectedDoc.title || 'documento'}
-                      title="Baixar arquivo"
-                    >
-                      <Download className="h-3.5 w-3.5 mr-1" />
-                      <span className="hidden sm:inline">Baixar</span>
-                    </a>
-                  </Button>
-                </>
-              )}
-            </div>
           </DialogHeader>
 
           <div className="flex-1 w-full h-full min-h-0 bg-slate-100 rounded-md overflow-hidden flex items-center justify-center">
             {selectedDoc &&
               (isImageFile(selectedDoc.url, selectedDoc.title) ? (
-                <div className="w-full h-full overflow-auto flex items-center justify-center p-2">
+                <div className="w-full h-full overflow-auto flex items-center justify-center p-2 sm:p-4">
                   <img
                     src={selectedDoc.url}
                     alt={selectedDoc.title}
-                    className="max-w-full max-h-full object-contain rounded shadow-sm"
+                    className="max-w-full max-h-full w-auto h-auto object-contain rounded shadow-sm select-none"
                   />
                 </div>
               ) : (

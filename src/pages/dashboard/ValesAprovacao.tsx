@@ -15,9 +15,22 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Checkbox } from '@/components/ui/checkbox'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import { Loader2, AlertCircle } from 'lucide-react'
 import { toast } from 'sonner'
 import { ValesAprovacaoTable } from '@/components/vales-aprovacao-table'
+
+const stripAccents = (str: string): string =>
+  str
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
 
 const CLAUDINEI_KEYWORDS = ['vale', 'autorização', 'autorizacao', 'desconto', 'escaneado']
 
@@ -47,6 +60,19 @@ export default function ValesAprovacao() {
   const [isRejectOpen, setIsRejectOpen] = useState(false)
   const [rejectReason, setRejectReason] = useState('')
   const [searchTerm, setSearchTerm] = useState('')
+  const [departamentoFilter, setDepartamentoFilter] = useState<'todos' | 'juridico' | 'sinistro'>(
+    'todos',
+  )
+
+  const matchesDepartamento = (c: any, filter: 'todos' | 'juridico' | 'sinistro'): boolean => {
+    if (filter === 'todos') return true
+    const dep = stripAccents(c.departamento_finalizador || '')
+    const isJuridico = dep.includes('juridico')
+    const isSinistro = dep.includes('sinistro')
+    if (filter === 'juridico') return isJuridico
+    if (filter === 'sinistro') return isSinistro
+    return true
+  }
 
   const matchesSearch = (c: any, term: string): boolean => {
     if (!term) return true
@@ -84,18 +110,27 @@ export default function ValesAprovacao() {
   }
 
   const filteredPendingChamados = useMemo(
-    () => pendingChamados.filter((c) => matchesSearch(c, searchTerm)),
-    [pendingChamados, searchTerm],
+    () =>
+      pendingChamados.filter(
+        (c) => matchesSearch(c, searchTerm) && matchesDepartamento(c, departamentoFilter),
+      ),
+    [pendingChamados, searchTerm, departamentoFilter],
   )
 
   const filteredApprovedChamados = useMemo(
-    () => approvedChamados.filter((c) => matchesSearch(c, searchTerm)),
-    [approvedChamados, searchTerm],
+    () =>
+      approvedChamados.filter(
+        (c) => matchesSearch(c, searchTerm) && matchesDepartamento(c, departamentoFilter),
+      ),
+    [approvedChamados, searchTerm, departamentoFilter],
   )
 
   const filteredApprovedByYouChamados = useMemo(
-    () => approvedByYouChamados.filter((c) => matchesSearch(c, searchTerm)),
-    [approvedByYouChamados, searchTerm],
+    () =>
+      approvedByYouChamados.filter(
+        (c) => matchesSearch(c, searchTerm) && matchesDepartamento(c, departamentoFilter),
+      ),
+    [approvedByYouChamados, searchTerm, departamentoFilter],
   )
 
   const fetchChamados = async () => {
@@ -613,12 +648,30 @@ export default function ValesAprovacao() {
         </div>
       </div>
 
-      <Input
-        placeholder="Buscar por carro, OS, registro ou nome..."
-        value={searchTerm}
-        onChange={(e) => setSearchTerm(e.target.value)}
-        className="max-w-xl"
-      />
+      <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+        <Input
+          placeholder="Buscar por carro, OS, registro ou nome..."
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          className="max-w-xl flex-1"
+        />
+
+        <div className="w-full sm:w-[200px]">
+          <Select
+            value={departamentoFilter}
+            onValueChange={(val: 'todos' | 'juridico' | 'sinistro') => setDepartamentoFilter(val)}
+          >
+            <SelectTrigger className="w-full bg-white shadow-sm">
+              <SelectValue placeholder="Filtrar departamento" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="todos">Todos</SelectItem>
+              <SelectItem value="juridico">Jurídico</SelectItem>
+              <SelectItem value="sinistro">Sinistro</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
         <TabsList>

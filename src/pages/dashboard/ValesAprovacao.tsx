@@ -435,20 +435,67 @@ export default function ValesAprovacao() {
             const nowYear = approvalDate.getFullYear()
             const nowMonth = approvalDate.getMonth() // 0-indexed
 
-            for (let i = 0; i < existingParcelas.length; i++) {
-              const parcela = existingParcelas[i]
-              const newRefDate = new Date(Date.UTC(nowYear, nowMonth + i, 1))
+            // Exceção pontual para o chamado f60a678a-f533-4135-88df-bd104fd38c1f (Carro 51019)
+            // Possui 2 vales ativos: 15 parcelas (vale de R$ 3.980) e 1 parcela única de R$ 88,22 (vale de 18/06).
+            // Ambos devem ter como mês inicial o mês da 2ª aprovação da diretoria.
+            const CHAMADO_EXCECAO_DUPLO_VALE = 'f60a678a-f533-4135-88df-bd104fd38c1f'
+
+            if (selectedChamado.id === CHAMADO_EXCECAO_DUPLO_VALE) {
+              // Separa a parcela de R$ 88,22 (parcela única) e as parcelas do vale de R$ 3.980 (~265,33)
+              const parcelaUnica88 = existingParcelas.find(
+                (p: any) => Math.abs(Number(p.valor_parcela) - 88.22) < 0.01,
+              )
+              const parcelas3980 = existingParcelas.filter((p: any) => p.id !== parcelaUnica88?.id)
+
+              const baseMonthDate = new Date(Date.UTC(nowYear, nowMonth, 1))
                 .toISOString()
                 .split('T')[0]
 
-              await supabase
-                .from('parcelas_vales')
-                .update({
-                  data_referencia: newRefDate,
-                  aprovado_diretoria: true,
-                  aprovado_em: approvalDate.toISOString(),
-                })
-                .eq('id', parcela.id)
+              // 1) Ajusta a parcela única de R$ 88,22 para o mês da aprovação
+              if (parcelaUnica88) {
+                await supabase
+                  .from('parcelas_vales')
+                  .update({
+                    data_referencia: baseMonthDate,
+                    aprovado_diretoria: true,
+                    aprovado_em: approvalDate.toISOString(),
+                  })
+                  .eq('id', parcelaUnica88.id)
+              }
+
+              // 2) Ajusta as parcelas do vale de R$ 3.980 (1ª parcela no mês da aprovação, seguintes mensais)
+              for (let i = 0; i < parcelas3980.length; i++) {
+                const parcela = parcelas3980[i]
+                const newRefDate = new Date(Date.UTC(nowYear, nowMonth + i, 1))
+                  .toISOString()
+                  .split('T')[0]
+
+                await supabase
+                  .from('parcelas_vales')
+                  .update({
+                    data_referencia: newRefDate,
+                    aprovado_diretoria: true,
+                    aprovado_em: approvalDate.toISOString(),
+                  })
+                  .eq('id', parcela.id)
+              }
+            } else {
+              // Comportamento padrão para todos os outros chamados
+              for (let i = 0; i < existingParcelas.length; i++) {
+                const parcela = existingParcelas[i]
+                const newRefDate = new Date(Date.UTC(nowYear, nowMonth + i, 1))
+                  .toISOString()
+                  .split('T')[0]
+
+                await supabase
+                  .from('parcelas_vales')
+                  .update({
+                    data_referencia: newRefDate,
+                    aprovado_diretoria: true,
+                    aprovado_em: approvalDate.toISOString(),
+                  })
+                  .eq('id', parcela.id)
+              }
             }
           }
         }

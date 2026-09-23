@@ -224,25 +224,47 @@ export default function ValesAprovadosDP() {
     const chamadoIds = [...new Set(validParcelas.map((p: any) => p.chamado_id).filter(Boolean))]
 
     let parcelaSequenceMap = new Map<string, Map<string, number>>()
+    let parcelaIdSequenceMap = new Map<string, string>() // p.id -> "1/15" ou "1/1" etc.
+    const CHAMADO_EXCECAO_DUPLO_VALE = 'f60a678a-f533-4135-88df-bd104fd38c1f'
+
     if (chamadoIds.length > 0) {
       const { data: allParcelas } = await supabase
         .from('parcelas_vales')
-        .select('chamado_id, data_referencia')
+        .select('id, chamado_id, data_referencia, valor_parcela')
         .eq('status', 'ativo')
         .in('chamado_id', chamadoIds)
         .order('data_referencia', { ascending: true })
 
       if (allParcelas) {
-        const byChamado = new Map<string, string[]>()
+        const byChamado = new Map<string, any[]>()
         for (const ap of allParcelas) {
           const arr = byChamado.get(ap.chamado_id) || []
-          arr.push(ap.data_referencia)
+          arr.push(ap)
           byChamado.set(ap.chamado_id, arr)
         }
-        for (const [cid, dates] of byChamado.entries()) {
-          const seqMap = new Map<string, number>()
-          dates.forEach((d, idx) => seqMap.set(d, idx + 1))
-          parcelaSequenceMap.set(cid, seqMap)
+        for (const [cid, items] of byChamado.entries()) {
+          if (cid === CHAMADO_EXCECAO_DUPLO_VALE) {
+            // Exceção pontual: chamado com 2 vales ativos
+            // Vale 1: Parcela única de R$ 88,22 -> "1/1"
+            // Vale 2: 15 parcelas de R$ 265,33/265,38 -> "1/15", "2/15", ... "15/15"
+            const parcelas88 = items.filter(
+              (it) => Math.abs(Number(it.valor_parcela) - 88.22) < 0.01,
+            )
+            const parcelas3980 = items.filter(
+              (it) => Math.abs(Number(it.valor_parcela) - 88.22) >= 0.01,
+            )
+
+            parcelas88.forEach((it, idx) => {
+              parcelaIdSequenceMap.set(it.id, `${idx + 1}/${parcelas88.length}`)
+            })
+            parcelas3980.forEach((it, idx) => {
+              parcelaIdSequenceMap.set(it.id, `${idx + 1}/${parcelas3980.length}`)
+            })
+          } else {
+            const seqMap = new Map<string, number>()
+            items.forEach((it, idx) => seqMap.set(it.data_referencia, idx + 1))
+            parcelaSequenceMap.set(cid, seqMap)
+          }
         }
       }
     }
@@ -347,7 +369,8 @@ export default function ValesAprovadosDP() {
       const totalFromSequence = seqMap ? seqMap.size : null
       const totalParcelas = totalFromSolicitacao || totalFromSequence || null
       const parcelaInfo =
-        currentParcela && totalParcelas ? `${currentParcela}/${totalParcelas}` : ''
+        parcelaIdSequenceMap.get(p.id) ||
+        (currentParcela && totalParcelas ? `${currentParcela}/${totalParcelas}` : '')
 
       let aprovacoesDiretoria: any[] = []
       try {

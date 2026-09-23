@@ -77,7 +77,7 @@ export default function ValesAprovacao() {
   const matchesSearch = (c: any, term: string): boolean => {
     if (!term) return true
     const t = term.toLowerCase()
-    const fields = [c.titulo, c.registro_motorista, c.nome_motorista]
+    const fields = [c.titulo, c.pia, c.registro_motorista, c.nome_motorista]
     if (fields.some((f) => (f ?? '').toString().toLowerCase().includes(t))) {
       return true
     }
@@ -139,7 +139,7 @@ export default function ValesAprovacao() {
       .from('chamados')
       .select(`
         id, titulo, descricao, responsavel_id, status_aprovacao, status_aprovacao_claudinei, aprovacoes_diretoria, criado_em,
-        registro_motorista, nome_motorista, data_ocorrencia, status_juridico, status_sinistro,
+        pia, registro_motorista, nome_motorista, data_ocorrencia, status_juridico, status_sinistro,
         anexos_chamado_interno ( id, nome_arquivo, arquivo_url, criado_em ),
         documentos ( id, nome_arquivo, arquivo_url, tipo_documento, orcamento_url, valor_orcamento, registro_motorista, nome_motorista, criado_em ),
         parcelas_vales ( id, valor_parcela, data_referencia ),
@@ -650,7 +650,7 @@ export default function ValesAprovacao() {
 
       <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
         <Input
-          placeholder="Buscar por carro, OS, registro ou nome..."
+          placeholder="Buscar por carro, OS, PIA, registro ou nome..."
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
           className="max-w-xl flex-1"

@@ -123,6 +123,7 @@ export function ValesAprovacaoTable({
         <TableHeader>
           <TableRow>
             <TableHead>Chamado</TableHead>
+            <TableHead>PIA</TableHead>
             <TableHead>Registro do Motorista</TableHead>
             <TableHead>Nome do Motorista</TableHead>
             <TableHead>Data da Ocorrência</TableHead>
@@ -186,6 +187,9 @@ export function ValesAprovacaoTable({
                       return null
                     })()}
                   </div>
+                </TableCell>
+                <TableCell className="font-mono text-sm text-slate-700">
+                  {chamado.pia || '-'}
                 </TableCell>
                 <TableCell>{driver.registro}</TableCell>
                 <TableCell>{driver.nome}</TableCell>

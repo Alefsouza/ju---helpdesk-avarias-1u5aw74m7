@@ -28,6 +28,22 @@ import { toast } from 'sonner'
 import { format } from 'date-fns'
 import { Link } from 'react-router-dom'
 
+const stripAccents = (str: string): string =>
+  str
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+
+const ALEX_VALE_KEYWORDS = ['vale', 'autorizacao', 'escaneado']
+
+const hasAlexValeAttachment = (anexos: any[]): boolean => {
+  if (!Array.isArray(anexos)) return false
+  return anexos.some((anexo) => {
+    const nome = stripAccents(anexo?.nome_arquivo || '')
+    return ALEX_VALE_KEYWORDS.some((kw) => nome.includes(kw))
+  })
+}
+
 export function ValesAprovacaoAlex() {
   const { user, profile } = useAuth()
   const [chamados, setChamados] = useState<any[]>([])
@@ -44,7 +60,7 @@ export function ValesAprovacaoAlex() {
     const { data, error } = await supabase
       .from('chamados')
       .select(
-        `id, titulo, criado_em, atualizado_em, responsavel_id, usuario_id, status_aprovacao_alex, status_interno, status, registro_motorista, nome_motorista, data_ocorrencia, formularios_espelho_danos ( registro_motorista, nome_motorista, data )`,
+        `id, titulo, criado_em, atualizado_em, responsavel_id, usuario_id, status_aprovacao_alex, status_interno, status, registro_motorista, nome_motorista, data_ocorrencia, formularios_espelho_danos ( registro_motorista, nome_motorista, data ), anexos_chamado_interno ( id, nome_arquivo )`,
       )
       .eq('status', 'finalizado')
       .eq('status_aprovacao_alex', 'pendente')
@@ -56,7 +72,11 @@ export function ValesAprovacaoAlex() {
       return
     }
 
-    setChamados(data || [])
+    const filtered = (data || []).filter((c: any) =>
+      hasAlexValeAttachment(c.anexos_chamado_interno),
+    )
+
+    setChamados(filtered)
     setLoading(false)
   }
 

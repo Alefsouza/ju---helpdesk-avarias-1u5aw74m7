@@ -3494,54 +3494,79 @@ export default function ChamadoDetalhes() {
     if (!window.confirm('Tem certeza que deseja finalizar este chamado?')) return
     setCompleting(true)
 
+    // Busca o estado mais recente do chamado no banco para garantir status_aprovacao_claudinei atual
+    const { data: latestChamado } = await supabase
+      .from('chamados')
+      .select('status_aprovacao_claudinei, status_aprovacao_alex, status_interno')
+      .eq('id', id as string)
+      .single()
+
+    const claudineiStatus =
+      latestChamado?.status_aprovacao_claudinei || chamado?.status_aprovacao_claudinei
+    const hasExistingClaudineiFlow =
+      claudineiStatus === 'aprovado' || claudineiStatus === 'pendente'
+
     const { data: internalAnexos } = await supabase
       .from('anexos_chamado_interno')
       .select('nome_arquivo')
       .eq('chamado_id', id as string)
 
+    const stripAccents = (str: string): string =>
+      str
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .toLowerCase()
+
     const claudineiKeywords = [
       'vale',
-      'quitação',
       'quitacao',
       'recibo',
       'nf',
       'nota fiscal',
       'boleto',
       'escaneado',
-      'autorização',
       'autorizacao',
       'desconto',
     ]
-    const alexKeywords = ['autorização', 'autorizacao', 'escaneado', 'vale']
+    const alexKeywords = ['autorizacao', 'escaneado', 'vale']
 
     const hasClaudineiTrigger = (internalAnexos || []).some((a: any) => {
-      const nome = (a.nome_arquivo || '').toLowerCase()
+      const nome = stripAccents(a.nome_arquivo || '')
       return claudineiKeywords.some((kw) => nome.includes(kw))
     })
     const hasAlexTrigger = (internalAnexos || []).some((a: any) => {
-      const nome = (a.nome_arquivo || '').toLowerCase()
+      const nome = stripAccents(a.nome_arquivo || '')
       return alexKeywords.some((kw) => nome.includes(kw))
     })
 
-    const isJuridicoUser = currentUserProfile?.tipo_usuario === 'juridico'
-    const isClaudineiFlow = isJuridicoUser && hasClaudineiTrigger
-    const hasApprovalTrigger = hasAlexTrigger
+    const isJuridicoUser =
+      currentUserProfile?.tipo_usuario === 'juridico' ||
+      currentUserProfile?.departamento?.toLowerCase().includes('juridico')
+
+    // 1) Se já tem fluxo do Claudinei ('aprovado' ou 'pendente'), NÃO enviar para o Alex nem recriar status_aprovacao_alex='pendente'
+    // 2) Chamado finalizado por usuário do Jurídico com anexo de vale/autorização vai sempre para o Claudinei, nunca para o Alex
+    const isNewClaudineiFlow = !hasExistingClaudineiFlow && isJuridicoUser && hasClaudineiTrigger
+    const isAlexFlow = !hasExistingClaudineiFlow && !isJuridicoUser && hasAlexTrigger
 
     const updatePayload: any = {
       atualizado_em: new Date().toISOString(),
+      status: 'finalizado',
     }
 
-    if (isClaudineiFlow) {
+    if (hasExistingClaudineiFlow) {
+      // O chamado já seguiu ou está seguindo o fluxo do Claudinei.
+      // Manter status_interno e status_aprovacao_claudinei existentes; nunca gravar/recriar status_aprovacao_alex='pendente'.
+      // Se status_aprovacao_alex tiver ficado pendente indevidamente antes, limpa para null.
+      if (latestChamado?.status_aprovacao_alex === 'pendente') {
+        updatePayload.status_aprovacao_alex = null
+      }
+    } else if (isNewClaudineiFlow) {
       updatePayload.status_aprovacao_claudinei = 'pendente'
       updatePayload.status_aprovacao_alex = null
       updatePayload.status_interno = 'aguardando_claudinei'
-      updatePayload.status = 'finalizado'
-    } else if (hasApprovalTrigger) {
-      updatePayload.status = 'finalizado'
+    } else if (isAlexFlow) {
       updatePayload.status_interno = 'AGUARDANDO_ALEX'
       updatePayload.status_aprovacao_alex = 'pendente'
-    } else {
-      updatePayload.status = 'finalizado'
     }
 
     const { data, error: updateError } = await supabase
@@ -3561,7 +3586,7 @@ export default function ChamadoDetalhes() {
       return
     }
 
-    if (!isClaudineiFlow) {
+    if (!isNewClaudineiFlow) {
       await supabase.from('historico_chamado').insert({
         chamado_id: id,
         acao: 'finalizado',
@@ -3569,7 +3594,7 @@ export default function ChamadoDetalhes() {
       })
     }
 
-    if (isClaudineiFlow) {
+    if (isNewClaudineiFlow) {
       await supabase.from('historico_chamado').insert({
         chamado_id: id as string,
         acao: 'respondido',
@@ -3577,7 +3602,7 @@ export default function ChamadoDetalhes() {
         detalhes:
           'Chamado encaminhado para aprovação do Claudinei (documento de Vale/Quitação/Recibo/NF/Nota Fiscal/Boleto/Escaneado/Autorização/Desconto detectado).',
       })
-    } else if (hasApprovalTrigger) {
+    } else if (isAlexFlow) {
       await supabase.from('historico_chamado').insert({
         chamado_id: id as string,
         acao: 'respondido',
@@ -3593,20 +3618,27 @@ export default function ChamadoDetalhes() {
             ...prev,
             status: updatePayload.status || prev.status,
             atualizado_em: new Date().toISOString(),
-            status_interno: updatePayload.status_interno || prev.status_interno,
+            status_interno:
+              updatePayload.status_interno !== undefined
+                ? updatePayload.status_interno
+                : prev.status_interno,
             status_aprovacao_alex:
-              updatePayload.status_aprovacao_alex || prev.status_aprovacao_alex,
+              updatePayload.status_aprovacao_alex !== undefined
+                ? updatePayload.status_aprovacao_alex
+                : prev.status_aprovacao_alex,
             status_aprovacao_claudinei:
-              updatePayload.status_aprovacao_claudinei || prev.status_aprovacao_claudinei,
+              updatePayload.status_aprovacao_claudinei !== undefined
+                ? updatePayload.status_aprovacao_claudinei
+                : prev.status_aprovacao_claudinei,
           }
         : prev,
     )
 
     setCompleting(false)
     toast.success(
-      isClaudineiFlow
+      isNewClaudineiFlow
         ? 'Chamado encaminhado para aprovação do Claudinei.'
-        : hasApprovalTrigger
+        : isAlexFlow
           ? 'Chamado finalizado e enviado para aprovação do Alex.'
           : 'Chamado finalizado com sucesso',
     )

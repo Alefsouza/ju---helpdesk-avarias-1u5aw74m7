@@ -815,7 +815,10 @@ function useRealtimeNotifications(
 export default function Layout() {
   const { user, profile, loading } = useAuth()
   const location = useLocation()
-  const isAuthRoute = location.pathname === '/' || location.pathname === '/cadastro'
+  const isAuthRoute =
+    location.pathname === '/' ||
+    location.pathname === '/cadastro' ||
+    location.pathname === '/redefinir-senha'
 
   useRealtimeNotifications(user?.id, profile, user?.email)
 
@@ -835,8 +838,9 @@ export default function Layout() {
     return <Navigate to="/" replace />
   }
 
-  // Redirect authenticated users from auth routes
-  if (user && isAuthRoute) {
+  // Redirect authenticated users from auth routes (exceto na tela de redefinição de senha,
+  // onde o usuário em recuperação precisa estar temporariamente logado para chamar updateUser)
+  if (user && isAuthRoute && location.pathname !== '/redefinir-senha') {
     if (profile?.tipo_usuario === 'planejamento') {
       return <Navigate to="/dashboard/vales-aprovacao-alex" replace />
     }

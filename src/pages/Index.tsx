@@ -10,8 +10,15 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Card, CardContent } from '@/components/ui/card'
 import { cn } from '@/lib/utils'
-import { AlertCircle, Loader2, Mail, Lock, Eye, EyeOff } from 'lucide-react'
+import { AlertCircle, Loader2, Mail, Lock, Eye, EyeOff, CheckCircle2, X } from 'lucide-react'
 import { Alert, AlertDescription } from '@/components/ui/alert'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
 
 const loginBgImage =
   'https://wrnhfpncasqifaisvyaf.supabase.co/storage/v1/object/public/assets/6.jpeg'
@@ -34,6 +41,11 @@ export default function Index() {
   const [error, setError] = useState<string | null>(null)
   const [isBgLoaded, setIsBgLoaded] = useState(false)
   const [showPassword, setShowPassword] = useState(false)
+  const [showForgotModal, setShowForgotModal] = useState(false)
+  const [forgotEmail, setForgotEmail] = useState('')
+  const [forgotLoading, setForgotLoading] = useState(false)
+  const [forgotSuccess, setForgotSuccess] = useState(false)
+  const [forgotError, setForgotError] = useState<string | null>(null)
 
   useEffect(() => {
     const img = new Image()
@@ -97,6 +109,69 @@ export default function Index() {
         }
       }
       setIsLoading(false)
+    }
+  }
+
+  const handleForgotPassword = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setForgotError(null)
+
+    const cleanEmail = forgotEmail.trim()
+    if (!cleanEmail) {
+      setForgotError('Por favor, informe seu e-mail.')
+      return
+    }
+
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+    if (!emailRegex.test(cleanEmail)) {
+      setForgotError('Por favor, informe um e-mail válido.')
+      return
+    }
+
+    setForgotLoading(true)
+
+    // Redirecionamento: https://sinistro.viasudeste.com em produção ou window.location.origin no preview/local
+    const isProd =
+      window.location.hostname === 'sinistro.viasudeste.com' ||
+      window.location.hostname === 'www.sinistro.viasudeste.com'
+    const baseUrl = isProd ? 'https://sinistro.viasudeste.com' : window.location.origin
+    const redirectTo = `${baseUrl}/redefinir-senha`
+
+    try {
+      const { error: resetError } = await supabase.auth.resetPasswordForEmail(cleanEmail, {
+        redirectTo,
+      })
+
+      if (resetError) {
+        console.error('Erro ao solicitar redefinição de senha:', resetError)
+        const isRateLimit =
+          resetError.status === 429 ||
+          (resetError as any).code === 'over_email_send_rate_limit' ||
+          resetError.message?.toLowerCase().includes('rate limit')
+
+        if (isRateLimit) {
+          setForgotError(
+            'Muitas tentativas em pouco tempo. Por favor, aguarde alguns instantes antes de tentar novamente.',
+          )
+        } else {
+          setForgotError(
+            resetError.message ||
+              'Não foi possível enviar o e-mail de recuperação. Tente novamente.',
+          )
+        }
+      } else {
+        setForgotSuccess(true)
+        toast({
+          title: 'E-mail de recuperação enviado',
+          description: 'Verifique sua caixa de entrada para redefinir sua senha.',
+          className: 'bg-green-600 text-white border-none',
+        })
+      }
+    } catch (err: any) {
+      console.error('Erro inesperado:', err)
+      setForgotError('Ocorreu um erro ao enviar o e-mail de recuperação. Tente novamente.')
+    } finally {
+      setForgotLoading(false)
     }
   }
 
@@ -183,9 +258,23 @@ export default function Index() {
                 )}
               </div>
               <div className="space-y-2">
-                <Label htmlFor="password" className="text-white/90 text-sm font-medium">
-                  Senha <span className="text-red-400">*</span>
-                </Label>
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="password" className="text-white/90 text-sm font-medium">
+                    Senha <span className="text-red-400">*</span>
+                  </Label>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowForgotModal(true)
+                      setForgotEmail(form.getValues('email') || '')
+                      setForgotError(null)
+                      setForgotSuccess(false)
+                    }}
+                    className="text-xs text-white/80 hover:text-white hover:underline transition-colors focus:outline-none"
+                  >
+                    Esqueci minha senha
+                  </button>
+                </div>
                 <div className="relative group">
                   <Lock
                     className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 transition-colors z-10"
@@ -242,6 +331,110 @@ export default function Index() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Modal / Dialog de Recuperação de Senha */}
+      <Dialog open={showForgotModal} onOpenChange={setShowForgotModal}>
+        <DialogContent className="sm:max-w-md bg-[#1a472d] border border-white/20 text-white p-6 shadow-2xl rounded-2xl backdrop-blur-xl">
+          <DialogHeader className="space-y-2">
+            <DialogTitle className="text-xl font-bold text-white tracking-wide">
+              Recuperar Senha
+            </DialogTitle>
+            <DialogDescription className="text-white/80 text-sm">
+              Informe seu e-mail cadastrado. Enviaremos um link seguro para você redefinir sua
+              senha.
+            </DialogDescription>
+          </DialogHeader>
+
+          {forgotSuccess ? (
+            <div className="space-y-4 py-3 animate-fade-in text-center">
+              <div className="mx-auto bg-green-500/20 p-3 rounded-full w-fit border border-green-500/30">
+                <CheckCircle2 className="h-8 w-8 text-green-400" />
+              </div>
+              <div className="space-y-1">
+                <h3 className="font-semibold text-white text-base">
+                  E-mail de recuperação enviado!
+                </h3>
+                <p className="text-sm text-white/80">
+                  Verifique sua caixa de entrada (e a pasta de spam) de{' '}
+                  <span className="font-semibold text-white">{forgotEmail}</span> para redefinir sua
+                  senha.
+                </p>
+              </div>
+              <Button
+                type="button"
+                onClick={() => {
+                  setShowForgotModal(false)
+                  setForgotSuccess(false)
+                  setForgotError(null)
+                }}
+                className="w-full bg-[#225f3d] hover:bg-[#153823] text-white font-medium mt-2 border border-[#4ca371]/30"
+              >
+                Entendido
+              </Button>
+            </div>
+          ) : (
+            <form onSubmit={handleForgotPassword} className="space-y-4 py-2">
+              {forgotError && (
+                <Alert
+                  variant="destructive"
+                  className="py-2 bg-red-500/20 border-red-500/50 text-white backdrop-blur-sm"
+                >
+                  <AlertCircle className="h-4 w-4" />
+                  <AlertDescription className="ml-2 text-xs">{forgotError}</AlertDescription>
+                </Alert>
+              )}
+
+              <div className="space-y-2">
+                <Label htmlFor="forgot-email" className="text-white/90 text-sm font-medium">
+                  E-mail cadastrado <span className="text-red-400">*</span>
+                </Label>
+                <div className="relative group">
+                  <Mail
+                    className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 transition-colors z-10"
+                    style={{ color: INSTITUTIONAL_GREEN_LIGHT }}
+                  />
+                  <Input
+                    id="forgot-email"
+                    type="email"
+                    value={forgotEmail}
+                    onChange={(e) => setForgotEmail(e.target.value)}
+                    placeholder="seu@email.com"
+                    autoFocus
+                    disabled={forgotLoading}
+                    className="pl-11 bg-white/10 border-white/20 text-white placeholder:text-white/50 rounded-lg h-12 transition-all duration-200 focus-visible:ring-2 focus-visible:ring-[#225f3d]/60 focus-visible:ring-offset-0 focus-visible:border-[#4ca371] hover:bg-white/15"
+                  />
+                </div>
+              </div>
+
+              <div className="flex flex-col-reverse sm:flex-row gap-2 pt-2">
+                <Button
+                  type="button"
+                  variant="ghost"
+                  onClick={() => setShowForgotModal(false)}
+                  disabled={forgotLoading}
+                  className="w-full sm:w-1/2 text-white/80 hover:text-white hover:bg-white/10"
+                >
+                  Cancelar
+                </Button>
+                <Button
+                  type="submit"
+                  disabled={forgotLoading}
+                  className="w-full sm:w-1/2 bg-[#225f3d] hover:bg-[#153823] text-white font-semibold h-11 border border-[#4ca371]/30 shadow-md"
+                >
+                  {forgotLoading ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Enviando...
+                    </>
+                  ) : (
+                    'Enviar link'
+                  )}
+                </Button>
+              </div>
+            </form>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

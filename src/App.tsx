@@ -5,6 +5,7 @@ import { Toaster as Sonner } from '@/components/ui/sonner'
 import { TooltipProvider } from '@/components/ui/tooltip'
 import Index from './pages/Index'
 import Register from './pages/Register'
+import RedefinirSenha from './pages/RedefinirSenha'
 import Dashboard from './pages/Dashboard'
 import MeusChamados from './pages/dashboard/MeusChamados'
 import NovoChamado from './pages/dashboard/NovoChamado'
@@ -105,6 +106,7 @@ const App = () => (
           <Route element={<Layout />}>
             <Route path="/" element={<Index />} />
             <Route path="/cadastro" element={<Register />} />
+            <Route path="/redefinir-senha" element={<RedefinirSenha />} />
             <Route path="/dashboard" element={<DashboardRoute />} />
             <Route path="/dashboard/meus-chamados" element={<MeusChamados />} />
             <Route path="/dashboard/novo-chamado" element={<NovoChamado />} />

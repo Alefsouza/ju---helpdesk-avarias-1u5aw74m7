@@ -307,7 +307,19 @@ export default function DocumentosPendentes() {
         },
       })
 
-      if (pdfError) throw pdfError
+      if (pdfError) {
+        let msg = pdfError.message || 'Erro ao chamar função de geração de PDF.'
+        // Tentar extrair mensagem do body se disponível no erro da edge function
+        if (pdfError.context && typeof pdfError.context.json === 'function') {
+          try {
+            const errJson = await pdfError.context.json()
+            if (errJson?.error) msg = errJson.error
+          } catch {
+            // ignorar falha ao ler json do context
+          }
+        }
+        throw new Error(msg)
+      }
       if (!pdfData || !pdfData.success) throw new Error(pdfData?.error || 'Erro ao gerar PDF')
 
       const { url, nome_arquivo } = pdfData

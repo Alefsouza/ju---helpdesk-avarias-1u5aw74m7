@@ -526,15 +526,81 @@ Deno.serve(async (req: Request) => {
               }
               const imgBytes = await imgRes.arrayBuffer()
 
-              let pdfImage
-              const contentTypeHeader = imgRes.headers.get('content-type') || ''
-              const isPng =
-                fotoUrl.toLowerCase().includes('.png') || contentTypeHeader.includes('png')
+              // Reduzir/otimizar imagem se for do Supabase Storage ou for muito pesada (>1MB)
+              let optimizedBytes = imgBytes
+              let isPng =
+                fotoUrl.toLowerCase().includes('.png') ||
+                (imgRes.headers.get('content-type') || '').includes('png')
 
+              // 1. Se for URL pública do Supabase Storage (/storage/v1/object/public/),
+              // tenta obter via serviço de transformação de imagem (/storage/v1/render/image/public/)
+              if (fotoUrl.includes('/storage/v1/object/public/')) {
+                const renderUrl =
+                  fotoUrl.replace(
+                    '/storage/v1/object/public/',
+                    '/storage/v1/render/image/public/',
+                  ) +
+                  (fotoUrl.includes('?') ? '&' : '?') +
+                  'width=1200&quality=75'
+
+                try {
+                  const renderRes = await fetch(renderUrl)
+                  if (renderRes.ok) {
+                    const transformedBytes = await renderRes.arrayBuffer()
+                    if (
+                      transformedBytes.byteLength > 0 &&
+                      transformedBytes.byteLength < optimizedBytes.byteLength
+                    ) {
+                      optimizedBytes = transformedBytes
+                      isPng = false // transform render retorna jpeg/webp otimizado
+                    }
+                  }
+                } catch (renderErr) {
+                  console.warn(
+                    'Fallback: não foi possível obter imagem transformada pelo storage:',
+                    renderErr,
+                  )
+                }
+              }
+
+              // 2. Se a imagem ainda for grande (>1.5MB), usar imagescript como fallback para redimensionar e comprimir
+              if (optimizedBytes.byteLength > 1.5 * 1024 * 1024) {
+                try {
+                  const { Image: ScriptImage } = await import('npm:imagescript@1.3.0')
+                  const decoded = await ScriptImage.decode(new Uint8Array(optimizedBytes))
+                  if (decoded) {
+                    const maxDim = 1200
+                    if (decoded.width > maxDim || decoded.height > maxDim) {
+                      if (decoded.width >= decoded.height) {
+                        decoded.resize(maxDim, ScriptImage.RESIZE_AUTO)
+                      } else {
+                        decoded.resize(ScriptImage.RESIZE_AUTO, maxDim)
+                      }
+                    }
+                    const compressed = await decoded.encodeJPEG(75)
+                    if (compressed && compressed.byteLength < optimizedBytes.byteLength) {
+                      optimizedBytes = compressed.buffer
+                      isPng = false
+                    }
+                  }
+                } catch (compressErr) {
+                  console.warn('imagescript compression fallback error:', compressErr)
+                }
+              }
+
+              let pdfImage
               if (isPng) {
-                pdfImage = await pdfDoc.embedPng(imgBytes)
+                try {
+                  pdfImage = await pdfDoc.embedPng(optimizedBytes)
+                } catch {
+                  pdfImage = await pdfDoc.embedJpg(optimizedBytes)
+                }
               } else {
-                pdfImage = await pdfDoc.embedJpg(imgBytes)
+                try {
+                  pdfImage = await pdfDoc.embedJpg(optimizedBytes)
+                } catch {
+                  pdfImage = await pdfDoc.embedPng(optimizedBytes)
+                }
               }
 
               const imgDims = pdfImage.scaleToFit(width - marginX * 2, 250)
@@ -577,6 +643,7 @@ Deno.serve(async (req: Request) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
     )
 
+    // Para espelho de danos com id do chamado ou vistoria avulsa
     const bucket = id ? 'anexos_chamados_interno' : 'documentos'
     let filePath = fileName
     if (id) {
@@ -592,6 +659,15 @@ Deno.serve(async (req: Request) => {
 
     if (uploadError) {
       console.error('Upload Error:', uploadError)
+      const sizeMB = (fileBytes.byteLength / (1024 * 1024)).toFixed(2)
+      if (
+        uploadError.message &&
+        uploadError.message.toLowerCase().includes('maximum allowed size')
+      ) {
+        throw new Error(
+          `O arquivo PDF gerado (${sizeMB} MB) excedeu o limite máximo permitido pelo storage. Verifique as fotos anexadas.`,
+        )
+      }
       throw new Error(`Upload failed: ${uploadError.message}`)
     }
 

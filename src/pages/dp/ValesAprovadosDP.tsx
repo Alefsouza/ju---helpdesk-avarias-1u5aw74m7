@@ -260,6 +260,23 @@ export default function ValesAprovadosDP() {
             parcelas3980.forEach((it, idx) => {
               parcelaIdSequenceMap.set(it.id, `${idx + 1}/${parcelas3980.length}`)
             })
+          } else if (cid === 'ee19a40c-0f5c-4bd1-95cc-8c894c93b2d9') {
+            // Exceção pontual: chamado PIA 002082026/201 (Carro 51210) com 2 vales ativos
+            // Vale 1: Parcela única de R$ 147,05 -> "1/1"
+            // Vale 2: 17 parcelas de R$ 305,88 / 305,92 -> "1/17", "2/17", ... "17/17"
+            const parcelas147 = items.filter(
+              (it) => Math.abs(Number(it.valor_parcela) - 147.05) < 0.01,
+            )
+            const parcelas5200 = items.filter(
+              (it) => Math.abs(Number(it.valor_parcela) - 147.05) >= 0.01,
+            )
+
+            parcelas147.forEach((it, idx) => {
+              parcelaIdSequenceMap.set(it.id, `${idx + 1}/${parcelas147.length}`)
+            })
+            parcelas5200.forEach((it, idx) => {
+              parcelaIdSequenceMap.set(it.id, `${idx + 1}/${parcelas5200.length}`)
+            })
           } else {
             const seqMap = new Map<string, number>()
             items.forEach((it, idx) => seqMap.set(it.data_referencia, idx + 1))

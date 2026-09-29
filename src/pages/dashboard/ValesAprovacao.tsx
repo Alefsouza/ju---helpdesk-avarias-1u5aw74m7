@@ -435,24 +435,42 @@ export default function ValesAprovacao() {
             const nowYear = approvalDate.getFullYear()
             const nowMonth = approvalDate.getMonth() // 0-indexed
 
-            // Exceção pontual para o chamado f60a678a-f533-4135-88df-bd104fd38c1f (Carro 51019)
-            // Possui 2 vales ativos: 15 parcelas (vale de R$ 3.980) e 1 parcela única de R$ 88,22 (vale de 18/06).
-            // Ambos devem ter como mês inicial o mês da 2ª aprovação da diretoria.
-            const CHAMADO_EXCECAO_DUPLO_VALE = 'f60a678a-f533-4135-88df-bd104fd38c1f'
+            // Exceções pontuais para chamados com múltiplos vales que devem iniciar no mesmo mês:
+            // 1) Carro 51019: f60a678a-f533-4135-88df-bd104fd38c1f
+            //    Possui 2 vales ativos: 15 parcelas (vale de R$ 3.980) e 1 parcela única de R$ 88,22 (vale de 18/06).
+            // 2) Carro 51210 / PIA 002082026/201: ee19a40c-0f5c-4bd1-95cc-8c894c93b2d9
+            //    Possui 2 vales ativos: 17 parcelas (vale de R$ 5.200) e 1 parcela única de R$ 147,05 (vale anterior).
+            // Em ambos os casos, a parcela única e a 1ª parcela do parcelamento iniciam no mês da aprovação da diretoria.
+            const CHAMADOS_EXCECAO_DUPLO_VALE = [
+              'f60a678a-f533-4135-88df-bd104fd38c1f',
+              'ee19a40c-0f5c-4bd1-95cc-8c894c93b2d9',
+            ]
 
-            if (selectedChamado.id === CHAMADO_EXCECAO_DUPLO_VALE) {
-              // Separa a parcela de R$ 88,22 (parcela única) e as parcelas do vale de R$ 3.980 (~265,33)
-              const parcelaUnica88 = existingParcelas.find(
-                (p: any) => Math.abs(Number(p.valor_parcela) - 88.22) < 0.01,
-              )
-              const parcelas3980 = existingParcelas.filter((p: any) => p.id !== parcelaUnica88?.id)
+            if (CHAMADOS_EXCECAO_DUPLO_VALE.includes(selectedChamado.id)) {
+              let parcelaUnica: any = null
+              let parcelasSequenciais: any[] = []
+
+              if (selectedChamado.id === 'f60a678a-f533-4135-88df-bd104fd38c1f') {
+                // Separa a parcela de R$ 88,22 (parcela única) e as parcelas do vale de R$ 3.980 (~265,33)
+                parcelaUnica = existingParcelas.find(
+                  (p: any) => Math.abs(Number(p.valor_parcela) - 88.22) < 0.01,
+                )
+                parcelasSequenciais = existingParcelas.filter((p: any) => p.id !== parcelaUnica?.id)
+              } else if (selectedChamado.id === 'ee19a40c-0f5c-4bd1-95cc-8c894c93b2d9') {
+                // Chamado PIA 002082026/201 (carro 51210):
+                // Separa a parcela única de R$ 147,05 e as 17 parcelas de R$ 305,88 / 305,92
+                parcelaUnica = existingParcelas.find(
+                  (p: any) => Math.abs(Number(p.valor_parcela) - 147.05) < 0.01,
+                )
+                parcelasSequenciais = existingParcelas.filter((p: any) => p.id !== parcelaUnica?.id)
+              }
 
               const baseMonthDate = new Date(Date.UTC(nowYear, nowMonth, 1))
                 .toISOString()
                 .split('T')[0]
 
-              // 1) Ajusta a parcela única de R$ 88,22 para o mês da aprovação
-              if (parcelaUnica88) {
+              // 1) Ajusta a parcela única para o mês da aprovação
+              if (parcelaUnica) {
                 await supabase
                   .from('parcelas_vales')
                   .update({
@@ -460,12 +478,12 @@ export default function ValesAprovacao() {
                     aprovado_diretoria: true,
                     aprovado_em: approvalDate.toISOString(),
                   })
-                  .eq('id', parcelaUnica88.id)
+                  .eq('id', parcelaUnica.id)
               }
 
-              // 2) Ajusta as parcelas do vale de R$ 3.980 (1ª parcela no mês da aprovação, seguintes mensais)
-              for (let i = 0; i < parcelas3980.length; i++) {
-                const parcela = parcelas3980[i]
+              // 2) Ajusta as parcelas sequenciais (1ª parcela no mês da aprovação, seguintes mensais)
+              for (let i = 0; i < parcelasSequenciais.length; i++) {
+                const parcela = parcelasSequenciais[i]
                 const newRefDate = new Date(Date.UTC(nowYear, nowMonth + i, 1))
                   .toISOString()
                   .split('T')[0]

@@ -533,17 +533,45 @@ export default function ValesAprovadosDP() {
     toast.loading('Gerando arquivo TXT...', { id: 'export-txt' })
 
     try {
-      const txtRows = exportableParcelas.map((p) => {
+      // Agrupar parcelas por colaborador (registro normalizado) + mês de referência (YYYY-MM).
+      // Quando o mesmo colaborador tiver mais de uma parcela no mesmo mês de referência,
+      // gera uma única linha com a somatória dos valores.
+      type GroupedTxtRow = {
+        registroPadded: string
+        codigo: string
+        totalValor: number
+      }
+
+      const groupedMap = new Map<string, GroupedTxtRow>()
+
+      for (const p of exportableParcelas) {
         const rawRegistro = String(p.registro).replace(/\D/g, '') || '0'
         const registroPadded = rawRegistro.padStart(6, '0')
 
-        const codigo = '602'
+        // Obter ano-mês de referência a partir de data_referencia (ex.: '2026-09-01' -> '2026-09')
+        const mesReferencia = String(p.data_referencia || '').slice(0, 7)
+        const groupKey = `${registroPadded}_${mesReferencia}`
 
-        const valueNum = Number(p.valor_parcela)
-        const valueStr = valueNum.toFixed(2).replace('.', ',')
+        const valorNum = Number(p.valor_parcela) || 0
+
+        const existing = groupedMap.get(groupKey)
+        if (existing) {
+          // Arredondar em centavos para evitar imprecisões de ponto flutuante
+          existing.totalValor = Math.round((existing.totalValor + valorNum) * 100) / 100
+        } else {
+          groupedMap.set(groupKey, {
+            registroPadded,
+            codigo: '602',
+            totalValor: valorNum,
+          })
+        }
+      }
+
+      const txtRows = Array.from(groupedMap.values()).map((row) => {
+        const valueStr = row.totalValor.toFixed(2).replace('.', ',')
         const valorPadded = valueStr.padStart(15, '0')
 
-        return `${registroPadded}\t${codigo}\t${valorPadded}`
+        return `${row.registroPadded}\t${row.codigo}\t${valorPadded}`
       })
 
       const txtContent = txtRows.join('\n')

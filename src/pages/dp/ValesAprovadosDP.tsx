@@ -96,10 +96,10 @@ export default function ValesAprovadosDP() {
         status_aprovacao,
         aprovacoes_diretoria,
         garagem,
-        formularios_espelho_danos ( registro_motorista, nome_motorista ),
+        formularios_espelho_danos!formularios_espelho_danos_chamado_id_fkey ( registro_motorista, nome_motorista ),
         solicitacoes_parcelamento ( registro, nome, quantidade_parcelas ),
-        documentos ( id, nome_arquivo, arquivo_url, tipo_documento, orcamento_url, criado_em ),
-        anexos_chamado_interno ( id, nome_arquivo, arquivo_url, criado_em )
+        documentos!documentos_chamado_id_fkey ( id, nome_arquivo, arquivo_url, tipo_documento, orcamento_url, criado_em ),
+        anexos_chamado_interno!anexos_chamado_interno_chamado_id_fkey ( id, nome_arquivo, arquivo_url, criado_em )
       )
     `)
       .eq('status', 'ativo')

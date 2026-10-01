@@ -259,7 +259,7 @@ export default function OsManutencao({
     try {
       setLoading(true)
       const { data, error } = await (supabase.from('documentos') as any)
-        .select('*, chamados(carro)')
+        .select('*, chamados!documentos_chamado_id_fkey(carro)')
         .in('tipo_documento', ['Vistoria', 'Espelho de Danos', 'OS de Manutenção'])
         .not('numero_os', 'is', null)
         .neq('numero_os', '')

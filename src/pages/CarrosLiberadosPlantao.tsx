@@ -85,7 +85,7 @@ export default function CarrosLiberadosPlantao({
     try {
       const { data, error } = await supabase
         .from('documentos')
-        .select('*, chamados(id, status, tipo_chamado, operacao)')
+        .select('*, chamados!documentos_chamado_id_fkey(id, status, tipo_chamado, operacao)')
         .in('tipo_documento', ['Vistoria', 'Espelho de Danos'])
         .not('numero_os', 'is', null)
         .neq('numero_os', '')

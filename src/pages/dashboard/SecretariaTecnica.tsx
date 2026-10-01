@@ -152,7 +152,7 @@ export default function SecretariaTecnica() {
         .from('documentos')
         .select(`
           *,
-          chamados (
+          chamados!documentos_chamado_id_fkey (
             id, 
             titulo,
             pia,

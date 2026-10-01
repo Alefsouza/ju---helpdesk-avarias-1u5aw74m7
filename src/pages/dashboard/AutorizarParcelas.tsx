@@ -20,7 +20,7 @@ export default function AutorizarParcelas() {
     const { data, error } = await supabase
       .from('solicitacoes_parcelamento')
       .select(
-        '*, chamados(titulo, id, nome_motorista, registro_motorista, formularios_espelho_danos(nome_motorista, registro_motorista))',
+        '*, chamados(titulo, id, nome_motorista, registro_motorista, formularios_espelho_danos!formularios_espelho_danos_chamado_id_fkey(nome_motorista, registro_motorista))',
       )
       .eq('status', 'pendente')
       .order('criado_em', { ascending: false })

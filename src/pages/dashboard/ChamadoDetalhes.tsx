@@ -74,6 +74,7 @@ import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
 import { isDanielBrotas, isBiancaZanatta } from '@/lib/juridico-access'
 import { UnificarChamadoModal } from '@/components/UnificarChamadoModal'
+import { DesunificarChamadoModal } from '@/components/DesunificarChamadoModal'
 import { useDocumentAction } from '@/hooks/use-document-action'
 import { useRegistroNome } from '@/hooks/use-registro-nome'
 import { Checkbox } from '@/components/ui/checkbox'
@@ -1545,6 +1546,7 @@ export default function ChamadoDetalhes() {
 
   const [transferModalOpen, setTransferModalOpen] = useState(false)
   const [unificarModalOpen, setUnificarModalOpen] = useState(false)
+  const [desunificarModalOpen, setDesunificarModalOpen] = useState(false)
   const [confirmReabrirOpen, setConfirmReabrirOpen] = useState(false)
   const [availableResponsaveis, setAvailableResponsaveis] = useState<Perfil[]>([])
   const [selectedResponsavel, setSelectedResponsavel] = useState<string>('')
@@ -3706,6 +3708,7 @@ export default function ChamadoDetalhes() {
     !isDaniel &&
     !isBianca
   const canUnify = isSupport && chamado.status !== 'finalizado' && chamado.status !== 'unificado'
+  const canDesunify = currentUserProfile?.tipo_usuario === 'admin' && chamado.status === 'unificado'
   const isJuridico = currentUserProfile?.tipo_usuario === 'juridico' && !isDaniel && !isBianca
   const isSinistro = currentUserProfile?.tipo_usuario === 'sinistro' && !isDaniel && !isBianca
 
@@ -3825,6 +3828,18 @@ export default function ChamadoDetalhes() {
             >
               <LinkIcon className="mr-2 h-3.5 w-3.5" />
               Unificar Chamado
+            </Button>
+          )}
+          {canDesunify && (
+            <Button
+              variant="outline"
+              size="sm"
+              className="text-amber-700 border-amber-300 bg-amber-50 hover:bg-amber-100 hover:text-amber-800 w-full sm:w-auto h-8 text-xs font-medium"
+              onClick={() => setDesunificarModalOpen(true)}
+              disabled={completing || transferLoading}
+            >
+              <LinkIcon className="mr-2 h-3.5 w-3.5 rotate-45" />
+              Desunificar Chamado
             </Button>
           )}
           {canTransfer && (
@@ -5046,6 +5061,27 @@ export default function ChamadoDetalhes() {
         }
         onSuccess={() => {
           setUnificarModalOpen(false)
+          fetchChamadoData()
+        }}
+      />
+
+      <DesunificarChamadoModal
+        isOpen={desunificarModalOpen}
+        onClose={() => setDesunificarModalOpen(false)}
+        chamado={
+          chamado
+            ? {
+                id: chamado.id,
+                titulo: chamado.titulo,
+                pia: chamado.pia,
+                status: chamado.status,
+                descricao: chamado.descricao,
+                unificado_em_chamado_id: chamado.unificado_em_chamado_id,
+              }
+            : null
+        }
+        onSuccess={() => {
+          setDesunificarModalOpen(false)
           fetchChamadoData()
         }}
       />

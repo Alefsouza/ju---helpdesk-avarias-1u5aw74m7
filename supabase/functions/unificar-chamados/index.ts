@@ -141,53 +141,79 @@ Deno.serve(async (req: Request) => {
     }
 
     // Start data migration:
-    // Update respostas_chamado
+    // Save original description if not already saved
+    const descricaoOrigemOriginal = origem.descricao_original || origem.descricao || ''
+
+    // Update respostas_chamado with tracking
     await supabaseAdmin
       .from('respostas_chamado')
-      .update({ chamado_id: destino_id })
+      .update({
+        chamado_id: destino_id,
+        chamado_origem_id: origem_id,
+      })
       .eq('chamado_id', origem_id)
 
-    // Update anexos_chamado
+    // Update anexos_chamado with tracking
     await supabaseAdmin
       .from('anexos_chamado')
-      .update({ chamado_id: destino_id })
+      .update({
+        chamado_id: destino_id,
+        chamado_origem_id: origem_id,
+      })
       .eq('chamado_id', origem_id)
 
-    // Update anexos_chamado_interno
+    // Update anexos_chamado_interno with tracking
     await supabaseAdmin
       .from('anexos_chamado_interno')
-      .update({ chamado_id: destino_id })
+      .update({
+        chamado_id: destino_id,
+        chamado_origem_id: origem_id,
+      })
       .eq('chamado_id', origem_id)
 
-    // Update documentos (RA/PIA)
+    // Update documentos (RA/PIA) with tracking
     await supabaseAdmin
       .from('documentos')
-      .update({ chamado_id: destino_id })
+      .update({
+        chamado_id: destino_id,
+        chamado_origem_id: origem_id,
+      })
       .eq('chamado_id', origem_id)
 
-    // Update formularios_espelho_danos
+    // Update formularios_espelho_danos with tracking
     await supabaseAdmin
       .from('formularios_espelho_danos')
-      .update({ chamado_id: destino_id })
+      .update({
+        chamado_id: destino_id,
+        chamado_origem_id: origem_id,
+      })
       .eq('chamado_id', origem_id)
 
-    // Update formularios_ido
+    // Update formularios_ido with tracking
     await supabaseAdmin
       .from('formularios_ido')
-      .update({ chamado_id: destino_id })
+      .update({
+        chamado_id: destino_id,
+        chamado_origem_id: origem_id,
+      })
       .eq('chamado_id', origem_id)
 
-    // Update historico_chamado
+    // Update historico_chamado with tracking
     await supabaseAdmin
       .from('historico_chamado')
-      .update({ chamado_id: destino_id })
+      .update({
+        chamado_id: destino_id,
+        chamado_origem_id: origem_id,
+      })
       .eq('chamado_id', origem_id)
 
-    // Mark origin as unified
+    // Mark origin as unified and save reverse relationship
     await supabaseAdmin
       .from('chamados')
       .update({
         status: 'unificado',
+        unificado_em_chamado_id: destino_id,
+        descricao_original: descricaoOrigemOriginal,
         atualizado_em: new Date().toISOString(),
         descricao:
           origem.descricao +

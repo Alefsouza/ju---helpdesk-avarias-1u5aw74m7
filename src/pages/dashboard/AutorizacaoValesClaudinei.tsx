@@ -91,7 +91,7 @@ export default function AutorizacaoValesClaudinei() {
       .from('chamados')
       .select(
         `id, titulo, descricao, carro, criado_em, atualizado_em, status_aprovacao_claudinei,
-        anexos_chamado_interno ( id, nome_arquivo, arquivo_url, criado_em )`,
+        anexos_chamado_interno!anexos_chamado_interno_chamado_id_fkey ( id, nome_arquivo, arquivo_url, criado_em )`,
       )
       .eq('status_aprovacao_claudinei', 'pendente')
       .in('id', chamadosComValeIds)

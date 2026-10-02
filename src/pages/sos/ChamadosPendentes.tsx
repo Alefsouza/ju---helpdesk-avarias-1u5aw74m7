@@ -42,8 +42,8 @@ export default function ChamadosPendentesSos() {
         .from('chamados')
         .select(`
           *,
-          anexos_chamado ( id, nome_arquivo, url_arquivo, tipo_arquivo ),
-          anexos_chamado_interno ( id, nome_arquivo, arquivo_url, tipo_arquivo )
+          anexos_chamado!anexos_chamado_chamado_id_fkey ( id, nome_arquivo, url_arquivo, tipo_arquivo ),
+          anexos_chamado_interno!anexos_chamado_interno_chamado_id_fkey ( id, nome_arquivo, arquivo_url, tipo_arquivo )
         `)
         .in('status', ['Pendente', 'pendente'])
         .order('criado_em', { ascending: false })

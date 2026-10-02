@@ -195,9 +195,9 @@ export default function ValoresAprovadosContabil() {
       .from('chamados')
       .select(
         `id, titulo, status_interno, criado_em, registro_motorista, nome_motorista, data_ocorrencia, numero_os,
-         documentos ( id, nome_arquivo, arquivo_url, tipo_documento, valor_orcamento ),
-         anexos_chamado_interno ( id, nome_arquivo, arquivo_url, criado_em ),
-         formularios_espelho_danos ( nome_motorista )`,
+         documentos!documentos_chamado_id_fkey ( id, nome_arquivo, arquivo_url, tipo_documento, valor_orcamento ),
+         anexos_chamado_interno!anexos_chamado_interno_chamado_id_fkey ( id, nome_arquivo, arquivo_url, criado_em ),
+         formularios_espelho_danos!formularios_espelho_danos_chamado_id_fkey ( nome_motorista )`,
       )
       .in('status_aprovacao', ['aprovado'])
       .order('atualizado_em', { ascending: false })

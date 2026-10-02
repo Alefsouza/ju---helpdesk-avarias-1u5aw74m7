@@ -61,7 +61,7 @@ export default function SinistrosCoc() {
         .from('chamados')
         .select(`
           *,
-          anexos_chamado(url_arquivo)
+          anexos_chamado!anexos_chamado_chamado_id_fkey(url_arquivo)
         `)
         .in('usuario_id', allowedUserIds)
         .order('criado_em', { ascending: false })

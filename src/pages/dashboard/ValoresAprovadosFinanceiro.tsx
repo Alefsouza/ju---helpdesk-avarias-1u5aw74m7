@@ -86,9 +86,9 @@ export default function ValoresAprovadosFinanceiro() {
       .from('chamados')
       .select(
         `id, titulo, status_interno, status_aprovacao, status_aprovacao_alex, status_aprovacao_claudinei, criado_em, registro_motorista, nome_motorista, data_ocorrencia, numero_os,
-         documentos ( id, nome_arquivo, arquivo_url, tipo_documento, valor_orcamento ),
-         anexos_chamado_interno ( id, nome_arquivo, arquivo_url, criado_em ),
-         formularios_espelho_danos ( nome_motorista )`,
+         documentos!documentos_chamado_id_fkey ( id, nome_arquivo, arquivo_url, tipo_documento, valor_orcamento ),
+         anexos_chamado_interno!anexos_chamado_interno_chamado_id_fkey ( id, nome_arquivo, arquivo_url, criado_em ),
+         formularios_espelho_danos!formularios_espelho_danos_chamado_id_fkey ( nome_motorista )`,
       )
       .or('status_aprovacao.eq.aprovado,status_interno.eq.aprovado_contabil')
       .order('atualizado_em', { ascending: false })

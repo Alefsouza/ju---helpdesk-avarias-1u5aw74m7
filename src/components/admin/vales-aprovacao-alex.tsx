@@ -60,7 +60,7 @@ export function ValesAprovacaoAlex() {
     const { data, error } = await supabase
       .from('chamados')
       .select(
-        `id, titulo, criado_em, atualizado_em, responsavel_id, usuario_id, status_aprovacao_alex, status_aprovacao_claudinei, status_interno, status, registro_motorista, nome_motorista, data_ocorrencia, formularios_espelho_danos ( registro_motorista, nome_motorista, data ), anexos_chamado_interno ( id, nome_arquivo )`,
+        `id, titulo, criado_em, atualizado_em, responsavel_id, usuario_id, status_aprovacao_alex, status_aprovacao_claudinei, status_interno, status, registro_motorista, nome_motorista, data_ocorrencia, formularios_espelho_danos!formularios_espelho_danos_chamado_id_fkey ( registro_motorista, nome_motorista, data ), anexos_chamado_interno!anexos_chamado_interno_chamado_id_fkey ( id, nome_arquivo )`,
       )
       .eq('status', 'finalizado')
       .eq('status_aprovacao_alex', 'pendente')

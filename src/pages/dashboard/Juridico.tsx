@@ -98,7 +98,9 @@ export default function Juridico() {
     try {
       let query = supabase
         .from('chamados')
-        .select('*, formularios_espelho_danos(registro_motorista, nome_motorista)')
+        .select(
+          '*, formularios_espelho_danos!formularios_espelho_danos_chamado_id_fkey(registro_motorista, nome_motorista)',
+        )
         .order('atualizado_em', { ascending: false })
 
       if (isSinistro && juridicoUserIds.length > 0) {

@@ -175,7 +175,9 @@ export default function OrcamentosDevolvidos() {
       // 2. Buscar dados dos chamados correspondentes
       let query = supabase
         .from('chamados')
-        .select('*, formularios_espelho_danos(registro_motorista, nome_motorista)')
+        .select(
+          '*, formularios_espelho_danos!formularios_espelho_danos_chamado_id_fkey(registro_motorista, nome_motorista)',
+        )
         .in('id', uniqueChamadoIds)
         .order('atualizado_em', { ascending: false })
 

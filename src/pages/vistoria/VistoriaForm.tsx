@@ -168,11 +168,6 @@ export default function VistoriaForm() {
   }
 
   const onSubmit = async (values: FormValues) => {
-    if (photos.length === 0) {
-      toast.error('Adicione ao menos uma foto do dano.')
-      return
-    }
-
     const userReg = (profile as any)?.registro
     if (!userReg || !profile?.nome_completo) {
       toast.error('Seu perfil está incompleto (falta Nome ou Registro).')
@@ -471,10 +466,10 @@ export default function VistoriaForm() {
                 <div>
                   <FormLabel className="flex items-center gap-2 text-base">
                     <Camera className="w-5 h-5" />
-                    Fotos do Dano <span className="text-red-500">*</span>
+                    Fotos do Dano
                   </FormLabel>
                   <p className="text-sm text-muted-foreground mt-1">
-                    Insira até 5 fotos claras das avarias. (Mínimo 1 foto obrigatória)
+                    Insira até 5 fotos claras das avarias (opcional).
                   </p>
                 </div>
 

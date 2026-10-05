@@ -2864,6 +2864,12 @@ export default function ChamadoDetalhes() {
   const confirmDeleteInternal = async () => {
     if (!anexoInternoToDelete) return
 
+    if (isExclusaoAnexoBloqueada) {
+      toast.error('Exclusão não permitida: chamado já aprovado pela diretoria/gestores.')
+      setAnexoInternoToDelete(null)
+      return
+    }
+
     try {
       const { id: anexoId, url } = anexoInternoToDelete
       const urlWithoutQuery = url.split('?')[0]
@@ -3389,6 +3395,11 @@ export default function ChamadoDetalhes() {
   }
 
   const handleReabrir = async () => {
+    if (isReabrirBloqueado) {
+      toast.error('Reabertura não permitida: chamado já aprovado pela diretoria/gestores.')
+      return
+    }
+
     setCompleting(true)
     try {
       const { data, error: updateError } = await supabase
@@ -3712,6 +3723,15 @@ export default function ChamadoDetalhes() {
   const isJuridico = currentUserProfile?.tipo_usuario === 'juridico' && !isDaniel && !isBianca
   const isSinistro = currentUserProfile?.tipo_usuario === 'sinistro' && !isDaniel && !isBianca
 
+  const isGestorAprovado =
+    chamado.status_aprovacao_alex === 'aprovado' ||
+    chamado.status_aprovacao_claudinei === 'aprovado'
+  const isPerfilBloqueado =
+    currentUserProfile?.tipo_usuario === 'juridico' ||
+    currentUserProfile?.tipo_usuario === 'sinistro'
+  const isReabrirBloqueado = isGestorAprovado && isPerfilBloqueado
+  const isExclusaoAnexoBloqueada = isGestorAprovado && isPerfilBloqueado
+
   const orcamentoDoc = documentosChamado.find((d) => d.tipo_documento === 'Orçamento')
   const hasOrcamentoInterno = anexosInternos.some((a) => {
     const nomeLower = a.nome_arquivo.toLowerCase()
@@ -3866,7 +3886,7 @@ export default function ChamadoDetalhes() {
               {completing ? 'Finalizando...' : 'Finalizar Chamado'}
             </Button>
           )}
-          {chamado.status === 'finalizado' && isSupport && (
+          {chamado.status === 'finalizado' && isSupport && !isReabrirBloqueado && (
             <Button
               variant="outline"
               size="sm"
@@ -4516,24 +4536,25 @@ export default function ChamadoDetalhes() {
                         {(user?.id === anexo.usuario_id ||
                           user?.id === chamado.responsavel_id ||
                           currentUserProfile?.tipo_usuario === 'admin' ||
-                          isTiAdmin) && (
-                          <Button
-                            size="icon"
-                            variant="ghost"
-                            className="h-8 w-8 text-slate-500 hover:text-red-600"
-                            onClick={() =>
-                              setAnexoInternoToDelete({ id: anexo.id, url: anexo.arquivo_url })
-                            }
-                            disabled={
-                              loadingAction === `${anexo.id}-download` ||
-                              loadingAction === `${anexo.id}-view` ||
-                              (savingDoc && editingDoc?.anexo.id === anexo.id)
-                            }
-                            title="Excluir anexo"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        )}
+                          isTiAdmin) &&
+                          !isExclusaoAnexoBloqueada && (
+                            <Button
+                              size="icon"
+                              variant="ghost"
+                              className="h-8 w-8 text-slate-500 hover:text-red-600"
+                              onClick={() =>
+                                setAnexoInternoToDelete({ id: anexo.id, url: anexo.arquivo_url })
+                              }
+                              disabled={
+                                loadingAction === `${anexo.id}-download` ||
+                                loadingAction === `${anexo.id}-view` ||
+                                (savingDoc && editingDoc?.anexo.id === anexo.id)
+                              }
+                              title="Excluir anexo"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          )}
                       </div>
                     </div>
                   ))}

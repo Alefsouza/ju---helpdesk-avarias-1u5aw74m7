@@ -85,6 +85,10 @@ export default function Defiridos() {
     currentUserProfile?.tipo_usuario === 'juridico' ||
     isMaria
 
+  const isPerfilBloqueado =
+    currentUserProfile?.tipo_usuario === 'juridico' ||
+    currentUserProfile?.tipo_usuario === 'sinistro'
+
   const defaultWidths: Record<string, number> = {
     pia: 120,
     titulo: 300,
@@ -215,6 +219,20 @@ export default function Defiridos() {
   }, [user, debouncedSearch, date])
 
   const handleReabrir = async (chamadoId: string) => {
+    const chamadoTarget = chamados.find((c) => c.id === chamadoId)
+    const chamadoAprovado =
+      chamadoTarget?.status_aprovacao_alex === 'aprovado' ||
+      chamadoTarget?.status_aprovacao_claudinei === 'aprovado'
+
+    if (isPerfilBloqueado && chamadoAprovado) {
+      toast({
+        title: 'Reabertura não permitida: chamado já aprovado pela diretoria/gestores.',
+        variant: 'destructive',
+      })
+      setConfirmReabrirId(null)
+      return
+    }
+
     setCompletingId(chamadoId)
     setConfirmReabrirId(null)
     try {
@@ -540,21 +558,27 @@ export default function Defiridos() {
                         >
                           <ArrowRight className="h-4 w-4" />
                         </Button>
-                        {isSupport && c.status === 'finalizado' && (
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            className="px-2"
-                            onClick={(e) => {
-                              e.stopPropagation()
-                              setConfirmReabrirId(c.id)
-                            }}
-                            disabled={completingId === c.id}
-                            title="Reabrir Chamado"
-                          >
-                            <RotateCcw className="h-4 w-4" />
-                          </Button>
-                        )}
+                        {isSupport &&
+                          c.status === 'finalizado' &&
+                          !(
+                            isPerfilBloqueado &&
+                            (c.status_aprovacao_alex === 'aprovado' ||
+                              c.status_aprovacao_claudinei === 'aprovado')
+                          ) && (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="px-2"
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                setConfirmReabrirId(c.id)
+                              }}
+                              disabled={completingId === c.id}
+                              title="Reabrir Chamado"
+                            >
+                              <RotateCcw className="h-4 w-4" />
+                            </Button>
+                          )}
                       </div>
                     </TableCell>
                   </TableRow>
@@ -608,20 +632,26 @@ export default function Defiridos() {
                     >
                       <ArrowRight className="h-4 w-4" />
                     </Button>
-                    {isSupport && c.status === 'finalizado' && (
-                      <Button
-                        variant="outline"
-                        className="flex-1"
-                        onClick={(e) => {
-                          e.stopPropagation()
-                          setConfirmReabrirId(c.id)
-                        }}
-                        disabled={completingId === c.id}
-                        title="Reabrir Chamado"
-                      >
-                        <RotateCcw className="h-4 w-4" />
-                      </Button>
-                    )}
+                    {isSupport &&
+                      c.status === 'finalizado' &&
+                      !(
+                        isPerfilBloqueado &&
+                        (c.status_aprovacao_alex === 'aprovado' ||
+                          c.status_aprovacao_claudinei === 'aprovado')
+                      ) && (
+                        <Button
+                          variant="outline"
+                          className="flex-1"
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            setConfirmReabrirId(c.id)
+                          }}
+                          disabled={completingId === c.id}
+                          title="Reabrir Chamado"
+                        >
+                          <RotateCcw className="h-4 w-4" />
+                        </Button>
+                      )}
                   </div>
                 </CardContent>
               </Card>

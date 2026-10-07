@@ -98,7 +98,7 @@ export default function ValesAprovadosDP() {
         garagem,
         formularios_espelho_danos!formularios_espelho_danos_chamado_id_fkey ( registro_motorista, nome_motorista ),
         solicitacoes_parcelamento ( registro, nome, quantidade_parcelas ),
-        documentos!documentos_chamado_id_fkey ( id, nome_arquivo, arquivo_url, tipo_documento, orcamento_url, criado_em ),
+        documentos!documentos_chamado_id_fkey ( id, nome_arquivo, arquivo_url, tipo_documento, orcamento_url, criado_em, registro_motorista, nome_motorista, registro_responsavel, nome_responsavel ),
         anexos_chamado_interno!anexos_chamado_interno_chamado_id_fkey ( id, nome_arquivo, arquivo_url, criado_em )
       )
     `)
@@ -158,6 +158,36 @@ export default function ValesAprovadosDP() {
         return temDuasAprovacoes
       }) || []
 
+    // Helper para localizar documento tipo Vale / Autorização de Desconto do chamado
+    const getDocVale = (c: any) => {
+      if (!c || !c.documentos || !Array.isArray(c.documentos) || c.documentos.length === 0)
+        return null
+      const docs = c.documentos
+      // Prioridade: tipo_documento Vale ou autorizacao_desconto
+      const docTipo = docs.find((d: any) => {
+        const t = (d.tipo_documento || '').toLowerCase()
+        return (
+          t === 'vale' ||
+          t === 'autorizacao_desconto' ||
+          t === 'autorização_desconto' ||
+          t === 'autorizacao'
+        )
+      })
+      if (docTipo) return docTipo
+
+      // Fallback: nome_arquivo contendo autorizacao ou vale
+      const docNome = docs.find((d: any) => {
+        const n = (d.nome_arquivo || '').toLowerCase()
+        return (
+          n.includes('autorizacao') ||
+          n.includes('autorização') ||
+          n.includes('desconto') ||
+          n.includes('vale')
+        )
+      })
+      return docNome || null
+    }
+
     const userIds = [
       ...new Set(validParcelas.map((p: any) => p.chamados?.usuario_id).filter(Boolean)),
     ]
@@ -172,6 +202,9 @@ export default function ValesAprovadosDP() {
       usersMap = new Map((usersData || []).map((u) => [u.id, u]))
     }
 
+    // Coleta nomes que precisam de lookup cruzado na tabela registros caso falte registro
+    const namesToLookup = new Set<string>()
+
     // Coleta todos os possíveis registros de colaboradores dos vales aprovados
     const rawRegistrosToFetch = new Set<string>()
     validParcelas.forEach((p: any) => {
@@ -183,11 +216,14 @@ export default function ValesAprovadosDP() {
       const solicitacaoData = Array.isArray(c.solicitacoes_parcelamento)
         ? c.solicitacoes_parcelamento[0]
         : c.solicitacoes_parcelamento
+      const docVale = getDocVale(c)
       const u = c.usuario_id ? usersMap.get(c.usuario_id) : null
 
       const cand =
         solicitacaoData?.registro ||
         espelhoData?.registro_motorista ||
+        docVale?.registro_motorista ||
+        docVale?.registro_responsavel ||
         c.registro_motorista ||
         u?.registro
 
@@ -197,8 +233,48 @@ export default function ValesAprovadosDP() {
         // Adiciona também a forma sem zeros à esquerda e padronizada
         const normalized = val.replace(/^0+(?!$)/, '')
         if (normalized) rawRegistrosToFetch.add(normalized)
+      } else {
+        // Se não tiver registro mas tiver nome vindo do docVale, coleta nome para busca cruzada
+        const candNome =
+          solicitacaoData?.nome ||
+          espelhoData?.nome_motorista ||
+          docVale?.nome_motorista ||
+          docVale?.nome_responsavel
+        if (candNome && String(candNome).trim() && String(candNome).trim() !== 'N/A') {
+          namesToLookup.add(String(candNome).trim())
+        }
       }
     })
+
+    // Busca cruzada na tabela registros por nome para colaboradores sem registro
+    const nomeToRegistroMap = new Map<string, { registro: string; garagem?: string }>()
+    if (namesToLookup.size > 0) {
+      for (const name of namesToLookup) {
+        try {
+          const { data: regRows } = await (supabase.from('registros') as any)
+            .select('registro, nome, garagem_colaborador')
+            .ilike('nome', `%${name}%`)
+            .limit(5)
+          if (regRows && regRows.length > 0) {
+            // Procura exato ou usa o primeiro
+            const exact =
+              regRows.find((r: any) => r.nome?.toLowerCase() === name.toLowerCase()) || regRows[0]
+            if (exact && exact.registro) {
+              const regVal = String(exact.registro).trim()
+              nomeToRegistroMap.set(name.toLowerCase(), {
+                registro: regVal,
+                garagem: exact.garagem_colaborador || undefined,
+              })
+              rawRegistrosToFetch.add(regVal)
+              const norm = regVal.replace(/^0+(?!$)/, '')
+              if (norm) rawRegistrosToFetch.add(norm)
+            }
+          }
+        } catch {
+          /* intentionally ignored */
+        }
+      }
+    }
 
     const registrosArray = Array.from(rawRegistrosToFetch)
     let registrosColaboradorMap = new Map<string, string>() // key: registro normalizado e original -> garagem_colaborador
@@ -298,15 +374,28 @@ export default function ValesAprovadosDP() {
         ? chamado.solicitacoes_parcelamento[0]
         : chamado.solicitacoes_parcelamento
 
+      const docVale = getDocVale(chamado)
+
+      // Se docVale tem nome mas não tem registro, tentar encontrar registro via mapa de busca cruzada
+      const docValeNome = docVale?.nome_motorista || docVale?.nome_responsavel || null
+      const docValeRegFromLookup = docValeNome
+        ? nomeToRegistroMap.get(docValeNome.toLowerCase())?.registro || null
+        : null
+
       const registro =
         solicitacaoData?.registro ||
         espelhoData?.registro_motorista ||
+        docVale?.registro_motorista ||
+        docVale?.registro_responsavel ||
+        docValeRegFromLookup ||
         chamado.registro_motorista ||
         user?.registro ||
         'N/A'
       const nome =
         solicitacaoData?.nome ||
         espelhoData?.nome_motorista ||
+        docVale?.nome_motorista ||
+        docVale?.nome_responsavel ||
         chamado.nome_motorista ||
         user?.nome_completo ||
         'N/A'

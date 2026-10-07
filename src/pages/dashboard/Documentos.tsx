@@ -77,17 +77,32 @@ export default function Documentos() {
 
     const fetchDocumentos = async () => {
       try {
-        const { data, error } = await supabase
-          .from('documentos')
-          .select('*')
-          .in('tipo_documento', ['IDO', 'Espelho de Danos'])
-          .order('criado_em', { ascending: false })
+        const PAGE_SIZE = 1000
+        let from = 0
+        let allDocs: Documento[] = []
+        let hasMore = true
 
-        if (error) throw error
+        while (hasMore) {
+          const { data, error } = await supabase
+            .from('documentos')
+            .select('*')
+            .in('tipo_documento', ['IDO', 'Espelho de Danos'])
+            .order('criado_em', { ascending: false })
+            .range(from, from + PAGE_SIZE - 1)
 
-        const docs = ((data as Documento[]) || []).filter(
-          (doc) => doc.tipo_documento === 'IDO' || !!doc.numero_os,
-        )
+          if (error) throw error
+
+          const pageDocs = (data as Documento[]) || []
+          allDocs = allDocs.concat(pageDocs)
+
+          if (pageDocs.length < PAGE_SIZE) {
+            hasMore = false
+          } else {
+            from += PAGE_SIZE
+          }
+        }
+
+        const docs = allDocs.filter((doc) => doc.tipo_documento === 'IDO' || !!doc.numero_os)
         setDocumentos(docs)
       } catch (error: any) {
         console.error('Erro ao buscar documentos:', error)

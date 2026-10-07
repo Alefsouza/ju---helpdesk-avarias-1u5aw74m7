@@ -148,35 +148,58 @@ export default function SecretariaTecnica() {
   const fetchDocumentos = async () => {
     try {
       setLoading(true)
-      const { data, error } = await supabase
-        .from('documentos')
-        .select(`
-          *,
-          chamados!documentos_chamado_id_fkey (
-            id, 
-            titulo,
-            pia,
-            registro_motorista, 
-            nome_motorista, 
-            responsavel_id,
-            tipo_chamado,
-            carro,
-            status,
-            numero_os
-          ),
-          formularios_espelho_danos(*)
-        `)
-        .in('tipo_documento', ['Vistoria', 'Espelho de Danos'])
-        .not('numero_os', 'is', null)
-        .neq('numero_os', '')
-        .neq('status_liberacao', 'sem_orcamento')
-        .order('criado_em', { ascending: false })
 
-      if (error) throw error
+      const PAGE_SIZE = 1000
+      let from = 0
+      let allDocs: any[] = []
+      let hasMore = true
 
-      // Filter: must have maintenance photos AND (NO orcamento_url OR is_recusado)
+      while (hasMore) {
+        let query = supabase
+          .from('documentos')
+          .select(`
+            *,
+            chamados!documentos_chamado_id_fkey (
+              id, 
+              titulo,
+              pia,
+              registro_motorista, 
+              nome_motorista, 
+              responsavel_id,
+              tipo_chamado,
+              carro,
+              status,
+              numero_os
+            ),
+            formularios_espelho_danos(*)
+          `)
+          .in('tipo_documento', ['Vistoria', 'Espelho de Danos'])
+          .not('numero_os', 'is', null)
+          .neq('numero_os', '')
+          .neq('status_liberacao', 'sem_orcamento')
+          .not('fotos_manutencao', 'is', null)
+          .neq('fotos_manutencao', '[]')
+          .or('orcamento_url.is.null,is_recusado.eq.true')
+          .order('criado_em', { ascending: false })
+          .range(from, from + PAGE_SIZE - 1)
+
+        const { data, error } = await query
+
+        if (error) throw error
+
+        const pageDocs = data || []
+        allDocs = allDocs.concat(pageDocs)
+
+        if (pageDocs.length < PAGE_SIZE) {
+          hasMore = false
+        } else {
+          from += PAGE_SIZE
+        }
+      }
+
+      // Filter: guarantee maintenance photos is non-empty array AND (NO orcamento_url OR is_recusado)
       const pendingDocuments =
-        data?.filter((doc: any) => {
+        allDocs.filter((doc: any) => {
           const hasPhotos = Array.isArray(doc.fotos_manutencao) && doc.fotos_manutencao.length > 0
           const hasOrcamento = !!doc.orcamento_url
           return hasPhotos && (!hasOrcamento || doc.is_recusado)

@@ -83,17 +83,34 @@ export default function CarrosLiberadosPlantao({
 
   const fetchDocumentos = async () => {
     try {
-      const { data, error } = await supabase
-        .from('documentos')
-        .select('*, chamados!documentos_chamado_id_fkey(id, status, tipo_chamado, operacao)')
-        .in('tipo_documento', ['Vistoria', 'Espelho de Danos'])
-        .not('numero_os', 'is', null)
-        .neq('numero_os', '')
-        .ilike('garagem', garagemFilter)
+      const PAGE_SIZE = 1000
+      let from = 0
+      let allDocs: any[] = []
+      let hasMore = true
 
-      if (error) throw error
+      while (hasMore) {
+        const { data, error } = await supabase
+          .from('documentos')
+          .select('*, chamados!documentos_chamado_id_fkey(id, status, tipo_chamado, operacao)')
+          .in('tipo_documento', ['Vistoria', 'Espelho de Danos'])
+          .not('numero_os', 'is', null)
+          .neq('numero_os', '')
+          .ilike('garagem', garagemFilter)
+          .range(from, from + PAGE_SIZE - 1)
 
-      const validDocs = (data || []).filter((d) => {
+        if (error) throw error
+
+        const pageDocs = data || []
+        allDocs = allDocs.concat(pageDocs)
+
+        if (pageDocs.length < PAGE_SIZE) {
+          hasMore = false
+        } else {
+          from += PAGE_SIZE
+        }
+      }
+
+      const validDocs = allDocs.filter((d) => {
         if (d.chamados && Array.isArray(d.chamados)) {
           return !d.chamados.some((c: any) => c.status === 'operacao' || c.operacao === 'Enviado')
         }

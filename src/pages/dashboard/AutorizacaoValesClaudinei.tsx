@@ -35,6 +35,28 @@ export default function AutorizacaoValesClaudinei() {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [isRejectOpen, setIsRejectOpen] = useState(false)
   const [rejectReason, setRejectReason] = useState('')
+  const [selectedDoc, setSelectedDoc] = useState<{ url: string; title: string } | null>(null)
+
+  const isImageFile = (url: string, title?: string): boolean => {
+    const cleanUrl = url.split('?')[0].toLowerCase()
+    const cleanTitle = (title || '').toLowerCase()
+    return (
+      cleanUrl.endsWith('.jpg') ||
+      cleanUrl.endsWith('.jpeg') ||
+      cleanUrl.endsWith('.png') ||
+      cleanUrl.endsWith('.webp') ||
+      cleanUrl.endsWith('.gif') ||
+      cleanTitle.endsWith('.jpg') ||
+      cleanTitle.endsWith('.jpeg') ||
+      cleanTitle.endsWith('.png') ||
+      cleanTitle.endsWith('.webp') ||
+      cleanTitle.endsWith('.gif')
+    )
+  }
+
+  const handleOpenDoc = (url: string, title: string) => {
+    setSelectedDoc({ url, title })
+  }
 
   const isAuthorized =
     user?.email === 'claudinei.mariano@viasudeste.com' ||
@@ -90,7 +112,7 @@ export default function AutorizacaoValesClaudinei() {
     const { data, error } = await supabase
       .from('chamados')
       .select(
-        `id, titulo, descricao, carro, criado_em, atualizado_em, status_aprovacao_claudinei,
+        `id, titulo, descricao, pia, carro, criado_em, atualizado_em, status_aprovacao_claudinei,
         anexos_chamado_interno!anexos_chamado_interno_chamado_id_fkey ( id, nome_arquivo, arquivo_url, criado_em )`,
       )
       .eq('status_aprovacao_claudinei', 'pendente')
@@ -231,6 +253,7 @@ export default function AutorizacaoValesClaudinei() {
                 <TableHeader>
                   <TableRow>
                     <TableHead>Chamado</TableHead>
+                    <TableHead>PIA</TableHead>
                     <TableHead>Carro</TableHead>
                     <TableHead>Descrição</TableHead>
                     <TableHead>Anexos Internos</TableHead>
@@ -248,6 +271,9 @@ export default function AutorizacaoValesClaudinei() {
                           {chamado.titulo || chamado.id}
                         </Link>
                       </TableCell>
+                      <TableCell className="font-mono text-sm text-slate-700">
+                        {chamado.pia || '-'}
+                      </TableCell>
                       <TableCell>{chamado.carro || '-'}</TableCell>
                       <TableCell className="max-w-xs">
                         <p
@@ -260,16 +286,17 @@ export default function AutorizacaoValesClaudinei() {
                       <TableCell>
                         <div className="flex flex-col gap-1">
                           {(chamado.anexos_chamado_interno || []).map((anexo: any) => (
-                            <a
+                            <button
                               key={anexo.id}
-                              href={anexo.arquivo_url}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="flex items-center gap-1.5 text-xs text-primary hover:underline"
+                              type="button"
+                              onClick={() =>
+                                handleOpenDoc(anexo.arquivo_url, anexo.nome_arquivo || 'Documento')
+                              }
+                              className="flex items-center gap-1.5 text-xs text-primary hover:underline text-left cursor-pointer transition-colors"
                             >
                               <FileText className="h-3 w-3 shrink-0" />
                               <span className="truncate max-w-[150px]">{anexo.nome_arquivo}</span>
-                            </a>
+                            </button>
                           ))}
                           {(!chamado.anexos_chamado_interno ||
                             chamado.anexos_chamado_interno.length === 0) && (
@@ -368,6 +395,41 @@ export default function AutorizacaoValesClaudinei() {
               Confirmar Recusa
             </Button>
           </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        open={!!selectedDoc}
+        onOpenChange={(open) => {
+          if (!open) setSelectedDoc(null)
+        }}
+      >
+        <DialogContent className="max-w-[96vw] w-[96vw] h-[94vh] max-h-[94vh] flex flex-col p-3 sm:p-5 gap-2 sm:gap-3">
+          <DialogHeader className="flex flex-row items-center justify-between pr-8 border-b pb-2.5 sm:pb-3 space-y-0 shrink-0">
+            <DialogTitle className="text-base sm:text-lg font-semibold truncate flex items-center gap-2">
+              <FileText className="h-5 w-5 text-primary shrink-0" />
+              <span className="truncate">{selectedDoc?.title || 'Visualização do Documento'}</span>
+            </DialogTitle>
+          </DialogHeader>
+
+          <div className="flex-1 w-full h-full min-h-0 bg-slate-100 rounded-md overflow-hidden flex items-center justify-center">
+            {selectedDoc &&
+              (isImageFile(selectedDoc.url, selectedDoc.title) ? (
+                <div className="w-full h-full overflow-auto flex items-center justify-center p-2 sm:p-4">
+                  <img
+                    src={selectedDoc.url}
+                    alt={selectedDoc.title}
+                    className="max-w-full max-h-full w-auto h-auto object-contain rounded shadow-sm select-none"
+                  />
+                </div>
+              ) : (
+                <iframe
+                  src={selectedDoc.url}
+                  title={selectedDoc.title}
+                  className="w-full h-full border-0 rounded"
+                />
+              ))}
+          </div>
         </DialogContent>
       </Dialog>
     </div>

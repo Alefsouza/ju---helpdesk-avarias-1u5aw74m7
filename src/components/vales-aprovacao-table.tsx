@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { format } from 'date-fns'
-import { FileText, FileSignature, Check, X } from 'lucide-react'
+import { FileText, FileSignature, Check, X, Eye } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
   Table,
@@ -14,7 +14,7 @@ import {
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { Badge } from '@/components/ui/badge'
 import { supabase } from '@/lib/supabase/client'
-import { DocumentViewerModal } from '@/components/DocumentViewerModal'
+import { DocumentViewerModal, isImageDocument } from '@/components/DocumentViewerModal'
 
 const stripAccents = (str: string): string =>
   str
@@ -175,6 +175,8 @@ interface ValesAprovacaoTableProps {
   showActions: boolean
   onApproveClick: (chamado: any) => void
   onRejectClick: (chamado: any) => void
+  lastViewedChamadoId?: string | null
+  onDocumentView?: (chamadoId: string) => void
 }
 
 export function ValesAprovacaoTable({
@@ -183,9 +185,18 @@ export function ValesAprovacaoTable({
   showActions,
   onApproveClick,
   onRejectClick,
+  lastViewedChamadoId,
+  onDocumentView,
 }: ValesAprovacaoTableProps) {
   const [selectedDoc, setSelectedDoc] = useState<{ url: string; title: string } | null>(null)
+  const [internalLastViewedChamadoId, setInternalLastViewedChamadoId] = useState<string | null>(
+    null,
+  )
   const [lookupMap, setLookupMap] = useState<CrossLookupMap>(new Map())
+
+  // Usa lastViewedChamadoId compartilhado se fornecido via prop, senão estado interno
+  const activeLastViewedId =
+    lastViewedChamadoId !== undefined ? lastViewedChamadoId : internalLastViewedChamadoId
 
   // Busca cruzada na tabela 'registros' para colaboradores cujo chamado não trouxe registro mas possui nome
   useEffect(() => {
@@ -282,8 +293,14 @@ export function ValesAprovacaoTable({
     }
   }, [chamados])
 
-  const handleOpenDoc = (url: string, title: string) => {
+  const handleOpenDoc = (url: string, title: string, chamadoId?: string) => {
     setSelectedDoc({ url, title })
+    if (chamadoId) {
+      setInternalLastViewedChamadoId(chamadoId)
+      if (onDocumentView) {
+        onDocumentView(chamadoId)
+      }
+    }
   }
   if (chamados.length === 0) {
     return (
@@ -391,37 +408,158 @@ export function ValesAprovacaoTable({
                   </div>
                 </TableCell>
                 <TableCell>
-                  <div className="flex flex-col gap-1">
-                    {orcamentoUrl && (
-                      <button
-                        type="button"
-                        onClick={() => handleOpenDoc(orcamentoUrl, 'Orçamento')}
-                        className="flex items-center gap-1.5 text-xs text-primary hover:underline text-left cursor-pointer transition-colors"
-                      >
-                        <FileText className="h-3 w-3 shrink-0" />
-                        <span className="truncate max-w-[150px]">Orçamento</span>
-                      </button>
-                    )}
-                    {relevantAnexos.map((anexo: any) => {
-                      const label = normalizeAttachmentLabel(anexo.nome_arquivo)
-                      return (
-                        <button
-                          key={anexo.id}
-                          type="button"
-                          onClick={() =>
-                            handleOpenDoc(anexo.arquivo_url, anexo.nome_arquivo || label)
-                          }
-                          className="flex items-center gap-1.5 text-xs text-primary hover:underline text-left cursor-pointer transition-colors"
-                        >
-                          <FileSignature className="h-3 w-3 shrink-0" />
-                          <span className="truncate max-w-[150px]">{label}</span>
-                        </button>
-                      )
-                    })}
-                    {!orcamentoUrl && relevantAnexos.length === 0 && (
-                      <span className="text-xs text-muted-foreground">Nenhum anexo</span>
-                    )}
-                  </div>
+                  {(() => {
+                    const isLastViewed = activeLastViewedId === chamado.id
+                    // Efeito de destaque em verde neon suave quando foi o último chamado com documento aberto
+                    const neonHighlightClass = isLastViewed
+                      ? 'ring-2 ring-[#39FF14] ring-offset-1 shadow-[0_0_12px_rgba(57,255,20,0.65)] border-[#39FF14]'
+                      : 'border-slate-200 dark:border-slate-700 hover:border-slate-400 dark:hover:border-slate-500'
+
+                    return (
+                      <div className="flex flex-col gap-2">
+                        {/* Miniaturas dos documentos */}
+                        <div className="flex items-center gap-2 flex-wrap">
+                          {orcamentoUrl &&
+                            (() => {
+                              const isImg = isImageDocument(orcamentoUrl, 'Orçamento')
+                              return (
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <button
+                                      type="button"
+                                      onClick={() =>
+                                        handleOpenDoc(orcamentoUrl, 'Orçamento', chamado.id)
+                                      }
+                                      className={`relative group w-11 h-11 rounded-md overflow-hidden bg-slate-100 dark:bg-slate-800 border transition-all duration-200 cursor-pointer flex items-center justify-center shrink-0 ${neonHighlightClass}`}
+                                      aria-label="Abrir Orçamento"
+                                    >
+                                      {isImg ? (
+                                        <img
+                                          src={orcamentoUrl}
+                                          alt="Orçamento"
+                                          className="w-full h-full object-cover transition-transform duration-200 group-hover:scale-110"
+                                          loading="lazy"
+                                        />
+                                      ) : (
+                                        <div className="w-full h-full flex flex-col items-center justify-center bg-blue-50/70 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400">
+                                          <FileText className="h-5 w-5" />
+                                          <span className="text-[9px] font-bold uppercase tracking-tight leading-none mt-0.5">
+                                            PDF
+                                          </span>
+                                        </div>
+                                      )}
+                                      <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                                        <Eye className="h-4 w-4 text-white" />
+                                      </div>
+                                      {isLastViewed && (
+                                        <span
+                                          className="absolute top-0.5 right-0.5 w-2 h-2 rounded-full bg-[#39FF14] shadow-[0_0_6px_#39FF14]"
+                                          title="Último visualizado"
+                                        />
+                                      )}
+                                    </button>
+                                  </TooltipTrigger>
+                                  <TooltipContent side="top">
+                                    <p className="text-xs">Orçamento (clique para ampliar)</p>
+                                  </TooltipContent>
+                                </Tooltip>
+                              )
+                            })()}
+
+                          {relevantAnexos.map((anexo: any) => {
+                            const label = normalizeAttachmentLabel(anexo.nome_arquivo)
+                            const isImg = isImageDocument(anexo.arquivo_url, anexo.nome_arquivo)
+                            return (
+                              <Tooltip key={anexo.id}>
+                                <TooltipTrigger asChild>
+                                  <button
+                                    type="button"
+                                    onClick={() =>
+                                      handleOpenDoc(
+                                        anexo.arquivo_url,
+                                        anexo.nome_arquivo || label,
+                                        chamado.id,
+                                      )
+                                    }
+                                    className={`relative group w-11 h-11 rounded-md overflow-hidden bg-slate-100 dark:bg-slate-800 border transition-all duration-200 cursor-pointer flex items-center justify-center shrink-0 ${neonHighlightClass}`}
+                                    aria-label={`Abrir ${label}`}
+                                  >
+                                    {isImg ? (
+                                      <img
+                                        src={anexo.arquivo_url}
+                                        alt={label}
+                                        className="w-full h-full object-cover transition-transform duration-200 group-hover:scale-110"
+                                        loading="lazy"
+                                      />
+                                    ) : (
+                                      <div className="w-full h-full flex flex-col items-center justify-center bg-emerald-50/70 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400">
+                                        <FileSignature className="h-5 w-5" />
+                                        <span className="text-[9px] font-bold uppercase tracking-tight leading-none mt-0.5">
+                                          Doc
+                                        </span>
+                                      </div>
+                                    )}
+                                    <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                                      <Eye className="h-4 w-4 text-white" />
+                                    </div>
+                                    {isLastViewed && (
+                                      <span
+                                        className="absolute top-0.5 right-0.5 w-2 h-2 rounded-full bg-[#39FF14] shadow-[0_0_6px_#39FF14]"
+                                        title="Último visualizado"
+                                      />
+                                    )}
+                                  </button>
+                                </TooltipTrigger>
+                                <TooltipContent side="top">
+                                  <p className="text-xs">
+                                    {anexo.nome_arquivo || label} (clique para ampliar)
+                                  </p>
+                                </TooltipContent>
+                              </Tooltip>
+                            )
+                          })}
+                        </div>
+
+                        {/* Links textuais auxiliares para facilitar leitura rápida */}
+                        <div className="flex flex-col gap-0.5">
+                          {orcamentoUrl && (
+                            <button
+                              type="button"
+                              onClick={() => handleOpenDoc(orcamentoUrl, 'Orçamento', chamado.id)}
+                              className="flex items-center gap-1.5 text-xs text-primary hover:underline text-left cursor-pointer transition-colors"
+                            >
+                              <FileText className="h-3 w-3 shrink-0" />
+                              <span className="truncate max-w-[150px]">Orçamento</span>
+                            </button>
+                          )}
+                          {relevantAnexos.map((anexo: any) => {
+                            const label = normalizeAttachmentLabel(anexo.nome_arquivo)
+                            return (
+                              <button
+                                key={anexo.id}
+                                type="button"
+                                onClick={() =>
+                                  handleOpenDoc(
+                                    anexo.arquivo_url,
+                                    anexo.nome_arquivo || label,
+                                    chamado.id,
+                                  )
+                                }
+                                className="flex items-center gap-1.5 text-xs text-primary hover:underline text-left cursor-pointer transition-colors"
+                              >
+                                <FileSignature className="h-3 w-3 shrink-0" />
+                                <span className="truncate max-w-[150px]">{label}</span>
+                              </button>
+                            )
+                          })}
+                        </div>
+
+                        {!orcamentoUrl && relevantAnexos.length === 0 && (
+                          <span className="text-xs text-muted-foreground">Nenhum anexo</span>
+                        )}
+                      </div>
+                    )
+                  })()}
                 </TableCell>
                 {showActions && (
                   <TableCell className="text-right">

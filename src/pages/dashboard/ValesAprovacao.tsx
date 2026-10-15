@@ -60,6 +60,7 @@ export default function ValesAprovacao() {
   const [isRejectOpen, setIsRejectOpen] = useState(false)
   const [rejectReason, setRejectReason] = useState('')
   const [searchTerm, setSearchTerm] = useState('')
+  const [lastViewedChamadoId, setLastViewedChamadoId] = useState<string | null>(null)
   const [departamentoFilter, setDepartamentoFilter] = useState<'todos' | 'juridico' | 'sinistro'>(
     'todos',
   )
@@ -797,6 +798,8 @@ export default function ValesAprovacao() {
                   chamados={filteredPendingChamados}
                   userId={user!.id}
                   showActions
+                  lastViewedChamadoId={lastViewedChamadoId}
+                  onDocumentView={(id) => setLastViewedChamadoId(id)}
                   onApproveClick={handleApproveClick}
                   onRejectClick={handleRejectClick}
                 />
@@ -817,6 +820,8 @@ export default function ValesAprovacao() {
                   chamados={filteredApprovedByYouChamados}
                   userId={user!.id}
                   showActions={false}
+                  lastViewedChamadoId={lastViewedChamadoId}
+                  onDocumentView={(id) => setLastViewedChamadoId(id)}
                   onApproveClick={handleApproveClick}
                   onRejectClick={handleRejectClick}
                 />
@@ -837,6 +842,8 @@ export default function ValesAprovacao() {
                   chamados={filteredApprovedChamados}
                   userId={user!.id}
                   showActions={false}
+                  lastViewedChamadoId={lastViewedChamadoId}
+                  onDocumentView={(id) => setLastViewedChamadoId(id)}
                   onApproveClick={handleApproveClick}
                   onRejectClick={handleRejectClick}
                 />

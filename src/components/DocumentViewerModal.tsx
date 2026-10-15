@@ -15,6 +15,13 @@ const ZOOM_MAX = 350
 const ZOOM_STEP = 25
 const ZOOM_DEFAULT = 100
 
+// Cursor de lupa customizado via SVG data-URI com fallback para zoom-in
+// SVG de 24x24 com centro do hotspot na lente (10, 10)
+const LUPA_SVG = encodeURIComponent(
+  `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#1e293b" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="10" cy="10" r="6" stroke="#0f172a" fill="rgba(255,255,255,0.4)"/><path d="m14.5 14.5 5.5 5.5"/><path d="M10 7.5v5" stroke="#2563eb"/><path d="M7.5 10h5" stroke="#2563eb"/></svg>`,
+)
+const LUPA_CURSOR_CSS = `url("data:image/svg+xml,${LUPA_SVG}") 10 10, zoom-in`
+
 export const isImageDocument = (url?: string | null, title?: string | null): boolean => {
   if (!url) return false
   const cleanUrl = url.split('?')[0].toLowerCase()
@@ -221,14 +228,13 @@ export function DocumentViewerModal({ open, onOpenChange, url, title }: Document
           onMouseMove={isZoomed ? handleMouseMove : undefined}
           onMouseUp={isZoomed ? handleMouseUp : undefined}
           onMouseLeave={isZoomed ? handleMouseUp : undefined}
-          className={`flex-1 w-full h-full min-h-0 bg-slate-100 dark:bg-slate-900 rounded-md overflow-auto border ${
-            isZoomed
-              ? isPanning
-                ? 'cursor-grabbing select-none'
-                : 'cursor-grab'
-              : 'cursor-default'
+          className={`flex-1 w-full h-full min-h-0 bg-slate-100 dark:bg-slate-900 rounded-md overflow-auto border select-none ${
+            isPanning ? 'cursor-grabbing' : ''
           }`}
-          style={{ position: 'relative' }}
+          style={{
+            position: 'relative',
+            cursor: isPanning ? 'grabbing' : isZoomed ? 'grab' : LUPA_CURSOR_CSS,
+          }}
         >
           {isImage ? (
             <div
@@ -246,10 +252,11 @@ export function DocumentViewerModal({ open, onOpenChange, url, title }: Document
                 onClick={handleDocumentClick}
                 onDoubleClick={handleDocumentDoubleClick}
                 draggable={false}
-                className="max-w-full max-h-full object-contain rounded shadow-sm select-none cursor-pointer transition-transform duration-150 ease-out"
+                className="max-w-full max-h-full object-contain rounded shadow-sm select-none transition-transform duration-150 ease-out"
                 style={{
                   transform: `scale(${zoom / 100})`,
                   transformOrigin: 'center center',
+                  cursor: isPanning ? 'grabbing' : isZoomed ? 'grab' : LUPA_CURSOR_CSS,
                 }}
                 title="Clique para aproximar • Duplo clique para redefinir"
               />
@@ -279,7 +286,7 @@ export function DocumentViewerModal({ open, onOpenChange, url, title }: Document
                   key={`${url}-${zoom}`}
                   src={pdfUrlWithZoom}
                   title={displayTitle}
-                  className="w-full h-full border-0 rounded bg-white"
+                  className="w-full h-full border-0 rounded bg-white pointer-events-auto"
                 />
               </div>
             </div>

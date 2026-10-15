@@ -22,10 +22,10 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
-import { Check, X, Loader2, AlertCircle, FileText, FileSignature, Eye } from 'lucide-react'
+import { Check, X, Loader2, AlertCircle, FileText, FileSignature } from 'lucide-react'
 import { toast } from 'sonner'
 import { Link } from 'react-router-dom'
-import { DocumentViewerModal, isImageDocument } from '@/components/DocumentViewerModal'
+import { DocumentViewerModal } from '@/components/DocumentViewerModal'
 
 export default function AutorizacaoValesClaudinei() {
   const { user, profile } = useAuth()
@@ -249,166 +249,99 @@ export default function AutorizacaoValesClaudinei() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {chamados.map((chamado) => (
-                    <TableRow key={chamado.id}>
-                      <TableCell>
-                        <Link
-                          to={`/dashboard/chamados/${chamado.id}`}
-                          className="font-medium text-primary hover:underline transition-colors"
-                        >
-                          {chamado.titulo || chamado.id}
-                        </Link>
-                      </TableCell>
-                      <TableCell className="font-mono text-sm text-slate-700">
-                        {chamado.pia || '-'}
-                      </TableCell>
-                      <TableCell>{chamado.carro || '-'}</TableCell>
-                      <TableCell className="max-w-xs">
-                        <p
-                          className="text-sm text-muted-foreground truncate"
-                          title={chamado.descricao}
-                        >
-                          {chamado.descricao || '-'}
-                        </p>
-                      </TableCell>
-                      <TableCell>
-                        {(() => {
-                          const isLastViewed = lastViewedChamadoId === chamado.id
-                          const neonHighlightClass = isLastViewed
-                            ? 'ring-2 ring-[#39FF14] ring-offset-1 shadow-[0_0_12px_rgba(57,255,20,0.65)] border-[#39FF14]'
-                            : 'border-slate-200 dark:border-slate-700 hover:border-slate-400 dark:hover:border-slate-500'
-                          const anexos = chamado.anexos_chamado_interno || []
-
-                          return (
-                            <div className="flex flex-col gap-2">
-                              {/* Miniaturas dos anexos internos */}
-                              {anexos.length > 0 && (
-                                <div className="flex items-center gap-2 flex-wrap">
-                                  {anexos.map((anexo: any) => {
-                                    const isImg = isImageDocument(
-                                      anexo.arquivo_url,
-                                      anexo.nome_arquivo,
-                                    )
-                                    return (
-                                      <Tooltip key={anexo.id}>
-                                        <TooltipTrigger asChild>
-                                          <button
-                                            type="button"
-                                            onClick={() =>
-                                              handleOpenDoc(
-                                                anexo.arquivo_url,
-                                                anexo.nome_arquivo || 'Documento',
-                                                chamado.id,
-                                              )
-                                            }
-                                            className={`relative group w-11 h-11 rounded-md overflow-hidden bg-slate-100 dark:bg-slate-800 border transition-all duration-200 cursor-pointer flex items-center justify-center shrink-0 ${neonHighlightClass}`}
-                                            aria-label={`Abrir ${anexo.nome_arquivo || 'Documento'}`}
-                                          >
-                                            {isImg ? (
-                                              <img
-                                                src={anexo.arquivo_url}
-                                                alt={anexo.nome_arquivo || 'Documento'}
-                                                className="w-full h-full object-cover transition-transform duration-200 group-hover:scale-110"
-                                                loading="lazy"
-                                              />
-                                            ) : (
-                                              <div className="w-full h-full flex flex-col items-center justify-center bg-blue-50/70 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400">
-                                                <FileSignature className="h-5 w-5" />
-                                                <span className="text-[9px] font-bold uppercase tracking-tight leading-none mt-0.5">
-                                                  Doc
-                                                </span>
-                                              </div>
-                                            )}
-                                            <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                                              <Eye className="h-4 w-4 text-white" />
-                                            </div>
-                                            {isLastViewed && (
-                                              <span
-                                                className="absolute top-0.5 right-0.5 w-2 h-2 rounded-full bg-[#39FF14] shadow-[0_0_6px_#39FF14]"
-                                                title="Último visualizado"
-                                              />
-                                            )}
-                                          </button>
-                                        </TooltipTrigger>
-                                        <TooltipContent side="top">
-                                          <p className="text-xs">
-                                            {anexo.nome_arquivo || 'Documento'} (clique para
-                                            ampliar)
-                                          </p>
-                                        </TooltipContent>
-                                      </Tooltip>
-                                    )
-                                  })}
-                                </div>
-                              )}
-
-                              {/* Links de texto para fácil leitura */}
-                              <div className="flex flex-col gap-0.5">
-                                {anexos.map((anexo: any) => (
-                                  <button
-                                    key={anexo.id}
-                                    type="button"
-                                    onClick={() =>
-                                      handleOpenDoc(
-                                        anexo.arquivo_url,
-                                        anexo.nome_arquivo || 'Documento',
-                                        chamado.id,
-                                      )
-                                    }
-                                    className="flex items-center gap-1.5 text-xs text-primary hover:underline text-left cursor-pointer transition-colors"
-                                  >
-                                    <FileText className="h-3 w-3 shrink-0" />
-                                    <span className="truncate max-w-[150px]">
-                                      {anexo.nome_arquivo}
-                                    </span>
-                                  </button>
-                                ))}
-                                {anexos.length === 0 && (
-                                  <span className="text-xs text-muted-foreground">
-                                    Nenhum anexo
-                                  </span>
-                                )}
-                              </div>
-                            </div>
-                          )
-                        })()}
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <div className="flex justify-end gap-2">
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <Button
-                                variant="outline"
-                                size="icon"
-                                className="text-green-600 border-green-200 hover:bg-green-50 hover:text-green-700"
-                                onClick={() => handleApproveClick(chamado)}
+                  {chamados.map((chamado) => {
+                    const isLastViewed = lastViewedChamadoId === chamado.id
+                    return (
+                      <TableRow
+                        key={chamado.id}
+                        className={`transition-colors ${
+                          isLastViewed
+                            ? 'border-l-4 border-l-[#39FF14] bg-[#39FF14]/[0.06] shadow-[inset_0_0_12px_rgba(57,255,20,0.18)] dark:bg-[#39FF14]/[0.08]'
+                            : ''
+                        }`}
+                      >
+                        <TableCell>
+                          <Link
+                            to={`/dashboard/chamados/${chamado.id}`}
+                            className="font-medium text-primary hover:underline transition-colors"
+                          >
+                            {chamado.titulo || chamado.id}
+                          </Link>
+                        </TableCell>
+                        <TableCell className="font-mono text-sm text-slate-700">
+                          {chamado.pia || '-'}
+                        </TableCell>
+                        <TableCell>{chamado.carro || '-'}</TableCell>
+                        <TableCell className="max-w-xs">
+                          <p
+                            className="text-sm text-muted-foreground truncate"
+                            title={chamado.descricao}
+                          >
+                            {chamado.descricao || '-'}
+                          </p>
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex flex-col gap-1">
+                            {(chamado.anexos_chamado_interno || []).map((anexo: any) => (
+                              <button
+                                key={anexo.id}
+                                type="button"
+                                onClick={() =>
+                                  handleOpenDoc(
+                                    anexo.arquivo_url,
+                                    anexo.nome_arquivo || 'Documento',
+                                    chamado.id,
+                                  )
+                                }
+                                className="flex items-center gap-1 text-xs text-primary hover:underline text-left cursor-pointer"
                               >
-                                <Check className="h-4 w-4" />
-                              </Button>
-                            </TooltipTrigger>
-                            <TooltipContent>
-                              <p>Aprovar</p>
-                            </TooltipContent>
-                          </Tooltip>
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <Button
-                                variant="outline"
-                                size="icon"
-                                className="text-red-600 border-red-200 hover:bg-red-50 hover:text-red-700"
-                                onClick={() => handleRejectClick(chamado)}
-                              >
-                                <X className="h-4 w-4" />
-                              </Button>
-                            </TooltipTrigger>
-                            <TooltipContent>
-                              <p>Recusar</p>
-                            </TooltipContent>
-                          </Tooltip>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ))}
+                                <FileText className="h-3 w-3 shrink-0" />
+                                <span className="truncate max-w-[150px]">{anexo.nome_arquivo}</span>
+                              </button>
+                            ))}
+                            {(!chamado.anexos_chamado_interno ||
+                              chamado.anexos_chamado_interno.length === 0) && (
+                              <span className="text-xs text-muted-foreground">Nenhum anexo</span>
+                            )}
+                          </div>
+                        </TableCell>{' '}
+                        <TableCell className="text-right">
+                          <div className="flex justify-end gap-2">
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button
+                                  variant="outline"
+                                  size="icon"
+                                  className="text-green-600 border-green-200 hover:bg-green-50 hover:text-green-700"
+                                  onClick={() => handleApproveClick(chamado)}
+                                >
+                                  <Check className="h-4 w-4" />
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                <p>Aprovar</p>
+                              </TooltipContent>
+                            </Tooltip>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button
+                                  variant="outline"
+                                  size="icon"
+                                  className="text-red-600 border-red-200 hover:bg-red-50 hover:text-red-700"
+                                  onClick={() => handleRejectClick(chamado)}
+                                >
+                                  <X className="h-4 w-4" />
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                <p>Recusar</p>
+                              </TooltipContent>
+                            </Tooltip>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    )
+                  })}
                 </TableBody>
               </Table>
             </div>

@@ -11,10 +11,10 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { Badge } from '@/components/ui/badge'
 import { supabase } from '@/lib/supabase/client'
+import { DocumentViewerModal } from '@/components/DocumentViewerModal'
 
 const stripAccents = (str: string): string =>
   str
@@ -282,23 +282,6 @@ export function ValesAprovacaoTable({
     }
   }, [chamados])
 
-  const isImageFile = (url: string, title?: string): boolean => {
-    const cleanUrl = url.split('?')[0].toLowerCase()
-    const cleanTitle = (title || '').toLowerCase()
-    return (
-      cleanUrl.endsWith('.jpg') ||
-      cleanUrl.endsWith('.jpeg') ||
-      cleanUrl.endsWith('.png') ||
-      cleanUrl.endsWith('.webp') ||
-      cleanUrl.endsWith('.gif') ||
-      cleanTitle.endsWith('.jpg') ||
-      cleanTitle.endsWith('.jpeg') ||
-      cleanTitle.endsWith('.png') ||
-      cleanTitle.endsWith('.webp') ||
-      cleanTitle.endsWith('.gif')
-    )
-  }
-
   const handleOpenDoc = (url: string, title: string) => {
     setSelectedDoc({ url, title })
   }
@@ -502,40 +485,14 @@ export function ValesAprovacaoTable({
         </TableBody>
       </Table>
 
-      <Dialog
+      <DocumentViewerModal
         open={!!selectedDoc}
         onOpenChange={(open) => {
           if (!open) setSelectedDoc(null)
         }}
-      >
-        <DialogContent className="max-w-[96vw] w-[96vw] h-[94vh] max-h-[94vh] flex flex-col p-3 sm:p-5 gap-2 sm:gap-3">
-          <DialogHeader className="flex flex-row items-center justify-between pr-8 border-b pb-2.5 sm:pb-3 space-y-0 shrink-0">
-            <DialogTitle className="text-base sm:text-lg font-semibold truncate flex items-center gap-2">
-              <FileText className="h-5 w-5 text-primary shrink-0" />
-              <span className="truncate">{selectedDoc?.title || 'Visualização do Documento'}</span>
-            </DialogTitle>
-          </DialogHeader>
-
-          <div className="flex-1 w-full h-full min-h-0 bg-slate-100 rounded-md overflow-hidden flex items-center justify-center">
-            {selectedDoc &&
-              (isImageFile(selectedDoc.url, selectedDoc.title) ? (
-                <div className="w-full h-full overflow-auto flex items-center justify-center p-2 sm:p-4">
-                  <img
-                    src={selectedDoc.url}
-                    alt={selectedDoc.title}
-                    className="max-w-full max-h-full w-auto h-auto object-contain rounded shadow-sm select-none"
-                  />
-                </div>
-              ) : (
-                <iframe
-                  src={selectedDoc.url}
-                  title={selectedDoc.title}
-                  className="w-full h-full border-0 rounded"
-                />
-              ))}
-          </div>
-        </DialogContent>
-      </Dialog>
+        url={selectedDoc?.url}
+        title={selectedDoc?.title}
+      />
     </div>
   )
 }

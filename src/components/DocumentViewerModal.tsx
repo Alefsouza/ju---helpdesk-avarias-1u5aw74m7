@@ -73,10 +73,12 @@ export function DocumentViewerModal({ open, onOpenChange, url, title }: Document
 
   const handleDocumentClick = useCallback(() => {
     setZoom((prev) => {
-      if (prev >= 250) {
-        return ZOOM_DEFAULT
+      // Se já estiver ampliado, não acumula mais no clique simples
+      if (prev > ZOOM_DEFAULT) {
+        return prev
       }
-      return Math.min(ZOOM_MAX, prev + 50)
+      // Primeiro clique amplia para um nível de zoom único confortável
+      return 150
     })
   }, [])
 
@@ -209,9 +211,11 @@ export function DocumentViewerModal({ open, onOpenChange, url, title }: Document
         <div className="flex items-center justify-between text-[11px] text-muted-foreground px-1 shrink-0">
           <div className="flex items-center gap-1.5 truncate">
             {isImage ? (
-              <span>Clique na imagem para aproximar • Duplo clique para redefinir (100%)</span>
+              <span>Clique na imagem para aproximar • Duplo clique para redefinir</span>
             ) : (
-              <span>Controles de zoom acima ou nos botões do visualizador do PDF</span>
+              <span>
+                Clique para aproximar • Duplo clique para redefinir (ou use os controles do PDF)
+              </span>
             )}
           </div>
           {isZoomed && (
@@ -263,6 +267,8 @@ export function DocumentViewerModal({ open, onOpenChange, url, title }: Document
             </div>
           ) : (
             <div
+              onClick={handleDocumentClick}
+              onDoubleClick={handleDocumentDoubleClick}
               className="w-full h-full flex items-center justify-center overflow-auto"
               style={{
                 // Para PDF, aplicar transform scale no container do iframe e redimensionar proporções
@@ -271,7 +277,9 @@ export function DocumentViewerModal({ open, onOpenChange, url, title }: Document
                 minWidth: '100%',
                 minHeight: '100%',
                 transition: 'width 0.15s ease-out, height 0.15s ease-out',
+                cursor: isPanning ? 'grabbing' : isZoomed ? 'grab' : LUPA_CURSOR_CSS,
               }}
+              title="Clique para aproximar • Duplo clique para redefinir"
             >
               <div
                 className="w-full h-full relative"

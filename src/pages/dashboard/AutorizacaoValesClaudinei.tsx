@@ -256,7 +256,7 @@ export default function AutorizacaoValesClaudinei() {
                         key={chamado.id}
                         className={`transition-colors ${
                           isLastViewed
-                            ? 'border-l-4 border-l-[#39FF14] bg-[#39FF14]/[0.06] shadow-[inset_0_0_12px_rgba(57,255,20,0.18)] dark:bg-[#39FF14]/[0.08]'
+                            ? 'border-l-2 border-l-emerald-500 bg-emerald-500/[0.05] dark:border-l-emerald-400 dark:bg-emerald-500/[0.08]'
                             : ''
                         }`}
                       >

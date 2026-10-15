@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { format } from 'date-fns'
 import { FileText, FileSignature, Check, X } from 'lucide-react'
@@ -14,6 +14,7 @@ import {
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { Badge } from '@/components/ui/badge'
+import { supabase } from '@/lib/supabase/client'
 
 const stripAccents = (str: string): string =>
   str
@@ -56,24 +57,97 @@ const normalizeAttachmentLabel = (nomeArquivo: string): string => {
   return 'Autorização de Desconto'
 }
 
-const getDriverData = (chamado: any) => {
+// Localiza o documento de Vale / Autorização de Desconto com prioridades e fallbacks idênticos ao DP
+const getDocVale = (chamado: any) => {
+  if (
+    !chamado ||
+    !chamado.documentos ||
+    !Array.isArray(chamado.documentos) ||
+    chamado.documentos.length === 0
+  ) {
+    return null
+  }
+  const docs = chamado.documentos
+  const docTipo = docs.find((d: any) => {
+    const t = (d.tipo_documento || '').toLowerCase()
+    return (
+      t === 'vale' ||
+      t === 'autorizacao_desconto' ||
+      t === 'autorização_desconto' ||
+      t === 'autorizacao'
+    )
+  })
+  if (docTipo) return docTipo
+
+  const docNome = docs.find((d: any) => {
+    const n = (d.nome_arquivo || '').toLowerCase()
+    return (
+      n.includes('autorizacao') ||
+      n.includes('autorização') ||
+      n.includes('desconto') ||
+      n.includes('vale')
+    )
+  })
+  return docNome || null
+}
+
+export type CrossLookupMap = Map<string, { registro: string; garagem?: string }>
+
+export const getDriverData = (chamado: any, lookupMap?: CrossLookupMap) => {
   const espelhoData = Array.isArray(chamado.formularios_espelho_danos)
     ? chamado.formularios_espelho_danos[0]
     : chamado.formularios_espelho_danos
 
-  const docVale = Array.isArray(chamado.documentos)
-    ? chamado.documentos.find(
-        (d: any) => d.tipo_documento === 'Vale' && (d.registro_motorista || d.nome_motorista),
-      )
-    : null
+  const solicitacaoData = Array.isArray(chamado.solicitacoes_parcelamento)
+    ? chamado.solicitacoes_parcelamento[0]
+    : chamado.solicitacoes_parcelamento
+
+  const docVale = getDocVale(chamado)
+
+  // Cadeia de resolução de nome (DP / ValesAprovadosDP)
+  const resolvedNome =
+    solicitacaoData?.nome ||
+    espelhoData?.nome_motorista ||
+    docVale?.nome_motorista ||
+    docVale?.nome_responsavel ||
+    chamado.nome_motorista ||
+    null
+
+  // Busca cruzada na tabela de registros se houver nome e registro ausente
+  let lookupReg: string | null = null
+  let lookupGaragem: string | null = null
+  if (resolvedNome && lookupMap) {
+    const info = lookupMap.get(resolvedNome.trim().toLowerCase())
+    if (info) {
+      lookupReg = info.registro || null
+      lookupGaragem = info.garagem || null
+    }
+  }
+
+  // Cadeia de resolução de registro
+  const resolvedRegistro =
+    solicitacaoData?.registro ||
+    espelhoData?.registro_motorista ||
+    docVale?.registro_motorista ||
+    docVale?.registro_responsavel ||
+    lookupReg ||
+    chamado.registro_motorista ||
+    null
+
+  const cleanReg =
+    resolvedRegistro && String(resolvedRegistro).trim() && String(resolvedRegistro).trim() !== 'N/A'
+      ? String(resolvedRegistro).trim()
+      : '-'
+
+  const cleanNome =
+    resolvedNome && String(resolvedNome).trim() && String(resolvedNome).trim() !== 'N/A'
+      ? String(resolvedNome).trim()
+      : '-'
 
   return {
-    registro:
-      espelhoData?.registro_motorista ||
-      docVale?.registro_motorista ||
-      chamado.registro_motorista ||
-      '-',
-    nome: espelhoData?.nome_motorista || docVale?.nome_motorista || chamado.nome_motorista || '-',
+    registro: cleanReg,
+    nome: cleanNome,
+    garagem: lookupGaragem,
   }
 }
 
@@ -111,6 +185,102 @@ export function ValesAprovacaoTable({
   onRejectClick,
 }: ValesAprovacaoTableProps) {
   const [selectedDoc, setSelectedDoc] = useState<{ url: string; title: string } | null>(null)
+  const [lookupMap, setLookupMap] = useState<CrossLookupMap>(new Map())
+
+  // Busca cruzada na tabela 'registros' para colaboradores cujo chamado não trouxe registro mas possui nome
+  useEffect(() => {
+    let isMounted = true
+
+    const fetchMissingRegistros = async () => {
+      const namesToLookup = new Set<string>()
+
+      for (const chamado of chamados) {
+        const espelhoData = Array.isArray(chamado.formularios_espelho_danos)
+          ? chamado.formularios_espelho_danos[0]
+          : chamado.formularios_espelho_danos
+
+        const solicitacaoData = Array.isArray(chamado.solicitacoes_parcelamento)
+          ? chamado.solicitacoes_parcelamento[0]
+          : chamado.solicitacoes_parcelamento
+
+        const docVale = getDocVale(chamado)
+
+        const existingReg =
+          solicitacaoData?.registro ||
+          espelhoData?.registro_motorista ||
+          docVale?.registro_motorista ||
+          docVale?.registro_responsavel ||
+          chamado.registro_motorista
+
+        const hasValidReg =
+          existingReg &&
+          String(existingReg).trim() &&
+          String(existingReg).trim() !== 'N/A' &&
+          String(existingReg).trim() !== '-'
+
+        if (!hasValidReg) {
+          const candNome =
+            solicitacaoData?.nome ||
+            espelhoData?.nome_motorista ||
+            docVale?.nome_motorista ||
+            docVale?.nome_responsavel ||
+            chamado.nome_motorista
+
+          if (
+            candNome &&
+            String(candNome).trim() &&
+            String(candNome).trim() !== 'N/A' &&
+            String(candNome).trim() !== '-'
+          ) {
+            namesToLookup.add(String(candNome).trim())
+          }
+        }
+      }
+
+      if (namesToLookup.size === 0) {
+        return
+      }
+
+      const newMap: CrossLookupMap = new Map()
+
+      for (const name of namesToLookup) {
+        try {
+          const { data: regRows } = await (supabase.from('registros') as any)
+            .select('registro, nome, garagem_colaborador')
+            .ilike('nome', `%${name}%`)
+            .limit(5)
+
+          if (regRows && regRows.length > 0) {
+            const exact =
+              regRows.find((r: any) => r.nome?.toLowerCase() === name.toLowerCase()) || regRows[0]
+            if (exact && exact.registro) {
+              const regVal = String(exact.registro).trim()
+              newMap.set(name.toLowerCase(), {
+                registro: regVal,
+                garagem: exact.garagem_colaborador || undefined,
+              })
+            }
+          }
+        } catch {
+          /* intentionally ignored */
+        }
+      }
+
+      if (isMounted && newMap.size > 0) {
+        setLookupMap((prev) => {
+          const merged = new Map(prev)
+          newMap.forEach((val, key) => merged.set(key, val))
+          return merged
+        })
+      }
+    }
+
+    fetchMissingRegistros()
+
+    return () => {
+      isMounted = false
+    }
+  }, [chamados])
 
   const isImageFile = (url: string, title?: string): boolean => {
     const cleanUrl = url.split('?')[0].toLowerCase()
@@ -158,7 +328,7 @@ export function ValesAprovacaoTable({
         </TableHeader>
         <TableBody>
           {chamados.map((chamado) => {
-            const driver = getDriverData(chamado)
+            const driver = getDriverData(chamado, lookupMap)
             const orcamentoUrl = getOrcamentoUrl(chamado)
             const aprovacoes = Array.isArray(chamado.aprovacoes_diretoria)
               ? chamado.aprovacoes_diretoria

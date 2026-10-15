@@ -144,7 +144,7 @@ export default function ValesAprovacao() {
         documentos!documentos_chamado_id_fkey ( id, nome_arquivo, arquivo_url, tipo_documento, orcamento_url, valor_orcamento, registro_motorista, nome_motorista, criado_em ),
         parcelas_vales ( id, valor_parcela, data_referencia ),
         formularios_espelho_danos!formularios_espelho_danos_chamado_id_fkey ( registro_motorista, nome_motorista ),
-        solicitacoes_parcelamento ( id, valor_orcamento, quantidade_parcelas, status, desconto_aplicado, vale_unificado ),
+        solicitacoes_parcelamento ( id, registro, nome, valor_orcamento, quantidade_parcelas, status, desconto_aplicado, vale_unificado ),
         historico_chamado!historico_chamado_chamado_id_fkey ( usuario_id, acao )
       `)
       .eq('status', 'finalizado')

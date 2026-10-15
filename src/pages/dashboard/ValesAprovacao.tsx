@@ -166,34 +166,59 @@ export default function ValesAprovacao() {
         return hasApprovalTrigger(anexos)
       }) || []
 
-    // Buscar em lote o histórico de finalização para os chamados filtrados
+    // Buscar em lote o histórico de ações relevantes para os chamados filtrados
     if (filtered.length > 0) {
       const chamadoIds = filtered.map((c: any) => c.id)
 
-      // 1. Busca todos os registros de historico_chamado com acao = 'finalizado' ordenados por criado_em asc
+      // Busca o histórico dos chamados ordenado por criado_em asc para processamento cronológico
       const { data: histData, error: histError } = await supabase
         .from('historico_chamado')
-        .select('chamado_id, usuario_id, acao, criado_em')
+        .select('chamado_id, usuario_id, acao, detalhes, criado_em')
         .in('chamado_id', chamadoIds)
-        .eq('acao', 'finalizado')
         .order('criado_em', { ascending: true })
 
       if (!histError && histData) {
-        // Mapear o último usuário que finalizou cada chamado
-        const lastFinalizerPerChamado = new Map<string, string>()
+        // Mapear o finalizador corrente para cada chamado percorrendo em ordem cronológica:
+        // - acao = 'reaberto': zera o finalizador corrente (a finalização anterior deixa de valer)
+        // - acao = 'finalizado': define o finalizador como o usuario_id da ação
+        // - ações que encaminham para a diretoria / aprovação da diretoria: definem o finalizador como o usuario_id da ação
+        const lastFinalizerPerChamado = new Map<string, string | null>()
+
+        const isEncaminhamentoDiretoria = (h: any): boolean => {
+          const detalhes = stripAccents(h.detalhes || '')
+          return (
+            detalhes.includes('encaminhado para aprovacao da diretoria') ||
+            (detalhes.includes('aprovacao da diretoria') && detalhes.includes('encaminhado')) ||
+            (detalhes.includes('diretoria') &&
+              (detalhes.includes('aprovado por') || detalhes.includes('encaminhado')))
+          )
+        }
+
         histData.forEach((h: any) => {
-          if (h.usuario_id) {
-            lastFinalizerPerChamado.set(h.chamado_id, h.usuario_id)
+          const action = (h.acao || '').toLowerCase().trim()
+          if (action === 'reaberto') {
+            lastFinalizerPerChamado.set(h.chamado_id, null)
+          } else if (action === 'finalizado') {
+            if (h.usuario_id) {
+              lastFinalizerPerChamado.set(h.chamado_id, h.usuario_id)
+            }
+          } else if (isEncaminhamentoDiretoria(h)) {
+            if (h.usuario_id) {
+              lastFinalizerPerChamado.set(h.chamado_id, h.usuario_id)
+            }
           }
         })
 
         // Coletar userIds a consultar em perfil_usuario
         const userIdsToFetch = new Set<string>()
-        lastFinalizerPerChamado.forEach((uid) => userIdsToFetch.add(uid))
+        lastFinalizerPerChamado.forEach((uid) => {
+          if (uid) userIdsToFetch.add(uid)
+        })
 
-        // Para chamados que não tenham historico com acao='finalizado', olhar o responsavel_id como fallback
+        // Para chamados que não tenham finalizador apurado, olhar o responsavel_id como fallback
         filtered.forEach((c: any) => {
-          if (!lastFinalizerPerChamado.has(c.id) && c.responsavel_id) {
+          const finalizer = lastFinalizerPerChamado.get(c.id)
+          if (!finalizer && c.responsavel_id) {
             userIdsToFetch.add(c.responsavel_id)
           }
         })

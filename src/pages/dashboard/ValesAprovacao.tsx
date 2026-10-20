@@ -50,6 +50,8 @@ export default function ValesAprovacao() {
   const [pendingChamados, setPendingChamados] = useState<any[]>([])
   const [approvedByYouChamados, setApprovedByYouChamados] = useState<any[]>([])
   const [approvedChamados, setApprovedChamados] = useState<any[]>([])
+  const [restricaoChamados, setRestricaoChamados] = useState<any[]>([])
+  const [pendenteDescontoChamados, setPendenteDescontoChamados] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [activeTab, setActiveTab] = useState<string>('pendentes')
   const [isApproveOpen, setIsApproveOpen] = useState(false)
@@ -134,6 +136,22 @@ export default function ValesAprovacao() {
     [approvedByYouChamados, searchTerm, departamentoFilter],
   )
 
+  const filteredRestricaoChamados = useMemo(
+    () =>
+      restricaoChamados.filter(
+        (c) => matchesSearch(c, searchTerm) && matchesDepartamento(c, departamentoFilter),
+      ),
+    [restricaoChamados, searchTerm, departamentoFilter],
+  )
+
+  const filteredPendenteDescontoChamados = useMemo(
+    () =>
+      pendenteDescontoChamados.filter(
+        (c) => matchesSearch(c, searchTerm) && matchesDepartamento(c, departamentoFilter),
+      ),
+    [pendenteDescontoChamados, searchTerm, departamentoFilter],
+  )
+
   const fetchChamados = async () => {
     setLoading(true)
     const { data, error } = await supabase
@@ -141,6 +159,7 @@ export default function ValesAprovacao() {
       .select(`
         id, titulo, descricao, responsavel_id, status_aprovacao, status_aprovacao_claudinei, aprovacoes_diretoria, criado_em,
         pia, registro_motorista, nome_motorista, data_ocorrencia, status_juridico, status_sinistro,
+        em_restricao, restricao_motivo, restricao_observacao, restricao_aplicada_em,
         anexos_chamado_interno!anexos_chamado_interno_chamado_id_fkey ( id, nome_arquivo, arquivo_url, criado_em ),
         documentos!documentos_chamado_id_fkey ( id, nome_arquivo, arquivo_url, tipo_documento, orcamento_url, valor_orcamento, registro_motorista, nome_motorista, criado_em ),
         parcelas_vales ( id, valor_parcela, data_referencia ),
@@ -148,7 +167,7 @@ export default function ValesAprovacao() {
         solicitacoes_parcelamento ( id, registro, nome, valor_orcamento, quantidade_parcelas, status, desconto_aplicado, vale_unificado ),
         historico_chamado!historico_chamado_chamado_id_fkey ( usuario_id, acao )
       `)
-      .eq('status', 'finalizado')
+      .or('status.eq.finalizado,em_restricao.eq.true')
       .or('status_aprovacao_alex.eq.aprovado,status_aprovacao_claudinei.eq.aprovado')
       .or(
         'status_aprovacao.is.null,status_aprovacao.eq.aprovacao_parcial,status_aprovacao.eq.pendente,status_aprovacao.eq.aprovado',
@@ -163,6 +182,10 @@ export default function ValesAprovacao() {
 
     const filtered =
       data?.filter((c: any) => {
+        // Chamados em restrição aprovados pelo Claudinei devem aparecer mesmo que ainda não tenham o anexo de vale padrão
+        if (c.em_restricao && c.status_aprovacao_claudinei === 'aprovado') {
+          return true
+        }
         const anexos = c.anexos_chamado_interno || []
         return hasApprovalTrigger(anexos)
       }) || []
@@ -257,16 +280,34 @@ export default function ValesAprovacao() {
       return aprovacoes.some((a: any) => a.usuario_id === user!.id && a.acao === 'aprovado')
     }
 
-    const approved = filtered.filter(
+    // Chamados das novas abas de restrição (em_restricao=true e status_aprovacao_claudinei='aprovado')
+    const restricaoGroup = filtered.filter(
+      (c: any) =>
+        c.em_restricao === true &&
+        c.status_aprovacao_claudinei === 'aprovado' &&
+        (c.restricao_motivo === 'Operador Desligado' || c.restricao_motivo === 'Operador Afastado'),
+    )
+
+    const pendenteDescontoGroup = filtered.filter(
+      (c: any) =>
+        c.em_restricao === true &&
+        c.status_aprovacao_claudinei === 'aprovado' &&
+        c.restricao_motivo === 'Pendente de Aprovação de Desconto',
+    )
+
+    // Os chamados em restrição ficam em suas abas dedicadas e não poluem as abas padrão
+    const standardChamados = filtered.filter((c: any) => !c.em_restricao)
+
+    const approved = standardChamados.filter(
       (c: any) => countAprovacoes(c.aprovacoes_diretoria) >= 2 && c.status_aprovacao === 'aprovado',
     )
 
-    const approvedByYou = filtered.filter((c: any) => {
+    const approvedByYou = standardChamados.filter((c: any) => {
       const count = countAprovacoes(c.aprovacoes_diretoria)
       return count < 2 && isApprovedByUser(c)
     })
 
-    const pending = filtered.filter((c: any) => {
+    const pending = standardChamados.filter((c: any) => {
       const count = countAprovacoes(c.aprovacoes_diretoria)
       const isApproved = count >= 2 && c.status_aprovacao === 'aprovado'
       const approvedByUser = count < 2 && isApprovedByUser(c)
@@ -276,6 +317,8 @@ export default function ValesAprovacao() {
     setPendingChamados(pending)
     setApprovedByYouChamados(approvedByYou)
     setApprovedChamados(approved)
+    setRestricaoChamados(restricaoGroup)
+    setPendenteDescontoChamados(pendenteDescontoGroup)
     setLoading(false)
   }
 
@@ -778,10 +821,22 @@ export default function ValesAprovacao() {
               {filteredApprovedByYouChamados.length}
             </span>
           </TabsTrigger>
+          <TabsTrigger value="restricao">
+            Restrição
+            <span className="ml-2 text-xs rounded-full bg-muted px-2 py-0.5">
+              {filteredRestricaoChamados.length}
+            </span>
+          </TabsTrigger>
           <TabsTrigger value="aprovados">
             Aprovados (2/2)
             <span className="ml-2 text-xs rounded-full bg-muted px-2 py-0.5">
               {filteredApprovedChamados.length}
+            </span>
+          </TabsTrigger>
+          <TabsTrigger value="pendente-aprovacao-desconto">
+            Pendente Aprovação de Desconto
+            <span className="ml-2 text-xs rounded-full bg-muted px-2 py-0.5">
+              {filteredPendenteDescontoChamados.length}
             </span>
           </TabsTrigger>
         </TabsList>
@@ -830,6 +885,28 @@ export default function ValesAprovacao() {
           </Card>
         </TabsContent>
 
+        <TabsContent value="restricao">
+          <Card>
+            <CardContent className="p-0">
+              {loading ? (
+                <div className="flex justify-center items-center p-8">
+                  <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                </div>
+              ) : (
+                <ValesAprovacaoTable
+                  chamados={filteredRestricaoChamados}
+                  userId={user!.id}
+                  showActions
+                  lastViewedChamadoId={lastViewedChamadoId}
+                  onDocumentView={(id) => setLastViewedChamadoId(id)}
+                  onApproveClick={handleApproveClick}
+                  onRejectClick={handleRejectClick}
+                />
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
         <TabsContent value="aprovados">
           <Card>
             <CardContent className="p-0">
@@ -842,6 +919,28 @@ export default function ValesAprovacao() {
                   chamados={filteredApprovedChamados}
                   userId={user!.id}
                   showActions={false}
+                  lastViewedChamadoId={lastViewedChamadoId}
+                  onDocumentView={(id) => setLastViewedChamadoId(id)}
+                  onApproveClick={handleApproveClick}
+                  onRejectClick={handleRejectClick}
+                />
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="pendente-aprovacao-desconto">
+          <Card>
+            <CardContent className="p-0">
+              {loading ? (
+                <div className="flex justify-center items-center p-8">
+                  <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                </div>
+              ) : (
+                <ValesAprovacaoTable
+                  chamados={filteredPendenteDescontoChamados}
+                  userId={user!.id}
+                  showActions
                   lastViewedChamadoId={lastViewedChamadoId}
                   onDocumentView={(id) => setLastViewedChamadoId(id)}
                   onApproveClick={handleApproveClick}

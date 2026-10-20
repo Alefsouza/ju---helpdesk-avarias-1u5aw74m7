@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { format } from 'date-fns'
-import { FileText, FileSignature, Check, X } from 'lucide-react'
+import { FileText, FileSignature, Check, X, ShieldAlert } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
   Table,
@@ -360,35 +360,60 @@ export function ValesAprovacaoTable({
                     >
                       {chamado.titulo || '-'}
                     </Link>
-                    {(() => {
-                      const dep = stripAccents(chamado.departamento_finalizador || '')
-                      const isJuridico = dep.includes('juridico')
-                      const isSinistro = dep.includes('sinistro')
-
-                      if (isJuridico) {
-                        return (
-                          <Badge
-                            variant="outline"
-                            className="w-fit rounded-full text-xs font-medium px-2.5 py-0.5 bg-blue-50 text-blue-700 border-blue-200"
+                    {chamado.em_restricao && (
+                      <div className="flex flex-col gap-1 mt-0.5">
+                        <Badge
+                          variant="outline"
+                          className="w-fit rounded-full text-xs font-semibold px-2.5 py-0.5 bg-amber-100 text-amber-900 border-amber-300 flex items-center gap-1"
+                        >
+                          <ShieldAlert className="h-3 w-3 text-amber-700 shrink-0" />
+                          Jurídico - Restrição
+                        </Badge>
+                        {chamado.restricao_motivo && (
+                          <span className="text-xs font-medium text-amber-900">
+                            Motivo: {chamado.restricao_motivo}
+                          </span>
+                        )}
+                        {chamado.restricao_observacao && (
+                          <span
+                            className="text-xs text-amber-800 bg-amber-50 px-2 py-1 rounded border border-amber-200 whitespace-pre-wrap max-w-sm"
+                            title={chamado.restricao_observacao}
                           >
-                            Jurídico
-                          </Badge>
-                        )
-                      }
+                            Obs: {chamado.restricao_observacao}
+                          </span>
+                        )}
+                      </div>
+                    )}
+                    {!chamado.em_restricao &&
+                      (() => {
+                        const dep = stripAccents(chamado.departamento_finalizador || '')
+                        const isJuridico = dep.includes('juridico')
+                        const isSinistro = dep.includes('sinistro')
 
-                      if (isSinistro) {
-                        return (
-                          <Badge
-                            variant="outline"
-                            className="w-fit rounded-full text-xs font-medium px-2.5 py-0.5 bg-green-50 text-green-700 border-green-200"
-                          >
-                            Sinistro
-                          </Badge>
-                        )
-                      }
+                        if (isJuridico) {
+                          return (
+                            <Badge
+                              variant="outline"
+                              className="w-fit rounded-full text-xs font-medium px-2.5 py-0.5 bg-blue-50 text-blue-700 border-blue-200"
+                            >
+                              Jurídico
+                            </Badge>
+                          )
+                        }
 
-                      return null
-                    })()}
+                        if (isSinistro) {
+                          return (
+                            <Badge
+                              variant="outline"
+                              className="w-fit rounded-full text-xs font-medium px-2.5 py-0.5 bg-green-50 text-green-700 border-green-200"
+                            >
+                              Sinistro
+                            </Badge>
+                          )
+                        }
+
+                        return null
+                      })()}
                   </div>
                 </TableCell>
                 <TableCell className="font-mono text-sm text-slate-700">

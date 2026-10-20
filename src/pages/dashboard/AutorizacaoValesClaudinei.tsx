@@ -22,7 +22,8 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
-import { Check, X, Loader2, AlertCircle, FileText, FileSignature } from 'lucide-react'
+import { Check, X, Loader2, AlertCircle, FileText, FileSignature, ShieldAlert } from 'lucide-react'
+import { Badge } from '@/components/ui/badge'
 import { toast } from 'sonner'
 import { Link } from 'react-router-dom'
 import { DocumentViewerModal } from '@/components/DocumentViewerModal'
@@ -53,10 +54,11 @@ export default function AutorizacaoValesClaudinei() {
   const fetchChamados = async () => {
     setLoading(true)
 
-    // Critério aditivo ("OU"): um chamado pendente deve aparecer se:
+    // Critério aditivo: um chamado pendente deve aparecer se:
     // 1. Possui documento do tipo 'Vale' em public.documentos, OU
-    // 2. Possui anexo interno cujo nome de arquivo comece com "Vale" (case-insensitive) em public.anexos_chamado_interno.
-    const [docsResult, anexosResult] = await Promise.all([
+    // 2. Possui anexo interno cujo nome de arquivo comece com "Vale" em public.anexos_chamado_interno, OU
+    // 3. Está em restrição (em_restricao = true) vindo do Jurídico.
+    const [docsResult, anexosResult, restricaoResult] = await Promise.all([
       supabase
         .from('documentos')
         .select('chamado_id')
@@ -67,6 +69,11 @@ export default function AutorizacaoValesClaudinei() {
         .select('chamado_id')
         .ilike('nome_arquivo', 'Vale%')
         .not('chamado_id', 'is', null),
+      supabase
+        .from('chamados')
+        .select('id')
+        .eq('status_aprovacao_claudinei', 'pendente')
+        .eq('em_restricao', true),
     ])
 
     if (docsResult.error) {
@@ -81,6 +88,12 @@ export default function AutorizacaoValesClaudinei() {
       return
     }
 
+    if (restricaoResult.error) {
+      toast.error('Erro ao buscar chamados em restrição')
+      setLoading(false)
+      return
+    }
+
     const idsValesDocs = (docsResult.data || [])
       .map((d: any) => d.chamado_id)
       .filter((id): id is string => Boolean(id))
@@ -89,9 +102,15 @@ export default function AutorizacaoValesClaudinei() {
       .map((a: any) => a.chamado_id)
       .filter((id): id is string => Boolean(id))
 
-    const chamadosComValeIds = Array.from(new Set([...idsValesDocs, ...idsAnexosVale]))
+    const idsRestricao = (restricaoResult.data || [])
+      .map((c: any) => c.id)
+      .filter((id): id is string => Boolean(id))
 
-    if (chamadosComValeIds.length === 0) {
+    const chamadosAlvoIds = Array.from(
+      new Set([...idsValesDocs, ...idsAnexosVale, ...idsRestricao]),
+    )
+
+    if (chamadosAlvoIds.length === 0) {
       setChamados([])
       setLoading(false)
       return
@@ -101,10 +120,11 @@ export default function AutorizacaoValesClaudinei() {
       .from('chamados')
       .select(
         `id, titulo, descricao, pia, carro, criado_em, atualizado_em, status_aprovacao_claudinei,
+        em_restricao, restricao_motivo, restricao_observacao,
         anexos_chamado_interno!anexos_chamado_interno_chamado_id_fkey ( id, nome_arquivo, arquivo_url, criado_em )`,
       )
       .eq('status_aprovacao_claudinei', 'pendente')
-      .in('id', chamadosComValeIds)
+      .in('id', chamadosAlvoIds)
       .order('atualizado_em', { ascending: false })
 
     if (error) {
@@ -261,12 +281,33 @@ export default function AutorizacaoValesClaudinei() {
                         }`}
                       >
                         <TableCell>
-                          <Link
-                            to={`/dashboard/chamados/${chamado.id}`}
-                            className="font-medium text-primary hover:underline transition-colors"
-                          >
-                            {chamado.titulo || chamado.id}
-                          </Link>
+                          <div className="flex flex-col gap-1 items-start">
+                            <Link
+                              to={`/dashboard/chamados/${chamado.id}`}
+                              className="font-medium text-primary hover:underline transition-colors"
+                            >
+                              {chamado.titulo || chamado.id}
+                            </Link>
+                            {chamado.em_restricao && (
+                              <div className="flex flex-col gap-0.5">
+                                <Badge
+                                  variant="outline"
+                                  className="px-2 py-0.5 text-[10px] font-bold tracking-wider bg-amber-100 text-amber-900 border-amber-300 w-fit flex items-center gap-1"
+                                >
+                                  <ShieldAlert className="h-3 w-3 text-amber-700" />
+                                  RESTRIÇÃO: {chamado.restricao_motivo || 'Em Restrição'}
+                                </Badge>
+                                {chamado.restricao_observacao && (
+                                  <span
+                                    className="text-[11px] text-amber-800 bg-amber-50 px-1.5 py-0.5 rounded border border-amber-200 max-w-xs truncate"
+                                    title={chamado.restricao_observacao}
+                                  >
+                                    Obs: {chamado.restricao_observacao}
+                                  </span>
+                                )}
+                              </div>
+                            )}
+                          </div>
                         </TableCell>
                         <TableCell className="font-mono text-sm text-slate-700">
                           {chamado.pia || '-'}

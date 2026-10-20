@@ -65,6 +65,8 @@ import {
   Pencil,
   CornerUpLeft,
   Edit,
+  ShieldAlert,
+  ShieldCheck,
 } from 'lucide-react'
 import { supabase } from '@/lib/supabase/client'
 import { useAuth } from '@/hooks/use-auth'
@@ -258,6 +260,92 @@ function ReabrirAlert({ confirmReabrirOpen, setConfirmReabrirOpen, handleReabrir
         </AlertDialogFooter>
       </AlertDialogContent>
     </AlertDialog>
+  )
+}
+
+function RestricaoModal({
+  open,
+  onOpenChange,
+  motivo,
+  setMotivo,
+  observacao,
+  setObservacao,
+  loading,
+  onSubmit,
+}: {
+  open: boolean
+  onOpenChange: (open: boolean) => void
+  motivo: string
+  setMotivo: (val: string) => void
+  observacao: string
+  setObservacao: (val: string) => void
+  loading: boolean
+  onSubmit: () => void
+}) {
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-[480px]">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2 text-amber-700">
+            <ShieldAlert className="h-5 w-5 text-amber-600" />
+            Aplicar Restrição ao Chamado
+          </DialogTitle>
+        </DialogHeader>
+        <div className="grid gap-4 py-3">
+          <p className="text-xs text-slate-500">
+            O chamado permanecerá <strong className="text-slate-700">EM ABERTO</strong> e será
+            encaminhado com restrição para aprovação do Dr. Claudinei / Dra. Bianca.
+          </p>
+
+          <div className="space-y-1.5">
+            <Label className="text-xs font-semibold text-slate-700">Motivo da Restrição *</Label>
+            <Select value={motivo} onValueChange={setMotivo} disabled={loading}>
+              <SelectTrigger className="h-9 text-xs">
+                <SelectValue placeholder="Selecione o motivo..." />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="Operador Desligado">Operador Desligado</SelectItem>
+                <SelectItem value="Operador Afastado">Operador Afastado</SelectItem>
+                <SelectItem value="Pendente de Aprovação de Desconto">
+                  Pendente de Aprovação de Desconto
+                </SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="space-y-1.5">
+            <Label className="text-xs font-semibold text-slate-700">Observação *</Label>
+            <Textarea
+              placeholder="Descreva detalhadamente a observação da restrição..."
+              value={observacao}
+              onChange={(e) => setObservacao(e.target.value)}
+              disabled={loading}
+              className="min-h-[90px] text-xs"
+            />
+          </div>
+        </div>
+        <DialogFooter>
+          <Button
+            variant="outline"
+            onClick={() => onOpenChange(false)}
+            disabled={loading}
+            size="sm"
+            className="text-xs"
+          >
+            Cancelar
+          </Button>
+          <Button
+            onClick={onSubmit}
+            disabled={loading || !motivo || !observacao.trim()}
+            size="sm"
+            className="bg-amber-600 hover:bg-amber-700 text-white text-xs"
+          >
+            {loading && <Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" />}
+            {loading ? 'Salvando...' : 'Aplicar Restrição'}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   )
 }
 
@@ -1586,6 +1674,12 @@ export default function ChamadoDetalhes() {
   const [renameAnexo, setRenameAnexo] = useState<AnexoInterno | null>(null)
   const [renameValue, setRenameValue] = useState('')
   const [renaming, setRenaming] = useState(false)
+
+  // Estado para Restrição (perfil jurídico)
+  const [restricaoModalOpen, setRestricaoModalOpen] = useState(false)
+  const [restricaoMotivo, setRestricaoMotivo] = useState('')
+  const [restricaoObservacao, setRestricaoObservacao] = useState('')
+  const [savingRestricao, setSavingRestricao] = useState(false)
 
   const { handleDocumentAction, loadingAction } = useDocumentAction()
 
@@ -3723,6 +3817,117 @@ export default function ChamadoDetalhes() {
   const isJuridico = currentUserProfile?.tipo_usuario === 'juridico' && !isDaniel && !isBianca
   const isSinistro = currentUserProfile?.tipo_usuario === 'sinistro' && !isDaniel && !isBianca
 
+  const handleAplicarRestricao = async () => {
+    if (!restricaoMotivo) {
+      toast.error('Selecione o motivo da restrição')
+      return
+    }
+    if (!restricaoObservacao.trim()) {
+      toast.error('A observação da restrição é obrigatória')
+      return
+    }
+    if (!user?.id || !id) return
+
+    setSavingRestricao(true)
+    try {
+      const nowIso = new Date().toISOString()
+      const updatePayload: any = {
+        em_restricao: true,
+        restricao_motivo: restricaoMotivo,
+        restricao_observacao: restricaoObservacao.trim(),
+        restricao_aplicada_por: user.id,
+        restricao_aplicada_em: nowIso,
+        status_aprovacao_claudinei: 'pendente',
+        atualizado_em: nowIso,
+      }
+
+      const { error: updateError } = await supabase
+        .from('chamados')
+        .update(updatePayload)
+        .eq('id', id)
+
+      if (updateError) throw updateError
+
+      await supabase.from('historico_chamado').insert({
+        chamado_id: id as string,
+        usuario_id: user.id,
+        acao: 'Restrição Aplicada',
+        detalhes: `Restrição aplicada pelo Jurídico. Motivo: ${restricaoMotivo}. Observação: ${restricaoObservacao.trim()}`,
+      })
+
+      setChamado((prev: any) =>
+        prev
+          ? {
+              ...prev,
+              ...updatePayload,
+            }
+          : prev,
+      )
+
+      setRestricaoModalOpen(false)
+      setRestricaoMotivo('')
+      setRestricaoObservacao('')
+      toast.success('Restrição aplicada com sucesso! Chamado enviado para aprovação.')
+    } catch (err: any) {
+      console.error(err)
+      toast.error('Erro ao aplicar restrição: ' + (err.message || 'Falha na comunicação'))
+    } finally {
+      setSavingRestricao(false)
+    }
+  }
+
+  const handleRemoverRestricao = async () => {
+    if (
+      !window.confirm(
+        'Tem certeza que deseja tirar a restrição deste chamado? Ele voltará ao fluxo normal.',
+      )
+    ) {
+      return
+    }
+    if (!user?.id || !id) return
+
+    setSavingRestricao(true)
+    try {
+      const nowIso = new Date().toISOString()
+      const updatePayload: any = {
+        em_restricao: false,
+        restricao_removida_por: user.id,
+        restricao_removida_em: nowIso,
+        atualizado_em: nowIso,
+      }
+
+      const { error: updateError } = await supabase
+        .from('chamados')
+        .update(updatePayload)
+        .eq('id', id)
+
+      if (updateError) throw updateError
+
+      await supabase.from('historico_chamado').insert({
+        chamado_id: id as string,
+        usuario_id: user.id,
+        acao: 'Restrição Removida',
+        detalhes: 'Restrição removida pelo Jurídico. Chamado retornou ao fluxo normal.',
+      })
+
+      setChamado((prev: any) =>
+        prev
+          ? {
+              ...prev,
+              ...updatePayload,
+            }
+          : prev,
+      )
+
+      toast.success('Restrição removida com sucesso!')
+    } catch (err: any) {
+      console.error(err)
+      toast.error('Erro ao remover restrição: ' + (err.message || 'Falha na comunicação'))
+    } finally {
+      setSavingRestricao(false)
+    }
+  }
+
   const isGestorAprovado =
     chamado.status_aprovacao_alex === 'aprovado' ||
     chamado.status_aprovacao_claudinei === 'aprovado'
@@ -3874,6 +4079,39 @@ export default function ChamadoDetalhes() {
               Transferir Chamado
             </Button>
           )}
+          {isJuridico &&
+            chamado.status !== 'unificado' &&
+            (chamado.em_restricao ? (
+              <Button
+                variant="outline"
+                size="sm"
+                className="text-amber-800 border-amber-300 bg-amber-50 hover:bg-amber-100 hover:text-amber-900 w-full sm:w-auto h-8 text-xs font-medium"
+                onClick={handleRemoverRestricao}
+                disabled={completing || transferLoading || savingRestricao}
+              >
+                {savingRestricao ? (
+                  <Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" />
+                ) : (
+                  <ShieldCheck className="mr-2 h-3.5 w-3.5 text-amber-700" />
+                )}
+                Tirar Restrição
+              </Button>
+            ) : (
+              <Button
+                variant="outline"
+                size="sm"
+                className="text-amber-700 border-amber-300 bg-amber-50/60 hover:bg-amber-100 hover:text-amber-800 w-full sm:w-auto h-8 text-xs font-medium"
+                onClick={() => {
+                  setRestricaoMotivo(chamado.restricao_motivo || '')
+                  setRestricaoObservacao(chamado.restricao_observacao || '')
+                  setRestricaoModalOpen(true)
+                }}
+                disabled={completing || transferLoading || savingRestricao}
+              >
+                <ShieldAlert className="mr-2 h-3.5 w-3.5 text-amber-600" />
+                Restrição
+              </Button>
+            ))}
           {canFinalize && (
             <Button
               variant="outline"
@@ -3986,6 +4224,22 @@ export default function ChamadoDetalhes() {
                 >
                   {chamado.situacao_processo}
                 </Badge>
+              </div>
+            )}
+            {chamado.em_restricao && (
+              <div className="flex flex-wrap items-center gap-2 mb-2">
+                <Badge
+                  variant="outline"
+                  className="px-2.5 py-0.5 uppercase text-[10px] font-bold tracking-wider bg-amber-100 text-amber-900 border-amber-300 flex items-center gap-1"
+                >
+                  <ShieldAlert className="h-3 w-3 text-amber-700" />
+                  RESTRIÇÃO: {chamado.restricao_motivo || 'Em Restrição'}
+                </Badge>
+                {chamado.restricao_observacao && (
+                  <span className="text-xs text-amber-800 bg-amber-50 px-2 py-0.5 rounded border border-amber-200">
+                    {chamado.restricao_observacao}
+                  </span>
+                )}
               </div>
             )}
             <h1 className="text-lg sm:text-xl font-bold text-slate-900">{chamado.titulo}</h1>
@@ -5052,6 +5306,17 @@ export default function ChamadoDetalhes() {
           </div>
         </div>
       )}
+
+      <RestricaoModal
+        open={restricaoModalOpen}
+        onOpenChange={setRestricaoModalOpen}
+        motivo={restricaoMotivo}
+        setMotivo={setRestricaoMotivo}
+        observacao={restricaoObservacao}
+        setObservacao={setRestricaoObservacao}
+        loading={savingRestricao}
+        onSubmit={handleAplicarRestricao}
+      />
 
       <TransferModal
         transferModalOpen={transferModalOpen}

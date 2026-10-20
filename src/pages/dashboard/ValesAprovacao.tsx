@@ -821,16 +821,16 @@ export default function ValesAprovacao() {
               {filteredApprovedByYouChamados.length}
             </span>
           </TabsTrigger>
-          <TabsTrigger value="restricao">
-            Restrição
-            <span className="ml-2 text-xs rounded-full bg-muted px-2 py-0.5">
-              {filteredRestricaoChamados.length}
-            </span>
-          </TabsTrigger>
           <TabsTrigger value="aprovados">
             Aprovados (2/2)
             <span className="ml-2 text-xs rounded-full bg-muted px-2 py-0.5">
               {filteredApprovedChamados.length}
+            </span>
+          </TabsTrigger>
+          <TabsTrigger value="restricao">
+            Restrição
+            <span className="ml-2 text-xs rounded-full bg-muted px-2 py-0.5">
+              {filteredRestricaoChamados.length}
             </span>
           </TabsTrigger>
           <TabsTrigger value="pendente-aprovacao-desconto">
@@ -885,28 +885,6 @@ export default function ValesAprovacao() {
           </Card>
         </TabsContent>
 
-        <TabsContent value="restricao">
-          <Card>
-            <CardContent className="p-0">
-              {loading ? (
-                <div className="flex justify-center items-center p-8">
-                  <Loader2 className="h-8 w-8 animate-spin text-primary" />
-                </div>
-              ) : (
-                <ValesAprovacaoTable
-                  chamados={filteredRestricaoChamados}
-                  userId={user!.id}
-                  showActions
-                  lastViewedChamadoId={lastViewedChamadoId}
-                  onDocumentView={(id) => setLastViewedChamadoId(id)}
-                  onApproveClick={handleApproveClick}
-                  onRejectClick={handleRejectClick}
-                />
-              )}
-            </CardContent>
-          </Card>
-        </TabsContent>
-
         <TabsContent value="aprovados">
           <Card>
             <CardContent className="p-0">
@@ -919,6 +897,28 @@ export default function ValesAprovacao() {
                   chamados={filteredApprovedChamados}
                   userId={user!.id}
                   showActions={false}
+                  lastViewedChamadoId={lastViewedChamadoId}
+                  onDocumentView={(id) => setLastViewedChamadoId(id)}
+                  onApproveClick={handleApproveClick}
+                  onRejectClick={handleRejectClick}
+                />
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="restricao">
+          <Card>
+            <CardContent className="p-0">
+              {loading ? (
+                <div className="flex justify-center items-center p-8">
+                  <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                </div>
+              ) : (
+                <ValesAprovacaoTable
+                  chamados={filteredRestricaoChamados}
+                  userId={user!.id}
+                  showActions
                   lastViewedChamadoId={lastViewedChamadoId}
                   onDocumentView={(id) => setLastViewedChamadoId(id)}
                   onApproveClick={handleApproveClick}

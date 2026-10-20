@@ -159,7 +159,7 @@ export default function ValesAprovacao() {
       .select(`
         id, titulo, descricao, responsavel_id, status_aprovacao, status_aprovacao_claudinei, aprovacoes_diretoria, criado_em,
         pia, registro_motorista, nome_motorista, data_ocorrencia, status_juridico, status_sinistro,
-        em_restricao, restricao_motivo, restricao_observacao, restricao_aplicada_em,
+        em_restricao, restricao_motivo, restricao_observacao, restricao_aplicada_em, restricao_removida_em,
         anexos_chamado_interno!anexos_chamado_interno_chamado_id_fkey ( id, nome_arquivo, arquivo_url, criado_em ),
         documentos!documentos_chamado_id_fkey ( id, nome_arquivo, arquivo_url, tipo_documento, orcamento_url, valor_orcamento, registro_motorista, nome_motorista, criado_em ),
         parcelas_vales ( id, valor_parcela, data_referencia ),
@@ -918,7 +918,7 @@ export default function ValesAprovacao() {
                 <ValesAprovacaoTable
                   chamados={filteredRestricaoChamados}
                   userId={user!.id}
-                  showActions
+                  showActions={false}
                   lastViewedChamadoId={lastViewedChamadoId}
                   onDocumentView={(id) => setLastViewedChamadoId(id)}
                   onApproveClick={handleApproveClick}
@@ -940,7 +940,7 @@ export default function ValesAprovacao() {
                 <ValesAprovacaoTable
                   chamados={filteredPendenteDescontoChamados}
                   userId={user!.id}
-                  showActions
+                  showActions={false}
                   lastViewedChamadoId={lastViewedChamadoId}
                   onDocumentView={(id) => setLastViewedChamadoId(id)}
                   onApproveClick={handleApproveClick}

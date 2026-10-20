@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { format } from 'date-fns'
-import { FileText, FileSignature, Check, X, ShieldAlert } from 'lucide-react'
+import { FileText, FileSignature, Check, X, ShieldAlert, AlertTriangle } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
   Table,
@@ -367,7 +367,9 @@ export function ValesAprovacaoTable({
                           className="w-fit rounded-full text-xs font-semibold px-2.5 py-0.5 bg-amber-100 text-amber-900 border-amber-300 flex items-center gap-1"
                         >
                           <ShieldAlert className="h-3 w-3 text-amber-700 shrink-0" />
-                          Jurídico - Restrição
+                          {chamado.restricao_motivo === 'Pendente de Aprovação de Desconto'
+                            ? 'Jurídico - Pendente Aprovação de Desconto'
+                            : 'Jurídico - Restrição'}
                         </Badge>
                         {chamado.restricao_motivo && (
                           <span className="text-xs font-medium text-amber-900">
@@ -384,36 +386,75 @@ export function ValesAprovacaoTable({
                         )}
                       </div>
                     )}
-                    {!chamado.em_restricao &&
-                      (() => {
-                        const dep = stripAccents(chamado.departamento_finalizador || '')
-                        const isJuridico = dep.includes('juridico')
-                        const isSinistro = dep.includes('sinistro')
+                    {!chamado.em_restricao && (
+                      <div className="flex flex-wrap items-center gap-1.5 mt-0.5">
+                        {(() => {
+                          const dep = stripAccents(chamado.departamento_finalizador || '')
+                          const isJuridico = dep.includes('juridico')
+                          const isSinistro = dep.includes('sinistro')
 
-                        if (isJuridico) {
-                          return (
-                            <Badge
-                              variant="outline"
-                              className="w-fit rounded-full text-xs font-medium px-2.5 py-0.5 bg-blue-50 text-blue-700 border-blue-200"
-                            >
-                              Jurídico
-                            </Badge>
-                          )
-                        }
+                          if (isJuridico) {
+                            return (
+                              <Badge
+                                variant="outline"
+                                className="w-fit rounded-full text-xs font-medium px-2.5 py-0.5 bg-blue-50 text-blue-700 border-blue-200"
+                              >
+                                Jurídico
+                              </Badge>
+                            )
+                          }
 
-                        if (isSinistro) {
-                          return (
-                            <Badge
-                              variant="outline"
-                              className="w-fit rounded-full text-xs font-medium px-2.5 py-0.5 bg-green-50 text-green-700 border-green-200"
-                            >
-                              Sinistro
-                            </Badge>
-                          )
-                        }
+                          if (isSinistro) {
+                            return (
+                              <Badge
+                                variant="outline"
+                                className="w-fit rounded-full text-xs font-medium px-2.5 py-0.5 bg-green-50 text-green-700 border-green-200"
+                              >
+                                Sinistro
+                              </Badge>
+                            )
+                          }
 
-                        return null
-                      })()}
+                          return null
+                        })()}
+                        {Boolean(
+                          chamado.restricao_removida_em ||
+                          chamado.restricao_motivo ||
+                          chamado.restricao_observacao,
+                        ) && (
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <span
+                                tabIndex={0}
+                                role="button"
+                                aria-label="Alerta de restrição anterior"
+                                className="inline-flex items-center text-amber-600 hover:text-amber-700 focus:outline-none focus:ring-1 focus:ring-amber-500 rounded p-0.5 cursor-help"
+                              >
+                                <AlertTriangle className="h-4 w-4 fill-amber-400 text-amber-700 shrink-0" />
+                              </span>
+                            </TooltipTrigger>
+                            <TooltipContent className="max-w-xs p-3 text-xs space-y-1.5 bg-slate-900 text-slate-100 border-slate-800 shadow-lg">
+                              <p className="font-semibold text-amber-300 flex items-center gap-1.5">
+                                <AlertTriangle className="h-3.5 w-3.5 text-amber-400" />
+                                Chamado já teve restrição do Jurídico
+                              </p>
+                              {chamado.restricao_motivo && (
+                                <p className="text-slate-200">
+                                  <strong className="text-slate-100">Motivo:</strong>{' '}
+                                  {chamado.restricao_motivo}
+                                </p>
+                              )}
+                              {chamado.restricao_observacao && (
+                                <p className="text-slate-200 whitespace-pre-wrap">
+                                  <strong className="text-slate-100">Observação:</strong>{' '}
+                                  {chamado.restricao_observacao}
+                                </p>
+                              )}
+                            </TooltipContent>
+                          </Tooltip>
+                        )}
+                      </div>
+                    )}
                   </div>
                 </TableCell>
                 <TableCell className="font-mono text-sm text-slate-700">

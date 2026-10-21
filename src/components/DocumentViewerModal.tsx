@@ -35,21 +35,22 @@ export const isImageDocument = (url?: string | null, title?: string | null): boo
  * #toolbar=0&navpanes=0&scrollbar=0&view=FitH suprimem a barra de ferramentas
  * do topo (toolbar=0) e recolhem o painel lateral de miniaturas (navpanes=0).
  */
-export const buildPdfViewerUrl = (rawUrl?: string | null): string => {
+export const buildPdfViewerUrl = (rawUrl?: string | null, zoomPercent?: number): string => {
   if (!rawUrl) return ''
   // Se a URL já contiver um fragmento (#), remove para aplicar os parâmetros limpos
   const [baseUrl] = rawUrl.split('#')
   // toolbar=0: esconde barra de ferramentas superior
   // navpanes=0: fecha miniaturas/painel de navegação lateral
-  // scrollbar=1: mantém a rolagem ativa
-  // view=FitH: ajusta largura do documento à tela
-  return `${baseUrl}#toolbar=0&navpanes=0&scrollbar=1&view=FitH`
+  // view=Fit: ajusta a página inteira à visualização padrão
+  const zoomParam = zoomPercent ? `&zoom=${zoomPercent}` : '&view=Fit'
+  return `${baseUrl}#toolbar=0&navpanes=0${zoomParam}`
 }
 
 export function DocumentViewerModal({ open, onOpenChange, url, title }: DocumentViewerModalProps) {
   const [isZoomed, setIsZoomed] = useState(false)
   const clickTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const containerRef = useRef<HTMLDivElement>(null)
+  const iframeRef = useRef<HTMLIFrameElement>(null)
 
   // Reset zoom on document change or open
   useEffect(() => {
@@ -71,7 +72,7 @@ export function DocumentViewerModal({ open, onOpenChange, url, title }: Document
   }, [])
 
   const handleDocumentClick = useCallback(() => {
-    // Dá zoom se ainda não estiver com zoom
+    // Se já estiver com zoom, não faz nada no 1 clique (mantém ampliado)
     if (clickTimeoutRef.current) {
       clearTimeout(clickTimeoutRef.current)
       clickTimeoutRef.current = null
@@ -88,7 +89,7 @@ export function DocumentViewerModal({ open, onOpenChange, url, title }: Document
       clearTimeout(clickTimeoutRef.current)
       clickTimeoutRef.current = null
     }
-    // Duplo clique tira o zoom
+    // Duplo clique tira o zoom e reseta a rolagem
     setIsZoomed(false)
     if (containerRef.current) {
       containerRef.current.scrollLeft = 0
@@ -96,11 +97,33 @@ export function DocumentViewerModal({ open, onOpenChange, url, title }: Document
     }
   }, [])
 
+  // Propaga o evento de roda do mouse (wheel) do overlay para o container ou tenta rolar o iframe
+  const handleOverlayWheel = useCallback((e: React.WheelEvent<HTMLDivElement>) => {
+    // 1. Tenta rolar o conteúdo interno do iframe se for acessível
+    try {
+      if (iframeRef.current?.contentWindow) {
+        iframeRef.current.contentWindow.scrollBy({
+          top: e.deltaY,
+          left: e.deltaX,
+          behavior: 'auto',
+        })
+      }
+    } catch {
+      // Ignora restrição cross-origin se aplicável
+    }
+
+    // 2. Rola o container externo se houver overflow
+    if (containerRef.current) {
+      containerRef.current.scrollTop += e.deltaY
+      containerRef.current.scrollLeft += e.deltaX
+    }
+  }, [])
+
   if (!url) return null
 
   const isImage = isImageDocument(url, title)
   const displayTitle = title || 'Visualização do Documento'
-  const pdfViewerSrc = !isImage ? buildPdfViewerUrl(url) : ''
+  const pdfViewerSrc = !isImage ? buildPdfViewerUrl(url, isZoomed ? 150 : undefined) : ''
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -146,7 +169,7 @@ export function DocumentViewerModal({ open, onOpenChange, url, title }: Document
           className="flex-1 w-full h-full min-h-0 bg-slate-100 dark:bg-slate-900 rounded-md overflow-auto border select-none"
           style={{
             position: 'relative',
-            cursor: isZoomed ? 'default' : LUPA_CURSOR_CSS,
+            cursor: isZoomed ? 'zoom-out' : LUPA_CURSOR_CSS,
           }}
         >
           {isImage ? (
@@ -175,33 +198,31 @@ export function DocumentViewerModal({ open, onOpenChange, url, title }: Document
             </div>
           ) : (
             <div
-              onClick={handleDocumentClick}
-              onDoubleClick={handleDocumentDoubleClick}
-              className="w-full h-full flex items-center justify-center overflow-auto relative"
+              className="relative w-full h-full min-w-full min-h-full"
               style={{
-                width: isZoomed ? '150%' : '100%',
-                height: isZoomed ? '150%' : '100%',
-                minWidth: '100%',
-                minHeight: '100%',
                 cursor: isZoomed ? 'zoom-out' : LUPA_CURSOR_CSS,
               }}
               title="1 clique: zoom • Duplo clique: tira o zoom"
             >
-              <div className="w-full h-full relative">
-                {/* Overlay transparente para capturar cliques no PDF */}
-                <div
-                  onClick={handleDocumentClick}
-                  onDoubleClick={handleDocumentDoubleClick}
-                  className="absolute inset-0 z-10"
-                  style={{ cursor: isZoomed ? 'zoom-out' : LUPA_CURSOR_CSS }}
-                  title="1 clique: zoom • Duplo clique: tira o zoom"
-                />
-                <iframe
-                  src={pdfViewerSrc}
-                  title={displayTitle}
-                  className="w-full h-full border-0 rounded bg-white block pointer-events-none"
-                />
-              </div>
+              {/* Overlay transparente para capturar cliques no PDF sem bloquear o scroll do mouse */}
+              {/* Deixa uma margem de 16px à direita para permitir arrastar a barra de rolagem nativa com o mouse */}
+              <div
+                onClick={handleDocumentClick}
+                onDoubleClick={handleDocumentDoubleClick}
+                onWheel={handleOverlayWheel}
+                className="absolute top-0 bottom-0 left-0 right-4 z-10"
+                style={{
+                  cursor: isZoomed ? 'zoom-out' : LUPA_CURSOR_CSS,
+                }}
+                title="1 clique: zoom • Duplo clique: tira o zoom"
+              />
+              <iframe
+                key={isZoomed ? 'pdf-zoomed' : 'pdf-normal'}
+                ref={iframeRef}
+                src={pdfViewerSrc}
+                title={displayTitle}
+                className="w-full h-full border-0 rounded bg-white block"
+              />
             </div>
           )}
         </div>

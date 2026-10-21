@@ -32,18 +32,31 @@ export const isImageDocument = (url?: string | null, title?: string | null): boo
  * Constrói a URL para exibição de PDF embutido sem a interface nativa
  * do navegador (barra de ferramentas no topo e painel de miniaturas à esquerda).
  * No Chrome/Edge/Firefox desktop, os parâmetros Adobe Open Parameters:
- * #toolbar=0&navpanes=0&scrollbar=0&view=FitH suprimem a barra de ferramentas
+ * #toolbar=0&navpanes=0&scrollbar=0 suprimem a barra de ferramentas
  * do topo (toolbar=0) e recolhem o painel lateral de miniaturas (navpanes=0).
+ *
+ * viewMode:
+ * - 'fit-width' (ou isFitWidth=true): '&view=FitH' (ajusta à largura da janela/pop-up)
+ * - 'fit-page' (padrão): '&view=Fit' (ajusta a página inteira à visualização padrão)
  */
-export const buildPdfViewerUrl = (rawUrl?: string | null, zoomPercent?: number): string => {
+export const buildPdfViewerUrl = (
+  rawUrl?: string | null,
+  viewModeOrZoom?: 'Fit' | 'FitH' | number | boolean,
+): string => {
   if (!rawUrl) return ''
   // Se a URL já contiver um fragmento (#), remove para aplicar os parâmetros limpos
   const [baseUrl] = rawUrl.split('#')
   // toolbar=0: esconde barra de ferramentas superior
   // navpanes=0: fecha miniaturas/painel de navegação lateral
-  // view=Fit: ajusta a página inteira à visualização padrão
-  const zoomParam = zoomPercent ? `&zoom=${zoomPercent}` : '&view=Fit'
-  return `${baseUrl}#toolbar=0&navpanes=0${zoomParam}`
+  let viewParam = '&view=Fit'
+  if (viewModeOrZoom === 'FitH' || viewModeOrZoom === true) {
+    viewParam = '&view=FitH'
+  } else if (typeof viewModeOrZoom === 'number') {
+    viewParam = `&zoom=${viewModeOrZoom}`
+  } else if (viewModeOrZoom === 'Fit' || viewModeOrZoom === false || !viewModeOrZoom) {
+    viewParam = '&view=Fit'
+  }
+  return `${baseUrl}#toolbar=0&navpanes=0${viewParam}`
 }
 
 export function DocumentViewerModal({ open, onOpenChange, url, title }: DocumentViewerModalProps) {
@@ -123,7 +136,7 @@ export function DocumentViewerModal({ open, onOpenChange, url, title }: Document
 
   const isImage = isImageDocument(url, title)
   const displayTitle = title || 'Visualização do Documento'
-  const pdfViewerSrc = !isImage ? buildPdfViewerUrl(url, isZoomed ? 150 : undefined) : ''
+  const pdfViewerSrc = !isImage ? buildPdfViewerUrl(url, isZoomed ? 'FitH' : 'Fit') : ''
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>

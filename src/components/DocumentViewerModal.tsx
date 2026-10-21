@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
-import { FileText, ZoomIn, ZoomOut, RotateCcw, Maximize2, ExternalLink, Move } from 'lucide-react'
+import { FileText, ExternalLink, Move } from 'lucide-react'
 
 export interface DocumentViewerModalProps {
   open: boolean
@@ -9,11 +9,6 @@ export interface DocumentViewerModalProps {
   url?: string | null
   title?: string | null
 }
-
-const ZOOM_MIN = 100
-const ZOOM_MAX = 300
-const ZOOM_STEP = 25
-const ZOOM_DEFAULT = 100
 
 // Cursor de lupa customizado via SVG data-URI com fallback para zoom-in
 // SVG de 24x24 com centro do hotspot na lente (10, 10)
@@ -34,20 +29,14 @@ export const isImageDocument = (url?: string | null, title?: string | null): boo
 }
 
 export function DocumentViewerModal({ open, onOpenChange, url, title }: DocumentViewerModalProps) {
-  const [zoom, setZoom] = useState<number>(ZOOM_DEFAULT)
-  const [isPanning, setIsPanning] = useState(false)
-  const panStartRef = useRef<{ x: number; y: number; scrollLeft: number; scrollTop: number }>({
-    x: 0,
-    y: 0,
-    scrollLeft: 0,
-    scrollTop: 0,
-  })
+  const [isZoomed, setIsZoomed] = useState(false)
+  const clickTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const containerRef = useRef<HTMLDivElement>(null)
 
   // Reset zoom on document change or open
   useEffect(() => {
     if (open) {
-      setZoom(ZOOM_DEFAULT)
+      setIsZoomed(false)
       if (containerRef.current) {
         containerRef.current.scrollLeft = 0
         containerRef.current.scrollTop = 0
@@ -55,185 +44,67 @@ export function DocumentViewerModal({ open, onOpenChange, url, title }: Document
     }
   }, [open, url])
 
-  // Detecção de clique no iframe para PDFs em zoom 100%:
-  // Como o iframe captura eventos internos do mouse, escutamos window.blur
-  // quando o mouse estiver sobre o contêiner do PDF para acionar o zoom inicial de 1 clique (150%)
-  const isHoveringPdfRef = useRef(false)
   useEffect(() => {
-    if (!open) return
-
-    const handleWindowBlur = () => {
-      if (isHoveringPdfRef.current) {
-        // Usuário clicou dentro do iframe
-        setZoom((prev) => {
-          if (prev <= ZOOM_DEFAULT) {
-            return 150
-          }
-          return prev
-        })
+    return () => {
+      if (clickTimeoutRef.current) {
+        clearTimeout(clickTimeoutRef.current)
       }
     }
+  }, [])
 
-    window.addEventListener('blur', handleWindowBlur)
-    return () => {
-      window.removeEventListener('blur', handleWindowBlur)
+  const handleDocumentClick = useCallback(() => {
+    // Dá zoom se ainda não estiver com zoom
+    if (clickTimeoutRef.current) {
+      clearTimeout(clickTimeoutRef.current)
+      clickTimeoutRef.current = null
     }
-  }, [open])
-
-  const handleZoomIn = useCallback(() => {
-    setZoom((prev) => Math.min(ZOOM_MAX, prev + ZOOM_STEP))
+    clickTimeoutRef.current = setTimeout(() => {
+      setIsZoomed(true)
+      clickTimeoutRef.current = null
+    }, 220)
   }, [])
 
-  const handleZoomOut = useCallback(() => {
-    setZoom((prev) => Math.max(ZOOM_MIN, prev - ZOOM_STEP))
-  }, [])
-
-  const handleResetZoom = useCallback(() => {
-    setZoom(ZOOM_DEFAULT)
+  const handleDocumentDoubleClick = useCallback((e: React.MouseEvent) => {
+    e.stopPropagation()
+    if (clickTimeoutRef.current) {
+      clearTimeout(clickTimeoutRef.current)
+      clickTimeoutRef.current = null
+    }
+    // Duplo clique tira o zoom
+    setIsZoomed(false)
     if (containerRef.current) {
       containerRef.current.scrollLeft = 0
       containerRef.current.scrollTop = 0
     }
   }, [])
 
-  const handleDocumentClick = useCallback(() => {
-    setZoom((prev) => {
-      // Se já estiver ampliado, não acumula mais no clique simples
-      if (prev > ZOOM_DEFAULT) {
-        return prev
-      }
-      // Primeiro clique amplia para um nível de zoom único confortável
-      return 150
-    })
-  }, [])
-
-  const handleDocumentDoubleClick = useCallback(
-    (e: React.MouseEvent) => {
-      e.stopPropagation()
-      handleResetZoom()
-    },
-    [handleResetZoom],
-  )
-
-  // Pan handlers for dragging zoomed container
-  const handleMouseDown = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
-    // Only drag with primary left mouse button
-    if (e.button !== 0) return
-    const container = containerRef.current
-    if (!container) return
-
-    setIsPanning(true)
-    panStartRef.current = {
-      x: e.clientX,
-      y: e.clientY,
-      scrollLeft: container.scrollLeft,
-      scrollTop: container.scrollTop,
-    }
-  }, [])
-
-  const handleMouseMove = useCallback(
-    (e: React.MouseEvent<HTMLDivElement>) => {
-      if (!isPanning || !containerRef.current) return
-      const dx = e.clientX - panStartRef.current.x
-      const dy = e.clientY - panStartRef.current.y
-      containerRef.current.scrollLeft = panStartRef.current.scrollLeft - dx
-      containerRef.current.scrollTop = panStartRef.current.scrollTop - dy
-    },
-    [isPanning],
-  )
-
-  const handleMouseUp = useCallback(() => {
-    setIsPanning(false)
-  }, [])
-
   if (!url) return null
 
   const isImage = isImageDocument(url, title)
   const displayTitle = title || 'Visualização do Documento'
-  const isZoomed = zoom !== 100
-
-  // For PDF via iframe:
-  // No estado inicial (zoom = 100), abrir ajustado à página (#view=Fit)
-  // Quando o zoom for acionado (> 100 ou < 100), passar #zoom={zoom}
-  const pdfUrlWithZoom = (() => {
-    if (isImage) return url
-    const clean = url.split('#')[0]
-    if (zoom === ZOOM_DEFAULT) {
-      return `${clean}#view=Fit`
-    }
-    // Para passos de 25% (125%, 150%, 175%...), passar o percentual sem o símbolo %
-    // Ex: #zoom=125, #zoom=150 (especificação padrão de PDF open parameters)
-    return `${clean}#zoom=${zoom}`
-  })()
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-[96vw] w-[96vw] h-[94vh] max-h-[94vh] flex flex-col p-3 sm:p-5 gap-2 sm:gap-3 select-none">
         <DialogHeader className="flex flex-row items-center justify-between pr-8 border-b pb-2.5 sm:pb-3 space-y-0 shrink-0 gap-2 flex-wrap">
-          <DialogTitle className="text-base sm:text-lg font-semibold truncate flex items-center gap-2 min-w-0 max-w-[50%]">
+          <DialogTitle className="text-base sm:text-lg font-semibold truncate flex items-center gap-2 min-w-0 max-w-[70%]">
             <FileText className="h-5 w-5 text-primary shrink-0" />
             <span className="truncate" title={displayTitle}>
               {displayTitle}
             </span>
           </DialogTitle>
 
-          {/* Barra de ferramentas de Zoom */}
-          <div className="flex items-center gap-1 sm:gap-1.5 ml-auto shrink-0 bg-slate-100 dark:bg-slate-800 p-1 rounded-lg border border-slate-200 dark:border-slate-700">
+          <div className="flex items-center gap-2 ml-auto shrink-0">
             <Button
               type="button"
-              variant="ghost"
-              size="icon"
-              className="h-8 w-8 text-slate-700 dark:text-slate-200 hover:bg-white dark:hover:bg-slate-700 disabled:opacity-40"
-              onClick={handleZoomOut}
-              disabled={zoom <= ZOOM_MIN}
-              title="Afastar zoom (-)"
-            >
-              <ZoomOut className="h-4 w-4" />
-            </Button>
-
-            <button
-              type="button"
-              onClick={handleResetZoom}
-              className="px-2 py-0.5 min-w-[52px] text-xs font-mono font-medium rounded hover:bg-white dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 transition-colors"
-              title="Clique para redefinir para 100%"
-            >
-              {zoom}%
-            </button>
-
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon"
-              className="h-8 w-8 text-slate-700 dark:text-slate-200 hover:bg-white dark:hover:bg-slate-700 disabled:opacity-40"
-              onClick={handleZoomIn}
-              disabled={zoom >= ZOOM_MAX}
-              title="Aproximar zoom (+)"
-            >
-              <ZoomIn className="h-4 w-4" />
-            </Button>
-
-            <div className="h-4 w-[1px] bg-slate-300 dark:bg-slate-600 mx-0.5" />
-
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon"
-              className="h-8 w-8 text-slate-700 dark:text-slate-200 hover:bg-white dark:hover:bg-slate-700"
-              onClick={handleResetZoom}
-              title="Redefinir zoom (100%)"
-            >
-              <RotateCcw className="h-3.5 w-3.5" />
-            </Button>
-
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon"
-              className="h-8 w-8 text-slate-700 dark:text-slate-200 hover:bg-white dark:hover:bg-slate-700"
+              variant="outline"
+              size="sm"
+              className="h-8 gap-1.5 text-xs font-medium"
               onClick={() => window.open(url, '_blank', 'noopener,noreferrer')}
               title="Abrir documento em nova aba"
             >
               <ExternalLink className="h-3.5 w-3.5" />
+              <span>Abrir em nova aba</span>
             </Button>
           </div>
         </DialogHeader>
@@ -241,43 +112,30 @@ export function DocumentViewerModal({ open, onOpenChange, url, title }: Document
         {/* Dica / instrução sutil */}
         <div className="flex items-center justify-between text-[11px] text-muted-foreground px-1 shrink-0">
           <div className="flex items-center gap-1.5 truncate">
-            {isImage ? (
-              <span>Clique na imagem para aproximar • Duplo clique para redefinir</span>
-            ) : (
-              <span>
-                Clique para aproximar • Duplo clique para redefinir (ou use os controles do PDF)
-              </span>
-            )}
+            <span>Clique para dar zoom • Duplo clique para tirar o zoom</span>
           </div>
           {isZoomed && (
             <span className="flex items-center gap-1 font-medium text-primary">
-              <Move className="h-3 w-3" /> Arraste para mover / role para navegar
+              <Move className="h-3 w-3" /> Role para navegar no documento ampliado
             </span>
           )}
         </div>
 
-        {/* Viewport container com scroll / pan */}
+        {/* Viewport container */}
         <div
           ref={containerRef}
-          onMouseDown={isZoomed ? handleMouseDown : undefined}
-          onMouseMove={isZoomed ? handleMouseMove : undefined}
-          onMouseUp={isZoomed ? handleMouseUp : undefined}
-          onMouseLeave={isZoomed ? handleMouseUp : undefined}
-          className={`flex-1 w-full h-full min-h-0 bg-slate-100 dark:bg-slate-900 rounded-md overflow-auto border select-none ${
-            isPanning ? 'cursor-grabbing' : ''
-          }`}
+          className="flex-1 w-full h-full min-h-0 bg-slate-100 dark:bg-slate-900 rounded-md overflow-auto border select-none"
           style={{
             position: 'relative',
-            cursor: isPanning ? 'grabbing' : isZoomed ? 'grab' : LUPA_CURSOR_CSS,
+            cursor: isZoomed ? 'default' : LUPA_CURSOR_CSS,
           }}
         >
           {isImage ? (
             <div
               className="min-w-full min-h-full flex items-center justify-center p-4"
               style={{
-                // Quando o zoom > 100%, expandir a área para permitir rolagem confortável
-                width: zoom > 100 ? `${zoom}%` : '100%',
-                height: zoom > 100 ? `${zoom}%` : '100%',
+                width: isZoomed ? '150%' : '100%',
+                height: isZoomed ? '150%' : '100%',
                 transition: 'width 0.15s ease-out, height 0.15s ease-out',
               }}
             >
@@ -289,42 +147,40 @@ export function DocumentViewerModal({ open, onOpenChange, url, title }: Document
                 draggable={false}
                 className="max-w-full max-h-full object-contain rounded shadow-sm select-none transition-transform duration-150 ease-out"
                 style={{
-                  transform: `scale(${zoom / 100})`,
+                  transform: isZoomed ? 'scale(1.5)' : 'scale(1)',
                   transformOrigin: 'center center',
-                  cursor: isPanning ? 'grabbing' : isZoomed ? 'grab' : LUPA_CURSOR_CSS,
+                  cursor: isZoomed ? 'zoom-out' : LUPA_CURSOR_CSS,
                 }}
-                title="Clique para aproximar • Duplo clique para redefinir"
+                title="1 clique: zoom • Duplo clique: tira o zoom"
               />
             </div>
           ) : (
             <div
               onClick={handleDocumentClick}
               onDoubleClick={handleDocumentDoubleClick}
-              onMouseEnter={() => {
-                isHoveringPdfRef.current = true
-              }}
-              onMouseLeave={() => {
-                isHoveringPdfRef.current = false
-              }}
               className="w-full h-full flex items-center justify-center overflow-auto relative"
               style={{
-                // Para PDF, quando ampliado (zoom > 100), o contêiner interno expande proporcionalmente
-                // permitindo rolagem nativa e pan suaves em ambas as direções (x e y), sem esticar
-                width: isZoomed && zoom > 100 ? `${zoom}%` : '100%',
-                height: isZoomed && zoom > 100 ? `${zoom}%` : '100%',
+                width: isZoomed ? '150%' : '100%',
+                height: isZoomed ? '150%' : '100%',
                 minWidth: '100%',
                 minHeight: '100%',
-                transition: isZoomed ? 'width 0.15s ease-out, height 0.15s ease-out' : 'none',
-                cursor: isPanning ? 'grabbing' : isZoomed ? 'grab' : LUPA_CURSOR_CSS,
+                cursor: isZoomed ? 'zoom-out' : LUPA_CURSOR_CSS,
               }}
-              title="Clique para aproximar • Duplo clique para redefinir"
+              title="1 clique: zoom • Duplo clique: tira o zoom"
             >
               <div className="w-full h-full relative">
+                {/* Overlay transparente para capturar cliques no PDF */}
+                <div
+                  onClick={handleDocumentClick}
+                  onDoubleClick={handleDocumentDoubleClick}
+                  className="absolute inset-0 z-10"
+                  style={{ cursor: isZoomed ? 'zoom-out' : LUPA_CURSOR_CSS }}
+                  title="1 clique: zoom • Duplo clique: tira o zoom"
+                />
                 <iframe
-                  key={`${url}-${zoom === ZOOM_DEFAULT ? 'fit' : zoom}`}
-                  src={pdfUrlWithZoom}
+                  src={url}
                   title={displayTitle}
-                  className="w-full h-full border-0 rounded bg-white pointer-events-auto block"
+                  className="w-full h-full border-0 rounded bg-white block pointer-events-none"
                 />
               </div>
             </div>

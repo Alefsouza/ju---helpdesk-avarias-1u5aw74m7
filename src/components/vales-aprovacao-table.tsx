@@ -389,9 +389,8 @@ export function ValesAprovacaoTable({
                     {!chamado.em_restricao && (
                       <div className="flex flex-wrap items-center gap-1.5 mt-0.5">
                         {(() => {
-                          const dep = stripAccents(chamado.departamento_finalizador || '')
-                          const isJuridico = dep.includes('juridico')
-                          const isSinistro = dep.includes('sinistro')
+                          const isJuridico = chamado.status_aprovacao_claudinei === 'aprovado'
+                          const isSinistro = chamado.status_aprovacao_alex === 'aprovado'
 
                           if (isJuridico) {
                             return (

@@ -69,9 +69,8 @@ export default function ValesAprovacao() {
 
   const matchesDepartamento = (c: any, filter: 'todos' | 'juridico' | 'sinistro'): boolean => {
     if (filter === 'todos') return true
-    const dep = stripAccents(c.departamento_finalizador || '')
-    const isJuridico = dep.includes('juridico')
-    const isSinistro = dep.includes('sinistro')
+    const isJuridico = c.status_aprovacao_claudinei === 'aprovado'
+    const isSinistro = c.status_aprovacao_alex === 'aprovado'
     if (filter === 'juridico') return isJuridico
     if (filter === 'sinistro') return isSinistro
     return true
@@ -157,15 +156,14 @@ export default function ValesAprovacao() {
     const { data, error } = await supabase
       .from('chamados')
       .select(`
-        id, titulo, descricao, responsavel_id, status_aprovacao, status_aprovacao_claudinei, aprovacoes_diretoria, criado_em,
+        id, titulo, descricao, responsavel_id, status_aprovacao, status_aprovacao_alex, status_aprovacao_claudinei, aprovacoes_diretoria, criado_em,
         pia, registro_motorista, nome_motorista, data_ocorrencia, status_juridico, status_sinistro,
         em_restricao, restricao_motivo, restricao_observacao, restricao_aplicada_em, restricao_removida_em,
         anexos_chamado_interno!anexos_chamado_interno_chamado_id_fkey ( id, nome_arquivo, arquivo_url, criado_em ),
         documentos!documentos_chamado_id_fkey ( id, nome_arquivo, arquivo_url, tipo_documento, orcamento_url, valor_orcamento, registro_motorista, nome_motorista, criado_em ),
         parcelas_vales ( id, valor_parcela, data_referencia ),
         formularios_espelho_danos!formularios_espelho_danos_chamado_id_fkey ( registro_motorista, nome_motorista ),
-        solicitacoes_parcelamento ( id, registro, nome, valor_orcamento, quantidade_parcelas, status, desconto_aplicado, vale_unificado ),
-        historico_chamado!historico_chamado_chamado_id_fkey ( usuario_id, acao )
+        solicitacoes_parcelamento ( id, registro, nome, valor_orcamento, quantidade_parcelas, status, desconto_aplicado, vale_unificado )
       `)
       .or('status.eq.finalizado,em_restricao.eq.true')
       .or('status_aprovacao_alex.eq.aprovado,status_aprovacao_claudinei.eq.aprovado')
@@ -189,91 +187,6 @@ export default function ValesAprovacao() {
         const anexos = c.anexos_chamado_interno || []
         return hasApprovalTrigger(anexos)
       }) || []
-
-    // Buscar em lote o histórico de ações relevantes para os chamados filtrados
-    if (filtered.length > 0) {
-      const chamadoIds = filtered.map((c: any) => c.id)
-
-      // Busca o histórico dos chamados ordenado por criado_em asc para processamento cronológico
-      const { data: histData, error: histError } = await supabase
-        .from('historico_chamado')
-        .select('chamado_id, usuario_id, acao, detalhes, criado_em')
-        .in('chamado_id', chamadoIds)
-        .order('criado_em', { ascending: true })
-
-      if (!histError && histData) {
-        // Mapear o finalizador corrente para cada chamado percorrendo em ordem cronológica:
-        // - acao = 'reaberto': zera o finalizador corrente (a finalização anterior deixa de valer)
-        // - acao = 'finalizado': define o finalizador como o usuario_id da ação
-        // - ações que encaminham para a diretoria / aprovação da diretoria: definem o finalizador como o usuario_id da ação
-        const lastFinalizerPerChamado = new Map<string, string | null>()
-
-        const isEncaminhamentoDiretoria = (h: any): boolean => {
-          const detalhes = stripAccents(h.detalhes || '')
-          return (
-            detalhes.includes('encaminhado para aprovacao da diretoria') ||
-            (detalhes.includes('aprovacao da diretoria') && detalhes.includes('encaminhado')) ||
-            (detalhes.includes('diretoria') &&
-              (detalhes.includes('aprovado por') || detalhes.includes('encaminhado')))
-          )
-        }
-
-        histData.forEach((h: any) => {
-          const action = (h.acao || '').toLowerCase().trim()
-          if (action === 'reaberto') {
-            lastFinalizerPerChamado.set(h.chamado_id, null)
-          } else if (action === 'finalizado') {
-            if (h.usuario_id) {
-              lastFinalizerPerChamado.set(h.chamado_id, h.usuario_id)
-            }
-          } else if (isEncaminhamentoDiretoria(h)) {
-            if (h.usuario_id) {
-              lastFinalizerPerChamado.set(h.chamado_id, h.usuario_id)
-            }
-          }
-        })
-
-        // Coletar userIds a consultar em perfil_usuario
-        const userIdsToFetch = new Set<string>()
-        lastFinalizerPerChamado.forEach((uid) => {
-          if (uid) userIdsToFetch.add(uid)
-        })
-
-        // Para chamados que não tenham finalizador apurado, olhar o responsavel_id como fallback
-        filtered.forEach((c: any) => {
-          const finalizer = lastFinalizerPerChamado.get(c.id)
-          if (!finalizer && c.responsavel_id) {
-            userIdsToFetch.add(c.responsavel_id)
-          }
-        })
-
-        let profileMap = new Map<string, string>()
-        if (userIdsToFetch.size > 0) {
-          const { data: profiles } = await supabase
-            .from('perfil_usuario')
-            .select('id, departamento')
-            .in('id', Array.from(userIdsToFetch))
-
-          if (profiles) {
-            profiles.forEach((p: any) => {
-              if (p.id && p.departamento) {
-                profileMap.set(p.id, p.departamento)
-              }
-            })
-          }
-        }
-
-        // Anexar departamento_finalizador a cada chamado
-        filtered.forEach((c: any) => {
-          const finalizerUserId = lastFinalizerPerChamado.get(c.id) || c.responsavel_id
-          if (finalizerUserId && profileMap.has(finalizerUserId)) {
-            c.departamento_finalizador = profileMap.get(finalizerUserId)
-          } else {
-            c.departamento_finalizador = null
-          }
-        })
-      }
-    }
 
     const isApprovedByUser = (c: any) => {
       const aprovacoes = Array.isArray(c.aprovacoes_diretoria) ? c.aprovacoes_diretoria : []

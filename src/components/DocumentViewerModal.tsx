@@ -55,6 +55,31 @@ export function DocumentViewerModal({ open, onOpenChange, url, title }: Document
     }
   }, [open, url])
 
+  // Detecção de clique no iframe para PDFs em zoom 100%:
+  // Como o iframe captura eventos internos do mouse, escutamos window.blur
+  // quando o mouse estiver sobre o contêiner do PDF para acionar o zoom inicial de 1 clique (150%)
+  const isHoveringPdfRef = useRef(false)
+  useEffect(() => {
+    if (!open) return
+
+    const handleWindowBlur = () => {
+      if (isHoveringPdfRef.current) {
+        // Usuário clicou dentro do iframe
+        setZoom((prev) => {
+          if (prev <= ZOOM_DEFAULT) {
+            return 150
+          }
+          return prev
+        })
+      }
+    }
+
+    window.addEventListener('blur', handleWindowBlur)
+    return () => {
+      window.removeEventListener('blur', handleWindowBlur)
+    }
+  }, [open])
+
   const handleZoomIn = useCallback(() => {
     setZoom((prev) => Math.min(ZOOM_MAX, prev + ZOOM_STEP))
   }, [])
@@ -127,11 +152,15 @@ export function DocumentViewerModal({ open, onOpenChange, url, title }: Document
   const displayTitle = title || 'Visualização do Documento'
   const isZoomed = zoom !== 100
 
-  // For PDF via iframe: appending #zoom=... where supported,
-  // plus applying a responsive scaled viewport container
+  // For PDF via iframe:
+  // No estado inicial (zoom = 100), abrir ajustado à página (#view=Fit)
+  // Quando o zoom for acionado (> 100 ou < 100), passar #zoom={zoom}
   const pdfUrlWithZoom = (() => {
     if (isImage) return url
     const clean = url.split('#')[0]
+    if (zoom === ZOOM_DEFAULT) {
+      return `${clean}#view=Fit`
+    }
     return `${clean}#zoom=${zoom}`
   })()
 
@@ -269,14 +298,20 @@ export function DocumentViewerModal({ open, onOpenChange, url, title }: Document
             <div
               onClick={handleDocumentClick}
               onDoubleClick={handleDocumentDoubleClick}
-              className="w-full h-full flex items-center justify-center overflow-auto"
+              onMouseEnter={() => {
+                isHoveringPdfRef.current = true
+              }}
+              onMouseLeave={() => {
+                isHoveringPdfRef.current = false
+              }}
+              className="w-full h-full flex items-center justify-center overflow-auto relative"
               style={{
-                // Para PDF, aplicar transform scale no container do iframe e redimensionar proporções
-                width: zoom > 100 ? `${zoom}%` : '100%',
-                height: zoom > 100 ? `${zoom}%` : '100%',
+                // Para PDF, aplicar redimensionamento APENAS quando zoom for acionado (!= 100)
+                width: isZoomed && zoom > 100 ? `${zoom}%` : '100%',
+                height: isZoomed && zoom > 100 ? `${zoom}%` : '100%',
                 minWidth: '100%',
                 minHeight: '100%',
-                transition: 'width 0.15s ease-out, height 0.15s ease-out',
+                transition: isZoomed ? 'width 0.15s ease-out, height 0.15s ease-out' : 'none',
                 cursor: isPanning ? 'grabbing' : isZoomed ? 'grab' : LUPA_CURSOR_CSS,
               }}
               title="Clique para aproximar • Duplo clique para redefinir"
@@ -284,14 +319,14 @@ export function DocumentViewerModal({ open, onOpenChange, url, title }: Document
               <div
                 className="w-full h-full relative"
                 style={{
-                  transform: zoom < 100 ? `scale(${zoom / 100})` : 'none',
+                  transform: isZoomed && zoom < 100 ? `scale(${zoom / 100})` : 'none',
                   transformOrigin: 'top left',
-                  width: zoom < 100 ? `${(100 / zoom) * 100}%` : '100%',
-                  height: zoom < 100 ? `${(100 / zoom) * 100}%` : '100%',
+                  width: isZoomed && zoom < 100 ? `${(100 / zoom) * 100}%` : '100%',
+                  height: isZoomed && zoom < 100 ? `${(100 / zoom) * 100}%` : '100%',
                 }}
               >
                 <iframe
-                  key={`${url}-${zoom}`}
+                  key={`${url}-${zoom === ZOOM_DEFAULT ? 'fit' : zoom}`}
                   src={pdfUrlWithZoom}
                   title={displayTitle}
                   className="w-full h-full border-0 rounded bg-white pointer-events-auto"

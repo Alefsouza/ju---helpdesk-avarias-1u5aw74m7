@@ -59,11 +59,359 @@ export const buildPdfViewerUrl = (
   return `${baseUrl}#toolbar=0&navpanes=0${viewParam}`
 }
 
+// Dynamic loader for PDF.js library via CDN (version 3.11.174)
+const PDFJS_SCRIPT_URL = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js'
+const PDFJS_WORKER_URL = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js'
+
+let pdfjsLoadPromise: Promise<any> | null = null
+function loadPdfJs(): Promise<any> {
+  if (typeof window === 'undefined') return Promise.reject(new Error('Window unavailable'))
+  const win = window as any
+  if (win.pdfjsLib) {
+    if (!win.pdfjsLib.GlobalWorkerOptions.workerSrc) {
+      win.pdfjsLib.GlobalWorkerOptions.workerSrc = PDFJS_WORKER_URL
+    }
+    return Promise.resolve(win.pdfjsLib)
+  }
+  if (!pdfjsLoadPromise) {
+    pdfjsLoadPromise = new Promise((resolve, reject) => {
+      const existingScript = document.querySelector(`script[src="${PDFJS_SCRIPT_URL}"]`)
+      if (existingScript) {
+        existingScript.addEventListener('load', () => {
+          if (win.pdfjsLib) {
+            win.pdfjsLib.GlobalWorkerOptions.workerSrc = PDFJS_WORKER_URL
+            resolve(win.pdfjsLib)
+          } else {
+            reject(new Error('pdfjsLib not available after script load'))
+          }
+        })
+        existingScript.addEventListener('error', (err) => reject(err))
+        return
+      }
+
+      const script = document.createElement('script')
+      script.src = PDFJS_SCRIPT_URL
+      script.async = true
+      script.onload = () => {
+        if (win.pdfjsLib) {
+          win.pdfjsLib.GlobalWorkerOptions.workerSrc = PDFJS_WORKER_URL
+          resolve(win.pdfjsLib)
+        } else {
+          reject(new Error('pdfjsLib not found on window'))
+        }
+      }
+      script.onerror = (e) => {
+        pdfjsLoadPromise = null
+        reject(e)
+      }
+      document.head.appendChild(script)
+    })
+  }
+  return pdfjsLoadPromise
+}
+
+interface PdfCanvasRendererProps {
+  url: string
+  isZoomed: boolean
+  onClick: () => void
+  onDoubleClick: (e: React.MouseEvent) => void
+  displayTitle: string
+}
+
+function PdfCanvasRenderer({
+  url,
+  isZoomed,
+  onClick,
+  onDoubleClick,
+  displayTitle,
+}: PdfCanvasRendererProps) {
+  const containerRef = useRef<HTMLDivElement>(null)
+  const [numPages, setNumPages] = useState<number>(0)
+  const [loading, setLoading] = useState<boolean>(true)
+  const [error, setError] = useState<string | null>(null)
+  const [viewportWidth, setViewportWidth] = useState<number>(0)
+  const [viewportHeight, setViewportHeight] = useState<number>(0)
+  const pdfDocRef = useRef<any>(null)
+  const renderTasksRef = useRef<Map<number, any>>(new Map())
+
+  // Observa redimensionamento do contêiner
+  useEffect(() => {
+    const el = containerRef.current
+    if (!el) return
+    const updateSize = () => {
+      const rect = el.getBoundingClientRect()
+      if (rect.width > 0 && rect.height > 0) {
+        setViewportWidth(rect.width)
+        setViewportHeight(rect.height)
+      }
+    }
+    updateSize()
+    const ro = new ResizeObserver(() => updateSize())
+    ro.observe(el)
+    return () => ro.disconnect()
+  }, [])
+
+  // Carrega o documento PDF com pdf.js
+  useEffect(() => {
+    let cancelled = false
+    setLoading(true)
+    setError(null)
+    setNumPages(0)
+
+    // Cancela tasks de renderização anteriores
+    renderTasksRef.current.forEach((task) => {
+      try {
+        task.cancel()
+      } catch {
+        // ignore
+      }
+    })
+    renderTasksRef.current.clear()
+
+    if (pdfDocRef.current) {
+      try {
+        pdfDocRef.current.destroy()
+      } catch {
+        // ignore
+      }
+      pdfDocRef.current = null
+    }
+
+    loadPdfJs()
+      .then((pdfjs) => {
+        if (cancelled) return
+        const loadingTask = pdfjs.getDocument({
+          url,
+          withCredentials: false,
+        })
+        return loadingTask.promise
+      })
+      .then((pdfDoc) => {
+        if (cancelled) {
+          if (pdfDoc) {
+            try {
+              pdfDoc.destroy()
+            } catch {
+              // ignore
+            }
+          }
+          return
+        }
+        pdfDocRef.current = pdfDoc
+        setNumPages(pdfDoc.numPages)
+        setLoading(false)
+      })
+      .catch((err) => {
+        if (cancelled) return
+        console.error('Erro ao carregar PDF via pdf.js:', err)
+        setError('Não foi possível renderizar o PDF diretamente.')
+        setLoading(false)
+      })
+
+    return () => {
+      cancelled = true
+      renderTasksRef.current.forEach((task) => {
+        try {
+          task.cancel()
+        } catch {
+          // ignore
+        }
+      })
+      renderTasksRef.current.clear()
+      if (pdfDocRef.current) {
+        try {
+          pdfDocRef.current.destroy()
+        } catch {
+          // ignore
+        }
+        pdfDocRef.current = null
+      }
+    }
+  }, [url])
+
+  // Se der erro ao carregar via pdf.js (ex.: CSP/rede), faz fallback para iframe nativo
+  if (error) {
+    const fallbackSrc = buildPdfViewerUrl(url, isZoomed ? 'FitH' : 'Fit')
+    return (
+      <div
+        ref={containerRef}
+        onClick={onClick}
+        onDoubleClick={onDoubleClick}
+        className="w-full h-full relative"
+        style={{ cursor: isZoomed ? 'zoom-out' : LUPA_CURSOR_CSS }}
+      >
+        <iframe
+          src={fallbackSrc}
+          title={displayTitle}
+          className="w-full h-full border-0 rounded bg-white block"
+        />
+      </div>
+    )
+  }
+
+  return (
+    <div
+      ref={containerRef}
+      onClick={onClick}
+      onDoubleClick={onDoubleClick}
+      className="w-full h-full min-h-full flex flex-col items-center py-4 px-2 sm:px-4 space-y-4 select-none"
+      style={{
+        cursor: isZoomed ? 'zoom-out' : LUPA_CURSOR_CSS,
+      }}
+      title="1 clique: zoom • Duplo clique: tira o zoom"
+    >
+      {loading && (
+        <div className="w-full h-full flex flex-col items-center justify-center text-muted-foreground gap-2 min-h-[300px]">
+          <div className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+          <span className="text-xs">Carregando visualização do PDF...</span>
+        </div>
+      )}
+
+      {!loading &&
+        numPages > 0 &&
+        viewportWidth > 0 &&
+        viewportHeight > 0 &&
+        Array.from({ length: numPages }, (_, i) => i + 1).map((pageNum) => (
+          <PdfPageCanvas
+            key={`${url}-p${pageNum}-${isZoomed ? 'zoomed' : 'normal'}`}
+            pdfDoc={pdfDocRef.current}
+            pageNum={pageNum}
+            containerWidth={viewportWidth}
+            containerHeight={viewportHeight}
+            isZoomed={isZoomed}
+            renderTasksRef={renderTasksRef}
+          />
+        ))}
+    </div>
+  )
+}
+
+interface PdfPageCanvasProps {
+  pdfDoc: any
+  pageNum: number
+  containerWidth: number
+  containerHeight: number
+  isZoomed: boolean
+  renderTasksRef: React.MutableRefObject<Map<number, any>>
+}
+
+function PdfPageCanvas({
+  pdfDoc,
+  pageNum,
+  containerWidth,
+  containerHeight,
+  isZoomed,
+  renderTasksRef,
+}: PdfPageCanvasProps) {
+  const canvasRef = useRef<HTMLCanvasElement>(null)
+
+  useEffect(() => {
+    if (!pdfDoc || !canvasRef.current) return
+    let isCancelled = false
+
+    // Cancela renderização pendente desta página se existir
+    const prevTask = renderTasksRef.current.get(pageNum)
+    if (prevTask) {
+      try {
+        prevTask.cancel()
+      } catch {
+        // ignore
+      }
+      renderTasksRef.current.delete(pageNum)
+    }
+
+    pdfDoc
+      .getPage(pageNum)
+      .then((page: any) => {
+        if (isCancelled || !canvasRef.current) return
+
+        // Viewport com escala 1.0 para medir dimensões nativas da página
+        const unscaledViewport = page.getViewport({ scale: 1.0 })
+        const pageWidth = unscaledViewport.width
+        const pageHeight = unscaledViewport.height
+
+        // Margens disponíveis dentro do pop-up
+        const horizontalPadding = 32 // margem lateral interna
+        const verticalPadding = 32 // margem vertical para caber confortavelmente
+        const availWidth = Math.max(containerWidth - horizontalPadding, 200)
+        const availHeight = Math.max(containerHeight - verticalPadding, 200)
+
+        // Modo ampliado (1 clique): preenche a largura (fit-width)
+        // Modo padrão: cabe na tela (fit-page: menor entre largura e altura)
+        let targetScale: number
+        if (isZoomed) {
+          targetScale = availWidth / pageWidth
+        } else {
+          const scaleW = availWidth / pageWidth
+          const scaleH = availHeight / pageHeight
+          // Fit-page: ajustado ao pop-up por inteiro (ambas largura e altura cabem na janela)
+          targetScale = Math.min(scaleW, scaleH)
+        }
+
+        // Suporte para telas Retina / HiDPI para máxima nitidez (DPR cap em 2)
+        const dpr = Math.min(window.devicePixelRatio || 1, 2)
+        const renderViewport = page.getViewport({ scale: targetScale * dpr })
+        const displayWidth = Math.floor(pageWidth * targetScale)
+        const displayHeight = Math.floor(pageHeight * targetScale)
+
+        const canvas = canvasRef.current
+        if (!canvas) return
+        canvas.width = Math.floor(renderViewport.width)
+        canvas.height = Math.floor(renderViewport.height)
+        canvas.style.width = `${displayWidth}px`
+        canvas.style.height = `${displayHeight}px`
+
+        const ctx = canvas.getContext('2d')
+        if (!ctx) return
+
+        const renderContext = {
+          canvasContext: ctx,
+          viewport: renderViewport,
+        }
+
+        const renderTask = page.render(renderContext)
+        renderTasksRef.current.set(pageNum, renderTask)
+
+        return renderTask.promise.then(() => {
+          renderTasksRef.current.delete(pageNum)
+        })
+      })
+      .catch((err: any) => {
+        if (err?.name === 'RenderingCancelledException') return
+        if (!isCancelled) {
+          console.warn(`Erro ao renderizar página ${pageNum}:`, err)
+        }
+      })
+
+    return () => {
+      isCancelled = true
+      const task = renderTasksRef.current.get(pageNum)
+      if (task) {
+        try {
+          task.cancel()
+        } catch {
+          // ignore
+        }
+        renderTasksRef.current.delete(pageNum)
+      }
+    }
+  }, [pdfDoc, pageNum, containerWidth, containerHeight, isZoomed, renderTasksRef])
+
+  return (
+    <canvas
+      ref={canvasRef}
+      className="bg-white rounded shadow-md pointer-events-none transition-shadow"
+      style={{
+        maxWidth: '100%',
+      }}
+    />
+  )
+}
+
 export function DocumentViewerModal({ open, onOpenChange, url, title }: DocumentViewerModalProps) {
   const [isZoomed, setIsZoomed] = useState(false)
   const clickTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const containerRef = useRef<HTMLDivElement>(null)
-  const iframeRef = useRef<HTMLIFrameElement>(null)
 
   // Reset zoom on document change or open
   useEffect(() => {
@@ -110,33 +458,10 @@ export function DocumentViewerModal({ open, onOpenChange, url, title }: Document
     }
   }, [])
 
-  // Propaga o evento de roda do mouse (wheel) do overlay para o container ou tenta rolar o iframe
-  const handleOverlayWheel = useCallback((e: React.WheelEvent<HTMLDivElement>) => {
-    // 1. Tenta rolar o conteúdo interno do iframe se for acessível
-    try {
-      if (iframeRef.current?.contentWindow) {
-        iframeRef.current.contentWindow.scrollBy({
-          top: e.deltaY,
-          left: e.deltaX,
-          behavior: 'auto',
-        })
-      }
-    } catch {
-      // Ignora restrição cross-origin se aplicável
-    }
-
-    // 2. Rola o container externo se houver overflow
-    if (containerRef.current) {
-      containerRef.current.scrollTop += e.deltaY
-      containerRef.current.scrollLeft += e.deltaX
-    }
-  }, [])
-
   if (!url) return null
 
   const isImage = isImageDocument(url, title)
   const displayTitle = title || 'Visualização do Documento'
-  const pdfViewerSrc = !isImage ? buildPdfViewerUrl(url, isZoomed ? 'FitH' : 'Fit') : ''
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -210,33 +535,13 @@ export function DocumentViewerModal({ open, onOpenChange, url, title }: Document
               />
             </div>
           ) : (
-            <div
-              className="relative w-full h-full min-w-full min-h-full"
-              style={{
-                cursor: isZoomed ? 'zoom-out' : LUPA_CURSOR_CSS,
-              }}
-              title="1 clique: zoom • Duplo clique: tira o zoom"
-            >
-              {/* Overlay transparente para capturar cliques no PDF sem bloquear o scroll do mouse */}
-              {/* Deixa uma margem de 16px à direita para permitir arrastar a barra de rolagem nativa com o mouse */}
-              <div
-                onClick={handleDocumentClick}
-                onDoubleClick={handleDocumentDoubleClick}
-                onWheel={handleOverlayWheel}
-                className="absolute top-0 bottom-0 left-0 right-4 z-10"
-                style={{
-                  cursor: isZoomed ? 'zoom-out' : LUPA_CURSOR_CSS,
-                }}
-                title="1 clique: zoom • Duplo clique: tira o zoom"
-              />
-              <iframe
-                key={isZoomed ? 'pdf-zoomed' : 'pdf-normal'}
-                ref={iframeRef}
-                src={pdfViewerSrc}
-                title={displayTitle}
-                className="w-full h-full border-0 rounded bg-white block"
-              />
-            </div>
+            <PdfCanvasRenderer
+              url={url}
+              isZoomed={isZoomed}
+              onClick={handleDocumentClick}
+              onDoubleClick={handleDocumentDoubleClick}
+              displayTitle={displayTitle}
+            />
           )}
         </div>
       </DialogContent>

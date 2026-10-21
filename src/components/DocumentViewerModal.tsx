@@ -28,6 +28,24 @@ export const isImageDocument = (url?: string | null, title?: string | null): boo
   )
 }
 
+/**
+ * Constrói a URL para exibição de PDF embutido sem a interface nativa
+ * do navegador (barra de ferramentas no topo e painel de miniaturas à esquerda).
+ * No Chrome/Edge/Firefox desktop, os parâmetros Adobe Open Parameters:
+ * #toolbar=0&navpanes=0&scrollbar=0&view=FitH suprimem a barra de ferramentas
+ * do topo (toolbar=0) e recolhem o painel lateral de miniaturas (navpanes=0).
+ */
+export const buildPdfViewerUrl = (rawUrl?: string | null): string => {
+  if (!rawUrl) return ''
+  // Se a URL já contiver um fragmento (#), remove para aplicar os parâmetros limpos
+  const [baseUrl] = rawUrl.split('#')
+  // toolbar=0: esconde barra de ferramentas superior
+  // navpanes=0: fecha miniaturas/painel de navegação lateral
+  // scrollbar=1: mantém a rolagem ativa
+  // view=FitH: ajusta largura do documento à tela
+  return `${baseUrl}#toolbar=0&navpanes=0&scrollbar=1&view=FitH`
+}
+
 export function DocumentViewerModal({ open, onOpenChange, url, title }: DocumentViewerModalProps) {
   const [isZoomed, setIsZoomed] = useState(false)
   const clickTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -82,6 +100,7 @@ export function DocumentViewerModal({ open, onOpenChange, url, title }: Document
 
   const isImage = isImageDocument(url, title)
   const displayTitle = title || 'Visualização do Documento'
+  const pdfViewerSrc = !isImage ? buildPdfViewerUrl(url) : ''
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -178,7 +197,7 @@ export function DocumentViewerModal({ open, onOpenChange, url, title }: Document
                   title="1 clique: zoom • Duplo clique: tira o zoom"
                 />
                 <iframe
-                  src={url}
+                  src={pdfViewerSrc}
                   title={displayTitle}
                   className="w-full h-full border-0 rounded bg-white block pointer-events-none"
                 />

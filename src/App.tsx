@@ -1,6 +1,7 @@
 import { BrowserRouter, Routes, Route, useNavigate } from 'react-router-dom'
 import { useEffect } from 'react'
 import { Toaster } from '@/components/ui/toaster'
+import { ErrorBoundary } from '@/components/ErrorBoundary'
 import { Toaster as Sonner } from '@/components/ui/sonner'
 import { TooltipProvider } from '@/components/ui/tooltip'
 import Index from './pages/Index'
@@ -97,90 +98,98 @@ const DashboardRoute = () => {
 }
 
 const App = () => (
-  <AuthProvider>
-    <BrowserRouter>
-      <TooltipProvider>
-        <Toaster />
-        <Sonner />
-        <Routes>
-          <Route element={<Layout />}>
-            <Route path="/" element={<Index />} />
-            <Route path="/cadastro" element={<Register />} />
-            <Route path="/redefinir-senha" element={<RedefinirSenha />} />
-            <Route path="/dashboard" element={<DashboardRoute />} />
-            <Route path="/dashboard/meus-chamados" element={<MeusChamados />} />
-            <Route path="/dashboard/novo-chamado" element={<NovoChamado />} />
-            <Route path="/dashboard/chamados-abertos" element={<ChamadosAbertos />} />
-            <Route path="/dashboard/meus-atendimentos" element={<MeusAtendimentos />} />
-            <Route path="/dashboard/orcamentos-devolvidos" element={<OrcamentosDevolvidos />} />
-            <Route path="/dashboard/finalizados" element={<Finalizados />} />
-            <Route path="/dashboard/juridico" element={<Juridico />} />
-            <Route path="/dashboard/defiridos" element={<Defiridos />} />
-            <Route path="/dashboard/cobranca-terceiros" element={<CobrancaTerceiros />} />
-            <Route path="/dashboard/demanda-judicial" element={<DemandaJudicial />} />
-            <Route path="/dashboard/terceiros" element={<Terceiros />} />
-            <Route path="/dashboard/chamados/:id" element={<ChamadoDetalhes />} />
-            <Route path="/dashboard/admin" element={<AdminDashboard />} />
-            <Route path="/dashboard/relatorios" element={<Relatorios />} />
-            <Route path="/dashboard/documentos" element={<Documentos />} />
-            <Route path="/dashboard/perfil" element={<Perfil />} />
-            <Route path="/dashboard/secretaria-tecnica" element={<SecretariaTecnica />} />
-            <Route path="/dashboard/vales-aprovacao" element={<ValesAprovacao />} />
-            <Route path="/dashboard/vales-aprovacao-alex" element={<ValesAprovacaoAlexPage />} />
+  <ErrorBoundary>
+    <AuthProvider>
+      <BrowserRouter>
+        <TooltipProvider>
+          <Toaster />
+          <Sonner />
+          <Routes>
+            <Route element={<Layout />}>
+              <Route path="/" element={<Index />} />
+              <Route path="/cadastro" element={<Register />} />
+              <Route path="/redefinir-senha" element={<RedefinirSenha />} />
+              <Route path="/dashboard" element={<DashboardRoute />} />
+              <Route path="/dashboard/meus-chamados" element={<MeusChamados />} />
+              <Route path="/dashboard/novo-chamado" element={<NovoChamado />} />
+              <Route path="/dashboard/chamados-abertos" element={<ChamadosAbertos />} />
+              <Route path="/dashboard/meus-atendimentos" element={<MeusAtendimentos />} />
+              <Route path="/dashboard/orcamentos-devolvidos" element={<OrcamentosDevolvidos />} />
+              <Route path="/dashboard/finalizados" element={<Finalizados />} />
+              <Route path="/dashboard/juridico" element={<Juridico />} />
+              <Route path="/dashboard/defiridos" element={<Defiridos />} />
+              <Route path="/dashboard/cobranca-terceiros" element={<CobrancaTerceiros />} />
+              <Route path="/dashboard/demanda-judicial" element={<DemandaJudicial />} />
+              <Route path="/dashboard/terceiros" element={<Terceiros />} />
+              <Route path="/dashboard/chamados/:id" element={<ChamadoDetalhes />} />
+              <Route path="/dashboard/admin" element={<AdminDashboard />} />
+              <Route path="/dashboard/relatorios" element={<Relatorios />} />
+              <Route path="/dashboard/documentos" element={<Documentos />} />
+              <Route path="/dashboard/perfil" element={<Perfil />} />
+              <Route path="/dashboard/secretaria-tecnica" element={<SecretariaTecnica />} />
+              <Route path="/dashboard/vales-aprovacao" element={<ValesAprovacao />} />
+              <Route path="/dashboard/vales-aprovacao-alex" element={<ValesAprovacaoAlexPage />} />
+              <Route
+                path="/dashboard/autorizacao-vales-claudinei"
+                element={<AutorizacaoValesClaudinei />}
+              />
+              <Route path="/dashboard/autorizar-parcelas" element={<AutorizarParcelas />} />
+              <Route path="/vales-aprovados" element={<ValesAprovadosDP />} />
+              <Route
+                path="/dashboard/valores-aprovados-financeiro"
+                element={<ValoresAprovadosFinanceiro />}
+              />
+              <Route
+                path="/dashboard/valores-aprovados-contabil"
+                element={<ValoresAprovadosContabil />}
+              />
+              <Route path="/vistoria/novo" element={<VistoriaForm />} />
+              <Route path="/vistoria/pendentes" element={<DocumentosPendentes />} />
+              <Route path="/espelhos-danos" element={<EspelhosDanos />} />
+              <Route path="/coc/novo" element={<NovoChamadoCoc />} />
+              <Route path="/coc/sinistros" element={<SinistrosCoc />} />
+              <Route path="/sos/pendentes" element={<ChamadosPendentesSos />} />
+            </Route>
+            <Route path="/espelho-danos-fixo/sucesso" element={<SucessoEspelhoDanosFixo />} />
+            <Route path="/espelho-danos-fixo" element={<FormularioEspelhoDanosFixo />} />
+            <Route path="/ido-fixo/sucesso" element={<SucessoIdoFixo />} />
+            <Route path="/ido-fixo" element={<FormularioIdoFixo />} />
+            <Route path="/ido/sucesso" element={<SucessoIdo />} />
+            <Route path="/ido/:id" element={<FormularioIdo />} />
+            <Route path="/espelho-danos/sucesso" element={<SucessoEspelhoDanos />} />
+            <Route path="/espelho-danos/:id" element={<FormularioEspelhoDanos />} />
             <Route
-              path="/dashboard/autorizacao-vales-claudinei"
-              element={<AutorizacaoValesClaudinei />}
-            />
-            <Route path="/dashboard/autorizar-parcelas" element={<AutorizarParcelas />} />
-            <Route path="/vales-aprovados" element={<ValesAprovadosDP />} />
-            <Route
-              path="/dashboard/valores-aprovados-financeiro"
-              element={<ValoresAprovadosFinanceiro />}
+              path="/os-manutencao"
+              element={<OsManutencao garagemFilter="Cursino" title="OS - Manutenção (Cursino)" />}
             />
             <Route
-              path="/dashboard/valores-aprovados-contabil"
-              element={<ValoresAprovadosContabil />}
+              path="/os-manutencao-leste"
+              element={<OsManutencao garagemFilter="Sapopemba" title="OS - Manutenção Leste" />}
             />
-            <Route path="/vistoria/novo" element={<VistoriaForm />} />
-            <Route path="/vistoria/pendentes" element={<DocumentosPendentes />} />
-            <Route path="/espelhos-danos" element={<EspelhosDanos />} />
-            <Route path="/coc/novo" element={<NovoChamadoCoc />} />
-            <Route path="/coc/sinistros" element={<SinistrosCoc />} />
-            <Route path="/sos/pendentes" element={<ChamadosPendentesSos />} />
-          </Route>
-          <Route path="/espelho-danos-fixo/sucesso" element={<SucessoEspelhoDanosFixo />} />
-          <Route path="/espelho-danos-fixo" element={<FormularioEspelhoDanosFixo />} />
-          <Route path="/ido-fixo/sucesso" element={<SucessoIdoFixo />} />
-          <Route path="/ido-fixo" element={<FormularioIdoFixo />} />
-          <Route path="/ido/sucesso" element={<SucessoIdo />} />
-          <Route path="/ido/:id" element={<FormularioIdo />} />
-          <Route path="/espelho-danos/sucesso" element={<SucessoEspelhoDanos />} />
-          <Route path="/espelho-danos/:id" element={<FormularioEspelhoDanos />} />
-          <Route
-            path="/os-manutencao"
-            element={<OsManutencao garagemFilter="Cursino" title="OS - Manutenção (Cursino)" />}
-          />
-          <Route
-            path="/os-manutencao-leste"
-            element={<OsManutencao garagemFilter="Sapopemba" title="OS - Manutenção Leste" />}
-          />
-          <Route
-            path="/carros-liberados-plantao"
-            element={
-              <CarrosLiberadosPlantao garagemFilter="Cursino" title="Carros Liberados (Cursino)" />
-            }
-          />
-          <Route
-            path="/carros-liberados-leste"
-            element={
-              <CarrosLiberadosPlantao garagemFilter="Sapopemba" title="Carros Liberados (Leste)" />
-            }
-          />
-          <Route path="*" element={<NotFound />} />
-        </Routes>
-      </TooltipProvider>
-    </BrowserRouter>
-  </AuthProvider>
+            <Route
+              path="/carros-liberados-plantao"
+              element={
+                <CarrosLiberadosPlantao
+                  garagemFilter="Cursino"
+                  title="Carros Liberados (Cursino)"
+                />
+              }
+            />
+            <Route
+              path="/carros-liberados-leste"
+              element={
+                <CarrosLiberadosPlantao
+                  garagemFilter="Sapopemba"
+                  title="Carros Liberados (Leste)"
+                />
+              }
+            />
+            <Route path="*" element={<NotFound />} />
+          </Routes>
+        </TooltipProvider>
+      </BrowserRouter>
+    </AuthProvider>
+  </ErrorBoundary>
 )
 
 export default App

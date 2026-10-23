@@ -11,12 +11,37 @@ const isValueEmpty = (v: any): boolean => {
   return false
 }
 
-export function getSyncDraft(storageKey: string) {
+export function getSyncDraft(
+  storageKey: string,
+  sanitizeDraft?: (raw: Record<string, any>) => Record<string, any> | null,
+) {
   try {
     const saved = localStorage.getItem(storageKey)
     if (saved) {
       const parsed = JSON.parse(saved)
-      if (parsed && typeof parsed === 'object') {
+      if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
+        if (typeof sanitizeDraft === 'function') {
+          try {
+            const sanitized = sanitizeDraft(parsed)
+            if (!sanitized) {
+              try {
+                localStorage.removeItem(storageKey)
+              } catch {
+                // Ignora erro de storage
+              }
+              return null
+            }
+            return sanitized
+          } catch (err) {
+            console.error('Erro ao sanitizar rascunho síncrono, descartando:', err)
+            try {
+              localStorage.removeItem(storageKey)
+            } catch {
+              // Ignora erro de storage
+            }
+            return null
+          }
+        }
         return parsed
       }
     }
@@ -85,31 +110,48 @@ export function useDraft<T extends Record<string, any>>(
         }
       }
 
-      if (parsed && typeof parsed === 'object') {
+      if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
         try {
           delete parsed.fotos_dano
           delete parsed.assinatura_base64
 
           let cleanData = parsed
           if (typeof sanitizeDraft === 'function') {
-            const sanitized = sanitizeDraft(parsed)
-            if (!sanitized) {
-              // Sanitizer indicou descarte total do rascunho corrompido
-              localStorage.removeItem(storageKey)
+            try {
+              const sanitized = sanitizeDraft(parsed)
+              if (!sanitized) {
+                // Sanitizer indicou descarte total do rascunho corrompido
+                try {
+                  localStorage.removeItem(storageKey)
+                } catch {
+                  // Ignora
+                }
+                isRestoring.current = false
+                return
+              }
+              cleanData = sanitized
+            } catch (err) {
+              console.error('Sanitizer falhou ao processar rascunho, descartando rascunho:', err)
+              try {
+                localStorage.removeItem(storageKey)
+              } catch {
+                // Ignora
+              }
               isRestoring.current = false
               return
             }
-            cleanData = sanitized
           }
 
-          const isCompletelyEmpty = Object.values(cleanData).every(isValueEmpty)
+          if (cleanData && typeof cleanData === 'object' && !Array.isArray(cleanData)) {
+            const isCompletelyEmpty = Object.values(cleanData).every(isValueEmpty)
 
-          if (!isCompletelyEmpty) {
-            const currentValues = form.getValues()
-            const merged = { ...currentValues, ...cleanData }
+            if (!isCompletelyEmpty) {
+              const currentValues = form.getValues()
+              const merged = { ...currentValues, ...cleanData }
 
-            form.reset(merged)
-            setDraftRestored(true)
+              form.reset(merged)
+              setDraftRestored(true)
+            }
           }
         } catch (err) {
           console.error('Erro ao restaurar rascunho, ignorando rascunho corrompido:', err)

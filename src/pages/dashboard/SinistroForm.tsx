@@ -120,51 +120,70 @@ export function SinistroForm() {
   const toastMostrado = useRef(false)
 
   const sanitizeSinistroDraft = useCallback((raw: Record<string, any>) => {
-    const cleaned: Record<string, any> = { ...raw }
+    try {
+      if (!raw || typeof raw !== 'object' || Array.isArray(raw)) {
+        return null
+      }
 
-    if (cleaned.dataOcorrencia) {
-      const d = new Date(cleaned.dataOcorrencia)
-      if (isNaN(d.getTime())) {
-        cleaned.dataOcorrencia = undefined
+      const cleaned: Record<string, any> = { ...raw }
+
+      if (cleaned.dataOcorrencia != null && cleaned.dataOcorrencia !== '') {
+        try {
+          const d = new Date(cleaned.dataOcorrencia)
+          if (isNaN(d.getTime())) {
+            cleaned.dataOcorrencia = undefined
+          } else {
+            cleaned.dataOcorrencia = d
+          }
+        } catch {
+          cleaned.dataOcorrencia = undefined
+        }
       } else {
-        cleaned.dataOcorrencia = d
+        cleaned.dataOcorrencia = undefined
       }
-    }
 
-    const stringFields = [
-      'titulo',
-      'horaOcorrencia',
-      'placaOnibus',
-      'registroMotorista',
-      'nomeMotorista',
-      'registroCobrador',
-      'nomeCobrador',
-      'descricaoAcidente',
-      't1Nome',
-      't1Contato',
-      't2Nome',
-      't2Contato',
-      't3Nome',
-      't3Contato',
-      'terNome',
-      'terContato',
-      'terPlaca',
-      'terModelo',
-    ]
+      const stringFields = [
+        'titulo',
+        'horaOcorrencia',
+        'placaOnibus',
+        'registroMotorista',
+        'nomeMotorista',
+        'registroCobrador',
+        'nomeCobrador',
+        'descricaoAcidente',
+        't1Nome',
+        't1Contato',
+        't2Nome',
+        't2Contato',
+        't3Nome',
+        't3Contato',
+        'terNome',
+        'terContato',
+        'terPlaca',
+        'terModelo',
+      ]
 
-    for (const key of stringFields) {
-      if (typeof cleaned[key] !== 'string') {
-        cleaned[key] = ''
+      for (const key of stringFields) {
+        if (typeof cleaned[key] !== 'string') {
+          cleaned[key] = ''
+        }
       }
-    }
 
-    return cleaned
+      return cleaned
+    } catch (e) {
+      console.error('Falha ao sanitizar rascunho de sinistro, ignorando rascunho:', e)
+      return null
+    }
   }, [])
 
   const initialDraft = (() => {
-    const raw = getSyncDraft(SINISTRO_DRAFT_KEY)
-    if (!raw || typeof raw !== 'object') return null
-    return sanitizeSinistroDraft(raw)
+    try {
+      const raw = getSyncDraft(SINISTRO_DRAFT_KEY, sanitizeSinistroDraft)
+      if (!raw || typeof raw !== 'object') return null
+      return sanitizeSinistroDraft(raw)
+    } catch {
+      return null
+    }
   })()
 
   const form = useForm<FormValues>({
@@ -172,7 +191,10 @@ export function SinistroForm() {
     defaultValues: {
       titulo: initialDraft?.titulo || '',
       dataOcorrencia:
-        initialDraft?.dataOcorrencia instanceof Date ? initialDraft.dataOcorrencia : undefined,
+        initialDraft?.dataOcorrencia instanceof Date &&
+        !isNaN(initialDraft.dataOcorrencia.getTime())
+          ? initialDraft.dataOcorrencia
+          : undefined,
       horaOcorrencia: initialDraft?.horaOcorrencia || '',
       placaOnibus: initialDraft?.placaOnibus || '',
       registroMotorista: initialDraft?.registroMotorista || '',
@@ -222,14 +244,26 @@ export function SinistroForm() {
     if (draftRestored && !toastMostrado.current) {
       toast.success('Rascunho recuperado com sucesso!')
       toastMostrado.current = true
-      const dataObj = form.getValues('dataOcorrencia')
-      if (dataObj && typeof dataObj === 'string') {
-        const parsedDate = new Date(dataObj)
-        if (!isNaN(parsedDate.getTime())) {
-          form.setValue('dataOcorrencia', parsedDate, { shouldValidate: true })
-        } else {
-          form.setValue('dataOcorrencia', undefined, { shouldValidate: false })
+      try {
+        const dataObj = form.getValues('dataOcorrencia')
+        if (dataObj) {
+          if (typeof dataObj === 'string' || typeof dataObj === 'number') {
+            const parsedDate = new Date(dataObj)
+            if (!isNaN(parsedDate.getTime())) {
+              form.setValue('dataOcorrencia', parsedDate, { shouldValidate: true })
+            } else {
+              form.setValue('dataOcorrencia', undefined, { shouldValidate: false })
+            }
+          } else if (dataObj instanceof Date) {
+            if (isNaN(dataObj.getTime())) {
+              form.setValue('dataOcorrencia', undefined, { shouldValidate: false })
+            }
+          } else {
+            form.setValue('dataOcorrencia', undefined, { shouldValidate: false })
+          }
         }
+      } catch (err) {
+        console.error('Erro ao normalizar dados restaurados de sinistro:', err)
       }
     }
   }, [draftRestored, form])
@@ -511,28 +545,39 @@ export function SinistroForm() {
                             )}
                           >
                             <CalendarIcon className="mr-2 h-4 w-4" />
-                            {field.value ? (
-                              field.value instanceof Date ? (
-                                format(field.value, 'PPP', { locale: ptBR })
-                              ) : (
-                                format(new Date(field.value), 'PPP', { locale: ptBR })
-                              )
-                            ) : (
-                              <span>Selecione uma data</span>
-                            )}
+                            {(() => {
+                              if (!field.value) return <span>Selecione uma data</span>
+                              try {
+                                const d =
+                                  field.value instanceof Date ? field.value : new Date(field.value)
+                                if (isNaN(d.getTime())) return <span>Selecione uma data</span>
+                                return format(d, 'PPP', { locale: ptBR })
+                              } catch {
+                                return <span>Selecione uma data</span>
+                              }
+                            })()}
                           </Button>
                         </PopoverTrigger>
                         <PopoverContent className="w-auto p-0" align="start">
                           <Calendar
                             mode="single"
-                            selected={
-                              field.value
-                                ? field.value instanceof Date
-                                  ? field.value
-                                  : new Date(field.value)
-                                : undefined
-                            }
-                            onSelect={field.onChange}
+                            selected={(() => {
+                              if (!field.value) return undefined
+                              try {
+                                const d =
+                                  field.value instanceof Date ? field.value : new Date(field.value)
+                                return isNaN(d.getTime()) ? undefined : d
+                              } catch {
+                                return undefined
+                              }
+                            })()}
+                            onSelect={(val) => {
+                              if (val && !isNaN(val.getTime())) {
+                                field.onChange(val)
+                              } else {
+                                field.onChange(undefined)
+                              }
+                            }}
                             initialFocus
                             locale={ptBR}
                           />

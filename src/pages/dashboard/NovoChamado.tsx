@@ -238,33 +238,56 @@ export default function NovoChamado() {
     getCategoryConfigs(os)
 
   const sanitizeNovoChamadoDraft = useCallback((raw: Record<string, any>) => {
-    const validTipos = ['Colisão', 'Lesão Corporal', 'Seguradora', '']
-    const cleaned: Record<string, any> = { ...raw }
-
-    if (cleaned.tipoChamado && !validTipos.includes(cleaned.tipoChamado)) {
-      cleaned.tipoChamado = ''
-    }
-
-    if (cleaned.dataOcorrencia) {
-      const d = new Date(cleaned.dataOcorrencia)
-      if (isNaN(d.getTime())) {
-        cleaned.dataOcorrencia = undefined
-      } else {
-        cleaned.dataOcorrencia = d
+    try {
+      if (!raw || typeof raw !== 'object' || Array.isArray(raw)) {
+        return null
       }
+
+      const validTipos = ['Colisão', 'Lesão Corporal', 'Seguradora']
+      const cleaned: Record<string, any> = { ...raw }
+
+      if (typeof cleaned.tipoChamado === 'string' && validTipos.includes(cleaned.tipoChamado)) {
+        // mantém o tipo de chamado válido
+      } else {
+        cleaned.tipoChamado = ''
+      }
+
+      if (cleaned.dataOcorrencia != null && cleaned.dataOcorrencia !== '') {
+        try {
+          const d = new Date(cleaned.dataOcorrencia)
+          if (isNaN(d.getTime())) {
+            cleaned.dataOcorrencia = undefined
+          } else {
+            cleaned.dataOcorrencia = d
+          }
+        } catch {
+          cleaned.dataOcorrencia = undefined
+        }
+      } else {
+        cleaned.dataOcorrencia = undefined
+      }
+
+      cleaned.titulo = typeof cleaned.titulo === 'string' ? cleaned.titulo : ''
+      cleaned.descricao = typeof cleaned.descricao === 'string' ? cleaned.descricao : ''
+      cleaned.placaOnibus = typeof cleaned.placaOnibus === 'string' ? cleaned.placaOnibus : ''
+      cleaned.situacaoProcesso =
+        typeof cleaned.situacaoProcesso === 'string' ? cleaned.situacaoProcesso : ''
+
+      return cleaned
+    } catch (e) {
+      console.error('Falha ao sanitizar rascunho de novo chamado, ignorando rascunho:', e)
+      return null
     }
-
-    if (typeof cleaned.titulo !== 'string') cleaned.titulo = ''
-    if (typeof cleaned.descricao !== 'string') cleaned.descricao = ''
-    if (typeof cleaned.placaOnibus !== 'string') cleaned.placaOnibus = ''
-
-    return cleaned
   }, [])
 
   const initialDraft = (() => {
-    const raw = getSyncDraft('draft-novo-chamado')
-    if (!raw || typeof raw !== 'object') return null
-    return sanitizeNovoChamadoDraft(raw)
+    try {
+      const raw = getSyncDraft('draft-novo-chamado', sanitizeNovoChamadoDraft)
+      if (!raw || typeof raw !== 'object') return null
+      return sanitizeNovoChamadoDraft(raw)
+    } catch {
+      return null
+    }
   })()
 
   const form = useForm<FormValues>({
@@ -276,7 +299,10 @@ export default function NovoChamado() {
       descricao: initialDraft?.descricao || '',
       placaOnibus: initialDraft?.placaOnibus || '',
       dataOcorrencia:
-        initialDraft?.dataOcorrencia instanceof Date ? initialDraft.dataOcorrencia : undefined,
+        initialDraft?.dataOcorrencia instanceof Date &&
+        !isNaN(initialDraft.dataOcorrencia.getTime())
+          ? initialDraft.dataOcorrencia
+          : undefined,
     },
   })
 
@@ -349,14 +375,32 @@ export default function NovoChamado() {
       toast.success('Rascunho recuperado com sucesso!')
       toastMostrado.current = true
 
-      const dataObj = form.getValues('dataOcorrencia')
-      if (dataObj && typeof dataObj === 'string') {
-        const parsedDate = new Date(dataObj)
-        if (!isNaN(parsedDate.getTime())) {
-          form.setValue('dataOcorrencia', parsedDate, { shouldValidate: true })
-        } else {
-          form.setValue('dataOcorrencia', undefined, { shouldValidate: false })
+      try {
+        const currentTipo = form.getValues('tipoChamado')
+        const validTipos = ['Colisão', 'Lesão Corporal', 'Seguradora']
+        if (currentTipo && !validTipos.includes(currentTipo as string)) {
+          form.setValue('tipoChamado', '', { shouldValidate: false })
         }
+
+        const dataObj = form.getValues('dataOcorrencia')
+        if (dataObj) {
+          if (typeof dataObj === 'string' || typeof dataObj === 'number') {
+            const parsedDate = new Date(dataObj)
+            if (!isNaN(parsedDate.getTime())) {
+              form.setValue('dataOcorrencia', parsedDate, { shouldValidate: true })
+            } else {
+              form.setValue('dataOcorrencia', undefined, { shouldValidate: false })
+            }
+          } else if (dataObj instanceof Date) {
+            if (isNaN(dataObj.getTime())) {
+              form.setValue('dataOcorrencia', undefined, { shouldValidate: false })
+            }
+          } else {
+            form.setValue('dataOcorrencia', undefined, { shouldValidate: false })
+          }
+        }
+      } catch (err) {
+        console.error('Erro ao normalizar dados restaurados do rascunho:', err)
       }
     }
   }, [draftRestored, form])
@@ -1022,29 +1066,46 @@ export default function NovoChamado() {
                               )}
                             >
                               <CalendarIcon className="mr-2 h-4 w-4" />
-                              {field.value && field.value instanceof Date ? (
-                                format(field.value, 'PPP', { locale: ptBR })
-                              ) : field.value ? (
-                                format(new Date(field.value), 'PPP', { locale: ptBR })
-                              ) : (
-                                <span>Selecione uma data</span>
-                              )}
+                              {(() => {
+                                if (!field.value) return <span>Selecione uma data</span>
+                                try {
+                                  const d =
+                                    field.value instanceof Date
+                                      ? field.value
+                                      : new Date(field.value)
+                                  if (isNaN(d.getTime())) return <span>Selecione uma data</span>
+                                  return format(d, 'PPP', { locale: ptBR })
+                                } catch {
+                                  return <span>Selecione uma data</span>
+                                }
+                              })()}
                             </Button>
                           </PopoverTrigger>
                           <PopoverContent className="w-auto p-0" align="start">
                             <Calendar
                               mode="single"
-                              selected={
-                                field.value
-                                  ? field.value instanceof Date
-                                    ? field.value
-                                    : new Date(field.value)
-                                  : undefined
-                              }
-                              onSelect={field.onChange}
+                              selected={(() => {
+                                if (!field.value) return undefined
+                                try {
+                                  const d =
+                                    field.value instanceof Date
+                                      ? field.value
+                                      : new Date(field.value)
+                                  return isNaN(d.getTime()) ? undefined : d
+                                } catch {
+                                  return undefined
+                                }
+                              })()}
+                              onSelect={(val) => {
+                                if (val && !isNaN(val.getTime())) {
+                                  field.onChange(val)
+                                } else {
+                                  field.onChange(undefined)
+                                }
+                              }}
                               initialFocus
                               locale={ptBR}
-                            />
+                            />{' '}
                           </PopoverContent>
                         </Popover>
                       )}

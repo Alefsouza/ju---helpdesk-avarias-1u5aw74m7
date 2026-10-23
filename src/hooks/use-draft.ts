@@ -14,9 +14,19 @@ const isValueEmpty = (v: any): boolean => {
 export function getSyncDraft(storageKey: string) {
   try {
     const saved = localStorage.getItem(storageKey)
-    if (saved) return JSON.parse(saved)
+    if (saved) {
+      const parsed = JSON.parse(saved)
+      if (parsed && typeof parsed === 'object') {
+        return parsed
+      }
+    }
   } catch (e) {
     console.error('Failed to parse draft from localStorage', e)
+    try {
+      localStorage.removeItem(storageKey)
+    } catch {
+      // Ignora erro de localStorage
+    }
   }
   return null
 }
@@ -26,6 +36,7 @@ export function useDraft<T extends Record<string, any>>(
   storageKey: string,
   userId?: string,
   enabled: boolean = true,
+  sanitizeDraft?: (raw: Record<string, any>) => Record<string, any> | null,
 ) {
   const [draftRestored, setDraftRestored] = useState(false)
   const isRestoring = useRef(true)
@@ -37,7 +48,7 @@ export function useDraft<T extends Record<string, any>>(
       return
     }
     const loadDraft = async () => {
-      let parsed = null
+      let parsed: any = null
 
       if (userId) {
         try {
@@ -47,7 +58,7 @@ export function useDraft<T extends Record<string, any>>(
             .eq('usuario_id', userId)
             .single()
 
-          if (data?.dados) {
+          if (data?.dados && typeof data.dados === 'object') {
             parsed = data.dados
           }
         } catch (e) {
@@ -56,28 +67,57 @@ export function useDraft<T extends Record<string, any>>(
       }
 
       if (!parsed) {
-        const saved = localStorage.getItem(storageKey)
-        if (saved) {
+        try {
+          const saved = localStorage.getItem(storageKey)
+          if (saved) {
+            const temp = JSON.parse(saved)
+            if (temp && typeof temp === 'object') {
+              parsed = temp
+            }
+          }
+        } catch (e) {
+          console.error('Failed to parse draft from localStorage', e)
           try {
-            parsed = JSON.parse(saved)
-          } catch (e) {
-            console.error('Failed to parse draft from localStorage', e)
+            localStorage.removeItem(storageKey)
+          } catch {
+            // Ignora erro de storage
           }
         }
       }
 
-      if (parsed) {
-        delete parsed.fotos_dano
-        delete parsed.assinatura_base64
+      if (parsed && typeof parsed === 'object') {
+        try {
+          delete parsed.fotos_dano
+          delete parsed.assinatura_base64
 
-        const isCompletelyEmpty = Object.values(parsed).every(isValueEmpty)
+          let cleanData = parsed
+          if (typeof sanitizeDraft === 'function') {
+            const sanitized = sanitizeDraft(parsed)
+            if (!sanitized) {
+              // Sanitizer indicou descarte total do rascunho corrompido
+              localStorage.removeItem(storageKey)
+              isRestoring.current = false
+              return
+            }
+            cleanData = sanitized
+          }
 
-        if (!isCompletelyEmpty) {
-          const currentValues = form.getValues()
-          const merged = { ...currentValues, ...parsed }
+          const isCompletelyEmpty = Object.values(cleanData).every(isValueEmpty)
 
-          form.reset(merged)
-          setDraftRestored(true)
+          if (!isCompletelyEmpty) {
+            const currentValues = form.getValues()
+            const merged = { ...currentValues, ...cleanData }
+
+            form.reset(merged)
+            setDraftRestored(true)
+          }
+        } catch (err) {
+          console.error('Erro ao restaurar rascunho, ignorando rascunho corrompido:', err)
+          try {
+            localStorage.removeItem(storageKey)
+          } catch {
+            // Ignora
+          }
         }
       }
 
@@ -87,7 +127,7 @@ export function useDraft<T extends Record<string, any>>(
     }
 
     loadDraft()
-  }, [form, storageKey, userId, enabled])
+  }, [form, storageKey, userId, enabled, sanitizeDraft])
 
   useEffect(() => {
     if (!enabled) return

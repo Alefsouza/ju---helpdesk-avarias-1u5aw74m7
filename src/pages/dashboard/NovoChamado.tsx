@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '@/lib/supabase/client'
 import { useAuth } from '@/hooks/use-auth'
@@ -17,7 +17,7 @@ import {
 } from '@/components/ui/select'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { Calendar } from '@/components/ui/calendar'
-import { cn } from '@/lib/utils'
+import { cn, generateUUID } from '@/lib/utils'
 import { format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 import { toast } from 'sonner'
@@ -237,7 +237,35 @@ export default function NovoChamado() {
   const { SEGURADORA_CATEGORIES, ATTACHMENT_CATEGORIES, LESAO_ATTACHMENT, UNIQUE_CATEGORIES } =
     getCategoryConfigs(os)
 
-  const initialDraft = getSyncDraft('draft-novo-chamado')
+  const sanitizeNovoChamadoDraft = useCallback((raw: Record<string, any>) => {
+    const validTipos = ['Colisão', 'Lesão Corporal', 'Seguradora', '']
+    const cleaned: Record<string, any> = { ...raw }
+
+    if (cleaned.tipoChamado && !validTipos.includes(cleaned.tipoChamado)) {
+      cleaned.tipoChamado = ''
+    }
+
+    if (cleaned.dataOcorrencia) {
+      const d = new Date(cleaned.dataOcorrencia)
+      if (isNaN(d.getTime())) {
+        cleaned.dataOcorrencia = undefined
+      } else {
+        cleaned.dataOcorrencia = d
+      }
+    }
+
+    if (typeof cleaned.titulo !== 'string') cleaned.titulo = ''
+    if (typeof cleaned.descricao !== 'string') cleaned.descricao = ''
+    if (typeof cleaned.placaOnibus !== 'string') cleaned.placaOnibus = ''
+
+    return cleaned
+  }, [])
+
+  const initialDraft = (() => {
+    const raw = getSyncDraft('draft-novo-chamado')
+    if (!raw || typeof raw !== 'object') return null
+    return sanitizeNovoChamadoDraft(raw)
+  })()
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
@@ -247,9 +275,8 @@ export default function NovoChamado() {
       titulo: initialDraft?.titulo || '',
       descricao: initialDraft?.descricao || '',
       placaOnibus: initialDraft?.placaOnibus || '',
-      dataOcorrencia: initialDraft?.dataOcorrencia
-        ? new Date(initialDraft.dataOcorrencia)
-        : undefined,
+      dataOcorrencia:
+        initialDraft?.dataOcorrencia instanceof Date ? initialDraft.dataOcorrencia : undefined,
     },
   })
 
@@ -258,6 +285,7 @@ export default function NovoChamado() {
     'draft-novo-chamado',
     user?.id,
     profile?.tipo_usuario !== 'sinistro',
+    sanitizeNovoChamadoDraft,
   )
 
   const [attachmentErrors, setAttachmentErrors] = useState<Record<string, string>>({})
@@ -323,7 +351,12 @@ export default function NovoChamado() {
 
       const dataObj = form.getValues('dataOcorrencia')
       if (dataObj && typeof dataObj === 'string') {
-        form.setValue('dataOcorrencia', new Date(dataObj), { shouldValidate: true })
+        const parsedDate = new Date(dataObj)
+        if (!isNaN(parsedDate.getTime())) {
+          form.setValue('dataOcorrencia', parsedDate, { shouldValidate: true })
+        } else {
+          form.setValue('dataOcorrencia', undefined, { shouldValidate: false })
+        }
       }
     }
   }, [draftRestored, form])
@@ -380,7 +413,7 @@ export default function NovoChamado() {
       const file = await compressImage(rawFile)
 
       const item: FileItem = {
-        id: crypto.randomUUID(),
+        id: generateUUID(),
         category: categoryId,
         file,
         name: file.name,
@@ -446,7 +479,7 @@ export default function NovoChamado() {
 
     try {
       const ext = item.name.split('.').pop()
-      const filePath = `${u.id}/${crypto.randomUUID()}.${ext}`
+      const filePath = `${u.id}/${generateUUID()}.${ext}`
 
       const { error } = await supabase.storage
         .from('anexos')
@@ -597,6 +630,12 @@ export default function NovoChamado() {
 
     const { tipoChamado, situacaoProcesso, titulo, dataOcorrencia, descricao, placaOnibus } = values
 
+    const parsedDataOcorrencia = dataOcorrencia ? new Date(dataOcorrencia) : null
+    if (!parsedDataOcorrencia || isNaN(parsedDataOcorrencia.getTime())) {
+      toast.error('Data da ocorrência inválida')
+      return
+    }
+
     const hasIncomplete = files.some((f) => f.status !== 'success')
     if (hasIncomplete) {
       toast.error('Valide todos os anexos antes de enviar')
@@ -690,7 +729,7 @@ export default function NovoChamado() {
             identifiedPrefixo && identifiedGaragem !== 'NOT_FOUND'
               ? identifiedPrefixo
               : placaOnibus,
-          data_ocorrencia: format(new Date(dataOcorrencia), 'yyyy-MM-dd'),
+          data_ocorrencia: format(parsedDataOcorrencia, 'yyyy-MM-dd'),
           situacao_processo: situacaoProcesso || null,
           criado_em: new Date().toISOString(),
         } as any)

@@ -5,6 +5,7 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import * as z from 'zod'
 import { Camera, X, AlertCircle } from 'lucide-react'
 import { supabase } from '@/lib/supabase/client'
+import { generateUUID } from '@/lib/utils'
 import { useToast } from '@/hooks/use-toast'
 import { format } from 'date-fns'
 import { useAuth } from '@/hooks/use-auth'
@@ -141,7 +142,7 @@ export default function FormularioEspelhoDanos() {
       const now = new Date()
       const dataStr = format(now, 'yyyy-MM-dd')
       const horarioStr = format(now, 'HH:mm')
-      const espelhoId = crypto.randomUUID()
+      const espelhoId = generateUUID()
 
       const { fotos_dano, ...formValuesToSave } = values
 

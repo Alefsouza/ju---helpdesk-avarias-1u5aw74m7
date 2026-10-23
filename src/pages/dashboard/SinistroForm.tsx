@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '@/lib/supabase/client'
 import { useAuth } from '@/hooks/use-auth'
@@ -119,15 +119,60 @@ export function SinistroForm() {
   const filesLoadedRef = useRef(false)
   const toastMostrado = useRef(false)
 
-  const initialDraft = getSyncDraft(SINISTRO_DRAFT_KEY)
+  const sanitizeSinistroDraft = useCallback((raw: Record<string, any>) => {
+    const cleaned: Record<string, any> = { ...raw }
+
+    if (cleaned.dataOcorrencia) {
+      const d = new Date(cleaned.dataOcorrencia)
+      if (isNaN(d.getTime())) {
+        cleaned.dataOcorrencia = undefined
+      } else {
+        cleaned.dataOcorrencia = d
+      }
+    }
+
+    const stringFields = [
+      'titulo',
+      'horaOcorrencia',
+      'placaOnibus',
+      'registroMotorista',
+      'nomeMotorista',
+      'registroCobrador',
+      'nomeCobrador',
+      'descricaoAcidente',
+      't1Nome',
+      't1Contato',
+      't2Nome',
+      't2Contato',
+      't3Nome',
+      't3Contato',
+      'terNome',
+      'terContato',
+      'terPlaca',
+      'terModelo',
+    ]
+
+    for (const key of stringFields) {
+      if (typeof cleaned[key] !== 'string') {
+        cleaned[key] = ''
+      }
+    }
+
+    return cleaned
+  }, [])
+
+  const initialDraft = (() => {
+    const raw = getSyncDraft(SINISTRO_DRAFT_KEY)
+    if (!raw || typeof raw !== 'object') return null
+    return sanitizeSinistroDraft(raw)
+  })()
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
       titulo: initialDraft?.titulo || '',
-      dataOcorrencia: initialDraft?.dataOcorrencia
-        ? new Date(initialDraft.dataOcorrencia)
-        : undefined,
+      dataOcorrencia:
+        initialDraft?.dataOcorrencia instanceof Date ? initialDraft.dataOcorrencia : undefined,
       horaOcorrencia: initialDraft?.horaOcorrencia || '',
       placaOnibus: initialDraft?.placaOnibus || '',
       registroMotorista: initialDraft?.registroMotorista || '',
@@ -152,6 +197,8 @@ export function SinistroForm() {
     form,
     SINISTRO_DRAFT_KEY,
     user?.id,
+    true,
+    sanitizeSinistroDraft,
   )
 
   useEffect(() => {
@@ -177,7 +224,12 @@ export function SinistroForm() {
       toastMostrado.current = true
       const dataObj = form.getValues('dataOcorrencia')
       if (dataObj && typeof dataObj === 'string') {
-        form.setValue('dataOcorrencia', new Date(dataObj), { shouldValidate: true })
+        const parsedDate = new Date(dataObj)
+        if (!isNaN(parsedDate.getTime())) {
+          form.setValue('dataOcorrencia', parsedDate, { shouldValidate: true })
+        } else {
+          form.setValue('dataOcorrencia', undefined, { shouldValidate: false })
+        }
       }
     }
   }, [draftRestored, form])
@@ -312,6 +364,12 @@ export function SinistroForm() {
       toast.error('Esse carro não pertence à frota da Via Sudeste.')
       return
     }
+    const parsedData = values.dataOcorrencia ? new Date(values.dataOcorrencia) : null
+    if (!parsedData || isNaN(parsedData.getTime())) {
+      toast.error('Data da ocorrência inválida')
+      return
+    }
+
     setIsSubmitting(true)
     try {
       const testemunhas = [
@@ -335,7 +393,7 @@ export function SinistroForm() {
           status: 'em_atendimento',
           garagem: identifiedGaragem,
           carro: identifiedPrefixo,
-          data_ocorrencia: format(new Date(values.dataOcorrencia), 'yyyy-MM-dd'),
+          data_ocorrencia: format(parsedData, 'yyyy-MM-dd'),
           nome_motorista: values.nomeMotorista,
           registro_motorista: values.registroMotorista,
           nome_cobrador: values.nomeCobrador,

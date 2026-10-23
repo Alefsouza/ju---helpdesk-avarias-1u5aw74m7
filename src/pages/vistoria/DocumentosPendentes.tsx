@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase/client'
+import { generateUUID } from '@/lib/utils'
 import {
   Table,
   TableBody,
@@ -222,7 +223,7 @@ export default function DocumentosPendentes() {
         }
       }
 
-      const espelhoId = crypto.randomUUID()
+      const espelhoId = generateUUID()
       let finalEspelhoId = espelhoId
       let shouldInsertForm = true
 

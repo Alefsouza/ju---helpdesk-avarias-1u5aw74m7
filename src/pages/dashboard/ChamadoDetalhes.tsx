@@ -73,7 +73,7 @@ import { useAuth } from '@/hooks/use-auth'
 import { format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 import { toast } from 'sonner'
-import { cn } from '@/lib/utils'
+import { cn, generateUUID } from '@/lib/utils'
 import { isDanielBrotas, isBiancaZanatta } from '@/lib/juridico-access'
 import { UnificarChamadoModal } from '@/components/UnificarChamadoModal'
 import { DesunificarChamadoModal } from '@/components/DesunificarChamadoModal'
@@ -2366,7 +2366,7 @@ export default function ChamadoDetalhes() {
 
     try {
       const ext = item.file.name.split('.').pop()
-      const uuid = crypto.randomUUID()
+      const uuid = generateUUID()
       const filePath = `${id}/${uuid}.${ext}`
 
       const { error } = await supabase.storage
@@ -2430,7 +2430,7 @@ export default function ChamadoDetalhes() {
       }
 
       const item: FileItem = {
-        id: crypto.randomUUID(),
+        id: generateUUID(),
         file,
         status: 'pending',
         progress: 0,
@@ -2913,7 +2913,7 @@ export default function ChamadoDetalhes() {
     setUploadingInternal(true)
     try {
       const ext = file.name.split('.').pop()
-      const uuid = crypto.randomUUID()
+      const uuid = generateUUID()
       const filePath = `${id}/${uuid}.${ext}`
 
       const { error: uploadError } = await supabase.storage
@@ -3370,7 +3370,7 @@ export default function ChamadoDetalhes() {
       const numOS = chamado?.numero_os || 'S/N'
       const novoNome = `Orçamento ${numeroOrcamento} - Carro: ${nomeCarro} - OS: ${numOS}.${ext}`
 
-      const uuid = crypto.randomUUID()
+      const uuid = generateUUID()
       const filePath = `${id}/${uuid}_${novoNome}`
 
       const { error: uploadError } = await supabase.storage

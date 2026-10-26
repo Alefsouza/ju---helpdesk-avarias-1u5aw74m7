@@ -3171,13 +3171,10 @@ export default function ChamadoDetalhes() {
       return
     }
 
-    // Para os demais perfis: mostrar SOMENTE os usuários com perfil de Sinistro e Jurídico (Alex e Claudinei)
+    // Para os demais perfis: listar TODOS os usuários com tipo_usuario 'sinistro' OU 'juridico'
     const filtered = allResponsaveis.filter((resp: any) => {
-      const email = resp.email?.toLowerCase().trim() || ''
-      const nome = resp.nome_completo?.toLowerCase().trim() || ''
-      const isAlex = email === 'alex.fontes@viasudeste.com' || nome.includes('alex fontes')
-      const isClaudinei = email === 'claudinei.mariano@viasudeste.com' || nome.includes('claudinei')
-      return isAlex || isClaudinei
+      const tipo = resp.tipo_usuario?.toLowerCase().trim()
+      return tipo === 'sinistro' || tipo === 'juridico'
     })
 
     setAvailableResponsaveis(filtered)

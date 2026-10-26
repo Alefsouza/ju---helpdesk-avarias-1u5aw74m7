@@ -3130,7 +3130,7 @@ export default function ChamadoDetalhes() {
 
     const { data, error } = await supabase
       .from('perfil_usuario')
-      .select('id, nome_completo, email')
+      .select('id, nome_completo, email, departamento, tipo_usuario')
       .neq('tipo_usuario', 'basico')
       .neq('id', user.id)
       .order('nome_completo', { ascending: true })
@@ -3140,7 +3140,47 @@ export default function ChamadoDetalhes() {
       return
     }
 
-    setAvailableResponsaveis(data || [])
+    const allResponsaveis = data || []
+
+    // Identifica se o usuário logado possui perfil de TI
+    let isTi =
+      user?.email?.toLowerCase().trim() === 'ti@viasudeste.com' ||
+      currentUserProfile?.email?.toLowerCase().trim() === 'ti@viasudeste.com' ||
+      currentUserProfile?.departamento?.trim().toUpperCase() === 'TI' ||
+      currentUserProfile?.tipo_usuario?.trim().toLowerCase() === 'ti'
+
+    if (!isTi && user.id) {
+      const { data: myProfile } = await supabase
+        .from('perfil_usuario')
+        .select('tipo_usuario, departamento, email')
+        .eq('id', user.id)
+        .maybeSingle()
+
+      if (
+        myProfile?.email?.toLowerCase().trim() === 'ti@viasudeste.com' ||
+        myProfile?.departamento?.trim().toUpperCase() === 'TI' ||
+        myProfile?.tipo_usuario?.trim().toLowerCase() === 'ti'
+      ) {
+        isTi = true
+      }
+    }
+
+    // Para o TI: continua mostrando todos os usuários disponíveis
+    if (isTi) {
+      setAvailableResponsaveis(allResponsaveis)
+      return
+    }
+
+    // Para os demais perfis: mostrar SOMENTE os usuários com perfil de Sinistro e Jurídico (Alex e Claudinei)
+    const filtered = allResponsaveis.filter((resp: any) => {
+      const email = resp.email?.toLowerCase().trim() || ''
+      const nome = resp.nome_completo?.toLowerCase().trim() || ''
+      const isAlex = email === 'alex.fontes@viasudeste.com' || nome.includes('alex fontes')
+      const isClaudinei = email === 'claudinei.mariano@viasudeste.com' || nome.includes('claudinei')
+      return isAlex || isClaudinei
+    })
+
+    setAvailableResponsaveis(filtered)
   }
 
   const handleOpenTransferModal = () => {

@@ -49,6 +49,10 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Calendar } from '@/components/ui/calendar'
 import { cn } from '@/lib/utils'
 
+// Chamado / Documento em regime de exceção única: liberado para exibição mesmo sem fotos de manutenção
+const ID_DOCUMENTO_EXCECAO = '737fd333-fc90-4e8a-8f8c-c955fdc28efd'
+const PIA_CHAMADO_EXCECAO = '003082026/079'
+
 export default function SecretariaTecnica() {
   const [documentos, setDocumentos] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
@@ -177,8 +181,9 @@ export default function SecretariaTecnica() {
           .not('numero_os', 'is', null)
           .neq('numero_os', '')
           .neq('status_liberacao', 'sem_orcamento')
-          .not('fotos_manutencao', 'is', null)
-          .neq('fotos_manutencao', '[]')
+          .or(
+            `and(fotos_manutencao.not.is.null,fotos_manutencao.neq.[]),id.eq.${ID_DOCUMENTO_EXCECAO}`,
+          )
           .or('orcamento_url.is.null,is_recusado.eq.true')
           .order('criado_em', { ascending: false })
           .range(from, from + PAGE_SIZE - 1)
@@ -198,11 +203,17 @@ export default function SecretariaTecnica() {
       }
 
       // Filter: guarantee maintenance photos is non-empty array AND (NO orcamento_url OR is_recusado)
+      // Exceção única: chamado 003082026/079 (documento id 737fd333-fc90-4e8a-8f8c-c955fdc28efd) aparece mesmo sem fotos_manutencao
       const pendingDocuments =
         allDocs.filter((doc: any) => {
+          const isExcecaoUnica =
+            doc.id === ID_DOCUMENTO_EXCECAO ||
+            doc.chamados?.pia === PIA_CHAMADO_EXCECAO ||
+            (doc.numero_os === '911120' &&
+              (doc.numero_carro === '52870' || doc.chamados?.carro === '52870'))
           const hasPhotos = Array.isArray(doc.fotos_manutencao) && doc.fotos_manutencao.length > 0
           const hasOrcamento = !!doc.orcamento_url
-          return hasPhotos && (!hasOrcamento || doc.is_recusado)
+          return (hasPhotos || isExcecaoUnica) && (!hasOrcamento || doc.is_recusado)
         }) || []
 
       // Identify which OS numbers need a fresh lookup

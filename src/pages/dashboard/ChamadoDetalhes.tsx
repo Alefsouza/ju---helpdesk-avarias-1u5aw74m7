@@ -3171,10 +3171,20 @@ export default function ChamadoDetalhes() {
       return
     }
 
-    // Para os demais perfis: listar TODOS os usuários com tipo_usuario 'sinistro' OU 'juridico'
+    // Para os demais perfis: listar TODOS os usuários com tipo_usuario 'sinistro' OU 'juridico',
+    // além dos 4 gestores aprovadores da diretoria (Alex Fontes, Luciana Caparroz, Dr. Claudinei Mariano, Dra. Bianca Zanatta)
+    const gestoresEmails = [
+      'alex.fontes@viasudeste.com',
+      'luciana.moraes@viasudeste.com',
+      'claudinei.mariano@viasudeste.com',
+      'bianca.zanatta@viasudeste.com',
+    ]
+
     const filtered = allResponsaveis.filter((resp: any) => {
       const tipo = resp.tipo_usuario?.toLowerCase().trim()
-      return tipo === 'sinistro' || tipo === 'juridico'
+      const email = resp.email?.toLowerCase().trim()
+      const isGestor = email && gestoresEmails.includes(email)
+      return tipo === 'sinistro' || tipo === 'juridico' || isGestor
     })
 
     setAvailableResponsaveis(filtered)

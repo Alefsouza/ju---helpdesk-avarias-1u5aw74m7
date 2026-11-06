@@ -55,6 +55,14 @@ function etapaChamado(c: ConsultaRow): { label: string; cls: string } {
   if (c.status_interno === 'aguardando_claudinei' || c.status_aprovacao_claudinei === 'pendente') {
     return { label: 'Pendente aprovação - Dr. Claudinei', cls: 'bg-amber-100 text-amber-800' }
   }
+  // Jurídico tem precedência: status_aprovacao_alex pode ficar 'pendente' velho
+  // em chamados que já seguiram para o Jurídico (ex.: arquivado, cobrar terceiro)
+  if (c.status_juridico) {
+    return { label: `Jurídico: ${c.status_juridico}`, cls: 'bg-sky-100 text-sky-800' }
+  }
+  if (c.status_interno === 'Jurídico') {
+    return { label: 'No Jurídico', cls: 'bg-sky-100 text-sky-800' }
+  }
   if (c.status_interno === 'AGUARDANDO_ALEX' || c.status_aprovacao_alex === 'pendente') {
     return { label: 'Pendente aprovação - Alex', cls: 'bg-amber-100 text-amber-800' }
   }
@@ -256,13 +264,6 @@ export default function ConsultaColaborador() {
                             <div>
                               <Badge variant="outline" className="text-xs text-slate-600">
                                 {c.situacao_processo}
-                              </Badge>
-                            </div>
-                          )}
-                          {c.status_juridico && (
-                            <div>
-                              <Badge variant="outline" className="text-xs text-slate-600">
-                                Jurídico: {c.status_juridico}
                               </Badge>
                             </div>
                           )}

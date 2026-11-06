@@ -278,7 +278,12 @@ export default function ConsultaColaborador() {
                             </Badge>
                             <div className="text-xs text-muted-foreground">
                               {c.parcelas_ativas} parcela(s) • {fmtBRL(c.valor_parcelas)}
-                              {c.proxima_parcela ? ` • próxima ${fmtData(c.proxima_parcela)}` : ''}
+                              {c.proxima_parcela
+                                ? new Date(c.proxima_parcela + 'T12:00:00') >=
+                                  new Date(new Date().toDateString())
+                                  ? ` • próxima ${fmtData(c.proxima_parcela)}`
+                                  : ` • última ${fmtData(c.proxima_parcela)}`
+                                : ''}
                             </div>
                           </div>
                         ) : (

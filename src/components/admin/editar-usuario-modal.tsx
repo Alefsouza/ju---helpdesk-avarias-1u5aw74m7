@@ -179,6 +179,7 @@ export function EditarUsuarioModal({
                       <SelectItem value="financeiro">Financeiro</SelectItem>
                       <SelectItem value="contabil">Contabil</SelectItem>
                       <SelectItem value="planejamento">Planejamento</SelectItem>
+                      <SelectItem value="consulta">Consulta (somente leitura)</SelectItem>
                     </SelectContent>
                   </Select>
                   <FormMessage />

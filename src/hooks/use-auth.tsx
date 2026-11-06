@@ -20,6 +20,7 @@ export type UserProfile = {
     | 'financeiro'
     | 'contabil'
     | 'planejamento'
+    | 'consulta'
   departamento?: string | null
   foto_url?: string | null
   garagem?: string | null

@@ -34,6 +34,7 @@ import {
   Gavel,
   FileCheck,
   RotateCcw,
+  Search,
 } from 'lucide-react'
 import { Skeleton } from '@/components/ui/skeleton'
 import { useEffect, useState } from 'react'
@@ -48,6 +49,7 @@ function AppSidebar() {
 
   const tipo = profile?.tipo_usuario
   const isPlanejamento = tipo === 'planejamento'
+  const isConsulta = tipo === 'consulta'
   const isBasico = tipo === 'basico'
   const isResponsavel = tipo === 'responsavel' || tipo === 'sinistro'
   const isSinistro = tipo === 'sinistro'
@@ -96,6 +98,21 @@ function AppSidebar() {
                     <Link to="/dashboard/vales-aprovacao-alex">
                       <FileCheck />
                       <span>Vales para Aprovação</span>
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              )}
+
+              {isConsulta && (
+                <SidebarMenuItem>
+                  <SidebarMenuButton
+                    asChild
+                    isActive={location.pathname === '/dashboard/consulta-colaborador'}
+                    className="data-[active=true]:bg-transparent data-[active=true]:text-[#c8e6c9] hover:bg-[#c8e6c9]/10 hover:text-[#c8e6c9] text-white transition-colors"
+                  >
+                    <Link to="/dashboard/consulta-colaborador">
+                      <Search />
+                      <span>Consultar Avarias</span>
                     </Link>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
@@ -856,6 +873,9 @@ export default function Layout() {
     if (user?.email === 'claudinei.mariano@viasudeste.com') {
       return <Navigate to="/dashboard" replace />
     }
+    if (profile?.tipo_usuario === 'consulta') {
+      return <Navigate to="/dashboard/consulta-colaborador" replace />
+    }
     if (profile?.tipo_usuario === 'vistoriador') {
       return <Navigate to="/vistoria/novo" replace />
     }
@@ -876,6 +896,17 @@ export default function Layout() {
       location.pathname === '/dashboard/perfil'
     if (!isPlanejamentoRoute) {
       return <Navigate to="/dashboard/vales-aprovacao-alex" replace />
+    }
+  }
+
+  // Redirect Consulta users to allowed routes only
+  if (user && profile?.tipo_usuario === 'consulta') {
+    const isConsultaRoute =
+      location.pathname === '/dashboard/consulta-colaborador' ||
+      location.pathname === '/dashboard/perfil' ||
+      location.pathname.startsWith('/dashboard/chamados/')
+    if (!isConsultaRoute) {
+      return <Navigate to="/dashboard/consulta-colaborador" replace />
     }
   }
 

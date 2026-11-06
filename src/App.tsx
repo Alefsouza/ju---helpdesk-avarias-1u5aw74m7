@@ -51,6 +51,7 @@ import NotFound from './pages/NotFound'
 import Layout from './components/Layout'
 import { AuthProvider, useAuth } from './hooks/use-auth'
 import SecretariaTecnica from './pages/dashboard/SecretariaTecnica'
+import ConsultaColaborador from './pages/dashboard/ConsultaColaborador'
 
 const DashboardRoute = () => {
   const { user, profile, loading } = useAuth()
@@ -69,6 +70,9 @@ const DashboardRoute = () => {
     if (!loading && profile?.tipo_usuario === 'secretaria_tecnica') {
       navigate('/dashboard/secretaria-tecnica', { replace: true })
     }
+    if (!loading && profile?.tipo_usuario === 'consulta') {
+      navigate('/dashboard/consulta-colaborador', { replace: true })
+    }
     if (!loading && (profile?.tipo_usuario === 'dp' || profile?.departamento === 'DP')) {
       navigate('/vales-aprovados', { replace: true })
     }
@@ -86,6 +90,7 @@ const DashboardRoute = () => {
     user?.email === 'alex.fontes@viasudeste.com' ||
     profile?.tipo_usuario === 'juridico' ||
     profile?.tipo_usuario === 'secretaria_tecnica' ||
+    profile?.tipo_usuario === 'consulta' ||
     profile?.tipo_usuario === 'dp' ||
     profile?.departamento === 'DP' ||
     profile?.tipo_usuario === 'financeiro' ||
@@ -127,6 +132,7 @@ const App = () => (
               <Route path="/dashboard/documentos" element={<Documentos />} />
               <Route path="/dashboard/perfil" element={<Perfil />} />
               <Route path="/dashboard/secretaria-tecnica" element={<SecretariaTecnica />} />
+              <Route path="/dashboard/consulta-colaborador" element={<ConsultaColaborador />} />
               <Route path="/dashboard/vales-aprovacao" element={<ValesAprovacao />} />
               <Route path="/dashboard/vales-aprovacao-alex" element={<ValesAprovacaoAlexPage />} />
               <Route

@@ -231,6 +231,7 @@ export default function ConsultaColaborador() {
                         </div>
                         <div className="text-xs text-muted-foreground">
                           Aberto em {fmtData(c.criado_em)}
+                          {c.status_chamado === 'finalizado' ? ' • Finalizado' : ''}
                         </div>
                       </TableCell>
                       <TableCell>

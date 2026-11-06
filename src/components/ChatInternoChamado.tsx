@@ -23,7 +23,13 @@ type MensagemInterna = {
 
 type PerfilMap = Record<string, { nome_completo: string; email: string }>
 
-export function ChatInternoChamado({ chamadoId }: { chamadoId: string }) {
+export function ChatInternoChamado({
+  chamadoId,
+  readOnly = false,
+}: {
+  chamadoId: string
+  readOnly?: boolean
+}) {
   const { user } = useAuth()
   const [mensagens, setMensagens] = useState<MensagemInterna[]>([])
   const [mensagem, setMensagem] = useState('')
@@ -174,7 +180,9 @@ export function ChatInternoChamado({ chamadoId }: { chamadoId: string }) {
         <div className="bg-amber-50 border-b border-amber-200 px-3 py-1.5 flex items-center gap-1.5">
           <Lock className="h-3 w-3 text-amber-700" />
           <span className="text-[11px] font-medium text-amber-800">
-            Apenas Admin, Sinistro, Jurídico e Planejamento podem visualizar esta conversa.
+            {readOnly
+              ? 'Somente leitura — você pode visualizar a conversa interna do chamado.'
+              : 'Apenas Admin, Sinistro, Jurídico e Planejamento podem visualizar esta conversa.'}
           </span>
         </div>
 
@@ -231,40 +239,42 @@ export function ChatInternoChamado({ chamadoId }: { chamadoId: string }) {
           <div ref={messagesEndRef} />
         </div>
 
-        <div
-          className={cn(
-            'flex flex-col gap-2 rounded-md border-t border-amber-200 p-3 transition-colors bg-white',
-          )}
-        >
-          <Textarea
-            placeholder="Digite uma mensagem interna (visível apenas para a equipe restrita)..."
-            value={mensagem}
-            onChange={(e) => setMensagem(e.target.value)}
-            className="min-h-[70px] resize-y bg-white text-xs sm:text-sm border-amber-200 focus-visible:ring-amber-400"
-            disabled={submitting}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
-                e.preventDefault()
-                handleEnviar()
-              }
-            }}
-          />
-          <div className="flex justify-end">
-            <Button
-              size="sm"
-              onClick={handleEnviar}
-              disabled={submitting || !mensagem.trim()}
-              className="bg-amber-600 hover:bg-amber-700 text-white h-8 text-xs"
-            >
-              {submitting ? (
-                <Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" />
-              ) : (
-                <Send className="mr-2 h-3.5 w-3.5" />
-              )}
-              {submitting ? 'Enviando...' : 'Enviar'}
-            </Button>
+        {!readOnly && (
+          <div
+            className={cn(
+              'flex flex-col gap-2 rounded-md border-t border-amber-200 p-3 transition-colors bg-white',
+            )}
+          >
+            <Textarea
+              placeholder="Digite uma mensagem interna (visível apenas para a equipe restrita)..."
+              value={mensagem}
+              onChange={(e) => setMensagem(e.target.value)}
+              className="min-h-[70px] resize-y bg-white text-xs sm:text-sm border-amber-200 focus-visible:ring-amber-400"
+              disabled={submitting}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
+                  e.preventDefault()
+                  handleEnviar()
+                }
+              }}
+            />
+            <div className="flex justify-end">
+              <Button
+                size="sm"
+                onClick={handleEnviar}
+                disabled={submitting || !mensagem.trim()}
+                className="bg-amber-600 hover:bg-amber-700 text-white h-8 text-xs"
+              >
+                {submitting ? (
+                  <Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" />
+                ) : (
+                  <Send className="mr-2 h-3.5 w-3.5" />
+                )}
+                {submitting ? 'Enviando...' : 'Enviar'}
+              </Button>
+            </div>
           </div>
-        </div>
+        )}
       </div>
     </div>
   )

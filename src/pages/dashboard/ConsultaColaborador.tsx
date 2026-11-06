@@ -287,9 +287,7 @@ export default function ConsultaColaborador() {
                             </div>
                           </div>
                         ) : (
-                          <Badge variant="outline" className="text-slate-600">
-                            A cobrar (DP)
-                          </Badge>
+                          <span className="text-xs text-muted-foreground">—</span>
                         )}
                       </TableCell>
                       <TableCell className="text-right">

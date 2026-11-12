@@ -14,7 +14,8 @@ import { createClient } from 'jsr:@supabase/supabase-js@2'
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Methods': 'GET, OPTIONS',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-espelho-token',
+  'Access-Control-Allow-Headers':
+    'authorization, x-client-info, apikey, content-type, x-espelho-token',
 }
 
 function json(body: unknown, status = 200) {
@@ -81,7 +82,9 @@ Deno.serve(async (req: Request) => {
 
     let query = admin
       .from('formularios_espelho_danos')
-      .select('id, numero_carro, linha, numero_os, garagem, data, horario, criado_em, atualizado_em, chamado_id')
+      .select(
+        'id, numero_carro, linha, numero_os, garagem, data, horario, criado_em, atualizado_em, chamado_id',
+      )
 
     if (desde) {
       query = query.gte('atualizado_em', desde).order('atualizado_em', { ascending: true })

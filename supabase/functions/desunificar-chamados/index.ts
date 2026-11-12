@@ -105,7 +105,7 @@ Deno.serve(async (req: Request) => {
     const { data: destino, error: destinoError } = await supabaseAdmin
       .from('chamados')
       .select('*')
-      .eq('id', destino_id)
+      .eq('id', destinoId)
       .single()
 
     if (destinoError || !destino) {

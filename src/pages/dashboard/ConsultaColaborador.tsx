@@ -51,6 +51,17 @@ const fmtBRL = (v?: number | null) =>
     ? Number(v).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
     : '—'
 
+// Resumo das parcelas: "N parcelas de R$ X • Pendente: R$ Y"
+// - valor_parcelas vem do RPC como o TOTAL pendente (soma das parcelas ativas/não pagas)
+// - o valor de cada parcela individual = total pendente / nº de parcelas ativas
+const resumoParcelas = (c: Pick<ConsultaRow, 'parcelas_ativas' | 'valor_parcelas'>) => {
+  const qtd = Number(c.parcelas_ativas) || 0
+  const total = Number(c.valor_parcelas) || 0
+  if (qtd <= 0 || total <= 0) return 'Nenhuma parcela pendente'
+  const valorParcela = Math.round((total / qtd) * 100) / 100
+  return `${qtd} parcela${qtd > 1 ? 's' : ''} de ${fmtBRL(valorParcela)} • Pendente: ${fmtBRL(total)}`
+}
+
 function etapaChamado(c: ConsultaRow): { label: string; cls: string } {
   if (c.status_interno === 'aguardando_claudinei' || c.status_aprovacao_claudinei === 'pendente') {
     return { label: 'Pendente aprovação - Dr. Claudinei', cls: 'bg-amber-100 text-amber-800' }
@@ -277,7 +288,7 @@ export default function ConsultaColaborador() {
                               Cobrança em andamento
                             </Badge>
                             <div className="text-xs text-muted-foreground">
-                              {c.parcelas_ativas} parcela(s) • {fmtBRL(c.valor_parcelas)}
+                              {resumoParcelas(c)}
                               {c.proxima_parcela
                                 ? new Date(c.proxima_parcela + 'T12:00:00') >=
                                   new Date(new Date().toDateString())

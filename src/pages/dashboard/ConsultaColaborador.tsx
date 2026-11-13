@@ -52,14 +52,22 @@ const fmtBRL = (v?: number | null) =>
     : '—'
 
 // Resumo das parcelas: "N parcelas de R$ X • Pendente: R$ Y"
-// - valor_parcelas vem do RPC como o TOTAL pendente (soma das parcelas ativas/não pagas)
-// - o valor de cada parcela individual = total pendente / nº de parcelas ativas
-const resumoParcelas = (c: Pick<ConsultaRow, 'parcelas_ativas' | 'valor_parcelas'>) => {
+// - valor_parcelas vem do RPC como o TOTAL (soma das parcelas ativas/não pagas)
+// - o valor de cada parcela individual = total / nº de parcelas ativas
+// - Pendente = total − o valor JÁ EXPORTADO para a Edna (arquivo do DP). O export do DP
+//   (ValesAprovadosDP) agrupa as parcelas por mês de referência (data_referencia) e é gerado
+//   mês a mês, então considera-se "já exportado" a soma das parcelas com data_referencia em
+//   meses ANTERIORES ao mês corrente; as do mês corrente em diante seguem pendentes.
+const resumoParcelas = (
+  c: Pick<ConsultaRow, 'parcelas_ativas' | 'valor_parcelas'>,
+  valorExportado = 0,
+) => {
   const qtd = Number(c.parcelas_ativas) || 0
   const total = Number(c.valor_parcelas) || 0
-  if (qtd <= 0 || total <= 0) return 'Nenhuma parcela pendente'
+  const pendente = Math.max(0, Math.round((total - Number(valorExportado) || 0) * 100) / 100)
+  if (qtd <= 0 || total <= 0 || pendente <= 0) return 'Nenhuma parcela pendente'
   const valorParcela = Math.round((total / qtd) * 100) / 100
-  return `${qtd} parcela${qtd > 1 ? 's' : ''} de ${fmtBRL(valorParcela)} • Pendente: ${fmtBRL(total)}`
+  return `${qtd} parcela${qtd > 1 ? 's' : ''} de ${fmtBRL(valorParcela)} • Pendente: ${fmtBRL(pendente)}`
 }
 
 function etapaChamado(c: ConsultaRow): { label: string; cls: string } {
@@ -115,6 +123,7 @@ export default function ConsultaColaborador() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [searched, setSearched] = useState(false)
+  const [exportadoPorChamado, setExportadoPorChamado] = useState<Record<string, number>>({})
 
   useEffect(() => {
     const t = setTimeout(() => setDebounced(busca.trim()), 400)
@@ -129,8 +138,10 @@ export default function ConsultaColaborador() {
         p_busca: termo,
       })
       if (rpcError) throw rpcError
-      setRows((data as any[]) || [])
+      const lista = ((data as any[]) || []) as ConsultaRow[]
+      setRows(lista)
       setSearched(true)
+      carregarExportado(lista)
     } catch (err: any) {
       console.error(err)
       setError('Erro ao consultar. Tente novamente.')
@@ -138,6 +149,39 @@ export default function ConsultaColaborador() {
       setSearched(true)
     } finally {
       setLoading(false)
+    }
+  }
+
+  // Soma, por chamado, o valor das parcelas já exportadas para a Edna (arquivo do DP):
+  // parcelas ativas com data_referencia em meses ANTERIORES ao mês corrente.
+  // Em caso de erro (ex.: RLS), mantém o mapa vazio e o resumo cai no valor total.
+  const carregarExportado = async (lista: ConsultaRow[]) => {
+    const ids = [...new Set(lista.map((c) => c.chamado_id).filter(Boolean))]
+    if (ids.length === 0) {
+      setExportadoPorChamado({})
+      return
+    }
+    try {
+      const inicioMes = (() => {
+        const now = new Date()
+        return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-01`
+      })()
+      const { data: parcelas, error: parcelasError } = await supabase
+        .from('parcelas_vales')
+        .select('chamado_id, valor_parcela, data_referencia')
+        .in('chamado_id', ids)
+        .eq('status', 'ativo')
+        .lt('data_referencia', inicioMes)
+      if (parcelasError) throw parcelasError
+      const mapa: Record<string, number> = {}
+      for (const p of (parcelas as any[]) || []) {
+        const v = Number(p.valor_parcela) || 0
+        if (v > 0) mapa[p.chamado_id] = Math.round(((mapa[p.chamado_id] || 0) + v) * 100) / 100
+      }
+      setExportadoPorChamado(mapa)
+    } catch (err) {
+      console.warn('Não foi possível carregar parcelas já exportadas:', err)
+      setExportadoPorChamado({})
     }
   }
 
@@ -288,7 +332,7 @@ export default function ConsultaColaborador() {
                               Cobrança em andamento
                             </Badge>
                             <div className="text-xs text-muted-foreground">
-                              {resumoParcelas(c)}
+                              {resumoParcelas(c, exportadoPorChamado[c.chamado_id] || 0)}
                               {c.proxima_parcela
                                 ? new Date(c.proxima_parcela + 'T12:00:00') >=
                                   new Date(new Date().toDateString())

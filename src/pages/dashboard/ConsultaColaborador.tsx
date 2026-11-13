@@ -17,6 +17,9 @@ import {
 } from '@/components/ui/table'
 
 type ConsultaRow = {
+  parcelas_pendentes: number
+  pendente_primeira: string | null
+  pendente_ultima: string | null
   chamado_id: string
   titulo: string | null
   status_chamado: string | null
@@ -52,23 +55,60 @@ const fmtBRL = (v?: number | null) =>
     ? Number(v).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
     : '—'
 
-// Resumo das parcelas: "N parcelas de R$ X • Pendente: R$ Y"
+// Competência MM/YYYY de uma data (yyyy-mm-dd), sem depender de timezone.
+const fmtCompetencia = (d?: string | null) => {
+  if (!d) return null
+  const m = /^(\d{4})-(\d{2})/.exec(d.length >= 7 ? d : '')
+  return m ? `${m[2]}/${m[1]}` : null
+}
+
+// Resumo das parcelas: "N parcelas de R$ X • Pendente: R$ Y • Falta(m) ..."
 // - valor_parcelas vem do RPC como o TOTAL (soma das parcelas ativas/não pagas)
-// - valor_exportado também vem do RPC (SECURITY DEFINER, ignora RLS): soma das parcelas
-//   ativas já exportadas para a Edna (arquivo do DP), isto é, com data_referencia anterior
-//   ao 1º dia do mês corrente (America/Sao_Paulo). Calculado no backend para funcionar
-//   para qualquer perfil — a consulta client-side de parcelas_vales era filtrada pelo
-//   RLS (só DP/Diretoria/Planejamento) e voltava vazia sem erro.
-// - Pendente = valor_parcelas − valor_exportado (mínimo 0).
+// - valor_exportado/parcelas_pendentes/pendente_primeira/pendente_ultima vêm do RPC
+//   (SECURITY DEFINER, ignora RLS): pendentes são as parcelas ativas com
+//   data_referencia >= 1º dia do mês corrente (America/Sao_Paulo), isto é, ainda não
+//   exportadas para a Edna (arquivo do DP, gerado mês a mês). Calculado no backend
+//   para funcionar para qualquer perfil — a consulta client-side de parcelas_vales era
+//   filtrada pelo RLS (só DP/Diretoria/Planejamento) e voltava vazia sem erro.
+// - Pendente (R$) = valor_parcelas − valor_exportado (mínimo 0).
 const resumoParcelas = (
-  c: Pick<ConsultaRow, 'parcelas_ativas' | 'valor_parcelas' | 'valor_exportado'>,
+  c: Pick<
+    ConsultaRow,
+    | 'parcelas_ativas'
+    | 'valor_parcelas'
+    | 'valor_exportado'
+    | 'parcelas_pendentes'
+    | 'pendente_primeira'
+    | 'pendente_ultima'
+  >,
 ) => {
   const qtd = Number(c.parcelas_ativas) || 0
   const total = Number(c.valor_parcelas) || 0
   const pendente = Math.max(0, Math.round((total - Number(c.valor_exportado) || 0) * 100) / 100)
   if (qtd <= 0 || total <= 0 || pendente <= 0) return 'Nenhuma parcela pendente'
+
+  const partes: string[] = []
   const valorParcela = Math.round((total / qtd) * 100) / 100
-  return `${qtd} parcela${qtd > 1 ? 's' : ''} de ${fmtBRL(valorParcela)} • Pendente: ${fmtBRL(pendente)}`
+  partes.push(`${qtd} parcela${qtd > 1 ? 's' : ''} de ${fmtBRL(valorParcela)}`)
+  partes.push(`Pendente: ${fmtBRL(pendente)}`)
+
+  const nPend = Number(c.parcelas_pendentes) || 0
+  if (nPend === 1) {
+    const comp = fmtCompetencia(c.pendente_primeira)
+    if (comp) partes.push(`Falta 1 parcela — ${comp}`)
+  } else if (nPend > 1) {
+    const de = fmtCompetencia(c.pendente_primeira)
+    const ate = fmtCompetencia(c.pendente_ultima)
+    if (de && ate && de !== ate) {
+      partes.push(`Faltam ${nPend} parcelas — competência ${de} até ${ate}`)
+    } else if (de) {
+      partes.push(`Faltam ${nPend} parcelas — competência ${de}`)
+    }
+  } else {
+    partes.push('Nenhuma parcela pendente')
+  }
+
+  return partes.join(' • ')
 }
 
 function etapaChamado(c: ConsultaRow): { label: string; cls: string } {
@@ -297,15 +337,7 @@ export default function ConsultaColaborador() {
                             <Badge className="bg-green-100 text-green-800 border-transparent">
                               Cobrança em andamento
                             </Badge>
-                            <div className="text-xs text-muted-foreground">
-                              {resumoParcelas(c)}
-                              {c.proxima_parcela
-                                ? new Date(c.proxima_parcela + 'T12:00:00') >=
-                                  new Date(new Date().toDateString())
-                                  ? ` • próxima ${fmtData(c.proxima_parcela)}`
-                                  : ` • última ${fmtData(c.proxima_parcela)}`
-                                : ''}
-                            </div>
+                            <div className="text-xs text-muted-foreground">{resumoParcelas(c)}</div>
                           </div>
                         ) : (
                           <span className="text-xs text-muted-foreground">—</span>

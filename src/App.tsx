@@ -52,7 +52,6 @@ import Layout from './components/Layout'
 import { AuthProvider, useAuth } from './hooks/use-auth'
 import SecretariaTecnica from './pages/dashboard/SecretariaTecnica'
 import ConsultaColaborador from './pages/dashboard/ConsultaColaborador'
-import AprovacaoJuridico from './pages/dashboard/AprovacaoJuridico'
 
 const DashboardRoute = () => {
   const { user, profile, loading } = useAuth()
@@ -134,7 +133,6 @@ const App = () => (
               <Route path="/dashboard/perfil" element={<Perfil />} />
               <Route path="/dashboard/secretaria-tecnica" element={<SecretariaTecnica />} />
               <Route path="/dashboard/consulta-colaborador" element={<ConsultaColaborador />} />
-              <Route path="/dashboard/aprovacao-juridico" element={<AprovacaoJuridico />} />
               <Route path="/dashboard/vales-aprovacao" element={<ValesAprovacao />} />
               <Route path="/dashboard/vales-aprovacao-alex" element={<ValesAprovacaoAlexPage />} />
               <Route

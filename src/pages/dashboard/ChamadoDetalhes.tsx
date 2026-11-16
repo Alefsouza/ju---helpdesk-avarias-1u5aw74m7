@@ -3770,23 +3770,19 @@ export default function ChamadoDetalhes() {
     }
 
     if (isJuridicoUser) {
-      // Motorista que será cobrado — obrigatório para o Jurídico
+      // Motorista que será cobrado — OPCIONAL para o Jurídico.
+      // Validação só quando o registro for preenchido; sem preenchimento grava null.
       const registro = registroCobranca.trim()
-      if (!registro) {
+      if (registro && motoristaCobrancaEncontrado !== true) {
         setCompleting(false)
         setModalCobrancaOpen(true)
-        toast.error('Informe o registro do motorista que será cobrado')
+        toast.error(cobrancaErro || 'Registro não validado na base de colaboradores')
         return
       }
-      if (!nomeCobranca.trim()) {
-        setCompleting(false)
-        setModalCobrancaOpen(true)
-        toast.error('Registro não validado na base de colaboradores')
-        return
-      }
-      updatePayload.registro_motorista_cobranca = registro.replace(/^0+/, '') || registro
-      updatePayload.nome_motorista_cobranca = nomeCobranca.trim()
-      updatePayload.status_aprovacao_juridico_1 = 'pendente'
+      updatePayload.registro_motorista_cobranca = registro
+        ? registro.replace(/^0+/, '') || registro
+        : null
+      updatePayload.nome_motorista_cobranca = registro ? nomeCobranca.trim() : null
     }
 
     if (hasExistingClaudineiFlow) {
@@ -3880,15 +3876,11 @@ export default function ChamadoDetalhes() {
     )
   }
 
-  // Confirma a finalização a partir do modal de cobrança (Jurídico)
+  // Confirma a finalização a partir do modal de cobrança (Jurídico) — campos opcionais
   const handleConfirmarFinalizarCobranca = async () => {
     const registro = registroCobranca.trim()
-    if (!registro) {
-      toast.error('Informe o registro do motorista que será cobrado')
-      return
-    }
-    if (!nomeCobranca.trim()) {
-      toast.error('Registro não validado na base de colaboradores')
+    if (registro && motoristaCobrancaEncontrado !== true) {
+      toast.error(cobrancaErro || 'Registro não validado na base de colaboradores')
       return
     }
     setFinalizandoCobranca(true)
@@ -5584,15 +5576,13 @@ export default function ChamadoDetalhes() {
           <DialogHeader>
             <DialogTitle>Finalizar Chamado — Cobrança de Motorista</DialogTitle>
             <DialogDescription>
-              Informe o registro do motorista que será cobrado. O nome é preenchido automaticamente
-              a partir da base de colaboradores.
+              Opcional: informe o registro do motorista que será cobrado. O nome é preenchido
+              automaticamente a partir da base de colaboradores.
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-2">
             <div className="space-y-2">
-              <Label htmlFor="registro-cobranca">
-                Registro do Motorista <span className="text-red-500">*</span>
-              </Label>
+              <Label htmlFor="registro-cobranca">Registro do Motorista (opcional)</Label>
               <Input
                 id="registro-cobranca"
                 placeholder="Ex.: 6989"
@@ -5626,11 +5616,11 @@ export default function ChamadoDetalhes() {
                 className="bg-muted cursor-not-allowed"
               />
             </div>
-            <div className="bg-amber-50 border border-amber-200 text-amber-800 p-3 rounded-md text-sm flex items-start gap-2">
+            <div className="bg-muted border text-muted-foreground p-3 rounded-md text-sm flex items-start gap-2">
               <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
               <div>
-                Após finalizar, o chamado entrará na fila de aprovação: primeiro Claudinei/Bianca e
-                depois a Diretoria. Ele ficará travado para reabertura durante o fluxo.
+                Você pode finalizar sem preencher os campos. Se informar o registro, ele será
+                validado na base de colaboradores antes da finalização.
               </div>
             </div>
           </div>
@@ -5644,12 +5634,7 @@ export default function ChamadoDetalhes() {
             </Button>
             <Button
               onClick={handleConfirmarFinalizarCobranca}
-              disabled={
-                finalizandoCobranca ||
-                completing ||
-                !registroCobranca.trim() ||
-                motoristaCobrancaEncontrado !== true
-              }
+              disabled={finalizandoCobranca || completing}
               className="bg-[#225f3d] hover:bg-[#1b4a30] text-white"
             >
               {finalizandoCobranca || completing ? 'Finalizando...' : 'Confirmar Finalização'}

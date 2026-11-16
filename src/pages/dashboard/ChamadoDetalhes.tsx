@@ -166,11 +166,57 @@ const ALLOWED_TYPES = [
   'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
 ]
 
-function shouldHideHistoryEntry(h: {
-  acao: string
+// Perfis internos que podem ver as entradas internas de fluxo no Histórico de
+// Interações (aprovações de vale/diretoria). Qualquer outro perfil (ex. 'basico'
+// — solicitante/motorista/garagem/terceiro) não vê essas entradas.
+const INTERNAL_HISTORY_PROFILES = [
+  'admin',
+  'juridico',
+  'sinistro',
+  'secretaria_tecnica',
+  'ti',
+  'planejamento',
+  'diretoria',
+  'responsavel',
+  'consulta',
+]
+
+function isInternalHistoryViewer(tipoUsuario?: string | null): boolean {
+  if (!tipoUsuario) return false
+  return INTERNAL_HISTORY_PROFILES.includes(tipoUsuario.trim().toLowerCase())
+}
+
+// Entradas internas de fluxo (vale/autorização/aprovações da diretoria) que o
+// solicitante (perfil básico) não deve ver no Histórico de Interações.
+function isInternalFlowHistoryEntry(h: {
+  acao?: string | null
   detalhes?: string | null
-  criado_em: string
 }): boolean {
+  const detalhes = (h.detalhes || '').toLowerCase()
+  if (detalhes.startsWith('chamado aprovado por ') && detalhes.includes('diretoria')) {
+    return true
+  }
+  if (detalhes.startsWith('autorização de desconto gerada com sucesso')) {
+    return true
+  }
+  if (h.acao === 'Aprovação Diretor' || h.acao === 'Reprovação Diretor') {
+    return true
+  }
+  return false
+}
+
+function shouldHideHistoryEntry(
+  h: {
+    acao: string
+    detalhes?: string | null
+    criado_em: string
+  },
+  viewerTipoUsuario?: string | null,
+): boolean {
+  if (viewerTipoUsuario !== undefined && !isInternalHistoryViewer(viewerTipoUsuario)) {
+    if (isInternalFlowHistoryEntry(h)) return true
+  }
+
   const isoDate = h.criado_em || ''
   if (!isoDate.includes('2026-08-03')) return false
 
@@ -1921,7 +1967,7 @@ export default function ChamadoDetalhes() {
       })
     })
     historicoData?.forEach((h) => {
-      if (shouldHideHistoryEntry(h)) {
+      if (shouldHideHistoryEntry(h, currUser?.tipo_usuario)) {
         return
       }
       if (
@@ -2098,7 +2144,7 @@ export default function ChamadoDetalhes() {
         async (payload) => {
           const newHistory = payload.new as any
 
-          if (shouldHideHistoryEntry(newHistory)) {
+          if (shouldHideHistoryEntry(newHistory, currentUserProfile?.tipo_usuario)) {
             return
           }
 

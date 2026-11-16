@@ -5446,7 +5446,7 @@ export default function ChamadoDetalhes() {
         </div>
       </div>
 
-      {chamado.status !== 'finalizado' && canReply && (
+      {(chamado.status !== 'finalizado' || isJuridico) && canReply && (
         <div className="bg-white rounded-lg border shadow-sm p-3 sm:p-4 animate-fade-in-up">
           <h3 className="text-xs font-bold text-slate-900 mb-2 uppercase tracking-wider">
             Responder

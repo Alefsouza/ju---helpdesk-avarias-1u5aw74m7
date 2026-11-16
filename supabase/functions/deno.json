@@ -1,16 +1,16 @@
 {
   "_versions": {
-    "manage-users": 15,
-    "transferir-chamado": 16,
-    "gerar-pdf": 56,
-    "criar-chamado-vistoria": 13,
-    "processar-documento-uazapi": 210,
-    "unificar-chamados": 23,
-    "verificar-inatividade-chamados": 9,
-    "importar-frota-xlsx": 209,
-    "sync-external-registros": 7,
-    "desunificar-chamados": 2,
-    "espelho-danos-intranet": 4,
-    "enviar-email-chamado": 1
+    "manage-users": 16,
+    "transferir-chamado": 17,
+    "gerar-pdf": 57,
+    "criar-chamado-vistoria": 14,
+    "processar-documento-uazapi": 211,
+    "unificar-chamados": 24,
+    "verificar-inatividade-chamados": 10,
+    "importar-frota-xlsx": 210,
+    "sync-external-registros": 8,
+    "desunificar-chamados": 3,
+    "espelho-danos-intranet": 5,
+    "enviar-email-chamado": 2
   }
 }

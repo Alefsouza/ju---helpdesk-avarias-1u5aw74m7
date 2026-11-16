@@ -535,31 +535,22 @@ Deno.serve(async (req: Request) => {
               // 1. Se for URL pública do Supabase Storage (/storage/v1/object/public/),
               // tenta obter via serviço de transformação de imagem (/storage/v1/render/image/public/)
               if (fotoUrl.includes('/storage/v1/object/public/')) {
-                const renderUrl =
-                  fotoUrl.replace(
-                    '/storage/v1/object/public/',
-                    '/storage/v1/render/image/public/',
-                  ) +
-                  (fotoUrl.includes('?') ? '&' : '?') +
-                  'width=1200&quality=75'
+                const renderUrl = fotoUrl.replace(
+                  '/storage/v1/object/public/',
+                  '/storage/v1/render/image/public/',
+                ) + (fotoUrl.includes('?') ? '&' : '?') + 'width=1200&quality=75'
 
                 try {
                   const renderRes = await fetch(renderUrl)
                   if (renderRes.ok) {
                     const transformedBytes = await renderRes.arrayBuffer()
-                    if (
-                      transformedBytes.byteLength > 0 &&
-                      transformedBytes.byteLength < optimizedBytes.byteLength
-                    ) {
+                    if (transformedBytes.byteLength > 0 && transformedBytes.byteLength < optimizedBytes.byteLength) {
                       optimizedBytes = transformedBytes
                       isPng = false // transform render retorna jpeg/webp otimizado
                     }
                   }
                 } catch (renderErr) {
-                  console.warn(
-                    'Fallback: não foi possível obter imagem transformada pelo storage:',
-                    renderErr,
-                  )
+                  console.warn('Fallback: não foi possível obter imagem transformada pelo storage:', renderErr)
                 }
               }
 
@@ -660,10 +651,7 @@ Deno.serve(async (req: Request) => {
     if (uploadError) {
       console.error('Upload Error:', uploadError)
       const sizeMB = (fileBytes.byteLength / (1024 * 1024)).toFixed(2)
-      if (
-        uploadError.message &&
-        uploadError.message.toLowerCase().includes('maximum allowed size')
-      ) {
+      if (uploadError.message && uploadError.message.toLowerCase().includes('maximum allowed size')) {
         throw new Error(
           `O arquivo PDF gerado (${sizeMB} MB) excedeu o limite máximo permitido pelo storage. Verifique as fotos anexadas.`,
         )

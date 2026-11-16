@@ -67,6 +67,9 @@ import {
   Edit,
   ShieldAlert,
   ShieldCheck,
+  Gavel,
+  Lock,
+  CheckCircle,
 } from 'lucide-react'
 import { supabase } from '@/lib/supabase/client'
 import { useAuth } from '@/hooks/use-auth'
@@ -81,6 +84,7 @@ import { useDocumentAction } from '@/hooks/use-document-action'
 import { useRegistroNome } from '@/hooks/use-registro-nome'
 import { Checkbox } from '@/components/ui/checkbox'
 import { ChatInternoChamado } from '@/components/ChatInternoChamado'
+import { DialogDescription } from '@/components/ui/dialog'
 
 type Chamado = any
 type Perfil = any
@@ -1680,6 +1684,58 @@ export default function ChamadoDetalhes() {
   const [restricaoMotivo, setRestricaoMotivo] = useState('')
   const [restricaoObservacao, setRestricaoObservacao] = useState('')
   const [savingRestricao, setSavingRestricao] = useState(false)
+
+  // Estado do motorista a cobrar (finalização pelo Jurídico)
+  const [registroCobranca, setRegistroCobranca] = useState('')
+  const [nomeCobranca, setNomeCobranca] = useState('')
+  const [verificandoCobranca, setVerificandoCobranca] = useState(false)
+  const [motoristaCobrancaEncontrado, setMotoristaCobrancaEncontrado] = useState<boolean | null>(
+    null,
+  )
+  const [cobrancaErro, setCobrancaErro] = useState('')
+  const [modalCobrancaOpen, setModalCobrancaOpen] = useState(false)
+  const [finalizandoCobranca, setFinalizandoCobranca] = useState(false)
+
+  // Valida o registro informado na base de colaboradores (tabela registros)
+  useEffect(() => {
+    async function verificarMotoristaCobranca() {
+      const registro = registroCobranca.trim()
+      if (!registro) {
+        setMotoristaCobrancaEncontrado(null)
+        setNomeCobranca('')
+        setCobrancaErro('')
+        return
+      }
+      setVerificandoCobranca(true)
+      try {
+        const normalized = registro.replace(/^0+/, '') || '0'
+        const { data } = await supabase
+          .from('registros')
+          .select('nome')
+          .eq('registro', normalized)
+          .maybeSingle()
+
+        if (data?.nome) {
+          setNomeCobranca(data.nome)
+          setMotoristaCobrancaEncontrado(true)
+          setCobrancaErro('')
+        } else {
+          setNomeCobranca('')
+          setMotoristaCobrancaEncontrado(false)
+          setCobrancaErro('Registro não encontrado na base de colaboradores')
+        }
+      } catch (err) {
+        console.error(err)
+        setNomeCobranca('')
+        setMotoristaCobrancaEncontrado(false)
+        setCobrancaErro('Erro ao consultar a base de colaboradores')
+      } finally {
+        setVerificandoCobranca(false)
+      }
+    }
+    const timer = setTimeout(verificarMotoristaCobranca, 500)
+    return () => clearTimeout(timer)
+  }, [registroCobranca])
 
   const { handleDocumentAction, loadingAction } = useDocumentAction()
 
@@ -3646,6 +3702,11 @@ export default function ChamadoDetalhes() {
   }
 
   const handleFinalizar = async () => {
+    if (isJuridico && !modalCobrancaOpen) {
+      // Jurídico: abre o modal para informar o motorista que será cobrado
+      setModalCobrancaOpen(true)
+      return
+    }
     if (!window.confirm('Tem certeza que deseja finalizar este chamado?')) return
     setCompleting(true)
 
@@ -3706,6 +3767,26 @@ export default function ChamadoDetalhes() {
     const updatePayload: any = {
       atualizado_em: new Date().toISOString(),
       status: 'finalizado',
+    }
+
+    if (isJuridicoUser) {
+      // Motorista que será cobrado — obrigatório para o Jurídico
+      const registro = registroCobranca.trim()
+      if (!registro) {
+        setCompleting(false)
+        setModalCobrancaOpen(true)
+        toast.error('Informe o registro do motorista que será cobrado')
+        return
+      }
+      if (!nomeCobranca.trim()) {
+        setCompleting(false)
+        setModalCobrancaOpen(true)
+        toast.error('Registro não validado na base de colaboradores')
+        return
+      }
+      updatePayload.registro_motorista_cobranca = registro.replace(/^0+/, '') || registro
+      updatePayload.nome_motorista_cobranca = nomeCobranca.trim()
+      updatePayload.status_aprovacao_juridico_1 = 'pendente'
     }
 
     if (hasExistingClaudineiFlow) {
@@ -3797,6 +3878,26 @@ export default function ChamadoDetalhes() {
           ? 'Chamado finalizado e enviado para aprovação do Alex.'
           : 'Chamado finalizado com sucesso',
     )
+  }
+
+  // Confirma a finalização a partir do modal de cobrança (Jurídico)
+  const handleConfirmarFinalizarCobranca = async () => {
+    const registro = registroCobranca.trim()
+    if (!registro) {
+      toast.error('Informe o registro do motorista que será cobrado')
+      return
+    }
+    if (!nomeCobranca.trim()) {
+      toast.error('Registro não validado na base de colaboradores')
+      return
+    }
+    setFinalizandoCobranca(true)
+    try {
+      setModalCobrancaOpen(false)
+      await handleFinalizar()
+    } finally {
+      setFinalizandoCobranca(false)
+    }
   }
 
   if (loading) {
@@ -3984,6 +4085,14 @@ export default function ChamadoDetalhes() {
     currentUserProfile?.tipo_usuario === 'juridico' ||
     currentUserProfile?.tipo_usuario === 'sinistro'
   const isReabrirBloqueado = isGestorAprovado && isPerfilBloqueado
+  // Bloqueio do fluxo de cobrança do Jurídico: enquanto houver aprovação
+  // pendente ou aprovada (gestor 1/2 ou diretoria 2/2), o chamado não pode ser reaberto
+  const hasFluxoCobrancaJuridico =
+    chamado.registro_motorista_cobranca != null &&
+    (chamado.status_aprovacao_juridico_1 === 'pendente' ||
+      chamado.status_aprovacao_juridico_1 === 'aprovado' ||
+      chamado.status_aprovacao_diretoria_2 === 'aprovado')
+  const isReabrirBloqueadoCobranca = hasFluxoCobrancaJuridico
   const isExclusaoAnexoBloqueada = isGestorAprovado && isPerfilBloqueado
 
   const orcamentoDoc = documentosChamado.find((d) => d.tipo_documento === 'Orçamento')
@@ -4173,18 +4282,21 @@ export default function ChamadoDetalhes() {
               {completing ? 'Finalizando...' : 'Finalizar Chamado'}
             </Button>
           )}
-          {chamado.status === 'finalizado' && isSupport && !isReabrirBloqueado && (
-            <Button
-              variant="outline"
-              size="sm"
-              className="text-blue-600 border-blue-200 hover:bg-blue-50 w-full sm:w-auto h-8 text-xs"
-              onClick={() => setConfirmReabrirOpen(true)}
-              disabled={completing || transferLoading}
-            >
-              <RotateCcw className="mr-2 h-3.5 w-3.5" />
-              Reabrir Chamado
-            </Button>
-          )}
+          {chamado.status === 'finalizado' &&
+            isSupport &&
+            !isReabrirBloqueado &&
+            !isReabrirBloqueadoCobranca && (
+              <Button
+                variant="outline"
+                size="sm"
+                className="text-blue-600 border-blue-200 hover:bg-blue-50 w-full sm:w-auto h-8 text-xs"
+                onClick={() => setConfirmReabrirOpen(true)}
+                disabled={completing || transferLoading}
+              >
+                <RotateCcw className="mr-2 h-3.5 w-3.5" />
+                Reabrir Chamado
+              </Button>
+            )}
         </div>
       </div>
 
@@ -4260,6 +4372,40 @@ export default function ChamadoDetalhes() {
                 >
                   {chamado.status_sinistro}
                 </Badge>
+              </div>
+            )}
+            {chamado.registro_motorista_cobranca && (
+              <div className="flex flex-wrap items-center gap-2 mb-2">
+                <Badge
+                  variant="outline"
+                  className="px-2.5 py-0.5 uppercase text-[10px] font-bold tracking-wider bg-rose-100 text-rose-800 border-rose-200 flex items-center gap-1"
+                >
+                  <Gavel className="h-3 w-3" />
+                  COBRANÇA: Reg. {chamado.registro_motorista_cobranca} —{' '}
+                  {chamado.nome_motorista_cobranca || 'motorista não informado'}
+                </Badge>
+                {chamado.status_aprovacao_juridico_1 && (
+                  <Badge
+                    variant="outline"
+                    className="px-2.5 py-0.5 uppercase text-[10px] font-bold tracking-wider bg-slate-100 text-slate-700 border-slate-200"
+                  >
+                    1ª APROVAÇÃO: {chamado.status_aprovacao_juridico_1}
+                  </Badge>
+                )}
+                {chamado.status_aprovacao_diretoria_2 && (
+                  <Badge
+                    variant="outline"
+                    className="px-2.5 py-0.5 uppercase text-[10px] font-bold tracking-wider bg-slate-100 text-slate-700 border-slate-200"
+                  >
+                    DIRETORIA: {chamado.status_aprovacao_diretoria_2}
+                  </Badge>
+                )}
+                {isReabrirBloqueadoCobranca && (
+                  <span className="text-[10px] text-amber-700 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded flex items-center gap-1">
+                    <Lock className="h-3 w-3" />
+                    Travado para reabertura (aprovação em andamento/concluída)
+                  </span>
+                )}
               </div>
             )}
             {chamado.situacao_processo && (
@@ -5426,6 +5572,91 @@ export default function ChamadoDetalhes() {
         setConfirmReabrirOpen={setConfirmReabrirOpen}
         handleReabrir={handleReabrir}
       />
+
+      {/* Modal de cobrança de motorista — finalização pelo Jurídico */}
+      <Dialog
+        open={modalCobrancaOpen}
+        onOpenChange={(open) => {
+          if (!open && !finalizandoCobranca) setModalCobrancaOpen(false)
+        }}
+      >
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Finalizar Chamado — Cobrança de Motorista</DialogTitle>
+            <DialogDescription>
+              Informe o registro do motorista que será cobrado. O nome é preenchido automaticamente
+              a partir da base de colaboradores.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <div className="space-y-2">
+              <Label htmlFor="registro-cobranca">
+                Registro do Motorista <span className="text-red-500">*</span>
+              </Label>
+              <Input
+                id="registro-cobranca"
+                placeholder="Ex.: 6989"
+                value={registroCobranca}
+                onChange={(e) => setRegistroCobranca(e.target.value)}
+                inputMode="numeric"
+              />
+              {verificandoCobranca && (
+                <p className="text-xs text-muted-foreground">Consultando colaborador...</p>
+              )}
+              {cobrancaErro && !verificandoCobranca && (
+                <p className="text-xs text-red-600 flex items-center gap-1">
+                  <AlertCircle className="h-3 w-3" />
+                  {cobrancaErro}
+                </p>
+              )}
+              {motoristaCobrancaEncontrado && !verificandoCobranca && (
+                <p className="text-xs text-green-700 flex items-center gap-1">
+                  <CheckCircle className="h-3 w-3" />
+                  Colaborador encontrado
+                </p>
+              )}
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="nome-cobranca">Nome do Motorista</Label>
+              <Input
+                id="nome-cobranca"
+                placeholder="Preenchido automaticamente pelo registro"
+                value={nomeCobranca}
+                readOnly
+                className="bg-muted cursor-not-allowed"
+              />
+            </div>
+            <div className="bg-amber-50 border border-amber-200 text-amber-800 p-3 rounded-md text-sm flex items-start gap-2">
+              <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
+              <div>
+                Após finalizar, o chamado entrará na fila de aprovação: primeiro Claudinei/Bianca e
+                depois a Diretoria. Ele ficará travado para reabertura durante o fluxo.
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setModalCobrancaOpen(false)}
+              disabled={finalizandoCobranca || completing}
+            >
+              Cancelar
+            </Button>
+            <Button
+              onClick={handleConfirmarFinalizarCobranca}
+              disabled={
+                finalizandoCobranca ||
+                completing ||
+                !registroCobranca.trim() ||
+                motoristaCobrancaEncontrado !== true
+              }
+              className="bg-[#225f3d] hover:bg-[#1b4a30] text-white"
+            >
+              {finalizandoCobranca || completing ? 'Finalizando...' : 'Confirmar Finalização'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <DuplicateAlert
         duplicateAlertOpen={duplicateAlertOpen}

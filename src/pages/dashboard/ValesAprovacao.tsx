@@ -321,7 +321,7 @@ export default function ValesAprovacao() {
           .filter((a: any) => a.acao === 'recusado' && a.motivo)
           .map((a: any) => a.motivo)
           .join(' | ')
-        await supabase.from('respostas_chamado').insert({
+        await supabase.from('mensagens_internas_chamado').insert({
           chamado_id: selectedChamado.id,
           usuario_id: user!.id,
           mensagem: `Vale reprovado pela diretoria.${motivos ? ' Motivos: ' + motivos : ''}`,
@@ -647,7 +647,7 @@ export default function ValesAprovacao() {
           .filter((a: any) => a.acao === 'recusado' && a.motivo)
           .map((a: any) => a.motivo)
           .join(' | ')
-        await supabase.from('respostas_chamado').insert({
+        await supabase.from('mensagens_internas_chamado').insert({
           chamado_id: selectedChamado.id,
           usuario_id: user!.id,
           mensagem: `Vale reprovado pela diretoria. Motivos: ${motivos}`,

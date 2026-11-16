@@ -87,7 +87,12 @@ Deno.serve(async (req: Request) => {
     })
 
     return new Response(
-      JSON.stringify({ ok: true, messageId: info.messageId, destinatarios: list, subject: assunto }),
+      JSON.stringify({
+        ok: true,
+        messageId: info.messageId,
+        destinatarios: list,
+        subject: assunto,
+      }),
       { status: 200, headers: { 'Content-Type': 'application/json' } },
     )
   } catch (err: any) {
@@ -141,10 +146,13 @@ function montarHtml(b: any, isTeste: boolean): string {
   const status = b.statusChamado || b.status || ''
   const quemNome = b.anexadoPorNome || b.criadoPor || b.solicitante || ''
   const quemEmail = b.anexadoPorEmail || b.criadoPorEmail || ''
-  const documento = b.documento || (b.tipoChamado ? String(b.tipoChamado) : 'Vale/Autorização de Desconto')
+  const documento =
+    b.documento || (b.tipoChamado ? String(b.tipoChamado) : 'Vale/Autorização de Desconto')
   const quando = b.anexadoEm || b.dataSolicitacao || ''
   const quandoFmt = quando ? formatarDataHora(quando) : ''
-  const link = b.linkChamado || (b.chamadoId ? `https://sinistro.viasudeste.com/dashboard/chamados/${b.chamadoId}` : '')
+  const link =
+    b.linkChamado ||
+    (b.chamadoId ? `https://sinistro.viasudeste.com/dashboard/chamados/${b.chamadoId}` : '')
 
   return `
   <div style="margin:0;padding:0;background:#f3f4f6;">
@@ -226,11 +234,18 @@ function montarTexto(b: any, isTeste: boolean): string {
   const status = b.statusChamado || b.status || ''
   const quemNome = b.anexadoPorNome || b.criadoPor || b.solicitante || ''
   const quemEmail = b.anexadoPorEmail || b.criadoPorEmail || ''
-  const documento = b.documento || (b.tipoChamado ? String(b.tipoChamado) : 'Vale/Autorização de Desconto')
+  const documento =
+    b.documento || (b.tipoChamado ? String(b.tipoChamado) : 'Vale/Autorização de Desconto')
   const quando = b.anexadoEm || b.dataSolicitacao || ''
   const quandoFmt = quando ? formatarDataHora(quando) : ''
-  const link = b.linkChamado || (b.chamadoId ? `https://sinistro.viasudeste.com/dashboard/chamados/${b.chamadoId}` : '')
-  const titulo = b.titulo ? `${b.titulo}${b.pia ? ` (PIA ${b.pia})` : ''}` : b.pia ? `PIA ${b.pia}` : codigoExibicao
+  const link =
+    b.linkChamado ||
+    (b.chamadoId ? `https://sinistro.viasudeste.com/dashboard/chamados/${b.chamadoId}` : '')
+  const titulo = b.titulo
+    ? `${b.titulo}${b.pia ? ` (PIA ${b.pia})` : ''}`
+    : b.pia
+      ? `PIA ${b.pia}`
+      : codigoExibicao
 
   return [
     isTeste ? '[TESTE] ' : '',

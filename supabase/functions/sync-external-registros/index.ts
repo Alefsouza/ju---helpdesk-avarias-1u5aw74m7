@@ -66,9 +66,10 @@ Deno.serve(async (req: Request) => {
           const regStr = String(item[registroKey]).trim()
           if (!regStr) continue
 
-          const rawGaragem = garagemKey !== undefined && item[garagemKey] !== null && item[garagemKey] !== undefined
-            ? String(item[garagemKey]).trim()
-            : null
+          const rawGaragem =
+            garagemKey !== undefined && item[garagemKey] !== null && item[garagemKey] !== undefined
+              ? String(item[garagemKey]).trim()
+              : null
           const garagemColaborador = rawGaragem ? rawGaragem : null
 
           const registroNormalized = regStr.replace(/^0+(?!$)/, '')

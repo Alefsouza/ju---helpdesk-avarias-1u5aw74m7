@@ -85,6 +85,11 @@ import { useRegistroNome } from '@/hooks/use-registro-nome'
 import { Checkbox } from '@/components/ui/checkbox'
 import { ChatInternoChamado } from '@/components/ChatInternoChamado'
 import { DialogDescription } from '@/components/ui/dialog'
+import {
+  dispararEmailAnexoVale,
+  tipoDocumentoAnexo,
+  chamadoEstaEmRestricaoOuPendenteDesconto,
+} from '@/services/emailService'
 
 type Chamado = any
 type Perfil = any
@@ -1105,6 +1110,29 @@ function GerarValeModal({
         usuario_id: userId,
         detalhes: `Autorização de Desconto gerada com sucesso no valor de ${formattedFinal} parcelada em ${parcelas}x.`,
       })
+
+      // E-mail automático (fire-and-forget) quando o chamado está em Restrição
+      // ou Pendente de Aprovação de Desconto — cópia para Luiz/Alef/Maria.
+      try {
+        const { data: sessionDataEmail } = await supabase.auth.getUser()
+        dispararEmailAnexoVale({
+          chamadoId: chamadoId,
+          titulo: chamado?.titulo,
+          pia: chamado?.pia,
+          carro: chamado?.carro || chamado?.numero_carro,
+          statusChamado: chamadoEstaEmRestricaoOuPendenteDesconto(chamado)
+            ? chamado.em_restricao
+              ? `Restrição${chamado.restricao_motivo ? ` — ${chamado.restricao_motivo}` : ''}`
+              : 'Pendente de Aprovação de Desconto'
+            : chamado?.status,
+          documento: 'Autorização de Desconto',
+          anexadoPorNome: solicitante?.nome_completo || sessionDataEmail?.user?.email,
+          anexadoPorEmail: sessionDataEmail?.user?.email,
+          observacoes: valorFinal > 0 ? `Valor: ${formattedFinal} em ${parcelas}x` : null,
+        }).catch((e) => console.warn('Falha no e-mail de anexo de Vale/Autorização:', e))
+      } catch (e) {
+        console.warn('Falha no e-mail de anexo de Vale/Autorização:', e)
+      }
 
       toast.success('Autorização de Desconto gerada com sucesso!')
 
@@ -3004,6 +3032,28 @@ export default function ChamadoDetalhes() {
       })
 
       toast.success('Anexo interno adicionado com sucesso')
+
+      // E-mail automático (fire-and-forget): Vale ou Autorização de Desconto
+      // anexado a chamado em Restrição / Pendente de Aprovação de Desconto.
+      const tipoDoc = tipoDocumentoAnexo(newAnexo.nome_arquivo)
+      const statusParaEmail = chamadoEstaEmRestricaoOuPendenteDesconto(chamado)
+        ? chamado.em_restricao
+          ? `Restrição${chamado.restricao_motivo ? ` — ${chamado.restricao_motivo}` : ''}`
+          : 'Pendente de Aprovação de Desconto'
+        : null
+      if (tipoDoc && statusParaEmail) {
+        const { data: sessionDataEmail } = await supabase.auth.getUser()
+        dispararEmailAnexoVale({
+          chamadoId: id as string,
+          titulo: chamado?.titulo,
+          pia: chamado?.pia,
+          carro: chamado?.carro || chamado?.numero_carro,
+          statusChamado: statusParaEmail,
+          documento: tipoDoc,
+          anexadoPorNome: currentUserProfile?.nome_completo || user?.email,
+          anexadoPorEmail: user?.email || sessionDataEmail?.user?.email,
+        }).catch((e) => console.warn('Falha no e-mail de anexo de Vale/Autorização:', e))
+      }
     } catch (err: any) {
       toast.error('Erro ao fazer upload do anexo interno')
     } finally {

@@ -57,7 +57,11 @@ export default function AprovacaoJuridico() {
   // Diretoria = Leandro Ferraz e Dona Sonia (mesmo critério do Layout: departamento Diretoria)
   const isDiretoria =
     profile?.departamento === 'Diretoria' || DIRETORIA_EMAILS.includes(user?.email || '')
-  const isTi = profile?.tipo_usuario === 'ti'
+  // TI não é um tipo_usuario do sistema — identifica por e-mail ou departamento 'TI'
+  // (mesmo critério usado no ChamadoDetalhes para liberar recursos de TI)
+  const isTi =
+    user?.email?.trim().toLowerCase() === 'ti@viasudeste.com' ||
+    profile?.departamento?.trim().toUpperCase() === 'TI'
   const isAdmin = profile?.tipo_usuario === 'admin' && !isDiretoria
 
   // Claudinei/Bianca aprovam na 1ª etapa; diretoria só vê a 2ª etapa

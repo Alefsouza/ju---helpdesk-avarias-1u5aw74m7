@@ -1157,27 +1157,31 @@ function GerarValeModal({
         detalhes: `Autorização de Desconto gerada com sucesso no valor de ${formattedFinal} parcelada em ${parcelas}x.`,
       })
 
-      // E-mail automático (fire-and-forget) quando o chamado está em Restrição
+      // E-mail automático (fire-and-forget) SOMENTE quando o chamado está em Restrição
       // ou Pendente de Aprovação de Desconto — cópia para Luiz/Alef/Maria.
-      try {
-        const { data: sessionDataEmail } = await supabase.auth.getUser()
-        dispararEmailAnexoVale({
-          chamadoId: chamadoId,
-          titulo: chamado?.titulo,
-          pia: chamado?.pia,
-          carro: chamado?.carro || chamado?.numero_carro,
-          statusChamado: chamadoEstaEmRestricaoOuPendenteDesconto(chamado)
-            ? chamado.em_restricao
+      // REGRA (17/11/2026 — dono): o e-mail de vale/autorização só sai para chamado
+      // COM RESTRIÇÃO. Antes o disparo era incondicional (a checagem só escolhia o
+      // texto do status) e chamados sem restrição recebiam o e-mail (caso 003102026/101
+      // às 13:08 — em_atendimento, sem restrição).
+      if (chamadoEstaEmRestricaoOuPendenteDesconto(chamado)) {
+        try {
+          const { data: sessionDataEmail } = await supabase.auth.getUser()
+          dispararEmailAnexoVale({
+            chamadoId: chamadoId,
+            titulo: chamado?.titulo,
+            pia: chamado?.pia,
+            carro: chamado?.carro || chamado?.numero_carro,
+            statusChamado: chamado.em_restricao
               ? `Restrição${chamado.restricao_motivo ? ` — ${chamado.restricao_motivo}` : ''}`
-              : 'Pendente de Aprovação de Desconto'
-            : chamado?.status,
-          documento: 'Autorização de Desconto',
-          anexadoPorNome: solicitante?.nome_completo || sessionDataEmail?.user?.email,
-          anexadoPorEmail: sessionDataEmail?.user?.email,
-          observacoes: valorFinal > 0 ? `Valor: ${formattedFinal} em ${parcelas}x` : null,
-        }).catch((e) => console.warn('Falha no e-mail de anexo de Vale/Autorização:', e))
-      } catch (e) {
-        console.warn('Falha no e-mail de anexo de Vale/Autorização:', e)
+              : 'Pendente de Aprovação de Desconto',
+            documento: 'Autorização de Desconto',
+            anexadoPorNome: solicitante?.nome_completo || sessionDataEmail?.user?.email,
+            anexadoPorEmail: sessionDataEmail?.user?.email,
+            observacoes: valorFinal > 0 ? `Valor: ${formattedFinal} em ${parcelas}x` : null,
+          }).catch((e) => console.warn('Falha no e-mail de anexo de Vale/Autorização:', e))
+        } catch (e) {
+          console.warn('Falha no e-mail de anexo de Vale/Autorização:', e)
+        }
       }
 
       toast.success('Autorização de Desconto gerada com sucesso!')

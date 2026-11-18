@@ -52,6 +52,7 @@ import Layout from './components/Layout'
 import { AuthProvider, useAuth } from './hooks/use-auth'
 import SecretariaTecnica from './pages/dashboard/SecretariaTecnica'
 import ConsultaColaborador from './pages/dashboard/ConsultaColaborador'
+import Sso from './pages/Sso'
 
 const DashboardRoute = () => {
   const { user, profile, loading } = useAuth()
@@ -110,6 +111,7 @@ const App = () => (
           <Toaster />
           <Sonner />
           <Routes>
+            <Route path="/sso" element={<Sso />} />
             <Route element={<Layout />}>
               <Route path="/" element={<Index />} />
               <Route path="/cadastro" element={<Register />} />

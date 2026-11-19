@@ -223,7 +223,8 @@ export default function MeusAtendimentos() {
             isInitialLoadRef.current = false
             return
           }
-          query = query.eq('garagem', userGaragem)
+          // Chamados da garagem OU em que o usuário é o responsável designado (independe da garagem)
+          query = query.or(`garagem.eq."${userGaragem}",responsavel_id.eq.${user.id}`)
         }
 
         if (
@@ -485,10 +486,11 @@ export default function MeusAtendimentos() {
 
       if (targetRecord.status !== 'em_atendimento') return false
 
-      // Se usuário tem filtro de garagem, checar se bate com a garagem
+      // Se usuário tem filtro de garagem, checar se bate com a garagem (ou se é o responsável designado)
       if (shouldFilterByGaragem && userGaragem) {
         const recGaragem = (targetRecord.garagem || '').trim().toLowerCase()
-        if (recGaragem !== userGaragem.toLowerCase()) return false
+        const isResponsavel = targetRecord.responsavel_id === user?.id
+        if (recGaragem !== userGaragem.toLowerCase() && !isResponsavel) return false
       }
 
       // Se usuário for jurídico/dp/alex
@@ -560,7 +562,7 @@ export default function MeusAtendimentos() {
             setSituacaoOptions([])
             return
           }
-          query = query.eq('garagem', userGaragem)
+          query = query.or(`garagem.eq."${userGaragem}",responsavel_id.eq.${user.id}`)
         }
 
         if (

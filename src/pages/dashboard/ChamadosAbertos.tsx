@@ -70,7 +70,8 @@ export default function ChamadosAbertos() {
           setLoading(false)
           return
         }
-        query = query.eq('garagem', userGaragem)
+        // Chamados da garagem OU em que o usuário é o responsável designado (independe da garagem)
+        query = query.or(`garagem.eq."${userGaragem}",responsavel_id.eq.${user?.id}`)
       }
 
       if (profile?.tipo_usuario === 'sinistro') {

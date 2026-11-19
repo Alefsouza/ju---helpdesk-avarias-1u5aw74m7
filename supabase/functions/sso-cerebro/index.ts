@@ -73,10 +73,13 @@ Deno.serve(async (req: Request) => {
         user_metadata: { full_name: nome || 'Leandro Ferraz' },
       })
       if (erroCriar || !criado?.user) {
-        return new Response(JSON.stringify({ error: 'Falha ao criar usuário: ' + (erroCriar?.message || '?') }), {
-          status: 500,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        })
+        return new Response(
+          JSON.stringify({ error: 'Falha ao criar usuário: ' + (erroCriar?.message || '?') }),
+          {
+            status: 500,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          },
+        )
       }
       user = criado.user
     }
@@ -87,16 +90,21 @@ Deno.serve(async (req: Request) => {
       email,
     })
     if (erroLink || !link?.properties?.hashed_token) {
-      return new Response(JSON.stringify({ error: 'Falha ao gerar link: ' + (erroLink?.message || '?') }), {
-        status: 500,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      })
+      return new Response(
+        JSON.stringify({ error: 'Falha ao gerar link: ' + (erroLink?.message || '?') }),
+        {
+          status: 500,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        },
+      )
     }
 
     const url =
       (Deno.env.get('SUPABASE_URL') || '') +
-      '/auth/v1/verify?token=' + link.properties.hashed_token +
-      '&type=magiclink&redirect_to=' + encodeURIComponent('https://helpdesk-cadastro-5422c.goskip.app/')
+      '/auth/v1/verify?token=' +
+      link.properties.hashed_token +
+      '&type=magiclink&redirect_to=' +
+      encodeURIComponent('https://helpdesk-cadastro-5422c.goskip.app/')
     const verifyRes = await fetch(url, { redirect: 'manual' })
     // GoTrue devolve 302 com token na query/fragment ou um JSON com a sessão
     const loc = verifyRes.headers.get('location') || ''
@@ -115,15 +123,21 @@ Deno.serve(async (req: Request) => {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         })
       }
-      return new Response(JSON.stringify({ error: 'Verify não devolveu sessão (loc: ' + loc.slice(0, 120) + ')' }), {
-        status: 500,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      })
+      return new Response(
+        JSON.stringify({ error: 'Verify não devolveu sessão (loc: ' + loc.slice(0, 120) + ')' }),
+        {
+          status: 500,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        },
+      )
     }
 
-    return new Response(JSON.stringify({ session: { access_token: access, refresh_token: refresh } }), {
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    })
+    return new Response(
+      JSON.stringify({ session: { access_token: access, refresh_token: refresh } }),
+      {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      },
+    )
   } catch (e: any) {
     return new Response(JSON.stringify({ error: e?.message || String(e) }), {
       status: 500,

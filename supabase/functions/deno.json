@@ -11,6 +11,7 @@
     "sync-external-registros": 8,
     "desunificar-chamados": 3,
     "espelho-danos-intranet": 5,
-    "enviar-email-chamado": 2
+    "enviar-email-chamado": 2,
+    "sso-cerebro": 1
   }
 }

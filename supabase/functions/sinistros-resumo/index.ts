@@ -14,7 +14,8 @@ import { createClient } from 'npm:@supabase/supabase-js@2'
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Methods': 'GET, OPTIONS',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, x-cerebro-token, content-type',
+  'Access-Control-Allow-Headers':
+    'authorization, x-client-info, apikey, x-cerebro-token, content-type',
 }
 
 const TOKEN = 'l7YQdHEjPp0DETGaGG1xp_AkN5voyUqQXAuKwdsfM-s'
@@ -42,7 +43,10 @@ Deno.serve(async (req: Request) => {
       const out: any[] = []
       const step = 1000
       for (let from = 0; from < 50000; from += step) {
-        const { data, error } = await admin.from(table).select(select).range(from, from + step - 1)
+        const { data, error } = await admin
+          .from(table)
+          .select(select)
+          .range(from, from + step - 1)
         if (error) throw new Error(table + ': ' + error.message)
         const batch = data || []
         for (const b of batch) out.push(b)
@@ -78,8 +82,12 @@ Deno.serve(async (req: Request) => {
         const j = await r.json()
         const itens = Array.isArray(j) ? j : j.items || []
         for (const it of itens) {
-          const p = String(it.prefixo_veiculo || '').replace(/^0+/, '').trim()
-          const cod = String(it.codigolinha || '').trim().toUpperCase()
+          const p = String(it.prefixo_veiculo || '')
+            .replace(/^0+/, '')
+            .trim()
+          const cod = String(it.codigolinha || '')
+            .trim()
+            .toUpperCase()
           if (p && cod && !p2l[p]) p2l[p] = cod
         }
       }
@@ -91,7 +99,9 @@ Deno.serve(async (req: Request) => {
       return /-/.test(c) || c.length < 3 ? c : c.slice(0, -2) + '-' + c.slice(-2)
     }
     const normLinha = (s: string) => {
-      const u = String(s || '').toUpperCase().replace(/[^A-Z0-9]/g, '')
+      const u = String(s || '')
+        .toUpperCase()
+        .replace(/[^A-Z0-9]/g, '')
       return u ? fmtLinha(u) : ''
     }
     const inc = (m: Record<string, number>, k: string) => {
@@ -109,7 +119,9 @@ Deno.serve(async (req: Request) => {
     for (const c of sins) {
       inc(porTipo, String(c.tipo_chamado || 'Não informado').trim())
       inc(porGar, String(c.garagem || '').trim() || '(sem garagem)')
-      const carro = String(c.carro || '').replace(/^0+/, '').trim()
+      const carro = String(c.carro || '')
+        .replace(/^0+/, '')
+        .trim()
       if (carro) inc(porCarro, carro)
 
       // linha: regra do dono — prefixo do carro cruzado com a VW; fallback

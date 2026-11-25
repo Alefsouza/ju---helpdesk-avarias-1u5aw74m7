@@ -215,12 +215,20 @@ export default function ValesAprovacao() {
       (c: any) => countAprovacoes(c.aprovacoes_diretoria) >= 2 && c.status_aprovacao === 'aprovado',
     )
 
+    // Regra: qualquer recusa da diretoria reprova de vez — o chamado sai das filas
+    const hasRecusa = (c: any) => {
+      const aprovacoes = Array.isArray(c.aprovacoes_diretoria) ? c.aprovacoes_diretoria : []
+      return aprovacoes.some((a: any) => a.acao === 'recusado')
+    }
+
     const approvedByYou = standardChamados.filter((c: any) => {
+      if (hasRecusa(c)) return false
       const count = countAprovacoes(c.aprovacoes_diretoria)
       return count < 2 && isApprovedByUser(c)
     })
 
     const pending = standardChamados.filter((c: any) => {
+      if (hasRecusa(c)) return false
       const count = countAprovacoes(c.aprovacoes_diretoria)
       const isApproved = count >= 2 && c.status_aprovacao === 'aprovado'
       const approvedByUser = count < 2 && isApprovedByUser(c)
@@ -610,20 +618,20 @@ export default function ValesAprovacao() {
       motivo: rejectReason,
     }
 
+    // Regra: 1 recusa de qualquer diretor (Sonia OU Leandro) reprova de vez —
+    // o chamado sai da fila de pendentes e volta para Sinistro/Jurídico.
+    // A APROVAÇÃO continua exigindo as duas aprovações (2/2).
     const nextAprovacoes = [...currentAprovacoes, newAprovacao]
-    const isFinished = nextAprovacoes.length >= 2
-    const nextStatusAprovacao = isFinished ? 'reprovado' : 'aprovacao_parcial'
+    const isFinished = true
+    const nextStatusAprovacao = 'reprovado'
 
     try {
       const updatePayload: any = {
         status_aprovacao: nextStatusAprovacao,
         aprovacoes_diretoria: nextAprovacoes,
         atualizado_em: new Date().toISOString(),
-      }
-
-      if (isFinished) {
-        updatePayload.status = 'em_andamento'
-        updatePayload.status_interno = 'Reprovado Diretoria'
+        status: 'em_andamento',
+        status_interno: 'Reprovado Diretoria',
       }
 
       const { error } = await supabase
@@ -637,40 +645,36 @@ export default function ValesAprovacao() {
         chamado_id: selectedChamado.id,
         usuario_id: user!.id,
         acao: 'Reprovação Diretor',
-        detalhes: isFinished
-          ? `Vale reprovado após avaliação final. Motivo: ${rejectReason}`
-          : `Recusado por um diretor: ${rejectReason} (Aguardando segunda avaliação)`,
+        detalhes: `Vale reprovado pela diretoria. Motivo: ${rejectReason}`,
       })
 
-      if (isFinished) {
-        const motivos = nextAprovacoes
-          .filter((a: any) => a.acao === 'recusado' && a.motivo)
-          .map((a: any) => a.motivo)
-          .join(' | ')
-        await supabase.from('mensagens_internas_chamado').insert({
-          chamado_id: selectedChamado.id,
-          usuario_id: user!.id,
-          mensagem: `Vale reprovado pela diretoria. Motivos: ${motivos}`,
-        })
+      // Mensagem automática de reprovação vai para o CHAT INTERNO
+      // (mensagens_internas_chamado), como na correção da 0.0.973.
+      const motivos = nextAprovacoes
+        .filter((a: any) => a.acao === 'recusado' && a.motivo)
+        .map((a: any) => a.motivo)
+        .join(' | ')
+      await supabase.from('mensagens_internas_chamado').insert({
+        chamado_id: selectedChamado.id,
+        usuario_id: user!.id,
+        mensagem: `Vale reprovado pela diretoria. Motivos: ${motivos}`,
+      })
 
-        if (
-          selectedChamado.solicitacoes_parcelamento &&
-          selectedChamado.solicitacoes_parcelamento.length > 0
-        ) {
-          await supabase
-            .from('solicitacoes_parcelamento')
-            .update({ status: 'recusado', atualizado_em: new Date().toISOString() })
-            .eq('id', selectedChamado.solicitacoes_parcelamento[0].id)
-        }
+      if (
+        selectedChamado.solicitacoes_parcelamento &&
+        selectedChamado.solicitacoes_parcelamento.length > 0
+      ) {
+        await supabase
+          .from('solicitacoes_parcelamento')
+          .update({ status: 'recusado', atualizado_em: new Date().toISOString() })
+          .eq('id', selectedChamado.solicitacoes_parcelamento[0].id)
       }
 
-      toast.success(
-        isFinished ? 'Vale recusado com sucesso' : 'Recusa registrada! Aguardando segundo diretor.',
-      )
+      toast.success('Vale recusado. O chamado voltou para Sinistro/Jurídico.')
       setIsRejectOpen(false)
       fetchChamados()
     } catch (error: any) {
-      toast.error('Erro ao recusar vale')
+      toast.error('Erro ao recusar vale: ' + (error?.message ?? 'tente novamente'))
     } finally {
       setIsSubmitting(false)
     }
